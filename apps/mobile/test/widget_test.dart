@@ -15,6 +15,6 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
 
-    expect(find.text('En construcción'), findsOneWidget);
+    expect(find.text('Bienvenido'), findsOneWidget);
   });
 }
