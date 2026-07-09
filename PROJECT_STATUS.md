@@ -202,3 +202,45 @@ El usuario propuso etiquetar hitos con tags de git:
 Core UI) → `v0.3.0` (Navegación + Splash) → `v0.4.0` (Onboarding) →
 `v0.5.0` (Login) → `v0.6.0` (Registro) → `v0.7.0` (Home). Aún no se ha
 creado ningún tag — es una recomendación pendiente de aplicar.
+
+## Repositorio oficial
+
+Desde este momento, el **único repositorio oficial** del proyecto es:
+
+```
+C:\dev\AppServicios_nuevo
+```
+
+Contexto y reglas:
+
+- Existe un **scaffold antiguo** en `C:\dev\AppServicios` que **NO
+  pertenece a este proyecto**. Tiene 0 commits de git, estructura de
+  carpetas distinta (`backend/` y `mobile/` en la raíz en vez de `apps/`),
+  no tiene `PROJECT_STATUS.md`, ni Core UI, ni Navigation, ni Onboarding.
+  No debe usarse como base de nada — se mantiene intacto únicamente por
+  precaución, ya que su contenido nunca fue commiteado y podría perderse
+  si se elimina sin revisión previa.
+- Existe una **copia idéntica** del repositorio oficial bajo
+  `C:\Users\ANYELO\Documents\Grupo empresarial 180°\PROYECTOS\ServiYA\APP`,
+  usada **únicamente como respaldo temporal** mientras se confirma la
+  migración definitiva a `C:\dev\AppServicios_nuevo`. No es una fuente de
+  verdad adicional.
+- Todo el desarrollo futuro debe realizarse **exclusivamente** sobre
+  `C:\dev\AppServicios_nuevo`.
+- **No deben mezclarse archivos** entre los tres proyectos anteriores
+  (scaffold antiguo, respaldo bajo `Documents`, repositorio oficial).
+- **No deben abrirse dos de estos proyectos simultáneamente** en Android
+  Studio o VS Code (evita bloqueos de archivos, indexado cruzado y
+  confusión sobre cuál carpeta se está editando).
+
+## Estado del entorno
+
+- `flutter analyze` funciona correctamente sobre `C:\dev\AppServicios_nuevo`
+  (`No issues found!`).
+- `flutter test` funciona correctamente (108/108 tests pasando).
+- El problema del carácter `°` (que afectaba `flutter analyze` y
+  `flutter build windows` en la ruta anterior bajo
+  `Grupo empresarial 180°`) **ya no existe** en la ruta oficial.
+- Ya **no es necesario** usar `dart analyze` como workaround de
+  `flutter analyze` — el comando estándar de Flutter funciona
+  directamente.
