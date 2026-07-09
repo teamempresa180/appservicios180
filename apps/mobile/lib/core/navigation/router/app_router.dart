@@ -1,8 +1,9 @@
 import 'package:go_router/go_router.dart';
-import '../../../features/home/presentation/pages/home_page.dart';
+import '../../../features/app_shell/presentation/pages/app_shell_page.dart';
 import '../../../features/login/presentation/pages/login_page.dart';
 import '../../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../../features/register/presentation/pages/register_page.dart';
+import '../../../features/select_role/presentation/pages/select_role_page.dart';
 import '../../../features/splash/presentation/pages/splash_page.dart';
 import '../guards/app_route_guard.dart';
 import '../routes/app_routes.dart';
@@ -33,8 +34,12 @@ abstract final class AppRouter {
         builder: (context, state) => const RegisterPage(),
       ),
       GoRoute(
+        path: AppRoutes.selectRole,
+        builder: (context, state) => const SelectRolePage(),
+      ),
+      GoRoute(
         path: AppRoutes.home,
-        builder: (context, state) => const HomePage(),
+        builder: (context, state) => const AppShellPage(),
       ),
     ],
   );

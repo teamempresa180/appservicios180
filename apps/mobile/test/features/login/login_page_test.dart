@@ -1,0 +1,140 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:mobile/core/navigation/routes/app_routes.dart';
+import 'package:mobile/core/ui/theme/app_theme.dart';
+import 'package:mobile/features/login/presentation/pages/login_page.dart';
+
+void main() {
+  Widget buildApp() {
+    final router = GoRouter(
+      initialLocation: AppRoutes.login,
+      routes: [
+        GoRoute(
+          path: AppRoutes.login,
+          builder: (context, state) => const LoginPage(),
+        ),
+        GoRoute(
+          path: AppRoutes.register,
+          builder: (context, state) =>
+              const Scaffold(body: Text('Register placeholder')),
+        ),
+        GoRoute(
+          path: AppRoutes.home,
+          builder: (context, state) =>
+              const Scaffold(body: Text('Home placeholder')),
+        ),
+      ],
+    );
+
+    return MaterialApp.router(theme: AppTheme.light, routerConfig: router);
+  }
+
+  testWidgets('shows title, subtitle and fields', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Iniciar sesión'), findsOneWidget);
+    expect(find.text('Ingresa tus datos para continuar.'), findsOneWidget);
+    expect(find.text('Correo electrónico'), findsOneWidget);
+    expect(find.text('Contraseña'), findsOneWidget);
+    expect(find.text('Continuar'), findsOneWidget);
+  });
+
+  testWidgets('shows validation errors for empty fields', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Continuar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('El correo es obligatorio.'), findsOneWidget);
+    expect(find.text('La contraseña es obligatoria.'), findsOneWidget);
+  });
+
+  testWidgets('shows an error for an invalid email and a short password', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Correo electrónico'),
+      'not-an-email',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Contraseña'),
+      '1234',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Continuar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ingresa un correo válido.'), findsOneWidget);
+    expect(
+      find.text('La contraseña debe tener al menos 8 caracteres.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('toggling the password visibility icon unmasks the text', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    EditableText editableTextOf(WidgetTester t) => t.widget<EditableText>(
+      find
+          .descendant(
+            of: find.widgetWithText(TextFormField, 'Contraseña'),
+            matching: find.byType(EditableText),
+          )
+          .first,
+    );
+
+    expect(editableTextOf(tester).obscureText, isTrue);
+
+    await tester.tap(find.byIcon(Icons.visibility_outlined));
+    await tester.pumpAndSettle();
+
+    expect(editableTextOf(tester).obscureText, isFalse);
+  });
+
+  testWidgets(
+    'valid submit shows loading and then navigates to Home',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Correo electrónico'),
+        'user@example.com',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Contraseña'),
+        'password123',
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Continuar'));
+      await tester.pump();
+
+      expect(find.text('Ingresando...'), findsOneWidget);
+
+      await tester.pumpAndSettle(const Duration(seconds: 2));
+
+      expect(find.text('Home placeholder'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    '"¿Olvidaste tu contraseña?" and "Crear cuenta" navigate to Register',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Crear cuenta'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Register placeholder'), findsOneWidget);
+    },
+  );
+}

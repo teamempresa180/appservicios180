@@ -82,49 +82,91 @@ npx jest        ✅ 51/51 suites, 113/113 tests
 ### Domain — ✅ 100% completo (mismo modelo que backend, en Dart)
 Mismos 23 conceptos, en `lib/<módulo>/{models,entities}/`.
 
-### Core UI (Design System) — ✅ completo (`lib/core/ui/`)
+### Core UI (Design System) — ✅ completo y refinado (`lib/core/ui/`)
 - `theme/app_theme.dart`: paleta 100% neutra (`AppColors`: background
   `#FFFFFF`, surface `#F8F8F8`, divider `#E5E5E5`, texto primario
   `#111111`, texto secundario `#666666`, error `#B00020`). Tipografía:
-  Roboto (fuente del sistema, sin assets).
-- `tokens/`: spacing, radius, elevation, durations.
-- `widgets/`: AppButton, AppTextField, AppCard, AppLoading, AppEmptyState,
-  AppDivider, AppSectionTitle, AppScaffold.
-- `animations/`: FadeIn, ScaleIn, SlideIn (sin Lottie/Rive).
+  Roboto (fuente del sistema, sin assets). `inputDecorationTheme` con
+  bordes distintos por estado (focus/error/disabled).
+- `tokens/`: spacing, radius, elevation (ahora consumido por `AppCard`),
+  durations.
+- `widgets/`: `AppButton` (estados normal/pressed/disabled/loading,
+  altura uniforme, `AnimatedSwitcher`), `AppTextField` (prefix/suffix
+  icon), `AppCard` (elevación sutil), `AppLoading` (Material 3
+  `strokeCap.round`), `AppEmptyState` (acción opcional vía `AppButton`),
+  `AppDivider`, `AppSectionTitle` (subtítulo + acción "Ver todo"
+  opcionales), `AppScaffold`.
+- `animations/`: FadeIn, ScaleIn, SlideIn (sin Lottie/Rive) — únicas
+  animaciones permitidas en toda la app.
 - `icons/`: AppIcons (solo Material Icons).
 - `extensions/`: helpers de tema y espaciado.
+- **Bug corregido (Prompt 29)**: `AppButton(expand: false)` crasheaba
+  ("BoxConstraints forces an infinite width") dentro de `Row`/`Wrap`/etc.
+  Causa: `minimumSize: Size.fromHeight(48)` fijaba el ancho mínimo en
+  infinito. Corregido a `Size(0, 48)`. Verificado en Column, Row, Wrap,
+  Card, ListView, GridView, Dialog, BottomSheet, AppBar actions.
 
 ### Navegación + Splash — ✅ completo (`lib/core/navigation/` + `lib/features/`)
 - `GoRouter` configurado en `core/navigation/router/app_router.dart`.
 - Rutas registradas: `/` (Splash), `/onboarding`, `/login`, `/register`,
-  `/home` — todas placeholder salvo Splash.
+  `/select-role`, `/home` (ahora renderiza `AppShellPage`, no un
+  placeholder suelto).
 - `guards/app_route_guard.dart`: guard "siempre permite", punto de
   extensión para autenticación futura (no implementada).
-- `SplashPage`: muestra "AppServicios" + "Inicializando..." (AppLoading),
-  espera 2s y navega a `/onboarding` automáticamente.
-- Placeholders Onboarding/Login/Register/Home: solo `AppScaffold` +
-  `AppSectionTitle` + `AppCard` + texto "En construcción". Sin
-  formularios, sin botones, sin lógica.
-- `main.dart` reescrito: `MaterialApp.router` + `AppTheme.light` +
-  `AppRouter.router`.
-- Dependencia agregada: `go_router: ^14.6.2` (resuelta a 14.8.1).
+- Navegación **dentro** del Shell y entre features de exploración
+  (Marketplace → Service Detail → Provider Profile) usa `Navigator.push`
+  local, no `GoRouter` — documentado en cada README de feature afectado.
 
-### Verificación Flutter (último estado conocido)
+### Features construidos (Prompts 19–30), todos 100% visuales/mock — sin backend
+
+| # | Feature | Contenido |
+|---|---|---|
+| 19 | `onboarding` | 3 slides, sin persistencia de "ya visto". |
+| 20 | `login` | Formulario funcional visualmente, validación local, sin auth real. |
+| 21 | `register` + `select_role` | Registro + selección Cliente/Proveedor, ambos simulados. |
+| 22–23 | `app_shell` | Shell reutilizable: `AppTopBar` + `IndexedStack` (5 slots: Inicio, Buscar, Órdenes, Mensajes, Perfil) + `AppBottomNavigation`/`AppNavigationRail` responsivo. |
+| 24 | `home` | Home único adaptable a rol (Cliente/Proveedor) vía `MockUserRole`, vive en el slot "Inicio" del Shell. |
+| 25 | — | Sprint de refinamiento visual del Design System (ver arriba). |
+| 26 | `marketplace` | Categorías, servicios destacados, proveedores recomendados — vive en el slot "Buscar" del Shell. `MockCategoryRepository`/`MockServiceRepository`/`MockProviderRepository`. |
+| 27 | `categories` | Grid responsivo de 12 categorías, independiente de `marketplace`. `MockCategoryRepository` propio. |
+| 28 | `search` | Buscador visual (acepta escritura, sin búsqueda real), 4 estados (loading/empty/results/noResults). `MockSearchRepository`. |
+| 29 | `service_detail` | Detalle de un servicio fijo simulado: galería, descripción, proveedor, categoría, reseñas. Abierto desde `marketplace`/`search` (`Navigator.push`). `MockServiceDetailRepository`. |
+| 30 | `provider_profile` | Perfil de un proveedor fijo simulado: portada, avatar, estadísticas, especialidades, servicios, disponibilidad, reseñas. Abierto desde `service_detail`. `MockProviderProfileRepository`. |
+
+Patrón repetido en cada feature de datos (26–30): `presentation/`
+(pages + widgets, sin `Scaffold` propio) + `models/` (composición de
+presentación tipada, p. ej. `ServiceDisplay`, `ServiceDetailData`,
+`ProviderProfileData` — nunca `Map<String, dynamic>` ni `dynamic`) +
+`repositories/` (contrato abstracto + `Mock*Repository`) + `mock/`
+(datos semilla con entidades reales de dominio, IDs deterministas) +
+`README.md` propio explicando qué es real/derivado/simulado y cómo
+reemplazar el mock por un repositorio real.
+
+### Verificación Flutter (último estado conocido — Prompt 30 aprobado)
 ```
-dart analyze    ✅ No issues found!
-flutter test    ✅ 105/105 tests
-flutter run -d windows   ✅ compila y corre sin errores
+flutter analyze          ✅ No issues found!
+flutter test              ✅ 333/333 tests
+flutter run -d windows    ✅ compila y corre sin errores
 ```
 
-**Nota de entorno importante**: `flutter analyze` falla con un crash del
-analysis server por el símbolo `°` en la ruta `Grupo empresarial 180°`
-(bug de entorno, no del código). Usar **`dart analyze`** como equivalente
-confiable en este proyecto — ya verificado que da los mismos resultados.
+**Nota de entorno**: el problema del carácter `°` (que afectaba
+`flutter analyze`/`flutter build windows` en la ruta antigua bajo
+`Grupo empresarial 180°`) **no existe** en la ruta oficial
+`C:\dev\AppServicios_nuevo` — no hace falta ningún workaround.
+
+**Nota sobre el dispositivo físico**: en las últimas sesiones el
+Realme RMX3938 no estaba conectado al momento de verificar; se usó
+`flutter run -d windows` como alternativa. Verificar en el dispositivo
+físico sigue pendiente como buena práctica, no es bloqueante.
 
 ### Lo que NO existe todavía en Flutter
 Gestión de estado (Provider/Riverpod/Bloc/Cubit/ViewModels), consumo de
-API, conexión a backend, Login/Registro/Home funcionales, Drawer,
-BottomNavigation, Tabs, identidad visual real.
+API, conexión a backend, autenticación real, persistencia, Chat, Quotes,
+Orders, Payments reales, identidad visual real. Toda navegación entre
+features de exploración (`marketplace`→`service_detail`→
+`provider_profile`) es `Navigator.push` puntual, no rutas de `GoRouter`
+registradas — ningún feature de datos tiene lookup por ID todavía (cada
+uno muestra un único registro fijo simulado).
 
 ## 5. Decisiones arquitectónicas importantes
 
@@ -153,13 +195,20 @@ BottomNavigation, Tabs, identidad visual real.
 - Toda navegación pasa por `AppRoutes` (constantes) + `AppRouter` — nunca
   strings de ruta sueltos.
 
-## 7. Branding (pendiente)
+## 7. Branding (pendiente — Sprint de Branding es el Prompt 33.1)
 
-**No existe identidad visual oficial.** No crear logo, colores de marca,
-tipografía corporativa ni iconografía propia hasta que el usuario la
-proporcione explícitamente. Cuando exista, el único archivo a tocar es
-`lib/core/ui/theme/app_theme.dart` (ver su propio README para el
-procedimiento).
+**No existe identidad visual oficial todavía.** No crear/usar logo,
+colores de marca (negro/dorado/blanco), tipografía corporativa ni
+iconografía propia hasta ese sprint dedicado. Cuando llegue, el único
+archivo a tocar es `lib/core/ui/theme/app_theme.dart` (ver su propio
+README para el procedimiento).
+
+**Archivo `Logo oficial grupo.svg`**: existe en la raíz del repositorio
+(`C:\dev\AppServicios_nuevo\Logo oficial grupo.svg`), colocado ahí por
+el usuario en preparación para el Sprint de Branding. **No fue creado
+por el asistente, no está en ningún commit, no se usa ni se referencia
+en ningún widget.** No moverlo, no tocarlo, no agregarlo a assets hasta
+el Prompt 33.1.
 
 ## 8. Cómo ejecutar
 
@@ -182,18 +231,25 @@ flutter run -d <device>
 
 ## 9. Último prompt completado
 
-**Prompt 18 — Flutter: Navegación Base + Splash (primer prototipo
-ejecutable)**. Completado y verificado (build, analyze, test, run).
+**Prompt 30 — Feature Provider Profile (visual completo)**. **Aprobado
+por el usuario.** Completado y verificado (`flutter analyze`,
+`flutter test` 333/333, `flutter run -d windows`). Working tree sin
+commit al momento de aprobarse — ver sección "Estado del repositorio al
+cierre de esta sesión" más abajo para el commit de continuidad.
 
 ## 10. Siguiente prompt sugerido
 
-**Prompt 19 — Construcción real de la pantalla Onboarding** (o el nombre
-que le dé el usuario), siguiendo el mismo patrón: reutilizar `core/ui`,
-sin gestión de estado todavía, sin conectar backend. Después, en orden
-natural: Login → Registro → Home, y solo entonces evaluar cuándo introducir
-gestión de estado (Provider/Riverpod/Bloc — a decidir con el usuario) y la
-primera conexión real al backend (probablemente empezando por
-Identity/Authentication, el Bounded Context base).
+**Prompt 31 — Request Service (flujo de solicitud, visual)**, siguiendo
+exactamente el mismo patrón que `service_detail`/`provider_profile`:
+`presentation/` (sin `Scaffold` propio) + `models/` (composición
+tipada) + `repositories/` (contrato + `Mock*Repository`, solo
+entidades reales de dominio — `Quote`/`Order` probablemente) + `mock/`
++ `README.md`. Cambio mínimo autorizado esperado: que el botón
+"Solicitar servicio" (hoy no-op en `service_detail` y
+`provider_profile`) navegue a esta nueva pantalla. Seguir sin backend,
+sin gestión de estado, sin persistencia. Después de eso, el Sprint de
+Branding (Prompt 33.1) es el próximo hito grande ya acordado con el
+usuario.
 
 ## 11. Sugerencia de versionado (aún no aplicada)
 
@@ -237,10 +293,36 @@ Contexto y reglas:
 
 - `flutter analyze` funciona correctamente sobre `C:\dev\AppServicios_nuevo`
   (`No issues found!`).
-- `flutter test` funciona correctamente (108/108 tests pasando).
+- `flutter test` funciona correctamente (**333/333 tests pasando** al
+  cierre del Prompt 30 — ver sección 4 para el detalle por feature).
 - El problema del carácter `°` (que afectaba `flutter analyze` y
   `flutter build windows` en la ruta anterior bajo
   `Grupo empresarial 180°`) **ya no existe** en la ruta oficial.
 - Ya **no es necesario** usar `dart analyze` como workaround de
   `flutter analyze` — el comando estándar de Flutter funciona
   directamente.
+
+## Estado del repositorio al cierre de esta sesión (previo al Prompt 31)
+
+Este handoff se generó justo antes de cerrar la conversación por límite
+de contexto. Para que la siguiente sesión (con o sin memoria de esta
+conversación) pueda retomar sin ambigüedad:
+
+- **Todo el trabajo de los Prompts 19–30 fue aprobado explícitamente
+  por el usuario**, prompt por prompt, verificando en cada uno
+  `flutter analyze` + `flutter test` + `flutter run`.
+- Inmediatamente después de actualizar este archivo, se ejecutó un
+  **commit de continuidad** con todo el código de `apps/mobile/`
+  (features 19–30 + el fix de `AppButton` + los READMEs), **sin
+  incluir `Logo oficial grupo.svg`** (branding sigue congelado, ver
+  sección 7).
+- Si al abrir una nueva sesión `git status` muestra ese commit como el
+  más reciente y el working tree está limpio (salvo, quizás, el
+  `Logo oficial grupo.svg` sin trackear), el estado es exactamente el
+  que se describe en este documento — se puede continuar directamente
+  con el **Prompt 31** sin re-verificar nada de los Prompts 19–30.
+- Si el working tree tiene cambios sin commitear más allá del logo,
+  **no asumir que son del Prompt 31** — confirmar con el usuario antes
+  de continuar, seguiendo la misma disciplina de "leer
+  PROJECT_STATUS.md → confirmar repo oficial → `git status` → confirmar
+  qué cambios corresponden a qué prompt" usada en cada prompt anterior.

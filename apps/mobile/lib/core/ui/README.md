@@ -14,6 +14,75 @@ otro concepto de negocio. Un widget como `AppButton` o `AppCard` debe poder
 usarse igual en esta aplicación que en cualquier otra — su única
 responsabilidad es aplicar el tema de forma consistente.
 
+## Componentes existentes
+
+| Widget | Para qué | Notas relevantes |
+|---|---|---|
+| `AppScaffold` | Estructura de página genérica (título opcional, body, FAB). | No soporta `bottomNavigationBar`/`NavigationRail` — el `AppShell` construye su propio `Scaffold` de Flutter para eso. |
+| `AppCard` | Contenedor de contenido. | `elevation` (opcional, default `AppElevation.level1`) da una sombra sutil sin perder el borde neutro. |
+| `AppButton` | Botón primario. | Estados: normal, pressed (automático de Material), disabled (`onPressed: null`), loading (`isLoading: true`, cross-fade suave al spinner). Altura mínima uniforme (48). |
+| `AppTextField` | Campo de texto. | `prefixIcon`/`suffixIcon` opcionales (Material Icons / widgets). Focus, error y disabled ya tienen bordes distintos vía el tema — no hace falta configurarlos por pantalla. |
+| `AppLoading` | Indicador de carga centrado. | `strokeCap: round` (look Material 3); el mensaje aparece con `FadeIn`. |
+| `AppEmptyState` | Estado vacío (sin resultados, sin datos). | `actionLabel`/`onActionPressed` opcionales renderizan un `AppButton`. |
+| `AppSectionTitle` | Encabezado de sección. | `subtitle` opcional; `actionLabel`/`onActionTap` renderizan un "Ver todo" (`trailing` sigue disponible y tiene prioridad si se pasa). |
+| `AppDivider` | Separador con espaciado vertical consistente. | — |
+| `FadeIn` / `ScaleIn` / `SlideIn` | Animaciones de entrada. | Únicas animaciones permitidas — no crear nuevas sin aprobación. |
+
+## Buenas prácticas
+
+- Consumir siempre un widget `App*` existente antes de construir algo con
+  Material puro (`Card`, `TextFormField`, `ElevatedButton`, etc.) — si el
+  widget existente no alcanza, primero considerar si un parámetro opcional
+  nuevo lo resolvería (como se hizo aquí con `prefixIcon`/`suffixIcon` en
+  `AppTextField`) antes de salir del Design System.
+- Todo espaciado, radio, elevación o duración debe venir de
+  `AppSpacing`/`AppRadius`/`AppElevation`/`AppDurations` — nunca un número
+  suelto (`16.0`, `EdgeInsets.all(12)`) escrito directamente en una
+  pantalla o widget de negocio.
+- Los parámetros nuevos que se agreguen a un widget `App*` deben ser
+  **opcionales con default seguro**, para que las pantallas existentes
+  seguir compilando y funcionando sin cambios.
+
+## Cuándo reutilizar
+
+- Si dos o más pantallas necesitan el mismo patrón visual (tarjeta con
+  ícono + título + descripción, lista con estado vacío, encabezado con
+  acción "Ver todo"), ese patrón pertenece aquí, no duplicado en cada
+  feature.
+- Si un widget de negocio necesita un ícono, siempre `Icons.*` (Material)
+  — nunca un asset.
+- Si una pantalla necesita una animación de entrada, usar `FadeIn`,
+  `ScaleIn` o `SlideIn` existentes — no escribir una animación custom por
+  pantalla.
+
+## Qué NO debe hacerse
+
+- No definir colores, tipografías o radios directamente en una pantalla —
+  siempre a través del tema o los tokens.
+- No agregar paquetes externos de UI (animaciones, iconos, temas) sin
+  aprobación explícita del usuario.
+- No romper la firma pública de un widget `App*` existente (parámetros
+  requeridos, tipos) — las mejoras se agregan como parámetros opcionales
+  nuevos, nunca renombrando o quitando los existentes.
+- No introducir branding: logos, colores corporativos, tipografía propia,
+  ilustraciones o imágenes. La paleta y tipografía deben seguir siendo
+  neutras hasta que exista una identidad visual oficial aprobada.
+- No agregar lógica de negocio a ningún widget de `core/ui` — solo
+  presentación.
+
+## Qué queda pendiente cuando exista branding oficial
+
+- Reemplazar `AppColors` en `theme/app_theme.dart` por la paleta de marca.
+- Cambiar `fontFamily` en `AppTheme.light` (y agregar la fuente como asset
+  si no es del sistema).
+- Revisar si la marca requiere más de un color de énfasis en el
+  `ColorScheme` (hoy solo hay `primary`/`secondary` neutros).
+- Decidir si el logo aparece en `SplashPage` y/o en `AppTopBar` (del
+  feature `app_shell`) — ninguno de los dos lo referencia todavía.
+- Ningún widget de `core/ui` debería necesitar cambios de código más allá
+  de `app_theme.dart` — ese es precisamente el punto de tener un Design
+  System centralizado.
+
 ## Cómo agregar nuevos widgets
 
 1. El widget debe vivir en `widgets/` y seguir el prefijo `App*`.
