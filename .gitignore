@@ -1,0 +1,31 @@
+# Backend (NestJS)
+apps/backend/node_modules/
+apps/backend/dist/
+apps/backend/coverage/
+apps/backend/.env
+apps/backend/*.log
+
+# Flutter (mobile)
+apps/mobile/.dart_tool/
+apps/mobile/build/
+apps/mobile/.flutter-plugins
+apps/mobile/.flutter-plugins-dependencies
+apps/mobile/.pub-cache/
+apps/mobile/.pub/
+apps/mobile/*.iml
+apps/mobile/android/.gradle/
+apps/mobile/android/local.properties
+apps/mobile/android/**/GeneratedPluginRegistrant.java
+apps/mobile/ios/Flutter/Generated.xcconfig
+apps/mobile/ios/Flutter/flutter_export_environment.sh
+apps/mobile/ios/Pods/
+apps/mobile/windows/flutter/generated_plugin_registrant.*
+apps/mobile/linux/flutter/generated_plugin_registrant.*
+apps/mobile/macos/Flutter/GeneratedPluginRegistrant.*
+apps/mobile/.idea/
+
+# Editors / OS
+.vscode/
+.DS_Store
+Thumbs.db
+*.log

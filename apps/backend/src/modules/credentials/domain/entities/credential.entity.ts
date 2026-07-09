@@ -1,0 +1,35 @@
+import { Entity } from '../../../core/domain/base/entity.base';
+import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
+import { CredentialId } from '../value-objects/credential-id.value-object';
+import { CredentialType } from '../value-objects/credential-type.value-object';
+import { CredentialStatus } from '../value-objects/credential-status.value-object';
+
+export interface CredentialProps {
+  identityId: IdentityId;
+  type: CredentialType;
+  status: CredentialStatus;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Represents that a credential record of a given type exists for an Identity.
+ * Pure data holder — never stores the actual secret, hash, or key material;
+ * no persistence, no business rules.
+ */
+export class Credential extends Entity<CredentialId> {
+  public readonly identityId: IdentityId;
+  public readonly type: CredentialType;
+  public readonly status: CredentialStatus;
+  public readonly createdAt: Date;
+  public readonly updatedAt: Date;
+
+  constructor(id: CredentialId, props: CredentialProps) {
+    super(id);
+    this.identityId = props.identityId;
+    this.type = props.type;
+    this.status = props.status;
+    this.createdAt = props.createdAt;
+    this.updatedAt = props.updatedAt;
+  }
+}
