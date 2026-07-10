@@ -164,6 +164,7 @@ reemplazar el mock por un repositorio real.
 | 46 | `schedule` | Agenda concreta del proveedor: `Provider`/`List<Schedule>` reales (6 bloques cubriendo cada `ScheduleStatus`/`ScheduleType`), conteos por estado + horas abiertas + día/hora/tipo/estado de cada bloque, todo **derivado** de datos reales — **sin ningún campo simulado**, a diferencia de todos los features anteriores desde `service_detail`. | `provider_dashboard` (quinto botón "Agenda" en `QuickActions`, junto a "Ver servicios"/"Disponibilidad"/"Estadísticas"/"Configuración"). |
 | 47 | `contact_management` | Gestión de canales de contacto: `Profile`/`List<Contact>` reales (5 contactos cubriendo cada `ContactType`/`ContactStatus`), conteos por estado + tipo/valor/estado de cada contacto, todo **derivado** de datos reales — **sin ningún campo simulado**, mismo criterio que `schedule`. `Contact` ya existía como dato de apoyo en `address_management` pero nunca había tenido pantalla propia. | `settings` (nueva opción "Contactos" en el menú, junto a "Direcciones"). |
 | 48 | `security` | Métodos de autenticación de la cuenta: `Identity`/`List<Authentication>` reales (5 métodos cubriendo cada `AuthMethodType`/`AuthenticationStatus`), conteos por estado + tipo/estado de cada método, todo **derivado** de datos reales — **sin ningún campo simulado**, mismo criterio que `schedule`/`contact_management`. `Authentication` nunca se había usado en ningún feature; `Credentials` (material secreto) queda explícitamente fuera de alcance. | `settings` (nueva opción "Seguridad" en el menú, junto a "Contactos"). |
+| 49 | `security` *(extensión)* | Se agregó `List<Credential>` real (4 credenciales cubriendo cada `CredentialType`/`CredentialStatus`) al mismo feature `security` — **no se creó un feature nuevo**: `Credential` es conceptualmente casi idéntico a `Authentication` y el propio README de `security` ya había anticipado esta extensión desde el Prompt 48. `SecurityDisplay`/`SecurityRepository`/`SecurityPage` ganaron el campo/método/sección nuevos; conteos por estado de credenciales también derivados, sin campos simulados. | Sin cambio de navegación — `security` ya era alcanzable desde `settings` ("Seguridad"). |
 
 Mismo patrón exacto que 26–30 en los 13 features nuevos (31–43):
 `presentation/` + `models/` (composición tipada) +
@@ -229,6 +230,13 @@ flutter run -d windows    ✅ compila y corre sin errores
 ```
 flutter analyze          ✅ No issues found!
 flutter test              ✅ 736/736 tests
+flutter run -d windows    ✅ compila y corre sin errores
+```
+
+### Verificación Flutter (actualizada — Prompt 49 aprobado)
+```
+flutter analyze          ✅ No issues found!
+flutter test              ✅ 740/740 tests
 flutter run -d windows    ✅ compila y corre sin errores
 ```
 
@@ -520,7 +528,7 @@ prompt asignado.
 ### Actualización — Siguiente prompt real (tras el Prompt 48)
 
 **Prompt 49 — Credentials, como extensión de `security` (no un feature
-nuevo)**, siguiente prompt acordado con el usuario. Revisión
+nuevo)**. **Aprobado por el usuario y consolidado.** Revisión
 arquitectónica previa a implementar: el módulo de dominio `Credentials`
 (ya completo — ver sección 3) modela que existe material de credencial
 de un tipo dado (`password`/`recoveryCode`/`securityKey`/`other`) para
@@ -538,8 +546,29 @@ contrato actual de `SecurityRepository`"*. Crear un feature
 `SecurityDisplay`, nuevo método en `SecurityRepository`, nueva sección
 visual en `SecurityPage`) en vez de crear un feature nuevo. No hizo
 falta ningún cambio de navegación: `security` ya es alcanzable desde
-`settings` ("Seguridad"). El Sprint de Branding sigue como hito grande
-pendiente, todavía sin número de prompt asignado.
+`settings` ("Seguridad"). Verificado con `flutter analyze` (`No issues
+found!`), `flutter test` (740/740) y `dart format .`. El Sprint de
+Branding sigue como hito grande pendiente, todavía sin número de
+prompt asignado.
+
+### Actualización — Siguiente prompt real (tras el Prompt 49)
+
+**Prompt 50 — Audit, como extensión de `security` (no un feature
+nuevo)**, siguiente prompt acordado con el usuario. Revisión
+arquitectónica previa a implementar (ver sección "Fase 2" del handoff
+de esta sesión para el detalle completo): de los tres módulos de
+dominio que ningún feature usaba todavía (`Audit`, `Attachment`,
+`Message`), `Message` ya estaba resuelto — `chat` (Prompt 35) lo usa
+como entidad real desde su construcción original, no quedaba trabajo
+ahí. Entre `Audit` y `Attachment`, se eligió `Audit` porque encaja
+naturalmente como "Actividad reciente de la cuenta" junto a
+`Authentication`/`Credentials`, ya presentes en `security` — mismo
+patrón de extensión ya validado en el Prompt 49, evitando crear un
+feature nuevo para una entidad que únicamente referencia `IdentityId`.
+`Attachment` (archivo adjunto a un `Message`) queda documentado como
+oportunidad futura para `chat`, no descartado, solo no elegido para
+este prompt. El Sprint de Branding sigue como hito grande pendiente,
+todavía sin número de prompt asignado.
 
 ## 11. Sugerencia de versionado (aún no aplicada)
 
@@ -883,6 +912,42 @@ anteriores (que se conservan como registro histórico, sin eliminar).
   los Prompts 19–48.
 - Si el working tree tiene cambios sin commitear más allá del logo,
   **no asumir que son del Prompt 49** — confirmar con el usuario antes
+  de continuar, siguiendo la misma disciplina usada en cada prompt
+  anterior.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 49 consolidado, previo al Prompt 50)
+
+Este es el handoff vigente — más reciente que los ocho bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+
+- **El Prompt 49 (`security` extendido con `Credentials`) fue aprobado
+  explícitamente por el usuario**, verificado con `flutter analyze`
+  (`No issues found!`), `flutter test` (740/740), `dart format .` y
+  `git status`.
+- Se creó un **único commit exclusivo del Prompt 49** con el mensaje
+  `Prompt 49 - Security extended with Credentials` (ver `git log -1`
+  para el hash exacto — no se fija aquí el hash literal por la misma
+  razón de auto-referencia explicada en secciones anteriores). Incluye
+  la extensión completa de `security` (mock/modelo/repositorio/
+  widgets/README) — **sin incluir `Logo oficial grupo.svg`** (branding
+  sigue congelado, ver sección 7). No hubo cambio de navegación: no se
+  tocó ningún otro feature.
+- `git status` tras el commit quedó exactamente:
+  ```
+  On branch main
+  Untracked files:
+          Logo oficial grupo.svg
+  nothing added to commit but untracked files present
+  ```
+- Si al abrir una nueva sesión `git status` muestra ese commit como el
+  más reciente y el working tree está limpio (salvo el
+  `Logo oficial grupo.svg` sin trackear), el estado es exactamente el
+  que se describe en este documento — se puede continuar directamente
+  con el **Prompt 50 — Audit (extensión de `security`)** (siguiente
+  prompt acordado, ver sección 10) sin re-verificar nada de los Prompts
+  19–49.
+- Si el working tree tiene cambios sin commitear más allá del logo,
+  **no asumir que son del Prompt 50** — confirmar con el usuario antes
   de continuar, siguiendo la misma disciplina usada en cada prompt
   anterior.
 - **A partir de esta sesión, el usuario solicitó un modo de trabajo

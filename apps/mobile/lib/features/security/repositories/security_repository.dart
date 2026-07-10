@@ -1,4 +1,5 @@
 import '../../../authentication/entities/authentication.dart';
+import '../../../credentials/entities/credential.dart';
 import '../../../identity/entities/identity.dart';
 
 /// Contract for reading the domain entities the Security screen needs.
@@ -9,4 +10,5 @@ import '../../../identity/entities/identity.dart';
 abstract class SecurityRepository {
   Identity getIdentity();
   List<Authentication> getAuthMethods();
+  List<Credential> getCredentials();
 }

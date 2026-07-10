@@ -7,6 +7,7 @@ import '../../models/security_display.dart';
 import '../../repositories/mock_security_repository.dart';
 import '../widgets/add_auth_method_button.dart';
 import '../widgets/auth_method_card.dart';
+import '../widgets/credentials_section.dart';
 import '../widgets/security_empty_state.dart';
 import '../widgets/security_header.dart';
 import '../widgets/security_loading.dart';
@@ -33,6 +34,7 @@ class SecurityPage extends StatelessWidget {
     return SecurityDisplay(
       identity: repository.getIdentity(),
       authMethods: repository.getAuthMethods(),
+      credentials: repository.getCredentials(),
     );
   }
 
@@ -60,6 +62,8 @@ class SecurityPage extends StatelessWidget {
               ),
             ),
             const AddAuthMethodButton(),
+            const SizedBox(height: AppSpacing.space16),
+            SlideIn(child: CredentialsSection(data: data)),
           ],
         );
     }

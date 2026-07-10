@@ -30,11 +30,11 @@ los métodos reales de la cuenta.
 security/
 ├── README.md
 ├── mock/
-│   └── mock_security_data.dart          Seed: Identity + 5 Authentication reales
+│   └── mock_security_data.dart          Seed: Identity + 5 Authentication + 4 Credential reales
 ├── models/
-│   └── security_display.dart             Identity + List<Authentication>, todo derivado
+│   └── security_display.dart             Identity + List<Authentication> + List<Credential>, todo derivado
 ├── repositories/
-│   ├── security_repository.dart           Contrato: Identity, List<Authentication>
+│   ├── security_repository.dart           Contrato: Identity, List<Authentication>, List<Credential>
 │   └── mock_security_repository.dart      Implementación en memoria
 └── presentation/
     ├── pages/
@@ -45,6 +45,8 @@ security/
         ├── auth_method_card.dart
         ├── auth_method_actions.dart
         ├── add_auth_method_button.dart
+        ├── credentials_section.dart
+        ├── credential_card.dart
         ├── security_loading.dart
         └── security_empty_state.dart
 
@@ -55,12 +57,16 @@ test/features/security/ (tests del repositorio, la página, responsive, navegaci
   `Authentication` reales que cubren cada valor de `AuthMethodType`
   (`password`/`biometric`/`oneTimeCode`/`thirdParty`/`other`) y cada
   valor de `AuthenticationStatus`
-  (`active`/`inactive`/`locked`/`revoked`) al menos una vez, todos
-  prefijados `security-` — este feature muestra los métodos de **una
-  sola cuenta fija**, no hay lookup por ID ni login real todavía.
+  (`active`/`inactive`/`locked`/`revoked`) al menos una vez, más 4
+  `Credential` reales que cubren cada valor de `CredentialType`
+  (`password`/`recoveryCode`/`securityKey`/`other`) y cada valor de
+  `CredentialStatus` (`active`/`expired`/`revoked`) al menos una vez,
+  todos prefijados `security-` — este feature muestra los métodos y
+  credenciales de **una sola cuenta fija**, no hay lookup por ID ni
+  login real todavía.
 - **`repositories/`**: `SecurityRepository` (contrato) +
   `MockSecurityRepository`, que devuelven **únicamente entidades reales
-  del dominio** (`Identity`, `Authentication`) — nunca
+  del dominio** (`Identity`, `Authentication`, `Credential`) — nunca
   `Map<String, dynamic>`, `dynamic` ni JSON.
 - **`models/`**: `SecurityDisplay`, la única composición de
   presentación de este feature.
@@ -71,18 +77,32 @@ test/features/security/ (tests del repositorio, la página, responsive, navegaci
 
 | Campo | Origen |
 |---|---|
-| `identity`, `authMethods` | Entidades **reales** del dominio (`identity/`, `authentication/`), servidas por el repositorio **mock** (`MockSecurityRepository`, datos fijos en memoria). |
-| Conteos por estado (`activeCount`/`inactiveCount`/`lockedCount`/`revokedCount`), tipo/estado de cada método | **Derivados, no simulados**: calculados directamente de la lista real de `Authentication`. |
+| `identity`, `authMethods`, `credentials` | Entidades **reales** del dominio (`identity/`, `authentication/`, `credentials/`), servidas por el repositorio **mock** (`MockSecurityRepository`, datos fijos en memoria). |
+| Conteos por estado (`activeCount`/`inactiveCount`/`lockedCount`/`revokedCount` para métodos; `activeCredentialsCount`/`expiredCredentialsCount`/`revokedCredentialsCount` para credenciales), tipo/estado de cada registro | **Derivados, no simulados**: calculados directamente de las listas reales de `Authentication`/`Credential`. |
 
 **No existe ningún campo simulado en este feature** — mismo criterio ya
 aplicado en `schedule` (Prompt 46) y `contact_management` (Prompt 47):
-el dominio `Authentication` ya modela exactamente lo que la pantalla
-necesita (tipo de método, estado), así que no hubo ningún dato ausente
-que fabricar. **No se usa el módulo `Credentials`**: `Authentication`
-dice qué método existe; `Credentials` representaría el material
-secreto asociado — este feature no necesita ni expone secretos, solo
-la lista de métodos disponibles, así que `Credentials` queda fuera de
-alcance intencionalmente.
+los dominios `Authentication`/`Credentials` ya modelan exactamente lo
+que la pantalla necesita (tipo, estado), así que no hubo ningún dato
+ausente que fabricar. `Credential` únicamente referencia `IdentityId`
+— nunca `Authentication` — por eso las dos listas se muestran una junto
+a la otra, sin cruzarlas ni inventar una relación que el dominio no
+define.
+
+### Historial: `Credentials` como extensión planeada, no un feature nuevo
+
+El Prompt 48 (versión original de este feature) dejó documentado aquí
+mismo que *"Cuando se decida modelar el material secreto en sí,
+`Credentials` se sumaría como una entidad adicional del repositorio,
+sin romper el contrato actual de `SecurityRepository`"*. El Prompt 49
+cumplió exactamente esa promesa: se evaluó crear un feature
+`credentials` independiente, pero se descartó porque hubiera producido
+una pantalla casi idéntica a esta (mismo punto de entrada en
+`settings`, misma estructura visual), duplicando UI sin aportar
+separación de responsabilidades real. Se extendió `security` en su
+lugar — `SecurityDisplay`/`SecurityRepository`/`SecurityPage` ganaron
+un campo/método/sección nuevos, sin ningún cambio de navegación (ya era
+alcanzable desde "Seguridad" en `settings`).
 
 **Sin colores ni iconos en el modelo**: `SecurityDisplay` no almacena
 ningún `Color` ni `IconData`. `AuthMethodCard` resuelve su ícono (por
@@ -98,12 +118,6 @@ features desde `search`. Por defecto renderiza `information` con los 5
 métodos mock.
 
 ## Cómo conectar posteriormente
-
-### Con Credentials
-
-Cuando se decida modelar el material secreto en sí (Prompt futuro),
-`Credentials` se sumaría como una entidad adicional del repositorio, sin
-romper el contrato actual de `SecurityRepository`.
 
 ### Con Backend
 
@@ -122,14 +136,15 @@ reales:
 
 ## Cambio mínimo en Settings
 
-Este prompt autorizó explícitamente un único cambio, exclusivamente
-para poder abrir esta pantalla: en `settings/models/settings_option.dart`
-se agregó `SettingsOptionId.security` ("Seguridad", junto a
-"Contactos") y en
+El Prompt 48 (versión original de este feature) autorizó explícitamente
+un único cambio, exclusivamente para poder abrir esta pantalla: en
+`settings/models/settings_option.dart` se agregó
+`SettingsOptionId.security` ("Seguridad", junto a "Contactos") y en
 `settings/presentation/pages/settings_page.dart` se conectó esa opción
 para navegar con `Navigator.push` a `SecurityPage` — el mismo patrón
-que ya usan "Direcciones"/"Contactos". Ninguna otra navegación fue
-modificada.
+que ya usan "Direcciones"/"Contactos". El Prompt 49 (extensión con
+`Credentials`) **no requirió ningún cambio de navegación adicional** —
+`SecurityPage` ya era alcanzable, solo ganó contenido nuevo.
 
 ## Qué widgets son reutilizables
 
@@ -139,6 +154,9 @@ modificada.
 - **`AuthMethodActions`**: dos botones fijos — reutilizable donde se
   necesite exactamente ese CTA doble, mismo espíritu que
   `ContactActions`.
+- **`CredentialCard`**: genérico (recibe un `Credential`), mismo
+  espíritu que `AuthMethodCard` pero sin acciones — este prompt no pidió
+  editar/eliminar credenciales, solo mostrarlas.
 - **`SecurityEmptyState`**, **`SecurityLoading`**: envoltorios delgados
   sobre `AppEmptyState`/`AppLoading` — reutilizables donde se necesiten
   esos estados con esta copy.
@@ -146,7 +164,9 @@ modificada.
 ## Qué NO existe todavía (a propósito)
 
 Backend, HTTP, gestión de estado (Provider/Riverpod/Bloc/Cubit/
-ViewModel), persistencia, login real, material secreto (`Credentials`),
-lookup por ID. Los botones "Agregar método"/"Desactivar"/"Eliminar" no
-hacen nada más que existir visualmente. Todo el contenido mostrado es
-real o derivado de datos reales, como se detalla arriba.
+ViewModel), persistencia, login real, el secreto real detrás de cada
+`Credential` (el dominio nunca lo almacena), lookup por ID. Los botones
+"Agregar método"/"Desactivar"/"Eliminar" no hacen nada más que existir
+visualmente; `CredentialCard` no tiene ninguna acción todavía. Todo el
+contenido mostrado es real o derivado de datos reales, como se detalla
+arriba.

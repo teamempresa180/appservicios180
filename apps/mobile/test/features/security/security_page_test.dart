@@ -6,6 +6,8 @@ import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
 import 'package:mobile/features/security/presentation/pages/security_page.dart';
 import 'package:mobile/features/security/presentation/widgets/auth_method_card.dart';
+import 'package:mobile/features/security/presentation/widgets/credential_card.dart';
+import 'package:mobile/features/security/presentation/widgets/credentials_section.dart';
 import 'package:mobile/features/security/presentation/widgets/security_statistics.dart';
 
 void main() {
@@ -43,7 +45,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AuthMethodCard), findsNWidgets(5));
-    expect(find.text('Contraseña'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AuthMethodCard),
+        matching: find.text('Contraseña'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Biometría'), findsOneWidget);
     expect(find.text('Código de un solo uso'), findsOneWidget);
     expect(find.text('Cuenta de terceros'), findsOneWidget);
@@ -67,6 +75,30 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Agregar método'), findsOneWidget);
+  });
+
+  testWidgets('shows every mock credential with its type and status', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CredentialsSection), findsOneWidget);
+    expect(find.byType(CredentialCard), findsNWidgets(4));
+    expect(
+      find.descendant(
+        of: find.byType(CredentialCard),
+        matching: find.text('Contraseña'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Código de recuperación'), findsOneWidget);
+    expect(find.text('Llave de seguridad'), findsOneWidget);
+    expect(find.text('Otra credencial'), findsOneWidget);
+    expect(find.text('Activa'), findsNWidgets(2));
+    expect(find.text('Expirada'), findsOneWidget);
+    expect(find.text('Revocada'), findsOneWidget);
+    expect(find.text('2 activas · 1 expiradas · 1 revocadas'), findsOneWidget);
   });
 
   testWidgets('loading state shows AppLoading instead of the list', (

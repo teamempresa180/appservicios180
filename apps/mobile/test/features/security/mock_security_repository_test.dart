@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/authentication/entities/authentication.dart';
+import 'package:mobile/credentials/entities/credential.dart';
 import 'package:mobile/features/security/repositories/mock_security_repository.dart';
 import 'package:mobile/identity/entities/identity.dart';
 
@@ -29,6 +30,27 @@ void main() {
       final identityId = repository.getIdentity().id;
       expect(
         repository.getAuthMethods().every((a) => a.identityId == identityId),
+        isTrue,
+      );
+    });
+
+    test('getCredentials returns real Credential entities, not maps', () {
+      final credentials = repository.getCredentials();
+      expect(credentials, isNotEmpty);
+      expect(credentials, everyElement(isA<Credential>()));
+    });
+
+    test('returns four credentials covering every type and status', () {
+      final credentials = repository.getCredentials();
+      expect(credentials.length, equals(4));
+      expect(credentials.map((c) => c.type).toSet().length, equals(4));
+      expect(credentials.map((c) => c.status).toSet().length, equals(3));
+    });
+
+    test('every credential references the same identity returned', () {
+      final identityId = repository.getIdentity().id;
+      expect(
+        repository.getCredentials().every((c) => c.identityId == identityId),
         isTrue,
       );
     });

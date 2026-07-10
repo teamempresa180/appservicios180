@@ -2,6 +2,10 @@ import '../../../authentication/entities/authentication.dart';
 import '../../../authentication/models/auth_method_type.dart';
 import '../../../authentication/models/authentication_id.dart';
 import '../../../authentication/models/authentication_status.dart';
+import '../../../credentials/entities/credential.dart';
+import '../../../credentials/models/credential_id.dart';
+import '../../../credentials/models/credential_status.dart';
+import '../../../credentials/models/credential_type.dart';
 import '../../../identity/entities/identity.dart';
 import '../../../identity/models/document_type.dart';
 import '../../../identity/models/identity_id.dart';
@@ -67,6 +71,45 @@ final List<Authentication> mockAuthMethods = [
     identityId: _identityId,
     methodType: AuthMethodType.other,
     status: AuthenticationStatus.revoked,
+    createdAt: _seedTimestamp,
+    updatedAt: _seedTimestamp,
+  ),
+];
+
+/// Four real `Credential` records covering every `CredentialType` and
+/// every `CredentialStatus` at least once. `Credential` only
+/// references `IdentityId` (never `Authentication`), per the domain's
+/// own rule — see the feature README for how these two lists relate.
+final List<Credential> mockCredentials = [
+  Credential(
+    id: CredentialId.fromString('security-credential-password'),
+    identityId: _identityId,
+    type: CredentialType.password,
+    status: CredentialStatus.active,
+    createdAt: _seedTimestamp,
+    updatedAt: _seedTimestamp,
+  ),
+  Credential(
+    id: CredentialId.fromString('security-credential-recovery-code'),
+    identityId: _identityId,
+    type: CredentialType.recoveryCode,
+    status: CredentialStatus.active,
+    createdAt: _seedTimestamp,
+    updatedAt: _seedTimestamp,
+  ),
+  Credential(
+    id: CredentialId.fromString('security-credential-security-key'),
+    identityId: _identityId,
+    type: CredentialType.securityKey,
+    status: CredentialStatus.expired,
+    createdAt: _seedTimestamp,
+    updatedAt: _seedTimestamp,
+  ),
+  Credential(
+    id: CredentialId.fromString('security-credential-other'),
+    identityId: _identityId,
+    type: CredentialType.other,
+    status: CredentialStatus.revoked,
     createdAt: _seedTimestamp,
     updatedAt: _seedTimestamp,
   ),
