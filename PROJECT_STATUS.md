@@ -160,6 +160,7 @@ reemplazar el mock por un repositorio real.
 | 42 | `provider_services` | Administración de servicios publicados: estadísticas activos/pausados (derivadas de `Service.status`), lista de servicios, acciones Editar/Pausar/Eliminar no-op. | `provider_dashboard` ("Ver servicios"). |
 | 43 | `availability` | Horario semanal del proveedor (Lunes–Domingo): 7 `Availability` reales (una por día), disponible/no disponible y horas derivados de `Availability.status`/`availableFrom`/`availableTo`, estadísticas derivadas + próxima disponibilidad simulada, acciones Editar/Copiar/Limpiar horario no-op. | `provider_dashboard` ("Disponibilidad"). |
 | 44 | `verification` | Verificación de identidad: `Identity`/`Profile` reales (una cuenta fija), nombre completo/tipo de documento reales (passthrough), `verificationStatus`/`completedSteps`/`pendingSteps`/`rejectedReason`/`estimatedReviewTime` totalmente simulados (el módulo de dominio `Verification` existe pero el prompt no lo incluyó en el contrato del repositorio — documentado explícitamente en el README como excepción al patrón "derivado, no simulado"), selfie simulada, 3 estados visuales (loading/empty/information). | `provider_profile` (tercer botón "Verificación", agregado junto a "Solicitar servicio"/"Chat"). |
+| 45 | `trust` | Confianza y reputación: `Identity`/`Trust` reales (una cuenta fija), puntaje/nivel/estado/última actualización reales (passthrough de `Trust.score`/`level`/`status`/`updatedAt`, sin restricción de entidades como en `verification`), `factors` (desglose de por qué el puntaje es el que es) totalmente simulado porque el propio dominio `Trust` está documentado como "sin lógica de cálculo". | `provider_profile` (cuarto botón "Confianza", agregado junto a "Solicitar servicio"/"Chat"/"Verificación"). |
 
 Mismo patrón exacto que 26–30 en los 13 features nuevos (31–43):
 `presentation/` + `models/` (composición tipada) +
@@ -197,6 +198,13 @@ flutter run -d windows    ✅ compila y corre sin errores
 ```
 flutter analyze          ✅ No issues found!
 flutter test              ✅ 656/656 tests
+flutter run -d windows    ✅ compila y corre sin errores
+```
+
+### Verificación Flutter (actualizada — Prompt 45 aprobado)
+```
+flutter analyze          ✅ No issues found!
+flutter test              ✅ 674/674 tests
 flutter run -d windows    ✅ compila y corre sin errores
 ```
 
@@ -240,6 +248,16 @@ sentido estricto (no derivados), a diferencia del patrón usado en
 `orders`/`provider_services`/`availability`. Ver el README de
 `features/verification/` para el detalle completo de esta excepción
 documentada.
+
+**Actualización (Prompt 45)**: `Trust` ya existe como feature 100%
+visual/mock (`trust`), abierto desde `provider_profile` (cuarto botón
+"Confianza"). A diferencia de `Verification`, este prompt no restringió
+las entidades permitidas, así que el feature usa directamente el
+módulo de dominio real `Trust` (`score`/`level`/`status`/`updatedAt`
+reales) — solo `factors` (el desglose de por qué el puntaje es el que
+es) queda simulado, porque la propia entidad `Trust` está documentada
+en el dominio como "sin lógica de cálculo". Ver el README de
+`features/trust/` para el detalle completo.
 
 ## 5. Decisiones arquitectónicas importantes
 
@@ -385,13 +403,28 @@ todavía sin número de prompt asignado.
 
 ### Actualización — Siguiente prompt real (tras el Prompt 44)
 
-**Prompt 45 — Trust**, siguiente prompt acordado con el usuario,
+**Prompt 45 — Trust (visual completo)**. **Aprobado por el usuario y
+consolidado.** Compone `Identity`/`Trust` reales del dominio (módulos
+ya completos — ver sección 3), sin restricción de entidades — por eso
+usa directamente `Trust.score`/`level`/`status`/`updatedAt` reales, con
+solo `factors` simulado (ver nota en sección 4). Cambio mínimo
+aplicado: un cuarto botón "Confianza" en `provider_profile` (junto a
+"Solicitar servicio"/"Chat"/"Verificación") que navega con
+`Navigator.push` a `TrustPage`. Verificado con `flutter analyze` (`No
+issues found!`), `flutter test` (674/674) y `dart format .`. El Sprint
+de Branding sigue como hito grande pendiente, todavía sin número de
+prompt asignado.
+
+### Actualización — Siguiente prompt real (tras el Prompt 45)
+
+**Prompt 46 — Schedule**, siguiente prompt acordado con el usuario,
 siguiendo el mismo patrón arquitectónico usado desde `service_detail`
-hasta `verification`: módulo de dominio `Trust` (ya completo — ver
-sección 3) compuesto junto a las entidades reales que el prompt
-indique, con cualquier campo simulado documentado explícitamente en el
-modelo y el README. El Sprint de Branding sigue como hito grande
-pendiente, todavía sin número de prompt asignado.
+hasta `trust`: módulo de dominio `Schedule` (ya completo — ver sección
+3) compuesto junto a `Provider` real, mostrando la agenda concreta de
+bloques de tiempo del proveedor (distinta de `Availability`, que
+declara disponibilidad semanal amplia — ver el README propio del
+dominio `schedule/` para la diferencia). El Sprint de Branding sigue
+como hito grande pendiente, todavía sin número de prompt asignado.
 
 ## 11. Sugerencia de versionado (aún no aplicada)
 
@@ -598,5 +631,39 @@ anteriores (que se conservan como registro histórico, sin eliminar).
   sección 10) sin re-verificar nada de los Prompts 19–44.
 - Si el working tree tiene cambios sin commitear más allá del logo,
   **no asumir que son del Prompt 45** — confirmar con el usuario antes
+  de continuar, siguiendo la misma disciplina usada en cada prompt
+  anterior.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 45 consolidado, previo al Prompt 46)
+
+Este es el handoff vigente — más reciente que los cuatro bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+
+- **El Prompt 45 (`trust`) fue aprobado explícitamente por el
+  usuario**, verificado con `flutter analyze` (`No issues found!`),
+  `flutter test` (674/674), `dart format .` y `git status`.
+- Se creó un **único commit exclusivo del Prompt 45** con el mensaje
+  `Prompt 45 - Trust feature completed` (ver `git log -1` para el hash
+  exacto — no se fija aquí el hash literal por la misma razón de
+  auto-referencia explicada en secciones anteriores). Incluye el
+  feature `trust` completo, el cambio mínimo de navegación en
+  `provider_profile`, y la actualización de este archivo —
+  **sin incluir `Logo oficial grupo.svg`** (branding sigue congelado,
+  ver sección 7).
+- `git status` tras el commit quedó exactamente:
+  ```
+  On branch main
+  Untracked files:
+          Logo oficial grupo.svg
+  nothing added to commit but untracked files present
+  ```
+- Si al abrir una nueva sesión `git status` muestra ese commit como el
+  más reciente y el working tree está limpio (salvo el
+  `Logo oficial grupo.svg` sin trackear), el estado es exactamente el
+  que se describe en este documento — se puede continuar directamente
+  con el **Prompt 46 — Schedule** (siguiente prompt acordado, ver
+  sección 10) sin re-verificar nada de los Prompts 19–45.
+- Si el working tree tiene cambios sin commitear más allá del logo,
+  **no asumir que son del Prompt 46** — confirmar con el usuario antes
   de continuar, siguiendo la misma disciplina usada en cada prompt
   anterior.

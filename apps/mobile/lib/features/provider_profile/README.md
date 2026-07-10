@@ -125,9 +125,9 @@ README de `service_detail`.
   `ProviderProfileData`/entidades concretas), pero con una estructura
   interna (tarjeta + `AppSectionTitle`) consistente con el resto de la
   app.
-- **`ProviderActions`**: envoltorio delgado sobre tres `AppButton` con
-  labels fijos — reutilizable donde se necesiten exactamente esos tres
-  CTA.
+- **`ProviderActions`**: envoltorio delgado sobre cuatro `AppButton` con
+  labels fijos — reutilizable donde se necesiten exactamente esos
+  cuatro CTA.
 
 ## Qué NO existe todavía (a propósito)
 
@@ -152,3 +152,9 @@ servicio"/"Chat") que navega (vía `Navigator.push`, no `GoRouter`) a
 `VerificationPage` — el único cambio permitido en este feature para
 ese prompt. Ver el README de `features/verification/` para más
 contexto.
+
+**Actualización (feature `trust`)**: `ProviderActions` ahora incluye un
+cuarto botón "Confianza" (antes "Solicitar servicio"/"Chat"/
+"Verificación") que navega (vía `Navigator.push`, no `GoRouter`) a
+`TrustPage` — el único cambio permitido en este feature para ese
+prompt. Ver el README de `features/trust/` para más contexto.
