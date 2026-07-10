@@ -148,7 +148,7 @@ navegación fue modificada.
   específicos de este feature (reciben `ProviderDashboardDisplay`),
   pero con estructura (tarjeta + `AppSectionTitle`) consistente con el
   resto de la app.
-- **`QuickActions`**: cuatro botones fijos — reutilizable donde se
+- **`QuickActions`**: cinco botones fijos — reutilizable donde se
   necesite exactamente ese conjunto de CTA.
 - **`DashboardEmptyState`**, **`DashboardLoading`**: envoltorios
   delgados sobre `AppEmptyState`/`AppLoading` — reutilizables donde se
@@ -176,3 +176,10 @@ de `QuickActions` ya no es un no-op — ahora navega (vía
 `Navigator.push`, no `GoRouter`) a `AvailabilityPage`, el único cambio
 permitido en este feature para ese prompt. Ver el README de
 `features/availability/` para más contexto.
+
+**Actualización (feature `schedule`)**: `QuickActions` ahora incluye un
+quinto botón "Agenda" (junto a "Ver servicios"/"Disponibilidad"/
+"Estadísticas"/"Configuración") que navega (vía `Navigator.push`, no
+`GoRouter`) a `SchedulePage` — el único cambio permitido en este
+feature para ese prompt. Ver el README de `features/schedule/` para más
+contexto.

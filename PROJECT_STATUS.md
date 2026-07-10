@@ -161,6 +161,7 @@ reemplazar el mock por un repositorio real.
 | 43 | `availability` | Horario semanal del proveedor (Lunes–Domingo): 7 `Availability` reales (una por día), disponible/no disponible y horas derivados de `Availability.status`/`availableFrom`/`availableTo`, estadísticas derivadas + próxima disponibilidad simulada, acciones Editar/Copiar/Limpiar horario no-op. | `provider_dashboard` ("Disponibilidad"). |
 | 44 | `verification` | Verificación de identidad: `Identity`/`Profile` reales (una cuenta fija), nombre completo/tipo de documento reales (passthrough), `verificationStatus`/`completedSteps`/`pendingSteps`/`rejectedReason`/`estimatedReviewTime` totalmente simulados (el módulo de dominio `Verification` existe pero el prompt no lo incluyó en el contrato del repositorio — documentado explícitamente en el README como excepción al patrón "derivado, no simulado"), selfie simulada, 3 estados visuales (loading/empty/information). | `provider_profile` (tercer botón "Verificación", agregado junto a "Solicitar servicio"/"Chat"). |
 | 45 | `trust` | Confianza y reputación: `Identity`/`Trust` reales (una cuenta fija), puntaje/nivel/estado/última actualización reales (passthrough de `Trust.score`/`level`/`status`/`updatedAt`, sin restricción de entidades como en `verification`), `factors` (desglose de por qué el puntaje es el que es) totalmente simulado porque el propio dominio `Trust` está documentado como "sin lógica de cálculo". | `provider_profile` (cuarto botón "Confianza", agregado junto a "Solicitar servicio"/"Chat"/"Verificación"). |
+| 46 | `schedule` | Agenda concreta del proveedor: `Provider`/`List<Schedule>` reales (6 bloques cubriendo cada `ScheduleStatus`/`ScheduleType`), conteos por estado + horas abiertas + día/hora/tipo/estado de cada bloque, todo **derivado** de datos reales — **sin ningún campo simulado**, a diferencia de todos los features anteriores desde `service_detail`. | `provider_dashboard` (quinto botón "Agenda" en `QuickActions`, junto a "Ver servicios"/"Disponibilidad"/"Estadísticas"/"Configuración"). |
 
 Mismo patrón exacto que 26–30 en los 13 features nuevos (31–43):
 `presentation/` + `models/` (composición tipada) +
@@ -205,6 +206,13 @@ flutter run -d windows    ✅ compila y corre sin errores
 ```
 flutter analyze          ✅ No issues found!
 flutter test              ✅ 674/674 tests
+flutter run -d windows    ✅ compila y corre sin errores
+```
+
+### Verificación Flutter (actualizada — Prompt 46 aprobado)
+```
+flutter analyze          ✅ No issues found!
+flutter test              ✅ 694/694 tests
 flutter run -d windows    ✅ compila y corre sin errores
 ```
 
@@ -258,6 +266,17 @@ reales) — solo `factors` (el desglose de por qué el puntaje es el que
 es) queda simulado, porque la propia entidad `Trust` está documentada
 en el dominio como "sin lógica de cálculo". Ver el README de
 `features/trust/` para el detalle completo.
+
+**Actualización (Prompt 46)**: `Schedule` ya existe como feature 100%
+visual/mock (`schedule`), abierto desde `provider_dashboard` (quinto
+botón "Agenda" en `QuickActions`). Este feature no tiene **ningún**
+campo simulado — a diferencia de todos los anteriores desde
+`service_detail` — porque el módulo de dominio real `Schedule` ya
+modela exactamente lo que la pantalla necesita (fecha/hora de
+inicio/fin, tipo, estado de cada bloque); todo lo mostrado (conteos por
+estado, horas abiertas) es una agregación derivada sobre esos datos
+100% reales. Ver el README de `features/schedule/` para el detalle
+completo, incluyendo la diferencia con `Availability`.
 
 ## 5. Decisiones arquitectónicas importantes
 
@@ -417,14 +436,35 @@ prompt asignado.
 
 ### Actualización — Siguiente prompt real (tras el Prompt 45)
 
-**Prompt 46 — Schedule**, siguiente prompt acordado con el usuario,
-siguiendo el mismo patrón arquitectónico usado desde `service_detail`
-hasta `trust`: módulo de dominio `Schedule` (ya completo — ver sección
-3) compuesto junto a `Provider` real, mostrando la agenda concreta de
+**Prompt 46 — Schedule (visual completo)**. **Aprobado por el usuario y
+consolidado.** Compone `Provider`/`List<Schedule>` reales del dominio
+(módulos ya completos — ver sección 3), mostrando la agenda concreta de
 bloques de tiempo del proveedor (distinta de `Availability`, que
 declara disponibilidad semanal amplia — ver el README propio del
-dominio `schedule/` para la diferencia). El Sprint de Branding sigue
-como hito grande pendiente, todavía sin número de prompt asignado.
+dominio `schedule/` para la diferencia). Sin ningún campo simulado —
+todo derivado de los 6 bloques reales del mock. Cambio mínimo aplicado:
+un quinto botón "Agenda" en `provider_dashboard` (`QuickActions`) que
+navega con `Navigator.push` a `SchedulePage`. Verificado con `flutter
+analyze` (`No issues found!`), `flutter test` (694/694) y `dart format
+.`. El Sprint de Branding sigue como hito grande pendiente, todavía sin
+número de prompt asignado.
+
+### Actualización — Siguiente prompt real (tras el Prompt 46)
+
+**Prompt 47 — Contact Management**, siguiente prompt acordado con el
+usuario. El módulo de dominio `Contact` (ya completo — ver sección 3)
+existía desde el inicio del proyecto pero solo se había usado de forma
+parcial: `address_management` (Prompt 40) reutiliza un único `Contact`
+fijo como dato de apoyo de cada dirección, sin darle nunca su propia
+pantalla de gestión. Este prompt le da a `Contact` el mismo tratamiento
+de primera clase que ya tienen `Address`/`Availability`/`Schedule`:
+lista de canales de contacto (correo/teléfono/otro) de una `Identity`,
+mostrando `Contact.type`/`value`/`status` reales sin necesidad de
+ningún campo simulado. Se integra abriéndose desde `settings` (nueva
+opción "Contactos" en el menú, junto a "Direcciones"), siguiendo
+exactamente el mismo patrón que Prompt 40 estableció para
+`address_management`. El Sprint de Branding sigue como hito grande
+pendiente, todavía sin número de prompt asignado.
 
 ## 11. Sugerencia de versionado (aún no aplicada)
 
@@ -665,5 +705,39 @@ anteriores (que se conservan como registro histórico, sin eliminar).
   sección 10) sin re-verificar nada de los Prompts 19–45.
 - Si el working tree tiene cambios sin commitear más allá del logo,
   **no asumir que son del Prompt 46** — confirmar con el usuario antes
+  de continuar, siguiendo la misma disciplina usada en cada prompt
+  anterior.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 46 consolidado, previo al Prompt 47)
+
+Este es el handoff vigente — más reciente que los cinco bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+
+- **El Prompt 46 (`schedule`) fue aprobado explícitamente por el
+  usuario**, verificado con `flutter analyze` (`No issues found!`),
+  `flutter test` (694/694), `dart format .` y `git status`.
+- Se creó un **único commit exclusivo del Prompt 46** con el mensaje
+  `Prompt 46 - Schedule feature completed` (ver `git log -1` para el
+  hash exacto — no se fija aquí el hash literal por la misma razón de
+  auto-referencia explicada en secciones anteriores). Incluye el
+  feature `schedule` completo, el cambio mínimo de navegación en
+  `provider_dashboard`, y la actualización de este archivo —
+  **sin incluir `Logo oficial grupo.svg`** (branding sigue congelado,
+  ver sección 7).
+- `git status` tras el commit quedó exactamente:
+  ```
+  On branch main
+  Untracked files:
+          Logo oficial grupo.svg
+  nothing added to commit but untracked files present
+  ```
+- Si al abrir una nueva sesión `git status` muestra ese commit como el
+  más reciente y el working tree está limpio (salvo el
+  `Logo oficial grupo.svg` sin trackear), el estado es exactamente el
+  que se describe en este documento — se puede continuar directamente
+  con el **Prompt 47 — Contact Management** (siguiente prompt acordado,
+  ver sección 10) sin re-verificar nada de los Prompts 19–46.
+- Si el working tree tiene cambios sin commitear más allá del logo,
+  **no asumir que son del Prompt 47** — confirmar con el usuario antes
   de continuar, siguiendo la misma disciplina usada en cada prompt
   anterior.

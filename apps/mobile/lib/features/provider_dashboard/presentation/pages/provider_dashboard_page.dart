@@ -5,6 +5,7 @@ import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../availability/presentation/pages/availability_page.dart';
 import '../../../provider_services/presentation/pages/provider_services_page.dart';
+import '../../../schedule/presentation/pages/schedule_page.dart';
 import '../../mock/mock_provider_dashboard_data.dart';
 import '../../models/provider_dashboard_display.dart';
 import '../../repositories/mock_provider_dashboard_repository.dart';
@@ -77,6 +78,17 @@ class ProviderDashboardPage extends StatelessWidget {
     );
   }
 
+  void _openSchedule(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Agenda')),
+          body: const SafeArea(child: SchedulePage()),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBody(BuildContext context) {
     switch (state) {
       case ProviderDashboardViewState.loading:
@@ -101,6 +113,7 @@ class ProviderDashboardPage extends StatelessWidget {
             QuickActions(
               onViewServices: () => _openProviderServices(context),
               onAvailability: () => _openAvailability(context),
+              onSchedule: () => _openSchedule(context),
             ),
           ],
         );
