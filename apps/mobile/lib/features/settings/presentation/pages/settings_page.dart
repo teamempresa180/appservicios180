@@ -3,6 +3,7 @@ import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../address_management/presentation/pages/address_management_page.dart';
+import '../../../contact_management/presentation/pages/contact_management_page.dart';
 import '../../models/settings_display.dart';
 import '../../models/settings_option.dart';
 import '../../repositories/mock_settings_repository.dart';
@@ -43,11 +44,29 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
+  void _openContacts(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Mis contactos')),
+          body: const SafeArea(child: ContactManagementPage()),
+        ),
+      ),
+    );
+  }
+
   VoidCallback? _onTapFor(BuildContext context, SettingsOptionId option) {
-    if (option == SettingsOptionId.addresses) {
-      return () => _openAddresses(context);
+    switch (option) {
+      case SettingsOptionId.addresses:
+        return () => _openAddresses(context);
+      case SettingsOptionId.contacts:
+        return () => _openContacts(context);
+      case SettingsOptionId.notifications:
+      case SettingsOptionId.privacy:
+      case SettingsOptionId.help:
+      case SettingsOptionId.logout:
+        return null;
     }
-    return null;
   }
 
   Widget _buildBody(BuildContext context) {

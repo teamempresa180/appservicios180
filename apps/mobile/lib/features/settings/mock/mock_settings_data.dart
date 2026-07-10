@@ -25,6 +25,7 @@ final Profile mockSettingsProfile = Profile(
 /// Simulated menu — see `SettingsDisplay` and the feature README.
 const List<SettingsOptionId> mockSettingsOptions = [
   SettingsOptionId.addresses,
+  SettingsOptionId.contacts,
   SettingsOptionId.notifications,
   SettingsOptionId.privacy,
   SettingsOptionId.help,

@@ -19,6 +19,8 @@ class SettingsOptionTile extends StatelessWidget {
     switch (option) {
       case SettingsOptionId.addresses:
         return Icons.location_on_outlined;
+      case SettingsOptionId.contacts:
+        return Icons.contact_mail_outlined;
       case SettingsOptionId.notifications:
         return Icons.notifications_outlined;
       case SettingsOptionId.privacy:
