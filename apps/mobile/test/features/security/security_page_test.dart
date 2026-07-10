@@ -5,6 +5,8 @@ import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
 import 'package:mobile/features/security/presentation/pages/security_page.dart';
+import 'package:mobile/features/security/presentation/widgets/audit_log_entry_card.dart';
+import 'package:mobile/features/security/presentation/widgets/audit_log_section.dart';
 import 'package:mobile/features/security/presentation/widgets/auth_method_card.dart';
 import 'package:mobile/features/security/presentation/widgets/credential_card.dart';
 import 'package:mobile/features/security/presentation/widgets/credentials_section.dart';
@@ -99,6 +101,38 @@ void main() {
     expect(find.text('Expirada'), findsOneWidget);
     expect(find.text('Revocada'), findsOneWidget);
     expect(find.text('2 activas · 1 expiradas · 1 revocadas'), findsOneWidget);
+  });
+
+  testWidgets('shows every mock audit entry, most-recent-first', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AuditLogSection), findsOneWidget);
+    expect(find.byType(AuditLogEntryCard), findsNWidgets(5));
+    expect(
+      find.text('Inicio de sesión desde un nuevo dispositivo (Windows).'),
+      findsOneWidget,
+    );
+    expect(find.text('Contraseña actualizada.'), findsOneWidget);
+    expect(
+      find.text('Se agregó biometría como método de autenticación.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Se eliminó una llave de seguridad expirada.'),
+      findsOneWidget,
+    );
+    expect(find.text('Cierre de sesión manual.'), findsOneWidget);
+
+    final firstEntry = tester.widget<AuditLogEntryCard>(
+      find.byType(AuditLogEntryCard).first,
+    );
+    expect(
+      firstEntry.entry.description,
+      equals('Inicio de sesión desde un nuevo dispositivo (Windows).'),
+    );
   });
 
   testWidgets('loading state shows AppLoading instead of the list', (

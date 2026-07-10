@@ -165,6 +165,7 @@ reemplazar el mock por un repositorio real.
 | 47 | `contact_management` | Gestión de canales de contacto: `Profile`/`List<Contact>` reales (5 contactos cubriendo cada `ContactType`/`ContactStatus`), conteos por estado + tipo/valor/estado de cada contacto, todo **derivado** de datos reales — **sin ningún campo simulado**, mismo criterio que `schedule`. `Contact` ya existía como dato de apoyo en `address_management` pero nunca había tenido pantalla propia. | `settings` (nueva opción "Contactos" en el menú, junto a "Direcciones"). |
 | 48 | `security` | Métodos de autenticación de la cuenta: `Identity`/`List<Authentication>` reales (5 métodos cubriendo cada `AuthMethodType`/`AuthenticationStatus`), conteos por estado + tipo/estado de cada método, todo **derivado** de datos reales — **sin ningún campo simulado**, mismo criterio que `schedule`/`contact_management`. `Authentication` nunca se había usado en ningún feature; `Credentials` (material secreto) queda explícitamente fuera de alcance. | `settings` (nueva opción "Seguridad" en el menú, junto a "Contactos"). |
 | 49 | `security` *(extensión)* | Se agregó `List<Credential>` real (4 credenciales cubriendo cada `CredentialType`/`CredentialStatus`) al mismo feature `security` — **no se creó un feature nuevo**: `Credential` es conceptualmente casi idéntico a `Authentication` y el propio README de `security` ya había anticipado esta extensión desde el Prompt 48. `SecurityDisplay`/`SecurityRepository`/`SecurityPage` ganaron el campo/método/sección nuevos; conteos por estado de credenciales también derivados, sin campos simulados. | Sin cambio de navegación — `security` ya era alcanzable desde `settings` ("Seguridad"). |
+| 50 | `security` *(extensión)* | Se agregó `List<Audit>` real (5 entradas cubriendo la mayoría de `AuditActionType`) al mismo feature `security` — **no se creó un feature nuevo**: `Audit` solo referencia `IdentityId` (mismo patrón que `Credential`) y encaja como "Actividad reciente de la cuenta". De los tres módulos sin uso (`Audit`, `Attachment`, `Message`), `Message` ya estaba resuelto por `chat`; `Attachment` quedó documentado como oportunidad futura para `chat`, no elegida esta vez. `SecurityDisplay`/`SecurityRepository`/`SecurityPage` ganaron el campo/método/sección nuevos, sin campos simulados (`sortedAuditLog` solo ordena, `Audit.description` es texto real). | Sin cambio de navegación — `security` ya era alcanzable desde `settings` ("Seguridad"). |
 
 Mismo patrón exacto que 26–30 en los 13 features nuevos (31–43):
 `presentation/` + `models/` (composición tipada) +
@@ -237,6 +238,13 @@ flutter run -d windows    ✅ compila y corre sin errores
 ```
 flutter analyze          ✅ No issues found!
 flutter test              ✅ 740/740 tests
+flutter run -d windows    ✅ compila y corre sin errores
+```
+
+### Verificación Flutter (actualizada — Prompt 50 aprobado)
+```
+flutter analyze          ✅ No issues found!
+flutter test              ✅ 744/744 tests
 flutter run -d windows    ✅ compila y corre sin errores
 ```
 
@@ -554,20 +562,36 @@ prompt asignado.
 ### Actualización — Siguiente prompt real (tras el Prompt 49)
 
 **Prompt 50 — Audit, como extensión de `security` (no un feature
-nuevo)**, siguiente prompt acordado con el usuario. Revisión
-arquitectónica previa a implementar (ver sección "Fase 2" del handoff
-de esta sesión para el detalle completo): de los tres módulos de
-dominio que ningún feature usaba todavía (`Audit`, `Attachment`,
-`Message`), `Message` ya estaba resuelto — `chat` (Prompt 35) lo usa
-como entidad real desde su construcción original, no quedaba trabajo
-ahí. Entre `Audit` y `Attachment`, se eligió `Audit` porque encaja
-naturalmente como "Actividad reciente de la cuenta" junto a
+nuevo)**. **Aprobado por el usuario y consolidado.** Revisión
+arquitectónica previa a implementar: de los tres módulos de dominio que
+ningún feature usaba todavía (`Audit`, `Attachment`, `Message`),
+`Message` ya estaba resuelto — `chat` (Prompt 35) lo usa como entidad
+real desde su construcción original, no quedaba trabajo ahí. Entre
+`Audit` y `Attachment`, se eligió `Audit` porque encaja naturalmente
+como "Actividad reciente de la cuenta" junto a
 `Authentication`/`Credentials`, ya presentes en `security` — mismo
 patrón de extensión ya validado en el Prompt 49, evitando crear un
 feature nuevo para una entidad que únicamente referencia `IdentityId`.
-`Attachment` (archivo adjunto a un `Message`) queda documentado como
-oportunidad futura para `chat`, no descartado, solo no elegido para
-este prompt. El Sprint de Branding sigue como hito grande pendiente,
+`Attachment` (archivo adjunto a un `Message`) quedó documentado como
+oportunidad futura para `chat`, no descartado, solo no elegido en ese
+momento. Verificado con `flutter analyze` (`No issues found!`),
+`flutter test` (744/744) y `dart format .`. El Sprint de Branding sigue
+como hito grande pendiente, todavía sin número de prompt asignado.
+
+### Actualización — Siguiente prompt real (tras el Prompt 50)
+
+**Prompt 51 — Attachment, como extensión de `chat` (no un feature
+nuevo)**, siguiente prompt acordado con el usuario, resultado de una
+auditoría completa del dominio (ver la sección "Fase 2" del handoff de
+esta sesión para la tabla A/B/C/D completa). Con esta extensión,
+`Attachment` era el único módulo de dominio de los 23 sin ninguna
+representación visual en ningún feature — se integró en `chat`
+(bounded context Communication, mismo al que pertenecen
+`Chat`/`Message`), no como feature nuevo, siguiendo exactamente el
+mismo criterio ya aplicado en `security` (Prompts 49–50). Con este
+prompt, **todos los módulos de dominio de negocio quedan con
+representación visual** (categoría A) — no queda ningún módulo en
+categoría C. El Sprint de Branding sigue como hito grande pendiente,
 todavía sin número de prompt asignado.
 
 ## 11. Sugerencia de versionado (aún no aplicada)
@@ -948,6 +972,41 @@ anteriores (que se conservan como registro histórico, sin eliminar).
   19–49.
 - Si el working tree tiene cambios sin commitear más allá del logo,
   **no asumir que son del Prompt 50** — confirmar con el usuario antes
+  de continuar, siguiendo la misma disciplina usada en cada prompt
+  anterior.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 50 consolidado, previo al Prompt 51)
+
+Este es el handoff vigente — más reciente que los nueve bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+
+- **El Prompt 50 (`security` extendido con `Audit`) fue aprobado
+  explícitamente por el usuario**, verificado con `flutter analyze`
+  (`No issues found!`), `flutter test` (744/744), `dart format .` y
+  `git status`.
+- Se creó un **único commit exclusivo del Prompt 50** con el mensaje
+  `Prompt 50 - Security extended with Audit` (ver `git log -1` para el
+  hash exacto — no se fija aquí el hash literal por la misma razón de
+  auto-referencia explicada en secciones anteriores). Incluye la
+  extensión completa de `security` (mock/modelo/repositorio/widgets/
+  README) — **sin incluir `Logo oficial grupo.svg`** (branding sigue
+  congelado, ver sección 7). No hubo cambio de navegación.
+- `git status` tras el commit quedó exactamente:
+  ```
+  On branch main
+  Untracked files:
+          Logo oficial grupo.svg
+  nothing added to commit but untracked files present
+  ```
+- Si al abrir una nueva sesión `git status` muestra ese commit como el
+  más reciente y el working tree está limpio (salvo el
+  `Logo oficial grupo.svg` sin trackear), el estado es exactamente el
+  que se describe en este documento — se puede continuar directamente
+  con el **Prompt 51 — Attachment (extensión de `chat`)** (siguiente
+  prompt acordado, ver sección 10) sin re-verificar nada de los Prompts
+  19–50.
+- Si el working tree tiene cambios sin commitear más allá del logo,
+  **no asumir que son del Prompt 51** — confirmar con el usuario antes
   de continuar, siguiendo la misma disciplina usada en cada prompt
   anterior.
 - **A partir de esta sesión, el usuario solicitó un modo de trabajo

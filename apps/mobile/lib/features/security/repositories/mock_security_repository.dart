@@ -1,3 +1,4 @@
+import '../../../audit/entities/audit.dart';
 import '../../../authentication/entities/authentication.dart';
 import '../../../credentials/entities/credential.dart';
 import '../../../identity/entities/identity.dart';
@@ -16,4 +17,7 @@ class MockSecurityRepository implements SecurityRepository {
 
   @override
   List<Credential> getCredentials() => List.unmodifiable(mockCredentials);
+
+  @override
+  List<Audit> getAuditLog() => List.unmodifiable(mockAuditLog);
 }

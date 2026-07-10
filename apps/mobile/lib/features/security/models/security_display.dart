@@ -1,3 +1,4 @@
+import '../../../audit/entities/audit.dart';
 import '../../../authentication/entities/authentication.dart';
 import '../../../authentication/models/authentication_status.dart';
 import '../../../credentials/entities/credential.dart';
@@ -5,20 +6,20 @@ import '../../../credentials/models/credential_status.dart';
 import '../../../identity/entities/identity.dart';
 
 /// Presentation-only composition of everything the Security screen
-/// needs. Composes three real domain entities — [identity],
-/// [authMethods], [credentials] — with **no simulated field at all**,
-/// the same intentional deviation already documented for
-/// `ScheduleDisplay`/`ContactManagementDisplay`: everything the screen
-/// shows (per-status counts, each record's type/status) is directly
-/// derivable from the real lists, so nothing needed to be fabricated.
-/// See the feature README.
+/// needs. Composes four real domain entities — [identity],
+/// [authMethods], [credentials], [auditLog] — with **no simulated
+/// field at all**, the same intentional deviation already documented
+/// for `ScheduleDisplay`/`ContactManagementDisplay`: everything the
+/// screen shows (per-status counts, each record's type/status/
+/// description) is directly derivable from the real lists, so nothing
+/// needed to be fabricated. See the feature README.
 ///
-/// [credentials] was added in a later prompt as a **planned
-/// extension** of this same feature (already anticipated in this
-/// feature's own README) rather than as a brand-new feature:
-/// `Credential` only references `IdentityId` — never `Authentication`
-/// — per the domain's own rule, so the two lists are shown side by
-/// side, not merged or cross-referenced.
+/// [credentials] and [auditLog] were both added in later prompts as
+/// **planned extensions** of this same feature (already anticipated in
+/// this feature's own README) rather than as brand-new features:
+/// `Credential`/`Audit` only reference `IdentityId` — never
+/// `Authentication` — per the domain's own rule, so all three lists
+/// are shown side by side, not merged or cross-referenced.
 ///
 /// Nothing here is added to the domain entities themselves. No `Color`
 /// or `IconData` is stored anywhere in this model — every widget
@@ -29,11 +30,13 @@ class SecurityDisplay {
     required this.identity,
     required this.authMethods,
     required this.credentials,
+    required this.auditLog,
   });
 
   final Identity identity;
   final List<Authentication> authMethods;
   final List<Credential> credentials;
+  final List<Audit> auditLog;
 
   /// Derived from the real [authMethods] — see the class doc.
   int get activeCount =>
@@ -63,4 +66,9 @@ class SecurityDisplay {
   /// Derived from the real [credentials] — see the class doc.
   int get revokedCredentialsCount =>
       credentials.where((c) => c.status == CredentialStatus.revoked).length;
+
+  /// Derived from the real [auditLog] — see the class doc. `Audit` has
+  /// no `status`; entries are shown most-recent-first.
+  List<Audit> get sortedAuditLog =>
+      [...auditLog]..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
 }

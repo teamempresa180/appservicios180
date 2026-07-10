@@ -1,3 +1,6 @@
+import '../../../audit/entities/audit.dart';
+import '../../../audit/models/audit_action_type.dart';
+import '../../../audit/models/audit_id.dart';
 import '../../../authentication/entities/authentication.dart';
 import '../../../authentication/models/auth_method_type.dart';
 import '../../../authentication/models/authentication_id.dart';
@@ -112,5 +115,47 @@ final List<Credential> mockCredentials = [
     status: CredentialStatus.revoked,
     createdAt: _seedTimestamp,
     updatedAt: _seedTimestamp,
+  ),
+];
+
+/// Five real, immutable `Audit` entries covering every `AuditActionType`
+/// relevant to an account's security history, ordered most-recent-first.
+/// `Audit` only references `IdentityId` (never `Authentication`/
+/// `Credential`), per the domain's own rule — see the feature README.
+final List<Audit> mockAuditLog = [
+  Audit(
+    id: AuditId.fromString('security-audit-login-new-device'),
+    identityId: _identityId,
+    actionType: AuditActionType.loggedIn,
+    description: 'Inicio de sesión desde un nuevo dispositivo (Windows).',
+    occurredAt: DateTime(2026, 1, 5, 18, 40),
+  ),
+  Audit(
+    id: AuditId.fromString('security-audit-password-updated'),
+    identityId: _identityId,
+    actionType: AuditActionType.updated,
+    description: 'Contraseña actualizada.',
+    occurredAt: DateTime(2026, 1, 3, 9, 15),
+  ),
+  Audit(
+    id: AuditId.fromString('security-audit-auth-method-created'),
+    identityId: _identityId,
+    actionType: AuditActionType.created,
+    description: 'Se agregó biometría como método de autenticación.',
+    occurredAt: DateTime(2025, 12, 20, 14, 5),
+  ),
+  Audit(
+    id: AuditId.fromString('security-audit-credential-deleted'),
+    identityId: _identityId,
+    actionType: AuditActionType.deleted,
+    description: 'Se eliminó una llave de seguridad expirada.',
+    occurredAt: DateTime(2025, 12, 10, 11, 30),
+  ),
+  Audit(
+    id: AuditId.fromString('security-audit-logout'),
+    identityId: _identityId,
+    actionType: AuditActionType.loggedOut,
+    description: 'Cierre de sesión manual.',
+    occurredAt: DateTime(2025, 12, 1, 20, 0),
   ),
 ];

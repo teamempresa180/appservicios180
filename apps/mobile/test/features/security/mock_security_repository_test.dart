@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/audit/entities/audit.dart';
 import 'package:mobile/authentication/entities/authentication.dart';
 import 'package:mobile/credentials/entities/credential.dart';
 import 'package:mobile/features/security/repositories/mock_security_repository.dart';
@@ -51,6 +52,26 @@ void main() {
       final identityId = repository.getIdentity().id;
       expect(
         repository.getCredentials().every((c) => c.identityId == identityId),
+        isTrue,
+      );
+    });
+
+    test('getAuditLog returns real Audit entities, not maps', () {
+      final auditLog = repository.getAuditLog();
+      expect(auditLog, isNotEmpty);
+      expect(auditLog, everyElement(isA<Audit>()));
+    });
+
+    test('returns five audit entries with real descriptions', () {
+      final auditLog = repository.getAuditLog();
+      expect(auditLog.length, equals(5));
+      expect(auditLog.every((a) => a.description.isNotEmpty), isTrue);
+    });
+
+    test('every audit entry references the same identity returned', () {
+      final identityId = repository.getIdentity().id;
+      expect(
+        repository.getAuditLog().every((a) => a.identityId == identityId),
         isTrue,
       );
     });
