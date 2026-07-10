@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../../../attachment/entities/attachment.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_radius.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../message/entities/message.dart';
+import 'attachment_preview.dart';
 
 /// A single message bubble, aligned right for the provider and left
 /// for the client (or vice versa, via [isFromProvider]). **No color is
@@ -10,15 +12,22 @@ import '../../../../message/entities/message.dart';
 /// `context.colors.*` (the app's neutral `ColorScheme`), resolved at
 /// build time, per the project's rule that only the Design System
 /// picks colors.
+///
+/// [attachments] (added in a later prompt as a **planned extension** —
+/// see the feature README) renders every real `Attachment` for this
+/// message via `AttachmentPreview`, below the content and above the
+/// timestamp. Empty by default — most messages have none.
 class MessageBubble extends StatelessWidget {
   const MessageBubble({
     super.key,
     required this.message,
     required this.isFromProvider,
+    this.attachments = const [],
   });
 
   final Message message;
   final bool isFromProvider;
+  final List<Attachment> attachments;
 
   String _formatTime(DateTime time) {
     final hour = time.hour.toString().padLeft(2, '0');
@@ -56,6 +65,11 @@ class MessageBubble extends StatelessWidget {
               message.content,
               style: context.textStyles.bodyMedium?.copyWith(color: textColor),
             ),
+            for (final attachment in attachments)
+              AttachmentPreview(
+                attachment: attachment,
+                onSurfaceColor: textColor,
+              ),
             const SizedBox(height: AppSpacing.space4),
             Text(
               _formatTime(message.sentAt),

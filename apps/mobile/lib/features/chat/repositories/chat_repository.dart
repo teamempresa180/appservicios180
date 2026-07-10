@@ -1,3 +1,4 @@
+import '../../../attachment/entities/attachment.dart';
 import '../../../chat/entities/chat.dart';
 import '../../../message/entities/message.dart';
 import '../../../order/entities/order.dart';
@@ -18,4 +19,5 @@ abstract class ChatRepository {
   Profile getProfile();
   Order getOrder();
   List<Message> getMessages();
+  List<Attachment> getAttachments();
 }

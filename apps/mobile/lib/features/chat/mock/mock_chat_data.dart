@@ -1,3 +1,7 @@
+import '../../../attachment/entities/attachment.dart';
+import '../../../attachment/models/attachment_id.dart';
+import '../../../attachment/models/attachment_status.dart';
+import '../../../attachment/models/attachment_type.dart';
 import '../../../chat/entities/chat.dart';
 import '../../../chat/models/chat_id.dart';
 import '../../../chat/models/chat_status.dart';
@@ -128,6 +132,64 @@ final List<Message> mockChatMessages = [
     status: MessageStatus.delivered,
     sentAt: DateTime(2026, 1, 10, 9, 46),
     readAt: null,
+  ),
+];
+
+/// Five real `Attachment` records covering every `AttachmentType` and
+/// every `AttachmentStatus` at least once. `Attachment` only
+/// references `MessageId` (never `Chat`), per the domain's own rule —
+/// two attachments on `chat-message-1` show that a single message can
+/// carry more than one.
+final List<Attachment> mockChatAttachments = [
+  Attachment(
+    id: AttachmentId.fromString('chat-attachment-photo'),
+    messageId: mockChatMessages[0].id,
+    fileName: 'foto_fuga.jpg',
+    mimeType: 'image/jpeg',
+    fileSize: 2400000,
+    type: AttachmentType.image,
+    status: AttachmentStatus.available,
+    createdAt: mockChatMessages[0].sentAt,
+  ),
+  Attachment(
+    id: AttachmentId.fromString('chat-attachment-quote'),
+    messageId: mockChatMessages[0].id,
+    fileName: 'cotizacion.pdf',
+    mimeType: 'application/pdf',
+    fileSize: 154000,
+    type: AttachmentType.document,
+    status: AttachmentStatus.available,
+    createdAt: mockChatMessages[0].sentAt,
+  ),
+  Attachment(
+    id: AttachmentId.fromString('chat-attachment-voice-note'),
+    messageId: mockChatMessages[2].id,
+    fileName: 'nota_voz.m4a',
+    mimeType: 'audio/mp4',
+    fileSize: 87000,
+    type: AttachmentType.audio,
+    status: AttachmentStatus.pending,
+    createdAt: mockChatMessages[2].sentAt,
+  ),
+  Attachment(
+    id: AttachmentId.fromString('chat-attachment-video'),
+    messageId: mockChatMessages[2].id,
+    fileName: 'video_diagnostico.mp4',
+    mimeType: 'video/mp4',
+    fileSize: 8100000,
+    type: AttachmentType.video,
+    status: AttachmentStatus.failed,
+    createdAt: mockChatMessages[2].sentAt,
+  ),
+  Attachment(
+    id: AttachmentId.fromString('chat-attachment-other'),
+    messageId: mockChatMessages[3].id,
+    fileName: 'archivo_temporal.zip',
+    mimeType: 'application/zip',
+    fileSize: 512000,
+    type: AttachmentType.other,
+    status: AttachmentStatus.removed,
+    createdAt: mockChatMessages[3].sentAt,
   ),
 ];
 

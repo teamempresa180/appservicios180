@@ -40,6 +40,7 @@ class ChatPage extends StatelessWidget {
       profile: repository.getProfile(),
       order: repository.getOrder(),
       messages: repository.getMessages(),
+      attachments: repository.getAttachments(),
       isOnline: mockChatIsOnline,
       lastSeen: mockChatLastSeen,
       isTyping: mockChatIsTyping,

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/attachment/entities/attachment.dart';
 import 'package:mobile/chat/entities/chat.dart';
 import 'package:mobile/features/chat/repositories/mock_chat_repository.dart';
 import 'package:mobile/message/entities/message.dart';
@@ -54,6 +55,29 @@ void main() {
       final chat = repository.getChat();
       expect(chat.orderId, equals(repository.getOrder().id));
       expect(chat.providerId, equals(repository.getProvider().id));
+    });
+
+    test('getAttachments returns real Attachment entities, not maps', () {
+      final attachments = repository.getAttachments();
+      expect(attachments, isNotEmpty);
+      expect(attachments, everyElement(isA<Attachment>()));
+    });
+
+    test('returns five attachments covering every type and status', () {
+      final attachments = repository.getAttachments();
+      expect(attachments.length, equals(5));
+      expect(attachments.map((a) => a.type).toSet().length, equals(5));
+      expect(attachments.map((a) => a.status).toSet().length, equals(4));
+    });
+
+    test('every attachment references a real message id', () {
+      final messageIds = repository.getMessages().map((m) => m.id).toSet();
+      expect(
+        repository.getAttachments().every(
+          (a) => messageIds.contains(a.messageId),
+        ),
+        isTrue,
+      );
     });
 
     test('is independent from every other feature mock data', () {

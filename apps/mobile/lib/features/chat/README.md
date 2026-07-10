@@ -20,11 +20,11 @@ pendiente (Prompt 33.1).
 chat/
 ├── README.md
 ├── mock/
-│   └── mock_chat_data.dart        Seed: Provider/Profile/Order/Chat/Message[] reales + presencia/typing simulados
+│   └── mock_chat_data.dart        Seed: Provider/Profile/Order/Chat/Message[]/Attachment[] reales + presencia/typing simulados
 ├── models/
-│   └── chat_display.dart          Chat + Provider + Profile + Order + List<Message> + presencia/typing simulados
+│   └── chat_display.dart          Chat + Provider + Profile + Order + List<Message> + List<Attachment> + presencia/typing simulados
 ├── repositories/
-│   ├── chat_repository.dart       Contrato: Chat, Provider, Profile, Order, List<Message>
+│   ├── chat_repository.dart       Contrato: Chat, Provider, Profile, Order, List<Message>, List<Attachment>
 │   └── mock_chat_repository.dart  Implementación en memoria
 └── presentation/
     ├── pages/
@@ -34,6 +34,7 @@ chat/
         ├── provider_header.dart
         ├── chat_messages.dart
         ├── message_bubble.dart
+        ├── attachment_preview.dart
         ├── typing_indicator.dart
         ├── message_input.dart
         ├── chat_actions.dart
@@ -44,9 +45,10 @@ test/features/chat/ (tests del repositorio, la página, responsive, navegación)
 ```
 
 - **`mock/`**: un único conjunto de entidades reales del dominio
-  (`Provider`, `Profile`, `Order`, `Chat`, `List<Message>`) con IDs
-  fijos y deterministas, prefijados `chat-` — este feature muestra
-  **una sola conversación fija**, no hay lookup por ID todavía.
+  (`Provider`, `Profile`, `Order`, `Chat`, `List<Message>`,
+  `List<Attachment>`) con IDs fijos y deterministas, prefijados `chat-`
+  — este feature muestra **una sola conversación fija**, no hay lookup
+  por ID todavía.
 - **`repositories/`**: `ChatRepository` (contrato) +
   `MockChatRepository`, que devuelven **únicamente entidades reales del
   dominio** — nunca `Map<String, dynamic>`, `dynamic` ni JSON.
@@ -59,13 +61,28 @@ test/features/chat/ (tests del repositorio, la página, responsive, navegación)
 
 | Campo | Origen |
 |---|---|
-| `chat`, `provider`, `profile`, `order`, `messages` | Entidades **reales** del dominio (`chat/`, `provider/`, `profiles/`, `order/`, `message/`), servidas por el repositorio **mock** (`MockChatRepository`, datos fijos en memoria). |
+| `chat`, `provider`, `profile`, `order`, `messages`, `attachments` | Entidades **reales** del dominio (`chat/`, `provider/`, `profiles/`, `order/`, `message/`, `attachment/`), servidas por el repositorio **mock** (`MockChatRepository`, datos fijos en memoria). |
 | Remitente de cada mensaje (proveedor vs. cliente) | **Derivado, no simulado**: `ChatDisplay.isFromProvider(message)` compara `Message.senderIdentityId` con `Provider.identityId` — ambos campos reales del dominio. No se agregó ningún campo `isProvider` simulado a `Message`. |
+| Adjuntos de cada mensaje | **Derivado, no simulado**: `ChatDisplay.attachmentsFor(message)` filtra `attachments` por `Attachment.messageId` — ambos campos reales del dominio. |
 | `isOnline`, `lastSeen` | **Totalmente simulados**: `Chat`/`Message` son "pure data holders" sin transporte en tiempo real (ver el doc de esas clases en el dominio) — no existe ningún módulo de presencia. |
 | `isTyping` | **Totalmente simulado**: misma razón — no hay transporte en tiempo real que reporte un estado de "escribiendo" en vivo. |
 
 Nada de esto se agregó a las entidades de dominio — todo vive
 exclusivamente en `ChatDisplay`.
+
+### Historial: `Attachment` como extensión planeada, no un feature nuevo
+
+Una auditoría completa del dominio (sesión del Prompt 51) identificó a
+`Attachment` como el único módulo de los 23 sin ninguna representación
+visual en ningún feature. `Attachment` únicamente referencia
+`MessageId` — nunca `Chat` — por lo que pertenece claramente al mismo
+bounded context Communication que este feature. Se evaluó crear un
+feature `attachment` independiente y se descartó: hubiera requerido
+duplicar la navegación y gran parte de la estructura visual de `chat`
+sin aportar separación de responsabilidades real. Se extendió `chat` en
+su lugar — `ChatDisplay`/`ChatRepository`/`MessageBubble` ganaron el
+campo/método/widget nuevos (`attachments`, `attachmentsFor`,
+`AttachmentPreview`), sin ningún cambio de navegación.
 
 **Sin colores en el modelo**: `ChatDisplay` no almacena ningún `Color`.
 `MessageBubble`/`TypingIndicator`/`ProviderHeader` resuelven todos sus
@@ -174,7 +191,11 @@ sin resolver (mismo enfoque que la elección de "Ver detalle" en
   reutilizable en cualquier pantalla futura que necesite ese mismo
   encabezado de contacto.
 - **`MessageBubble`**: genérico (recibe `Message` + `bool
-  isFromProvider`), reutilizable en cualquier lista de mensajes futura.
+  isFromProvider` + `List<Attachment>` opcional), reutilizable en
+  cualquier lista de mensajes futura.
+- **`AttachmentPreview`**: genérico (recibe un `Attachment` + el color
+  de texto de la burbuja), reutilizable en cualquier lista de adjuntos
+  futura.
 - **`TypingIndicator`**: genérico, sin dependencias de `ChatDisplay`.
 - **`MessageInput`**: envoltorio de campo de texto + botón de envío,
   reutilizable donde se necesite ese mismo compositor.
@@ -187,12 +208,13 @@ sin resolver (mismo enfoque que la elección de "Ver detalle" en
 Backend, sockets, WebSockets, Firebase, HTTP, gestión de estado
 (Provider/Riverpod/Bloc/Cubit/ViewModel), persistencia, envío real de
 mensajes, presencia/typing en tiempo real, notificaciones push,
-auditoría, lookup por ID (una única conversación fija). El botón
-"Enviar" no hace nada más que existir visualmente — no agrega mensajes
-a la lista ni los envía a ningún lado. El botón "Ver orden" en
-`ChatActions` sigue siendo no-op. Todo el contenido mostrado (excepto
-las 5 entidades de dominio compuestas y la derivación real de
-remitente) es simulado, como se detalla arriba.
+auditoría, subida/descarga real de archivos adjuntos, lookup por ID
+(una única conversación fija). El botón "Enviar" no hace nada más que
+existir visualmente — no agrega mensajes a la lista ni los envía a
+ningún lado. El botón "Ver orden" en `ChatActions` sigue siendo no-op.
+Todo el contenido mostrado (excepto las 6 entidades de dominio
+compuestas y las derivaciones reales de remitente/adjuntos) es
+simulado, como se detalla arriba.
 
 **Actualización (feature `notifications`)**: el botón "Más opciones"
 (ícono de overflow) en `ChatActions` ya no es un no-op — ahora navega

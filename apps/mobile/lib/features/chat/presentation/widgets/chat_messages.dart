@@ -19,6 +19,7 @@ class ChatMessages extends StatelessWidget {
           MessageBubble(
             message: message,
             isFromProvider: data.isFromProvider(message),
+            attachments: data.attachmentsFor(message),
           ),
           const SizedBox(height: AppSpacing.space4),
         ],

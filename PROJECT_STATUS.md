@@ -166,6 +166,7 @@ reemplazar el mock por un repositorio real.
 | 48 | `security` | Métodos de autenticación de la cuenta: `Identity`/`List<Authentication>` reales (5 métodos cubriendo cada `AuthMethodType`/`AuthenticationStatus`), conteos por estado + tipo/estado de cada método, todo **derivado** de datos reales — **sin ningún campo simulado**, mismo criterio que `schedule`/`contact_management`. `Authentication` nunca se había usado en ningún feature; `Credentials` (material secreto) queda explícitamente fuera de alcance. | `settings` (nueva opción "Seguridad" en el menú, junto a "Contactos"). |
 | 49 | `security` *(extensión)* | Se agregó `List<Credential>` real (4 credenciales cubriendo cada `CredentialType`/`CredentialStatus`) al mismo feature `security` — **no se creó un feature nuevo**: `Credential` es conceptualmente casi idéntico a `Authentication` y el propio README de `security` ya había anticipado esta extensión desde el Prompt 48. `SecurityDisplay`/`SecurityRepository`/`SecurityPage` ganaron el campo/método/sección nuevos; conteos por estado de credenciales también derivados, sin campos simulados. | Sin cambio de navegación — `security` ya era alcanzable desde `settings` ("Seguridad"). |
 | 50 | `security` *(extensión)* | Se agregó `List<Audit>` real (5 entradas cubriendo la mayoría de `AuditActionType`) al mismo feature `security` — **no se creó un feature nuevo**: `Audit` solo referencia `IdentityId` (mismo patrón que `Credential`) y encaja como "Actividad reciente de la cuenta". De los tres módulos sin uso (`Audit`, `Attachment`, `Message`), `Message` ya estaba resuelto por `chat`; `Attachment` quedó documentado como oportunidad futura para `chat`, no elegida esta vez. `SecurityDisplay`/`SecurityRepository`/`SecurityPage` ganaron el campo/método/sección nuevos, sin campos simulados (`sortedAuditLog` solo ordena, `Audit.description` es texto real). | Sin cambio de navegación — `security` ya era alcanzable desde `settings` ("Seguridad"). |
+| 51 | `chat` *(extensión)* | Se agregó `List<Attachment>` real (5 adjuntos cubriendo cada `AttachmentType`/`AttachmentStatus`, algunos mensajes con más de uno) al mismo feature `chat` — **no se creó un feature nuevo**: `Attachment` solo referencia `MessageId` y era el último de los 23 módulos de dominio sin ninguna representación visual. `ChatDisplay`/`ChatRepository`/`MessageBubble` ganaron el campo/método/widget nuevos (`attachments`, `attachmentsFor`, `AttachmentPreview`), sin campos simulados. **Con este prompt, los 23 módulos de dominio quedan con representación visual completa.** | Sin cambio de navegación — `chat` ya era alcanzable desde `payments` ("Ver recibo"). |
 
 Mismo patrón exacto que 26–30 en los 13 features nuevos (31–43):
 `presentation/` + `models/` (composición tipada) +
@@ -245,6 +246,13 @@ flutter run -d windows    ✅ compila y corre sin errores
 ```
 flutter analyze          ✅ No issues found!
 flutter test              ✅ 744/744 tests
+flutter run -d windows    ✅ compila y corre sin errores
+```
+
+### Verificación Flutter (actualizada — Prompt 51 aprobado, cierre del Sprint 1)
+```
+flutter analyze          ✅ No issues found!
+flutter test              ✅ 748/748 tests
 flutter run -d windows    ✅ compila y corre sin errores
 ```
 
@@ -581,18 +589,57 @@ como hito grande pendiente, todavía sin número de prompt asignado.
 ### Actualización — Siguiente prompt real (tras el Prompt 50)
 
 **Prompt 51 — Attachment, como extensión de `chat` (no un feature
-nuevo)**, siguiente prompt acordado con el usuario, resultado de una
-auditoría completa del dominio (ver la sección "Fase 2" del handoff de
-esta sesión para la tabla A/B/C/D completa). Con esta extensión,
-`Attachment` era el único módulo de dominio de los 23 sin ninguna
-representación visual en ningún feature — se integró en `chat`
-(bounded context Communication, mismo al que pertenecen
-`Chat`/`Message`), no como feature nuevo, siguiendo exactamente el
-mismo criterio ya aplicado en `security` (Prompts 49–50). Con este
-prompt, **todos los módulos de dominio de negocio quedan con
-representación visual** (categoría A) — no queda ningún módulo en
-categoría C. El Sprint de Branding sigue como hito grande pendiente,
-todavía sin número de prompt asignado.
+nuevo)**. **Aprobado por el usuario y consolidado — cierre oficial del
+Sprint 1.** Resultado de una auditoría completa del dominio (ver la
+sección "Fase 2" del handoff de esa sesión para la tabla A/B/C/D
+completa). Con esta extensión, `Attachment` era el único módulo de
+dominio de los 23 sin ninguna representación visual en ningún feature
+— se integró en `chat` (bounded context Communication, mismo al que
+pertenecen `Chat`/`Message`), no como feature nuevo, siguiendo
+exactamente el mismo criterio ya aplicado en `security` (Prompts
+49–50). Verificado con `flutter analyze` (`No issues found!`),
+`flutter test` (748/748) y `dart format .`. **Con este prompt, los 23
+módulos de dominio quedan con representación visual completa** — no
+queda ningún módulo en categoría C.
+
+## Sprint 1 — Cierre oficial (Prompts 19–51)
+
+El **Sprint 1 (Frontend Flutter, visual/mock, sin backend)** queda
+oficialmente cerrado con el Prompt 51. Resumen:
+
+- **43 prompts de features/extensiones** (19–51), cada uno aprobado
+  explícitamente por el usuario y consolidado con su propio commit
+  exclusivo, siguiendo la disciplina "1 prompt = 1 commit" desde el
+  Prompt 31.
+- **Los 23 módulos de dominio** (Domain layer, 100% completo desde
+  antes de este sprint) **tienen representación visual** en al menos un
+  feature — 21 como feature dedicado, 2 (`Credentials`, `Audit`) y 1
+  más (`Attachment`) como extensiones deliberadas de features ya
+  existentes (`security`×2, `chat`×1) en vez de features nuevos,
+  siguiendo la disciplina arquitectónica introducida en los Prompts
+  49–51 ("extender en vez de duplicar pantallas").
+- **748 tests pasando**, `flutter analyze` limpio, `flutter run -d
+  windows` funcional — verificado en cada prompt.
+- **Sin backend, sin HTTP, sin Firebase, sin WebSockets, sin gestión de
+  estado** (Provider/Riverpod/Bloc/Cubit/ViewModel), sin persistencia,
+  sin autenticación real — exactamente como se planeó desde el inicio.
+- **Sin identidad visual oficial todavía** — paleta 100% neutra (ver
+  sección 4), `Logo oficial grupo.svg` presente en la raíz del
+  repositorio pero **intencionalmente sin trackear** desde el inicio
+  del proyecto, reservado para el Sprint de Branding.
+
+## Sprint 2 — Branding & UX (iniciado)
+
+**Etapa 1 — Fundación del Design System oficial**, en curso. Objetivo:
+construir la identidad visual oficial (nombre "Servicios 180°",
+paleta, tipografía, espaciados, radios, elevaciones, sombras,
+animaciones, iconografía, estilos de botones/campos/cards/diálogos/
+bottom sheets/chips) a partir del análisis de `Logo oficial grupo.svg`,
+e integrarla como nuevos tokens/tema en `core/ui/`, **sin rediseñar
+todavía ninguna pantalla existente** — esa aplicación consistente a
+todos los features es el objetivo de las siguientes etapas del Sprint
+2. Ver el handoff de esta sesión para el detalle completo de la
+auditoría visual, el análisis del logo y las decisiones de diseño.
 
 ## 11. Sugerencia de versionado (aún no aplicada)
 
@@ -1009,6 +1056,52 @@ anteriores (que se conservan como registro histórico, sin eliminar).
   **no asumir que son del Prompt 51** — confirmar con el usuario antes
   de continuar, siguiendo la misma disciplina usada en cada prompt
   anterior.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 51 consolidado — cierre del Sprint 1, inicio del Sprint 2 Branding & UX)
+
+Este es el handoff vigente — más reciente que los diez bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+
+- **El Prompt 51 (`chat` extendido con `Attachment`) fue aprobado
+  explícitamente por el usuario**, verificado con `flutter analyze`
+  (`No issues found!`), `flutter test` (748/748), `dart format .` y
+  `git status`. Con este prompt se cierra oficialmente el **Sprint 1**
+  (ver la sección dedicada arriba).
+- Se creó un **único commit exclusivo del Prompt 51** con el mensaje
+  `Prompt 51 - Chat extended with Attachment (Sprint 1 closed)` (ver
+  `git log -1` para el hash exacto — no se fija aquí el hash literal
+  por la misma razón de auto-referencia explicada en secciones
+  anteriores). Incluye la extensión completa de `chat`
+  (mock/modelo/repositorio/widgets/README) y la actualización de este
+  archivo — **sin incluir `Logo oficial grupo.svg`** (branding sigue
+  congelado hasta que el Sprint 2 lo trate explícitamente, ver sección
+  7). No hubo cambio de navegación.
+- `git status` tras el commit quedó exactamente:
+  ```
+  On branch main
+  Untracked files:
+          Logo oficial grupo.svg
+  nothing added to commit but untracked files present
+  ```
+- **A partir de esta sesión comienza el Sprint 2 — Branding & UX**,
+  Etapa 1 (Fundación del Design System oficial): auditoría visual del
+  frontend existente, análisis del logo oficial (sin agregarlo al
+  repositorio todavía), definición de tokens (paleta con variantes
+  50–900, tipografía, espaciados, radios, elevaciones, sombras,
+  especificación de animaciones, iconografía, estilos de
+  botones/campos/cards/diálogos/bottom sheets/chips) e integración
+  mínima de esos tokens en `core/ui/` sin rediseñar ninguna pantalla
+  todavía. Ver el resto de este handoff/la respuesta de esa sesión para
+  el detalle completo de las decisiones de diseño.
+- Si al abrir una nueva sesión `git status` muestra ese commit como el
+  más reciente y el working tree está limpio (salvo el
+  `Logo oficial grupo.svg` sin trackear, que en esta etapa puede además
+  haber sido leído/analizado pero **no agregado**), el estado es
+  exactamente el que se describe en este documento.
+- Si el working tree tiene cambios sin commitear más allá del logo,
+  **no asumir que corresponden a la siguiente etapa del Sprint 2** —
+  confirmar con el usuario antes de continuar, siguiendo la misma
+  disciplina usada en cada prompt anterior.
 - **A partir de esta sesión, el usuario solicitó un modo de trabajo
   optimizado**: fases grandes (analizar → implementar todo el feature
   → navegación → tests → verificación final única) en vez de narrar

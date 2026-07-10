@@ -5,6 +5,7 @@ import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
 import 'package:mobile/features/chat/presentation/pages/chat_page.dart';
+import 'package:mobile/features/chat/presentation/widgets/attachment_preview.dart';
 import 'package:mobile/features/chat/presentation/widgets/chat_messages.dart';
 import 'package:mobile/features/chat/presentation/widgets/message_bubble.dart';
 import 'package:mobile/features/chat/presentation/widgets/message_input.dart';
@@ -46,6 +47,20 @@ void main() {
     expect(find.byType(MessageBubble), findsNWidgets(4));
     expect(find.textContaining('Ya estoy en camino'), findsOneWidget);
     expect(find.textContaining('Perfecto, muchas gracias'), findsOneWidget);
+  });
+
+  testWidgets('shows every mock attachment across the conversation', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AttachmentPreview), findsNWidgets(5));
+    expect(find.textContaining('foto_fuga.jpg'), findsOneWidget);
+    expect(find.textContaining('cotizacion.pdf'), findsOneWidget);
+    expect(find.textContaining('nota_voz.m4a'), findsOneWidget);
+    expect(find.textContaining('video_diagnostico.mp4'), findsOneWidget);
+    expect(find.textContaining('archivo_temporal.zip'), findsOneWidget);
   });
 
   testWidgets('does not show the typing indicator by default', (tester) async {

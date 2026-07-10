@@ -1,3 +1,4 @@
+import '../../../attachment/entities/attachment.dart';
 import '../../../chat/entities/chat.dart';
 import '../../../message/entities/message.dart';
 import '../../../order/entities/order.dart';
@@ -23,4 +24,7 @@ class MockChatRepository implements ChatRepository {
 
   @override
   List<Message> getMessages() => List.unmodifiable(mockChatMessages);
+
+  @override
+  List<Attachment> getAttachments() => List.unmodifiable(mockChatAttachments);
 }
