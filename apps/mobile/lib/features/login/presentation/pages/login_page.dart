@@ -47,9 +47,7 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                FadeIn(
-                  child: const AppSectionTitle(title: 'Iniciar sesión'),
-                ),
+                FadeIn(child: const AppSectionTitle(title: 'Iniciar sesión')),
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.space16),
                   child: Text(

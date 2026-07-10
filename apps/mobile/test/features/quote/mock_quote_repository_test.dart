@@ -52,10 +52,7 @@ void main() {
     });
 
     test('is independent from every other feature mock data', () {
-      expect(
-        repository.getProvider().id.value.startsWith('quote-'),
-        isTrue,
-      );
+      expect(repository.getProvider().id.value.startsWith('quote-'), isTrue);
     });
   });
 }

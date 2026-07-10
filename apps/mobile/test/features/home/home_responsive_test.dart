@@ -16,9 +16,7 @@ void main() {
     });
   }
 
-  testWidgets('Cliente content has no overflow at 320px width', (
-    tester,
-  ) async {
+  testWidgets('Cliente content has no overflow at 320px width', (tester) async {
     await setSurfaceSize(tester, const Size(320, 640));
     await tester.pumpWidget(
       MaterialApp(

@@ -83,8 +83,10 @@ class _ScheduleSelectorState extends State<ScheduleSelector> {
                   onTap: _pickDate,
                   child: Row(
                     children: [
-                      Icon(Icons.calendar_today_outlined,
-                          color: context.colors.primary),
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        color: context.colors.primary,
+                      ),
                       const SizedBox(width: AppSpacing.space8),
                       Flexible(
                         child: Text(
@@ -103,8 +105,10 @@ class _ScheduleSelectorState extends State<ScheduleSelector> {
                   onTap: _pickTime,
                   child: Row(
                     children: [
-                      Icon(Icons.access_time_outlined,
-                          color: context.colors.primary),
+                      Icon(
+                        Icons.access_time_outlined,
+                        color: context.colors.primary,
+                      ),
                       const SizedBox(width: AppSpacing.space8),
                       Flexible(
                         child: Text(

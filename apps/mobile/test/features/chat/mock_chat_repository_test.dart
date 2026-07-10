@@ -47,10 +47,7 @@ void main() {
 
     test('every message belongs to the same chat returned', () {
       final chatId = repository.getChat().id;
-      expect(
-        repository.getMessages().every((m) => m.chatId == chatId),
-        isTrue,
-      );
+      expect(repository.getMessages().every((m) => m.chatId == chatId), isTrue);
     });
 
     test('chat references the same order and provider returned', () {
@@ -60,10 +57,7 @@ void main() {
     });
 
     test('is independent from every other feature mock data', () {
-      expect(
-        repository.getProvider().id.value.startsWith('chat-'),
-        isTrue,
-      );
+      expect(repository.getProvider().id.value.startsWith('chat-'), isTrue);
     });
   });
 }

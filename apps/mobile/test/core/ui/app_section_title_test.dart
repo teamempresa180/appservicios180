@@ -6,7 +6,10 @@ import 'package:mobile/core/ui/widgets/app_section_title.dart';
 
 void main() {
   Widget buildApp(Widget child) {
-    return MaterialApp(theme: AppTheme.light, home: Scaffold(body: child));
+    return MaterialApp(
+      theme: AppTheme.light,
+      home: Scaffold(body: child),
+    );
   }
 
   testWidgets('shows only the title when nothing else is provided', (

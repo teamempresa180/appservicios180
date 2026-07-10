@@ -94,8 +94,7 @@ class _AppShellPageState extends State<AppShellPage> {
           ShellPlaceholder(
             icon: Icons.chat_bubble_outline,
             title: 'Mensajes',
-            description:
-                'Aquí vivirá el Chat entre clientes y proveedores.',
+            description: 'Aquí vivirá el Chat entre clientes y proveedores.',
           ),
           ProfilePage(),
         ],

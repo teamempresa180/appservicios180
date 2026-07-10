@@ -34,9 +34,7 @@ class ProfileContact extends StatelessWidget {
           const AppSectionTitle(title: 'Contacto'),
           for (final contact in data.contacts) ...[
             Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: AppSpacing.space4,
-              ),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.space4),
               child: Row(
                 children: [
                   Icon(_iconFor(contact.type), color: context.colors.primary),

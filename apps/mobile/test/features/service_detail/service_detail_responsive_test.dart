@@ -19,9 +19,7 @@ void main() {
   }
 
   for (final width in widths) {
-    testWidgets('Service Detail has no overflow at ${width}px', (
-      tester,
-    ) async {
+    testWidgets('Service Detail has no overflow at ${width}px', (tester) async {
       await setSurfaceSize(tester, width);
       await tester.pumpWidget(
         MaterialApp(

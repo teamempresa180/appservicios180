@@ -41,10 +41,7 @@ void main() {
     });
 
     test('is independent from every other feature mock data', () {
-      expect(
-        repository.getIdentity().id.value.startsWith('profile-'),
-        isTrue,
-      );
+      expect(repository.getIdentity().id.value.startsWith('profile-'), isTrue);
     });
   });
 }

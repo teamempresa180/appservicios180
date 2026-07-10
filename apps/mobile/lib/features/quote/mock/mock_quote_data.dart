@@ -51,7 +51,8 @@ final Provider mockQuoteProvider = Provider(
   status: ProviderStatus.active,
   type: ProviderType.independent,
   experience: ProviderExperience.advanced,
-  biography: 'Plomera independiente, especializada en reparaciones '
+  biography:
+      'Plomera independiente, especializada en reparaciones '
       'residenciales.',
   yearsOfExperience: 8,
   createdAt: _seedTimestamp,
@@ -105,7 +106,8 @@ final Quote mockQuote = Quote(
   providerId: ProviderId.fromString('quote-provider-diana'),
   proposedPrice: 45,
   estimatedDuration: 60,
-  notes: 'Incluye revisión general de la tubería y reemplazo de empaques '
+  notes:
+      'Incluye revisión general de la tubería y reemplazo de empaques '
       'si es necesario. El precio puede variar si se detectan daños '
       'adicionales durante la visita.',
   status: QuoteStatus.pending,

@@ -39,9 +39,7 @@ class ClientHomeContent extends StatelessWidget {
           child: QuickCategories(categories: MockHomeData.quickCategories),
         ),
         const SizedBox(height: AppSpacing.space16),
-        SlideIn(
-          child: RecentServices(services: MockHomeData.recentServices),
-        ),
+        SlideIn(child: RecentServices(services: MockHomeData.recentServices)),
       ],
     );
   }

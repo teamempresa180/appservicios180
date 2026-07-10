@@ -38,11 +38,14 @@ void main() {
       expect(repository.getAddress(), isA<Address>());
     });
 
-    test('service, availability and provider reference the same provider id', () {
-      final providerId = repository.getProvider().id;
-      expect(repository.getService().providerId, equals(providerId));
-      expect(repository.getAvailability().providerId, equals(providerId));
-    });
+    test(
+      'service, availability and provider reference the same provider id',
+      () {
+        final providerId = repository.getProvider().id;
+        expect(repository.getService().providerId, equals(providerId));
+        expect(repository.getAvailability().providerId, equals(providerId));
+      },
+    );
 
     test('service references the same category id', () {
       expect(

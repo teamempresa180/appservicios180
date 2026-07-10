@@ -19,9 +19,7 @@ void main() {
   }
 
   for (final width in widths) {
-    testWidgets('Notifications has no overflow at ${width}px', (
-      tester,
-    ) async {
+    testWidgets('Notifications has no overflow at ${width}px', (tester) async {
       await setSurfaceSize(tester, width);
       await tester.pumpWidget(
         MaterialApp(

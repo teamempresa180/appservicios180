@@ -102,7 +102,9 @@ abstract final class AppTheme {
         ),
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.radius8),
-          borderSide: BorderSide(color: AppColors.divider.withValues(alpha: 0.5)),
+          borderSide: BorderSide(
+            color: AppColors.divider.withValues(alpha: 0.5),
+          ),
         ),
       ),
     );

@@ -10,7 +10,8 @@ class ReviewsEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return const AppEmptyState(
       title: 'Sin reseñas todavía',
-      description: 'Cuando califiques un servicio, tus reseñas '
+      description:
+          'Cuando califiques un servicio, tus reseñas '
           'aparecerán aquí.',
       icon: Icons.rate_review_outlined,
     );

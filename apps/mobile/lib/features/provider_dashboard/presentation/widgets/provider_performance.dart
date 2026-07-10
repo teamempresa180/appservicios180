@@ -62,9 +62,7 @@ class _PerformanceRow extends StatelessWidget {
         children: [
           Icon(icon, size: AppSpacing.space16, color: context.colors.primary),
           const SizedBox(width: AppSpacing.space8),
-          Expanded(
-            child: Text(label, style: context.textStyles.bodyMedium),
-          ),
+          Expanded(child: Text(label, style: context.textStyles.bodyMedium)),
           const SizedBox(width: AppSpacing.space8),
           Flexible(
             child: Text(

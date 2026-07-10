@@ -21,9 +21,7 @@ class OnboardingSlideView extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.space16,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.space16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

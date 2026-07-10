@@ -10,7 +10,8 @@ class NotificationsEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return const AppEmptyState(
       title: 'Sin notificaciones',
-      description: 'Cuando haya novedades sobre tus órdenes, pagos o '
+      description:
+          'Cuando haya novedades sobre tus órdenes, pagos o '
           'mensajes, aparecerán aquí.',
       icon: Icons.notifications_none_outlined,
     );

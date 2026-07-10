@@ -8,24 +8,23 @@ import 'package:mobile/features/request_service/presentation/pages/request_servi
 /// Confirms the minimal, explicitly-authorized wiring that lets
 /// Request Service open Quote — see the feature README.
 void main() {
-  testWidgets(
-    'tapping "Continuar" in Request Service opens Quote',
-    (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light,
-          home: const Scaffold(body: RequestServicePage()),
-        ),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('tapping "Continuar" in Request Service opens Quote', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const Scaffold(body: RequestServicePage()),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.text('Continuar'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Continuar'));
-      await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Continuar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
 
-      expect(find.byType(QuotePage), findsOneWidget);
-      expect(find.text('Cotización'), findsWidgets);
-    },
-  );
+    expect(find.byType(QuotePage), findsOneWidget);
+    expect(find.text('Cotización'), findsWidgets);
+  });
 }

@@ -9,24 +9,21 @@ import 'package:mobile/features/payments/presentation/pages/payments_page.dart';
 /// Payments open Chat — see the feature README (and `payments`' README)
 /// for why "Ver recibo" is the button that opens it.
 void main() {
-  testWidgets(
-    'tapping "Ver recibo" in Payments opens Chat',
-    (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light,
-          home: const Scaffold(body: PaymentsPage()),
-        ),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('tapping "Ver recibo" in Payments opens Chat', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const Scaffold(body: PaymentsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.text('Ver recibo'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Ver recibo'));
-      await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ver recibo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ver recibo'));
+    await tester.pumpAndSettle();
 
-      expect(find.byType(ChatPage), findsOneWidget);
-      expect(find.text('Chat'), findsWidgets);
-    },
-  );
+    expect(find.byType(ChatPage), findsOneWidget);
+    expect(find.text('Chat'), findsWidgets);
+  });
 }

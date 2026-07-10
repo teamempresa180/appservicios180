@@ -177,10 +177,7 @@ void main() {
       // "offstage" widgets, so the non-selected ones must be looked up
       // with skipOffstage: false to prove they exist.
       expect(find.byType(HomePage, skipOffstage: false), findsOneWidget);
-      expect(
-        find.byType(MarketplacePage, skipOffstage: false),
-        findsOneWidget,
-      );
+      expect(find.byType(MarketplacePage, skipOffstage: false), findsOneWidget);
       expect(find.byType(ProfilePage, skipOffstage: false), findsOneWidget);
       expect(
         find.byType(ShellPlaceholder, skipOffstage: false),
@@ -203,10 +200,7 @@ void main() {
       // Still all five destinations built after switching tabs — none
       // were disposed/recreated.
       expect(find.byType(HomePage, skipOffstage: false), findsOneWidget);
-      expect(
-        find.byType(MarketplacePage, skipOffstage: false),
-        findsOneWidget,
-      );
+      expect(find.byType(MarketplacePage, skipOffstage: false), findsOneWidget);
       expect(find.byType(ProfilePage, skipOffstage: false), findsOneWidget);
       expect(
         find.byType(ShellPlaceholder, skipOffstage: false),

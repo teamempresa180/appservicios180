@@ -54,10 +54,7 @@ class OrderSummary extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.space8),
-        Text(
-          '\$${data.price}',
-          style: context.textStyles.titleMedium,
-        ),
+        Text('\$${data.price}', style: context.textStyles.titleMedium),
       ],
     );
   }

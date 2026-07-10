@@ -10,7 +10,8 @@ class ChatEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return const AppEmptyState(
       title: 'Sin mensajes todavía',
-      description: 'Cuando el proveedor o tú escriban, la conversación '
+      description:
+          'Cuando el proveedor o tú escriban, la conversación '
           'aparecerá aquí.',
       icon: Icons.chat_bubble_outline,
     );

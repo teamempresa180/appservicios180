@@ -32,7 +32,10 @@ class ChatActions extends StatelessWidget {
       children: [
         IconButton(
           onPressed: onViewOrder ?? () {},
-          icon: Icon(Icons.receipt_long_outlined, color: context.colors.primary),
+          icon: Icon(
+            Icons.receipt_long_outlined,
+            color: context.colors.primary,
+          ),
           tooltip: 'Ver orden',
         ),
         const SizedBox(width: AppSpacing.space4),

@@ -9,24 +9,23 @@ import 'package:mobile/features/notifications/presentation/pages/notifications_p
 /// open Notifications — see the feature README (and `chat`'s README)
 /// for why "Más opciones" is the button that opens it.
 void main() {
-  testWidgets(
-    'tapping "Más opciones" in Chat opens Notifications',
-    (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light,
-          home: const Scaffold(body: ChatPage()),
-        ),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('tapping "Más opciones" in Chat opens Notifications', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const Scaffold(body: ChatPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.byIcon(Icons.more_vert));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
 
-      expect(find.byType(NotificationsPage), findsOneWidget);
-      expect(find.text('Notificaciones'), findsWidgets);
-    },
-  );
+    expect(find.byType(NotificationsPage), findsOneWidget);
+    expect(find.text('Notificaciones'), findsWidgets);
+  });
 }

@@ -10,7 +10,8 @@ class AddressesEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return const AppEmptyState(
       title: 'Sin direcciones guardadas',
-      description: 'Agrega una dirección para solicitar servicios más '
+      description:
+          'Agrega una dirección para solicitar servicios más '
           'rápido.',
       icon: Icons.location_off_outlined,
     );

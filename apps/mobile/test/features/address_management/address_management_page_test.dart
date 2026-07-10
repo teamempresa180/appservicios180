@@ -91,9 +91,7 @@ void main() {
   testWidgets('empty state shows AppEmptyState instead of the list', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      buildApp(state: AddressManagementViewState.empty),
-    );
+    await tester.pumpWidget(buildApp(state: AddressManagementViewState.empty));
     await tester.pumpAndSettle();
 
     expect(find.byType(AppEmptyState), findsOneWidget);

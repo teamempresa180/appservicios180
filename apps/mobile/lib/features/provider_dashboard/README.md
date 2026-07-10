@@ -159,14 +159,20 @@ navegación fue modificada.
 Backend, HTTP, gestión de estado
 (Provider/Riverpod/Bloc/Cubit/ViewModel), persistencia, agregación real
 de ganancias por período, métricas reales de tiempo de respuesta/tasa
-de aceptación, disponibilidad real, lookup por ID (un único proveedor
-fijo). Los botones "Disponibilidad"/"Estadísticas"/"Configuración" de
-`QuickActions` siguen sin hacer nada más que existir visualmente. Todo
-el contenido mostrado (excepto las 6 entidades de dominio compuestas y
-los 4 campos derivados) es simulado, como se detalla arriba.
+de aceptación, lookup por ID (un único proveedor fijo). Los botones
+"Estadísticas"/"Configuración" de `QuickActions` siguen sin hacer nada
+más que existir visualmente. Todo el contenido mostrado (excepto las 6
+entidades de dominio compuestas y los 4 campos derivados) es simulado,
+como se detalla arriba.
 
 **Actualización (feature `provider_services`)**: el botón "Ver
 servicios" de `QuickActions` ya no es un no-op — ahora navega (vía
 `Navigator.push`, no `GoRouter`) a `ProviderServicesPage`, el único
 cambio permitido en este feature para ese prompt. Ver el README de
 `features/provider_services/` para más contexto.
+
+**Actualización (feature `availability`)**: el botón "Disponibilidad"
+de `QuickActions` ya no es un no-op — ahora navega (vía
+`Navigator.push`, no `GoRouter`) a `AvailabilityPage`, el único cambio
+permitido en este feature para ese prompt. Ver el README de
+`features/availability/` para más contexto.

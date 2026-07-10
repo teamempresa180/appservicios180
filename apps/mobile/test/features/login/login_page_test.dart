@@ -100,30 +100,29 @@ void main() {
     expect(editableTextOf(tester).obscureText, isFalse);
   });
 
-  testWidgets(
-    'valid submit shows loading and then navigates to Home',
-    (tester) async {
-      await tester.pumpWidget(buildApp());
-      await tester.pumpAndSettle();
+  testWidgets('valid submit shows loading and then navigates to Home', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Correo electrónico'),
-        'user@example.com',
-      );
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Contraseña'),
-        'password123',
-      );
-      await tester.tap(find.widgetWithText(FilledButton, 'Continuar'));
-      await tester.pump();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Correo electrónico'),
+      'user@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Contraseña'),
+      'password123',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Continuar'));
+    await tester.pump();
 
-      expect(find.text('Ingresando...'), findsOneWidget);
+    expect(find.text('Ingresando...'), findsOneWidget);
 
-      await tester.pumpAndSettle(const Duration(seconds: 2));
+    await tester.pumpAndSettle(const Duration(seconds: 2));
 
-      expect(find.text('Home placeholder'), findsOneWidget);
-    },
-  );
+    expect(find.text('Home placeholder'), findsOneWidget);
+  });
 
   testWidgets(
     '"¿Olvidaste tu contraseña?" and "Crear cuenta" navigate to Register',

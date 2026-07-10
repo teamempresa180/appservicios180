@@ -10,7 +10,8 @@ class ServicesEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return const AppEmptyState(
       title: 'Sin servicios publicados',
-      description: 'Agrega tu primer servicio para empezar a recibir '
+      description:
+          'Agrega tu primer servicio para empezar a recibir '
           'solicitudes.',
       icon: Icons.design_services_outlined,
     );

@@ -25,7 +25,9 @@ class AppScaffold extends StatelessWidget {
       appBar: title == null
           ? null
           : AppBar(title: Text(title!), actions: actions),
-      body: SafeArea(child: Padding(padding: padding, child: body)),
+      body: SafeArea(
+        child: Padding(padding: padding, child: body),
+      ),
       floatingActionButton: floatingActionButton,
     );
   }

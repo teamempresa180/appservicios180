@@ -35,8 +35,7 @@ class NotificationFilterTabs extends StatefulWidget {
   final NotificationTab initialTab;
 
   @override
-  State<NotificationFilterTabs> createState() =>
-      _NotificationFilterTabsState();
+  State<NotificationFilterTabs> createState() => _NotificationFilterTabsState();
 }
 
 class _NotificationFilterTabsState extends State<NotificationFilterTabs> {

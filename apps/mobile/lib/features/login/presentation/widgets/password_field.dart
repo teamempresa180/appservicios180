@@ -58,7 +58,9 @@ class _PasswordFieldState extends State<PasswordField> {
               onPressed: widget.enabled ? _toggleObscure : null,
               tooltip: _obscure ? 'Mostrar contraseña' : 'Ocultar contraseña',
               icon: Icon(
-                _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                _obscure
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
               ),
             ),
           ),

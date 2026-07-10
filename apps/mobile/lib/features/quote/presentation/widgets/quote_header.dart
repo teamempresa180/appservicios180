@@ -11,9 +11,6 @@ class QuoteHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppSectionTitle(
-      title: 'Cotización',
-      subtitle: data.service.name,
-    );
+    return AppSectionTitle(title: 'Cotización', subtitle: data.service.name);
   }
 }

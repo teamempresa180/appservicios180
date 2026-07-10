@@ -9,22 +9,21 @@ import 'package:mobile/features/settings/presentation/pages/settings_page.dart';
 /// Settings open Address Management — see the feature README (and
 /// `settings`'s README).
 void main() {
-  testWidgets(
-    'tapping "Direcciones" in Settings opens Address Management',
-    (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light,
-          home: const Scaffold(body: SettingsPage()),
-        ),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('tapping "Direcciones" in Settings opens Address Management', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const Scaffold(body: SettingsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Direcciones'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Direcciones'));
+    await tester.pumpAndSettle();
 
-      expect(find.byType(AddressManagementPage), findsOneWidget);
-      expect(find.text('Mis direcciones'), findsWidgets);
-    },
-  );
+    expect(find.byType(AddressManagementPage), findsOneWidget);
+    expect(find.text('Mis direcciones'), findsWidgets);
+  });
 }

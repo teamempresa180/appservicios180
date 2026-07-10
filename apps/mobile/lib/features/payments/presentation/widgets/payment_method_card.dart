@@ -37,10 +37,7 @@ class PaymentMethodCard extends StatelessWidget {
           const AppSectionTitle(title: 'Método de pago'),
           Row(
             children: [
-              Icon(
-                _iconFor(data.paymentMethod),
-                color: context.colors.primary,
-              ),
+              Icon(_iconFor(data.paymentMethod), color: context.colors.primary),
               const SizedBox(width: AppSpacing.space8),
               Text(
                 data.paymentMethod.label,

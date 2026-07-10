@@ -9,24 +9,21 @@ import 'package:mobile/features/payments/presentation/pages/payments_page.dart';
 /// open Payments — see the feature README (and `orders`' README) for
 /// why "Ver detalle" is the button that opens it.
 void main() {
-  testWidgets(
-    'tapping "Ver detalle" in Orders opens Payments',
-    (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light,
-          home: const Scaffold(body: OrdersPage()),
-        ),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('tapping "Ver detalle" in Orders opens Payments', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const Scaffold(body: OrdersPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.text('Ver detalle'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Ver detalle'));
-      await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ver detalle'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ver detalle'));
+    await tester.pumpAndSettle();
 
-      expect(find.byType(PaymentsPage), findsOneWidget);
-      expect(find.text('Pago'), findsWidgets);
-    },
-  );
+    expect(find.byType(PaymentsPage), findsOneWidget);
+    expect(find.text('Pago'), findsWidgets);
+  });
 }

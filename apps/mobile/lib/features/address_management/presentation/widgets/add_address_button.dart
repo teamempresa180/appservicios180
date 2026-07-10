@@ -11,9 +11,6 @@ class AddAddressButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppButton(
-      label: 'Agregar dirección',
-      onPressed: onPressed ?? () {},
-    );
+    return AppButton(label: 'Agregar dirección', onPressed: onPressed ?? () {});
   }
 }

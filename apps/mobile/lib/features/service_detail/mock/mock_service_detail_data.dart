@@ -48,7 +48,8 @@ final Provider mockServiceDetailProvider = Provider(
   status: ProviderStatus.active,
   type: ProviderType.independent,
   experience: ProviderExperience.advanced,
-  biography: 'Plomera independiente, 8 años de experiencia en '
+  biography:
+      'Plomera independiente, 8 años de experiencia en '
       'reparaciones residenciales.',
   yearsOfExperience: 8,
   createdAt: _seedTimestamp,

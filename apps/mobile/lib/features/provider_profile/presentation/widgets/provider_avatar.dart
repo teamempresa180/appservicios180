@@ -14,11 +14,7 @@ class ProviderAvatar extends StatelessWidget {
     return CircleAvatar(
       radius: radius,
       backgroundColor: context.colors.primary,
-      child: Icon(
-        Icons.person,
-        size: radius,
-        color: context.colors.onPrimary,
-      ),
+      child: Icon(Icons.person, size: radius, color: context.colors.onPrimary),
     );
   }
 }

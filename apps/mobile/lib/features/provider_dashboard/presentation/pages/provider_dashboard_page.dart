@@ -3,6 +3,7 @@ import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../availability/presentation/pages/availability_page.dart';
 import '../../../provider_services/presentation/pages/provider_services_page.dart';
 import '../../mock/mock_provider_dashboard_data.dart';
 import '../../models/provider_dashboard_display.dart';
@@ -65,6 +66,17 @@ class ProviderDashboardPage extends StatelessWidget {
     );
   }
 
+  void _openAvailability(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Disponibilidad')),
+          body: const SafeArea(child: AvailabilityPage()),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBody(BuildContext context) {
     switch (state) {
       case ProviderDashboardViewState.loading:
@@ -88,6 +100,7 @@ class ProviderDashboardPage extends StatelessWidget {
             const SizedBox(height: AppSpacing.space16),
             QuickActions(
               onViewServices: () => _openProviderServices(context),
+              onAvailability: () => _openAvailability(context),
             ),
           ],
         );

@@ -29,7 +29,10 @@ class ProfileInformation extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(data.displayName, style: context.textStyles.titleSmall),
+                    Text(
+                      data.displayName,
+                      style: context.textStyles.titleSmall,
+                    ),
                     Text(
                       'Miembro desde ${data.memberSince}',
                       style: context.textStyles.bodySmall,

@@ -9,11 +9,7 @@ import '../../../request_service/presentation/pages/request_service_page.dart';
 /// remains a no-op — it does not open a real chat yet (see the feature
 /// README).
 class ProviderActions extends StatelessWidget {
-  const ProviderActions({
-    super.key,
-    this.onRequestService,
-    this.onChat,
-  });
+  const ProviderActions({super.key, this.onRequestService, this.onChat});
 
   final VoidCallback? onRequestService;
   final VoidCallback? onChat;

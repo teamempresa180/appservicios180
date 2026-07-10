@@ -37,7 +37,8 @@ class CategoriesPage extends StatelessWidget {
             for (final category in MockCategoryRepository().getAll())
               CategoryDisplay(
                 category: category,
-                servicesCount: mockCategoryServicesCount[category.id.value] ?? 0,
+                servicesCount:
+                    mockCategoryServicesCount[category.id.value] ?? 0,
               ),
           ];
 

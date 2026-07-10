@@ -23,8 +23,7 @@ class MockProviderProfileRepository implements ProviderProfileRepository {
   List<Review> getReviews() => List.unmodifiable(mockProviderProfileReviews);
 
   @override
-  List<Service> getServices() =>
-      List.unmodifiable(mockProviderProfileServices);
+  List<Service> getServices() => List.unmodifiable(mockProviderProfileServices);
 
   @override
   List<Category> getCategories() =>

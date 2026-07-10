@@ -25,5 +25,6 @@ class MockProviderRepository implements ProviderRepository {
   double ratingOf(ProviderId id) => mockProviderRatings[id.value] ?? 4.5;
 
   @override
-  int servicesCountOf(ProviderId id) => mockProviderServicesCount[id.value] ?? 0;
+  int servicesCountOf(ProviderId id) =>
+      mockProviderServicesCount[id.value] ?? 0;
 }

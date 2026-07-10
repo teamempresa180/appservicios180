@@ -64,7 +64,8 @@ final List<Provider> mockSearchProviders = [
     status: ProviderStatus.active,
     type: ProviderType.independent,
     experience: ProviderExperience.advanced,
-    biography: 'Diana Restrepo — plomera independiente, 8 años de '
+    biography:
+        'Diana Restrepo — plomera independiente, 8 años de '
         'experiencia en reparaciones residenciales.',
     yearsOfExperience: 8,
     createdAt: _seedTimestamp,
@@ -77,7 +78,8 @@ final List<Provider> mockSearchProviders = [
     status: ProviderStatus.active,
     type: ProviderType.freelancer,
     experience: ProviderExperience.expert,
-    biography: 'Felipe Cortés — electricista certificado, instalaciones '
+    biography:
+        'Felipe Cortés — electricista certificado, instalaciones '
         'residenciales y comerciales.',
     yearsOfExperience: 12,
     createdAt: _seedTimestamp,
@@ -90,7 +92,8 @@ final List<Provider> mockSearchProviders = [
     status: ProviderStatus.active,
     type: ProviderType.company,
     experience: ProviderExperience.intermediate,
-    biography: 'Marta Londoño — equipo de limpieza profesional para '
+    biography:
+        'Marta Londoño — equipo de limpieza profesional para '
         'hogares y oficinas.',
     yearsOfExperience: 5,
     createdAt: _seedTimestamp,

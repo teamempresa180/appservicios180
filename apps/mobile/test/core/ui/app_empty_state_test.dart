@@ -6,7 +6,10 @@ import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 
 void main() {
   Widget buildApp(Widget child) {
-    return MaterialApp(theme: AppTheme.light, home: Scaffold(body: child));
+    return MaterialApp(
+      theme: AppTheme.light,
+      home: Scaffold(body: child),
+    );
   }
 
   testWidgets('shows icon, title and description without an action', (

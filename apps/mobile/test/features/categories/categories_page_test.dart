@@ -8,7 +8,10 @@ import 'package:mobile/features/categories/presentation/widgets/categories_grid.
 
 void main() {
   Widget buildApp(Widget child) {
-    return MaterialApp(theme: AppTheme.light, home: Scaffold(body: child));
+    return MaterialApp(
+      theme: AppTheme.light,
+      home: Scaffold(body: child),
+    );
   }
 
   testWidgets('normal state shows the header and all 12 categories', (
@@ -18,7 +21,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Todas las categorías'), findsOneWidget);
-    expect(find.text('Explora todos los servicios disponibles.'), findsOneWidget);
+    expect(
+      find.text('Explora todos los servicios disponibles.'),
+      findsOneWidget,
+    );
     expect(find.text('Plomería'), findsOneWidget);
     expect(find.text('Electricidad'), findsOneWidget);
     expect(find.text('Limpieza'), findsOneWidget);

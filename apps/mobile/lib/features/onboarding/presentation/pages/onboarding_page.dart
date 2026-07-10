@@ -63,10 +63,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       context.go(AppRoutes.login);
       return;
     }
-    _controller.nextPage(
-      duration: AppDurations.medium,
-      curve: Curves.easeOut,
-    );
+    _controller.nextPage(duration: AppDurations.medium, curve: Curves.easeOut);
   }
 
   @override
@@ -80,9 +77,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               itemCount: OnboardingPage.slides.length,
               onPageChanged: (index) => setState(() => _currentPage = index),
               itemBuilder: (context, index) {
-                return OnboardingSlideView(
-                  slide: OnboardingPage.slides[index],
-                );
+                return OnboardingSlideView(slide: OnboardingPage.slides[index]);
               },
             ),
           ),

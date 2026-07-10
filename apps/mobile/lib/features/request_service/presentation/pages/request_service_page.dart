@@ -69,16 +69,12 @@ class RequestServicePage extends StatelessWidget {
           SlideIn(child: AddressSummary(data: data)),
           const SizedBox(height: AppSpacing.space16),
           SlideIn(
-            child: ProblemDescription(
-              initialText: data.problemDescription,
-            ),
+            child: ProblemDescription(initialText: data.problemDescription),
           ),
           const SizedBox(height: AppSpacing.space16),
           SlideIn(child: AttachmentsSection(attachments: data.attachments)),
           const SizedBox(height: AppSpacing.space16),
-          SlideIn(
-            child: PrioritySelector(initialPriority: data.priority),
-          ),
+          SlideIn(child: PrioritySelector(initialPriority: data.priority)),
           const SizedBox(height: AppSpacing.space16),
           const ContinueButton(),
         ],

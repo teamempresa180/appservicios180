@@ -18,9 +18,7 @@ class ReviewsSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final average = reviews.isEmpty
         ? 0.0
-        : reviews
-                  .map((r) => r.review.rating.value)
-                  .reduce((a, b) => a + b) /
+        : reviews.map((r) => r.review.rating.value).reduce((a, b) => a + b) /
               reviews.length;
 
     return AppCard(

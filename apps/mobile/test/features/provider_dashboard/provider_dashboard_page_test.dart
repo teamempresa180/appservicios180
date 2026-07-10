@@ -106,9 +106,7 @@ void main() {
   testWidgets('empty state shows AppEmptyState instead of the information', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      buildApp(state: ProviderDashboardViewState.empty),
-    );
+    await tester.pumpWidget(buildApp(state: ProviderDashboardViewState.empty));
     await tester.pumpAndSettle();
 
     expect(find.byType(AppEmptyState), findsOneWidget);

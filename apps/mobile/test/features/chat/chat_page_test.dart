@@ -27,9 +27,7 @@ void main() {
     expect(find.text('Reparación de fuga de agua'), findsOneWidget);
   });
 
-  testWidgets('shows the provider header with online status', (
-    tester,
-  ) async {
+  testWidgets('shows the provider header with online status', (tester) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
@@ -50,9 +48,7 @@ void main() {
     expect(find.textContaining('Perfecto, muchas gracias'), findsOneWidget);
   });
 
-  testWidgets('does not show the typing indicator by default', (
-    tester,
-  ) async {
+  testWidgets('does not show the typing indicator by default', (tester) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 

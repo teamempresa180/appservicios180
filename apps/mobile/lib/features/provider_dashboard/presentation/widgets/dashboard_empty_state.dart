@@ -10,7 +10,8 @@ class DashboardEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return const AppEmptyState(
       title: 'Sin información del panel',
-      description: 'No pudimos cargar la información de tu cuenta de '
+      description:
+          'No pudimos cargar la información de tu cuenta de '
           'proveedor.',
       icon: Icons.dashboard_outlined,
     );

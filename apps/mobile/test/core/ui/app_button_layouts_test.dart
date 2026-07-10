@@ -17,7 +17,10 @@ import 'package:mobile/core/ui/widgets/app_button.dart';
 /// `isLoading: false`.
 void main() {
   Widget buildApp(Widget child) {
-    return MaterialApp(theme: AppTheme.light, home: Scaffold(body: child));
+    return MaterialApp(
+      theme: AppTheme.light,
+      home: Scaffold(body: child),
+    );
   }
 
   void expectNoException(WidgetTester tester) {

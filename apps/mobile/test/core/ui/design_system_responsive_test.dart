@@ -84,10 +84,7 @@ void main() {
           expect(exception, isNull);
         } else {
           expect(exception, isA<FlutterError>());
-          expect(
-            exception.toString(),
-            contains('overflowed by'),
-          );
+          expect(exception.toString(), contains('overflowed by'));
         }
       },
     );

@@ -14,20 +14,16 @@ class MockOrdersRepository implements OrdersRepository {
   List<Order> getOrders() => List.unmodifiable(mockOrders);
 
   @override
-  Service getServiceFor(Order order) =>
-      mockOrderServices[order.id]!;
+  Service getServiceFor(Order order) => mockOrderServices[order.id]!;
 
   @override
-  Provider getProviderFor(Order order) =>
-      mockOrderProviders[order.id]!;
+  Provider getProviderFor(Order order) => mockOrderProviders[order.id]!;
 
   @override
-  Profile getProfileFor(Order order) =>
-      mockOrderProfiles[order.id]!;
+  Profile getProfileFor(Order order) => mockOrderProfiles[order.id]!;
 
   @override
-  Category getCategoryFor(Order order) =>
-      mockOrderCategories[order.id]!;
+  Category getCategoryFor(Order order) => mockOrderCategories[order.id]!;
 
   @override
   Quote getQuoteFor(Order order) => mockOrderQuotes[order.id]!;

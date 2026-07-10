@@ -42,9 +42,7 @@ class RecentOrders extends StatelessWidget {
           const AppSectionTitle(title: 'Órdenes recientes'),
           for (final order in recent) ...[
             Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: AppSpacing.space4,
-              ),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.space4),
               child: Row(
                 children: [
                   Expanded(

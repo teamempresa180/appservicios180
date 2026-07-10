@@ -17,9 +17,12 @@ void main() {
       expect(notifications, everyElement(isA<Notification>()));
     });
 
-    test('returns one notification per category the UI needs to distinguish', () {
-      expect(repository.getNotifications().length, equals(5));
-    });
+    test(
+      'returns one notification per category the UI needs to distinguish',
+      () {
+        expect(repository.getNotifications().length, equals(5));
+      },
+    );
 
     test('exactly one notification is paired with a real Order', () {
       final matches = repository.getNotifications().where(

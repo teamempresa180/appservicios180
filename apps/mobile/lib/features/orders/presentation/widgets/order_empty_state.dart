@@ -10,7 +10,8 @@ class OrderEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return const AppEmptyState(
       title: 'Sin órdenes todavía',
-      description: 'Cuando solicites un servicio, tus órdenes aparecerán '
+      description:
+          'Cuando solicites un servicio, tus órdenes aparecerán '
           'aquí.',
       icon: Icons.receipt_long_outlined,
     );

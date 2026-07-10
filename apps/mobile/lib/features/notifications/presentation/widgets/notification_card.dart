@@ -38,10 +38,7 @@ class NotificationCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.space4),
-                Text(
-                  data.description,
-                  style: context.textStyles.bodyMedium,
-                ),
+                Text(data.description, style: context.textStyles.bodyMedium),
                 const SizedBox(height: AppSpacing.space4),
                 Text(data.timeAgo, style: context.textStyles.bodySmall),
                 const SizedBox(height: AppSpacing.space8),

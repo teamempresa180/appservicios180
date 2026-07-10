@@ -6,7 +6,10 @@ import 'package:mobile/core/ui/widgets/app_button.dart';
 
 void main() {
   Widget buildApp(Widget child) {
-    return MaterialApp(theme: AppTheme.light, home: Scaffold(body: child));
+    return MaterialApp(
+      theme: AppTheme.light,
+      home: Scaffold(body: child),
+    );
   }
 
   testWidgets('normal state is enabled and shows the label', (tester) async {

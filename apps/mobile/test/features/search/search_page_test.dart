@@ -9,7 +9,10 @@ import 'package:mobile/features/search/presentation/widgets/search_results.dart'
 
 void main() {
   Widget buildApp(Widget child) {
-    return MaterialApp(theme: AppTheme.light, home: Scaffold(body: child));
+    return MaterialApp(
+      theme: AppTheme.light,
+      home: Scaffold(body: child),
+    );
   }
 
   testWidgets('shows the header and the search bar accepts typing', (
@@ -19,7 +22,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Buscar servicios'), findsOneWidget);
-    expect(find.text('Encuentra exactamente lo que necesitas.'), findsOneWidget);
+    expect(
+      find.text('Encuentra exactamente lo que necesitas.'),
+      findsOneWidget,
+    );
 
     await tester.enterText(find.byType(TextFormField), 'plomería');
     await tester.pump();

@@ -158,8 +158,9 @@ reemplazar el mock por un repositorio real.
 | 40 | `address_management` | Gestión de direcciones guardadas (Casa/Trabajo/Oficina), acciones Editar/Eliminar/Seleccionar no-op. | `settings` ("Direcciones"). |
 | 41 | `provider_dashboard` | Panel del proveedor: ganancias (simuladas), estadísticas de órdenes (derivadas), rendimiento, órdenes recientes/pendientes, acciones rápidas. | `ProfileActions` ("Panel del proveedor", botón agregado). |
 | 42 | `provider_services` | Administración de servicios publicados: estadísticas activos/pausados (derivadas de `Service.status`), lista de servicios, acciones Editar/Pausar/Eliminar no-op. | `provider_dashboard` ("Ver servicios"). |
+| 43 | `availability` | Horario semanal del proveedor (Lunes–Domingo): 7 `Availability` reales (una por día), disponible/no disponible y horas derivados de `Availability.status`/`availableFrom`/`availableTo`, estadísticas derivadas + próxima disponibilidad simulada, acciones Editar/Copiar/Limpiar horario no-op. | `provider_dashboard` ("Disponibilidad"). |
 
-Mismo patrón exacto que 26–30 en los 12 features nuevos:
+Mismo patrón exacto que 26–30 en los 13 features nuevos (31–43):
 `presentation/` + `models/` (composición tipada) +
 `repositories/`(contrato + `Mock*Repository`) + `mock/` + `README.md`
 propio. Criterio nuevo, aplicado consistentemente desde el Prompt 31:
@@ -181,6 +182,13 @@ flutter run -d windows    ✅ compila y corre sin errores
 ```
 flutter analyze          ✅ No issues found!
 flutter test              ✅ 613/613 tests
+flutter run -d windows    ✅ compila y corre sin errores
+```
+
+### Verificación Flutter (actualizada — Prompt 43 aprobado)
+```
+flutter analyze          ✅ No issues found!
+flutter test              ✅ 635/635 tests
 flutter run -d windows    ✅ compila y corre sin errores
 ```
 
@@ -306,6 +314,15 @@ actualización de este documento, commit único de consolidación y
 re-verificación de `flutter analyze`/`flutter test`. Ver la sección de
 cierre de sesión más abajo para el hash del commit.
 
+### Actualización — Prompt 43 completado y consolidado
+
+**Prompt 43 — Feature Availability (visual completo)**. **Aprobado por
+el usuario.** Completado y verificado (`flutter analyze`, `flutter
+test` 635/635, `flutter run -d windows`, `git status`). Ver la tabla de
+features en la sección 4 para el detalle. Consolidado con commit
+exclusivo (ver sección de cierre de sesión más abajo para el hash) tras
+`dart format .` + re-verificación de `flutter analyze`/`flutter test`.
+
 ## 10. Siguiente prompt sugerido
 
 **Prompt 31 — Request Service (flujo de solicitud, visual)** *(nota
@@ -333,6 +350,17 @@ dominio ya existente, 100% completo — ver sección 3) compuesto junto a
 prompt indique explícitamente documentados en el modelo y el README. El
 Sprint de Branding sigue como hito grande pendiente, todavía sin número
 de prompt asignado.
+
+### Actualización — Siguiente prompt real (tras el Prompt 43)
+
+**Prompt 44 — Verification (visual completo)**, en curso de
+construcción siguiendo el mismo patrón. Compone `Identity`/`Profile`
+reales del dominio (módulos ya completos — ver sección 3) más campos
+simulados de estado de verificación documentados en su propio README.
+Cambio mínimo autorizado esperado: un botón "Verificación" en
+`provider_profile` que navegue a `VerificationPage`. El Sprint de
+Branding sigue como hito grande pendiente, todavía sin número de
+prompt asignado.
 
 ## 11. Sugerencia de versionado (aún no aplicada)
 
@@ -395,6 +423,18 @@ Contexto y reglas:
   físico Realme RMX3938 seguía sin conectarse durante esta racha de
   prompts; sigue pendiente como buena práctica, no bloqueante).
 
+### Actualización — Estado del entorno tras el Prompt 43
+
+- `flutter analyze` sigue en `No issues found!` con el feature
+  `availability` incluido.
+- `flutter test` pasa **635/635 tests** (613 previos + 22 agregados
+  por `availability`).
+- `dart format .` se ejecutó como parte de la consolidación de este
+  prompt; si reformateó algún archivo, se re-verificó
+  `flutter analyze`/`flutter test` después.
+- `flutter run -d windows` compila y corre sin errores (dispositivo
+  físico seguía sin conectarse; sigue pendiente, no bloqueante).
+
 ## Estado del repositorio al cierre de esta sesión (previo al Prompt 31)
 
 Este handoff se generó justo antes de cerrar la conversación por límite
@@ -446,5 +486,45 @@ se conserva como registro histórico, sin eliminar).
   Prompts 19–42.
 - Si el working tree tiene cambios sin commitear más allá del logo,
   **no asumir que son del Prompt 43** — confirmar con el usuario antes
+  de continuar, siguiendo la misma disciplina usada en cada prompt
+  anterior.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 43 consolidado, previo al Prompt 44)
+
+Este es el handoff vigente — más reciente que los dos bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+
+- **El Prompt 43 (`availability`) fue aprobado explícitamente por el
+  usuario**, verificado con `flutter analyze` + `flutter test`
+  (635/635) + `flutter run -d windows` + `git status`.
+- Como parte de la consolidación de este prompt se ejecutó
+  `dart format .` sobre todo `apps/mobile/` (solo cambios de estilo en
+  100 archivos existentes, sin alterar comportamiento), re-verificado
+  con `flutter analyze` (`No issues found!`) y `flutter test`
+  (635/635) después de formatear.
+- Se creó un **único commit exclusivo del Prompt 43** con el mensaje
+  `Prompt 43 - Availability feature completed` (ver `git log -1` para
+  el hash exacto — no se fija aquí el hash literal porque una edición
+  posterior de este mismo archivo para registrarlo lo cambiaría de
+  nuevo, un problema de auto-referencia inherente a Git). Incluye el
+  feature `availability` completo, el cambio mínimo de navegación en
+  `provider_dashboard`, y el resultado de `dart format .` sobre el
+  resto del proyecto — **sin incluir `Logo oficial grupo.svg`**
+  (branding sigue congelado, ver sección 7).
+- `git status` tras el commit quedó exactamente:
+  ```
+  On branch main
+  Untracked files:
+          Logo oficial grupo.svg
+  nothing added to commit but untracked files present
+  ```
+- Si al abrir una nueva sesión `git status` muestra ese commit como el
+  más reciente y el working tree está limpio (salvo el
+  `Logo oficial grupo.svg` sin trackear), el estado es exactamente el
+  que se describe en este documento — se puede continuar directamente
+  con el **Prompt 44 — Verification** (siguiente prompt acordado, ver
+  sección 10) sin re-verificar nada de los Prompts 19–43.
+- Si el working tree tiene cambios sin commitear más allá del logo,
+  **no asumir que son del Prompt 44** — confirmar con el usuario antes
   de continuar, siguiendo la misma disciplina usada en cada prompt
   anterior.

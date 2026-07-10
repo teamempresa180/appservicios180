@@ -6,12 +6,7 @@ import '../../../../core/ui/widgets/app_button.dart';
 /// visual — every button is a documented no-op; it does not edit,
 /// delete or select a real address yet (see the feature README).
 class AddressActions extends StatelessWidget {
-  const AddressActions({
-    super.key,
-    this.onEdit,
-    this.onDelete,
-    this.onSelect,
-  });
+  const AddressActions({super.key, this.onEdit, this.onDelete, this.onSelect});
 
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;

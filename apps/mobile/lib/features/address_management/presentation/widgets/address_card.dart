@@ -58,10 +58,7 @@ class AddressCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.space4),
-          Text(
-            data.deliveryInstructions,
-            style: context.textStyles.bodySmall,
-          ),
+          Text(data.deliveryInstructions, style: context.textStyles.bodySmall),
           const SizedBox(height: AppSpacing.space12),
           const AddressActions(),
         ],

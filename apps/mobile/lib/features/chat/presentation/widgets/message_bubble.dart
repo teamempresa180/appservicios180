@@ -36,9 +36,7 @@ class MessageBubble extends StatelessWidget {
         : context.colors.onPrimary;
 
     return Align(
-      alignment: isFromProvider
-          ? Alignment.centerLeft
-          : Alignment.centerRight,
+      alignment: isFromProvider ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: AppSpacing.space4),
         padding: const EdgeInsets.symmetric(
@@ -56,9 +54,7 @@ class MessageBubble extends StatelessWidget {
           children: [
             Text(
               message.content,
-              style: context.textStyles.bodyMedium?.copyWith(
-                color: textColor,
-              ),
+              style: context.textStyles.bodyMedium?.copyWith(color: textColor),
             ),
             const SizedBox(height: AppSpacing.space4),
             Text(

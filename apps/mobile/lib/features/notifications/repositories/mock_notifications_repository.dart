@@ -11,8 +11,7 @@ import 'notifications_repository.dart';
 /// see the feature README.
 class MockNotificationsRepository implements NotificationsRepository {
   @override
-  List<Notification> getNotifications() =>
-      List.unmodifiable(mockNotifications);
+  List<Notification> getNotifications() => List.unmodifiable(mockNotifications);
 
   @override
   Order? getOrderFor(Notification notification) =>

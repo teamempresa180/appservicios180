@@ -33,10 +33,7 @@ class ServiceCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.space4),
           Text(data.category.name, style: context.textStyles.bodySmall),
           const SizedBox(height: AppSpacing.space8),
-          Text(
-            '\$${service.basePrice}',
-            style: context.textStyles.titleMedium,
-          ),
+          Text('\$${service.basePrice}', style: context.textStyles.titleMedium),
           const SizedBox(height: AppSpacing.space8),
           Row(
             children: [
@@ -46,10 +43,7 @@ class ServiceCard extends StatelessWidget {
                 color: context.colors.secondary,
               ),
               const SizedBox(width: AppSpacing.space4),
-              Text(
-                '${data.viewsCount}',
-                style: context.textStyles.bodySmall,
-              ),
+              Text('${data.viewsCount}', style: context.textStyles.bodySmall),
               const SizedBox(width: AppSpacing.space12),
               Icon(
                 Icons.request_page_outlined,

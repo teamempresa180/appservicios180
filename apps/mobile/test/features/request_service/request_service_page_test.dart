@@ -66,9 +66,7 @@ void main() {
     expect(find.textContaining('Calle 45'), findsOneWidget);
   });
 
-  testWidgets('shows the problem description field prefilled', (
-    tester,
-  ) async {
+  testWidgets('shows the problem description field prefilled', (tester) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 

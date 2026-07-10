@@ -23,7 +23,8 @@ final List<Provider> mockProviders = [
     status: ProviderStatus.active,
     type: ProviderType.independent,
     experience: ProviderExperience.advanced,
-    biography: 'Especialista en plomería residencial con más de 8 años '
+    biography:
+        'Especialista en plomería residencial con más de 8 años '
         'de experiencia.',
     yearsOfExperience: 8,
     createdAt: _seedTimestamp,
@@ -36,7 +37,8 @@ final List<Provider> mockProviders = [
     status: ProviderStatus.active,
     type: ProviderType.freelancer,
     experience: ProviderExperience.expert,
-    biography: 'Electricista certificado, instalaciones residenciales '
+    biography:
+        'Electricista certificado, instalaciones residenciales '
         'y comerciales.',
     yearsOfExperience: 12,
     createdAt: _seedTimestamp,

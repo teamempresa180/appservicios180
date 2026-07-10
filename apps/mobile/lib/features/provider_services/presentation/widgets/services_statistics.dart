@@ -46,10 +46,7 @@ class ServicesStatistics extends StatelessWidget {
             children: [
               _StatTile(label: 'Servicios activos', value: '$activeCount'),
               _StatTile(label: 'Servicios pausados', value: '$pausedCount'),
-              _StatTile(
-                label: 'Total de solicitudes',
-                value: '$totalRequests',
-              ),
+              _StatTile(label: 'Total de solicitudes', value: '$totalRequests'),
               _StatTile(
                 label: 'Total de visualizaciones',
                 value: '$totalViews',

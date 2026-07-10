@@ -36,16 +36,12 @@ class ProfileActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        AppButton(
-          label: 'Editar perfil',
-          onPressed: onEditProfile ?? () {},
-        ),
+        AppButton(label: 'Editar perfil', onPressed: onEditProfile ?? () {}),
         const SizedBox(height: AppSpacing.space8),
         AppButton(
           label: 'Panel del proveedor',
           onPressed:
-              onProviderDashboard ??
-              () => _openProviderDashboard(context),
+              onProviderDashboard ?? () => _openProviderDashboard(context),
         ),
         const SizedBox(height: AppSpacing.space8),
         AppButton(label: 'Cerrar sesión', onPressed: onLogout ?? () {}),

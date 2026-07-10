@@ -6,7 +6,10 @@ import 'package:mobile/core/ui/widgets/app_text_field.dart';
 
 void main() {
   Widget buildApp(Widget child) {
-    return MaterialApp(theme: AppTheme.light, home: Scaffold(body: child));
+    return MaterialApp(
+      theme: AppTheme.light,
+      home: Scaffold(body: child),
+    );
   }
 
   testWidgets('shows label, hint, prefix and suffix icons', (tester) async {
@@ -33,9 +36,7 @@ void main() {
     expect(field.enabled, isFalse);
   });
 
-  testWidgets('shows the validator error message when invalid', (
-    tester,
-  ) async {
+  testWidgets('shows the validator error message when invalid', (tester) async {
     final formKey = GlobalKey<FormState>();
     await tester.pumpWidget(
       buildApp(

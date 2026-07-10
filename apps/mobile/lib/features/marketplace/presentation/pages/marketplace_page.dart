@@ -40,7 +40,8 @@ class MarketplacePage extends StatelessWidget {
           providerName: providerRepository
               .profileOf(service.providerId)
               .displayName,
-          categoryName: categoryRepository.getById(service.categoryId)?.name ?? '',
+          categoryName:
+              categoryRepository.getById(service.categoryId)?.name ?? '',
           rating: serviceRepository.ratingOf(service.id),
         ),
     ];

@@ -79,9 +79,7 @@ void main() {
   testWidgets('loading state shows AppLoading instead of the list', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      buildApp(state: ProviderServicesViewState.loading),
-    );
+    await tester.pumpWidget(buildApp(state: ProviderServicesViewState.loading));
     // The indeterminate CircularProgressIndicator never settles, so
     // pumpAndSettle can't be used — but the message's FadeIn does need
     // a couple of pumps to resolve, or its delayed Future leaves a
@@ -96,9 +94,7 @@ void main() {
   testWidgets('empty state shows AppEmptyState instead of the list', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      buildApp(state: ProviderServicesViewState.empty),
-    );
+    await tester.pumpWidget(buildApp(state: ProviderServicesViewState.empty));
     await tester.pumpAndSettle();
 
     expect(find.byType(AppEmptyState), findsOneWidget);

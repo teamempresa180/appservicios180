@@ -23,7 +23,10 @@ class AppLoading extends StatelessWidget {
           if (message != null) ...[
             const SizedBox(height: AppSpacing.space12),
             FadeIn(
-              child: Text(message!, style: Theme.of(context).textTheme.bodyMedium),
+              child: Text(
+                message!,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
             ),
           ],
         ],
