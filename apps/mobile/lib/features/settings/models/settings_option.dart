@@ -5,6 +5,7 @@
 enum SettingsOptionId {
   addresses,
   contacts,
+  security,
   notifications,
   privacy,
   help,
@@ -18,6 +19,8 @@ extension SettingsOptionLabel on SettingsOptionId {
         return 'Direcciones';
       case SettingsOptionId.contacts:
         return 'Contactos';
+      case SettingsOptionId.security:
+        return 'Seguridad';
       case SettingsOptionId.notifications:
         return 'Notificaciones';
       case SettingsOptionId.privacy:

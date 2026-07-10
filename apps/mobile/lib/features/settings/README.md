@@ -47,7 +47,7 @@ test/features/settings/ (smoke test de la página)
 | Campo | Origen |
 |---|---|
 | `profile` | Entidad **real** del dominio (`profiles/`), servida por el repositorio **mock**. |
-| `options` (`SettingsOptionId`) | **Totalmente simulado**: "Configuración de la app" no es uno de los 22 módulos de negocio del dominio — es un menú de UI puro (Direcciones, Contactos, Notificaciones, Privacidad, Ayuda, Cerrar sesión). |
+| `options` (`SettingsOptionId`) | **Totalmente simulado**: "Configuración de la app" no es uno de los 22 módulos de negocio del dominio — es un menú de UI puro (Direcciones, Contactos, Seguridad, Notificaciones, Privacidad, Ayuda, Cerrar sesión). |
 
 **Sin colores ni iconos en el modelo**: `SettingsDisplay` no almacena
 ningún `Color` ni `IconData`. `SettingsOptionTile` resuelve el icono de
@@ -68,8 +68,10 @@ features desde `search`.
   feature `address_management`, Prompt 40) — el cambio de navegación
   que el Prompt 40 pedía explícitamente. Tocar "Contactos" navega a
   `ContactManagementPage` (del feature `contact_management`, Prompt
-  47) — el mismo patrón. El resto de las opciones
-  ("Notificaciones"/"Privacidad"/"Ayuda"/"Cerrar sesión") son no-op.
+  47) — el mismo patrón. Tocar "Seguridad" navega a `SecurityPage` (del
+  feature `security`, Prompt 48) — el mismo patrón. El resto de las
+  opciones ("Notificaciones"/"Privacidad"/"Ayuda"/"Cerrar sesión") son
+  no-op.
 
 ## Cómo conectar posteriormente con Backend
 

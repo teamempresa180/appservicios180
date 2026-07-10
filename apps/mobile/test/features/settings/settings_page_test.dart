@@ -18,9 +18,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Configuración'), findsOneWidget);
-    expect(find.byType(SettingsOptionTile), findsNWidgets(6));
+    expect(find.byType(SettingsOptionTile), findsNWidgets(7));
     expect(find.text('Direcciones'), findsOneWidget);
     expect(find.text('Contactos'), findsOneWidget);
+    expect(find.text('Seguridad'), findsOneWidget);
     expect(find.text('Notificaciones'), findsOneWidget);
     expect(find.text('Privacidad'), findsOneWidget);
     expect(find.text('Ayuda'), findsOneWidget);

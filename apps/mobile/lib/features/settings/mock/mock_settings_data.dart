@@ -26,6 +26,7 @@ final Profile mockSettingsProfile = Profile(
 const List<SettingsOptionId> mockSettingsOptions = [
   SettingsOptionId.addresses,
   SettingsOptionId.contacts,
+  SettingsOptionId.security,
   SettingsOptionId.notifications,
   SettingsOptionId.privacy,
   SettingsOptionId.help,
