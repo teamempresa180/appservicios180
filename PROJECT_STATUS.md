@@ -159,6 +159,7 @@ reemplazar el mock por un repositorio real.
 | 41 | `provider_dashboard` | Panel del proveedor: ganancias (simuladas), estadísticas de órdenes (derivadas), rendimiento, órdenes recientes/pendientes, acciones rápidas. | `ProfileActions` ("Panel del proveedor", botón agregado). |
 | 42 | `provider_services` | Administración de servicios publicados: estadísticas activos/pausados (derivadas de `Service.status`), lista de servicios, acciones Editar/Pausar/Eliminar no-op. | `provider_dashboard` ("Ver servicios"). |
 | 43 | `availability` | Horario semanal del proveedor (Lunes–Domingo): 7 `Availability` reales (una por día), disponible/no disponible y horas derivados de `Availability.status`/`availableFrom`/`availableTo`, estadísticas derivadas + próxima disponibilidad simulada, acciones Editar/Copiar/Limpiar horario no-op. | `provider_dashboard` ("Disponibilidad"). |
+| 44 | `verification` | Verificación de identidad: `Identity`/`Profile` reales (una cuenta fija), nombre completo/tipo de documento reales (passthrough), `verificationStatus`/`completedSteps`/`pendingSteps`/`rejectedReason`/`estimatedReviewTime` totalmente simulados (el módulo de dominio `Verification` existe pero el prompt no lo incluyó en el contrato del repositorio — documentado explícitamente en el README como excepción al patrón "derivado, no simulado"), selfie simulada, 3 estados visuales (loading/empty/information). | `provider_profile` (tercer botón "Verificación", agregado junto a "Solicitar servicio"/"Chat"). |
 
 Mismo patrón exacto que 26–30 en los 13 features nuevos (31–43):
 `presentation/` + `models/` (composición tipada) +
@@ -192,6 +193,13 @@ flutter test              ✅ 635/635 tests
 flutter run -d windows    ✅ compila y corre sin errores
 ```
 
+### Verificación Flutter (actualizada — Prompt 44 aprobado)
+```
+flutter analyze          ✅ No issues found!
+flutter test              ✅ 656/656 tests
+flutter run -d windows    ✅ compila y corre sin errores
+```
+
 **Nota de entorno**: el problema del carácter `°` (que afectaba
 `flutter analyze`/`flutter build windows` en la ruta antigua bajo
 `Grupo empresarial 180°`) **no existe** en la ruta oficial
@@ -221,6 +229,17 @@ registros: `orders`, `notifications`, `reviews`,
 `quote`, `orders`, `payments`) — lo que sigue sin existir es su
 conexión a backend/lógica real, no la pantalla en sí. Ver la tabla de
 features arriba.
+
+**Actualización (Prompt 44)**: `Verification` ya existe como feature
+100% visual/mock (`verification`), abierto desde `provider_profile`
+(tercer botón "Verificación"). El módulo de dominio real `Verification`
+existe (ver sección 3) pero **no se usa** en este feature — el prompt
+restringió el repositorio a `Identity`/`Profile` únicamente, por lo que
+`verificationStatus` y campos relacionados siguen siendo simulados en
+sentido estricto (no derivados), a diferencia del patrón usado en
+`orders`/`provider_services`/`availability`. Ver el README de
+`features/verification/` para el detalle completo de esta excepción
+documentada.
 
 ## 5. Decisiones arquitectónicas importantes
 
@@ -353,14 +372,26 @@ de prompt asignado.
 
 ### Actualización — Siguiente prompt real (tras el Prompt 43)
 
-**Prompt 44 — Verification (visual completo)**, en curso de
-construcción siguiendo el mismo patrón. Compone `Identity`/`Profile`
-reales del dominio (módulos ya completos — ver sección 3) más campos
-simulados de estado de verificación documentados en su propio README.
-Cambio mínimo autorizado esperado: un botón "Verificación" en
-`provider_profile` que navegue a `VerificationPage`. El Sprint de
-Branding sigue como hito grande pendiente, todavía sin número de
-prompt asignado.
+**Prompt 44 — Verification (visual completo)**. **Aprobado por el
+usuario y consolidado.** Compone `Identity`/`Profile` reales del
+dominio (módulos ya completos — ver sección 3) más campos simulados de
+estado de verificación documentados en su propio README. Cambio mínimo
+aplicado: un tercer botón "Verificación" en `provider_profile` (junto a
+"Solicitar servicio"/"Chat") que navega con `Navigator.push` a
+`VerificationPage`. Verificado con `flutter analyze` (`No issues
+found!`), `flutter test` (656/656) y `dart format .` (0 archivos
+modificados). El Sprint de Branding sigue como hito grande pendiente,
+todavía sin número de prompt asignado.
+
+### Actualización — Siguiente prompt real (tras el Prompt 44)
+
+**Prompt 45 — Trust**, siguiente prompt acordado con el usuario,
+siguiendo el mismo patrón arquitectónico usado desde `service_detail`
+hasta `verification`: módulo de dominio `Trust` (ya completo — ver
+sección 3) compuesto junto a las entidades reales que el prompt
+indique, con cualquier campo simulado documentado explícitamente en el
+modelo y el README. El Sprint de Branding sigue como hito grande
+pendiente, todavía sin número de prompt asignado.
 
 ## 11. Sugerencia de versionado (aún no aplicada)
 
@@ -526,5 +557,46 @@ anteriores (que se conservan como registro histórico, sin eliminar).
   sección 10) sin re-verificar nada de los Prompts 19–43.
 - Si el working tree tiene cambios sin commitear más allá del logo,
   **no asumir que son del Prompt 44** — confirmar con el usuario antes
+  de continuar, siguiendo la misma disciplina usada en cada prompt
+  anterior.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 44 consolidado, previo al Prompt 45)
+
+Este es el handoff vigente — más reciente que los tres bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+
+- **El Prompt 44 (`verification`) fue aprobado explícitamente por el
+  usuario**, verificado con `flutter analyze` (`No issues found!`),
+  `flutter test` (656/656), `dart format .` (0 archivos modificados,
+  ya estaba formateado) y `git status`.
+- El feature llegó ya construido y verificado en una sesión previa
+  (código + tests de `verification`, cambio mínimo de navegación en
+  `provider_profile/presentation/widgets/provider_actions.dart` y su
+  README) — esta sesión ejecutó el Sprint de Consolidación
+  correspondiente: actualización de este documento, `dart format .`,
+  re-verificación de `flutter analyze`/`flutter test`, y commit único.
+- Se creó un **único commit exclusivo del Prompt 44** con el mensaje
+  `Prompt 44 - Verification feature completed` (ver `git log -1` para
+  el hash exacto — no se fija aquí el hash literal por la misma razón
+  de auto-referencia explicada en la sección del Prompt 43). Incluye el
+  feature `verification` completo, el cambio mínimo de navegación en
+  `provider_profile`, y la actualización de este archivo —
+  **sin incluir `Logo oficial grupo.svg`** (branding sigue congelado,
+  ver sección 7).
+- `git status` tras el commit quedó exactamente:
+  ```
+  On branch main
+  Untracked files:
+          Logo oficial grupo.svg
+  nothing added to commit but untracked files present
+  ```
+- Si al abrir una nueva sesión `git status` muestra ese commit como el
+  más reciente y el working tree está limpio (salvo el
+  `Logo oficial grupo.svg` sin trackear), el estado es exactamente el
+  que se describe en este documento — se puede continuar directamente
+  con el **Prompt 45 — Trust** (siguiente prompt acordado, ver
+  sección 10) sin re-verificar nada de los Prompts 19–44.
+- Si el working tree tiene cambios sin commitear más allá del logo,
+  **no asumir que son del Prompt 45** — confirmar con el usuario antes
   de continuar, siguiendo la misma disciplina usada en cada prompt
   anterior.

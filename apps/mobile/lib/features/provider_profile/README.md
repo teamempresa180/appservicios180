@@ -125,8 +125,8 @@ README de `service_detail`.
   `ProviderProfileData`/entidades concretas), pero con una estructura
   interna (tarjeta + `AppSectionTitle`) consistente con el resto de la
   app.
-- **`ProviderActions`**: envoltorio delgado sobre dos `AppButton` con
-  labels fijos — reutilizable donde se necesiten exactamente esos dos
+- **`ProviderActions`**: envoltorio delgado sobre tres `AppButton` con
+  labels fijos — reutilizable donde se necesiten exactamente esos tres
   CTA.
 
 ## Qué NO existe todavía (a propósito)
@@ -145,3 +145,10 @@ cambio permitido en este feature para ese prompt. Como
 `RequestServicePage` también muestra un único servicio/proveedor fijo
 simulado, esto no depende todavía del proveedor real de este perfil.
 Ver el README de `features/request_service/` para más contexto.
+
+**Actualización (feature `verification`)**: `ProviderActions` ahora
+incluye un tercer botón "Verificación" (antes solo "Solicitar
+servicio"/"Chat") que navega (vía `Navigator.push`, no `GoRouter`) a
+`VerificationPage` — el único cambio permitido en este feature para
+ese prompt. Ver el README de `features/verification/` para más
+contexto.
