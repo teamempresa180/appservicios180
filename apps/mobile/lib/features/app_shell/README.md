@@ -2,12 +2,17 @@
 
 Marco de navegación reutilizable (top bar + área de contenido + barra de
 navegación responsiva) que alojará **todas** las pantallas principales de
-la aplicación una vez autenticado el usuario. Todavía no aloja ninguna
-pantalla real — solo placeholders elegantes, uno por sección. Reutiliza
+la aplicación una vez autenticado el usuario. Reutiliza
 exclusivamente el Design System existente (`AppCard`, `AppDivider`,
 `AppSectionTitle`, `AppSpacing`, `FadeIn`/`ScaleIn`). Sin identidad
 visual propia: sin logo, sin colores de marca, sin ilustraciones —
 título temporal "AppServicios" en texto plano y solo Material Icons.
+
+**Actualización (feature `profile`, Prompt 38)**: el slot "Perfil"
+(índice 4) ya no muestra `ShellPlaceholder` — ahora aloja `ProfilePage`
+directamente, el único cambio autorizado en ese prompt. "Órdenes" y
+"Mensajes" siguen mostrando `ShellPlaceholder` hasta que sus propios
+prompts los conecten de la misma forma.
 
 ## Arquitectura del feature
 

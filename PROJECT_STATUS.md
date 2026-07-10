@@ -142,10 +142,45 @@ presentación tipada, p. ej. `ServiceDisplay`, `ServiceDetailData`,
 `README.md` propio explicando qué es real/derivado/simulado y cómo
 reemplazar el mock por un repositorio real.
 
+### Features construidos (Prompts 31–42), mismo patrón que 26–30 — todos 100% visuales/mock, sin backend
+
+| # | Feature | Contenido | Abierto desde |
+|---|---|---|---|
+| 31 | `request_service` | Formulario de solicitud de servicio: fecha, hora, dirección, descripción, adjuntos simulados, prioridad. | `provider_profile` ("Solicitar servicio"). |
+| 32 | `quote` | Cotización: resumen de servicio/proveedor/dirección/horario, desglose de precio, notas. | `request_service` ("Continuar"). |
+| 33 | `orders` | Lista de órdenes con 4 estados (Pendiente/En progreso/Finalizada/Cancelada), tabs de filtro puramente visuales. | `quote` ("Confirmar solicitud"). |
+| 34 | `payments` | Detalle de un pago: método, estado, resumen, desglose. | `orders` ("Ver detalle"). |
+| 35 | `chat` | Conversación simulada cliente↔proveedor (4 mensajes alternados), input visual no-op. | `payments` ("Ver recibo"). |
+| 36 | `notifications` | Centro de notificaciones con 5 categorías (orden/pago/cotización/mensaje/sistema), tabs de filtro visuales. | `chat` ("Más opciones"). |
+| 37 | `reviews` | Lista de reseñas con calificación por estrellas, filtros por rating (visuales). | `orders` ("Calificar", especificado explícitamente por el prompt). |
+| 38 | `profile` | Perfil de cuenta del cliente: información personal, contacto, dirección, progreso de perfil. | Slot "Perfil" del `AppShell` (antes `ShellPlaceholder`). |
+| 39 | `settings` | Menú de configuración (Direcciones/Notificaciones/Privacidad/Ayuda/Cerrar sesión). **Insertado** antes del Prompt 40 porque ese prompt asumía su existencia y no había sido construido — confirmado con el usuario antes de proceder. | Ícono de engranaje en `ProfileHeader` (`profile`). |
+| 40 | `address_management` | Gestión de direcciones guardadas (Casa/Trabajo/Oficina), acciones Editar/Eliminar/Seleccionar no-op. | `settings` ("Direcciones"). |
+| 41 | `provider_dashboard` | Panel del proveedor: ganancias (simuladas), estadísticas de órdenes (derivadas), rendimiento, órdenes recientes/pendientes, acciones rápidas. | `ProfileActions` ("Panel del proveedor", botón agregado). |
+| 42 | `provider_services` | Administración de servicios publicados: estadísticas activos/pausados (derivadas de `Service.status`), lista de servicios, acciones Editar/Pausar/Eliminar no-op. | `provider_dashboard` ("Ver servicios"). |
+
+Mismo patrón exacto que 26–30 en los 12 features nuevos:
+`presentation/` + `models/` (composición tipada) +
+`repositories/`(contrato + `Mock*Repository`) + `mock/` + `README.md`
+propio. Criterio nuevo, aplicado consistentemente desde el Prompt 31:
+cuando el prompt pide un campo "simulado" que en realidad ya tiene un
+equivalente real en el dominio (p. ej. `OrderDisplay.scheduledDate` ←
+`Order.scheduledDate`, `ProviderServiceDisplay.isPublished` ←
+`Service.status == active`), se expone como **getter derivado/real**
+en vez de fabricar un segundo valor inconsistente — documentado
+explícitamente en cada README y en el doc de cada clase de modelo.
+
 ### Verificación Flutter (último estado conocido — Prompt 30 aprobado)
 ```
 flutter analyze          ✅ No issues found!
 flutter test              ✅ 333/333 tests
+flutter run -d windows    ✅ compila y corre sin errores
+```
+
+### Verificación Flutter (actualizada — Prompt 42 aprobado)
+```
+flutter analyze          ✅ No issues found!
+flutter test              ✅ 613/613 tests
 flutter run -d windows    ✅ compila y corre sin errores
 ```
 
@@ -161,12 +196,23 @@ físico sigue pendiente como buena práctica, no es bloqueante.
 
 ### Lo que NO existe todavía en Flutter
 Gestión de estado (Provider/Riverpod/Bloc/Cubit/ViewModels), consumo de
-API, conexión a backend, autenticación real, persistencia, Chat, Quotes,
-Orders, Payments reales, identidad visual real. Toda navegación entre
-features de exploración (`marketplace`→`service_detail`→
-`provider_profile`) es `Navigator.push` puntual, no rutas de `GoRouter`
-registradas — ningún feature de datos tiene lookup por ID todavía (cada
-uno muestra un único registro fijo simulado).
+API, conexión a backend, autenticación real, persistencia, identidad
+visual real. Toda navegación entre features de exploración/flujo
+(`marketplace`→`service_detail`→`provider_profile`→`request_service`→
+`quote`→`orders`→`payments`→`chat`→`notifications`, `orders`→`reviews`,
+`profile`→`settings`→`address_management`, `profile`→
+`provider_dashboard`→`provider_services`) es `Navigator.push` puntual,
+no rutas de `GoRouter` registradas — ningún feature de datos tiene
+lookup por ID todavía (cada uno muestra un único registro fijo
+simulado, o una lista fija en los features que ya muestran varios
+registros: `orders`, `notifications`, `reviews`,
+`address_management`, `provider_services`).
+
+**Actualización (Prompts 31–42)**: `Chat`, `Quotes`, `Orders` y
+`Payments` **ya existen como features 100% visuales/mock** (`chat`,
+`quote`, `orders`, `payments`) — lo que sigue sin existir es su
+conexión a backend/lógica real, no la pantalla en sí. Ver la tabla de
+features arriba.
 
 ## 5. Decisiones arquitectónicas importantes
 
@@ -195,7 +241,7 @@ uno muestra un único registro fijo simulado).
 - Toda navegación pasa por `AppRoutes` (constantes) + `AppRouter` — nunca
   strings de ruta sueltos.
 
-## 7. Branding (pendiente — Sprint de Branding es el Prompt 33.1)
+## 7. Branding (pendiente — Sprint de Branding, sin número de prompt fijo asignado todavía)
 
 **No existe identidad visual oficial todavía.** No crear/usar logo,
 colores de marca (negro/dorado/blanco), tipografía corporativa ni
@@ -206,9 +252,12 @@ README para el procedimiento).
 **Archivo `Logo oficial grupo.svg`**: existe en la raíz del repositorio
 (`C:\dev\AppServicios_nuevo\Logo oficial grupo.svg`), colocado ahí por
 el usuario en preparación para el Sprint de Branding. **No fue creado
-por el asistente, no está en ningún commit, no se usa ni se referencia
-en ningún widget.** No moverlo, no tocarlo, no agregarlo a assets hasta
-el Prompt 33.1.
+por el asistente, sigue sin estar en ningún commit (permanece
+untracked a propósito), no se usa ni se referencia en ningún widget.**
+No moverlo, no tocarlo, no agregarlo a assets. Reconfirmado intacto en
+el Sprint de Consolidación posterior al Prompt 42 — sigue reservado
+exclusivamente para el Sprint de Branding, todavía no programado con
+un número de prompt fijo.
 
 ## 8. Cómo ejecutar
 
@@ -237,10 +286,32 @@ por el usuario.** Completado y verificado (`flutter analyze`,
 commit al momento de aprobarse — ver sección "Estado del repositorio al
 cierre de esta sesión" más abajo para el commit de continuidad.
 
+### Actualización — Prompt 42 completado (sesión posterior)
+
+**Prompt 42 — Feature Provider Services (visual completo)**, último de
+una racha continua de 12 prompts (31 a 42) construidos en la misma
+sesión siguiendo exactamente el patrón de `service_detail`/
+`provider_profile`. Todos entregados con el formato estándar (qué se
+implementó, árbol, widgets, repository, modelo, responsive,
+`flutter analyze`, `flutter test`, `flutter run`, `git status`,
+confirmación sin backend) y todos aprobados por el usuario antes de
+avanzar al siguiente. Ver la tabla de features en la sección 4 para el
+detalle de cada uno, incluyendo el Prompt 39 (`settings`) insertado
+fuera de la numeración original del usuario porque el Prompt 40
+(`address_management`) asumía su existencia.
+
+Sprint de Consolidación ejecutado inmediatamente después del Prompt 42
+(sin desarrollar features nuevos): auditoría de `git status`,
+actualización de este documento, commit único de consolidación y
+re-verificación de `flutter analyze`/`flutter test`. Ver la sección de
+cierre de sesión más abajo para el hash del commit.
+
 ## 10. Siguiente prompt sugerido
 
-**Prompt 31 — Request Service (flujo de solicitud, visual)**, siguiendo
-exactamente el mismo patrón que `service_detail`/`provider_profile`:
+**Prompt 31 — Request Service (flujo de solicitud, visual)** *(nota
+histórica: ya completado — ver arriba; sección conservada como
+registro de la planificación original)*, siguiendo exactamente el
+mismo patrón que `service_detail`/`provider_profile`:
 `presentation/` (sin `Scaffold` propio) + `models/` (composición
 tipada) + `repositories/` (contrato + `Mock*Repository`, solo
 entidades reales de dominio — `Quote`/`Order` probablemente) + `mock/`
@@ -250,6 +321,18 @@ entidades reales de dominio — `Quote`/`Order` probablemente) + `mock/`
 sin gestión de estado, sin persistencia. Después de eso, el Sprint de
 Branding (Prompt 33.1) es el próximo hito grande ya acordado con el
 usuario.
+
+### Actualización — Siguiente prompt real
+
+**Prompt 43 — Availability (visual completo)**, confirmado por el
+usuario como el siguiente prompt tras este Sprint de Consolidación.
+Debería seguir exactamente el mismo patrón arquitectónico usado desde
+`service_detail` hasta `provider_services`: `Availability` (módulo de
+dominio ya existente, 100% completo — ver sección 3) compuesto junto a
+`Provider`/`Profile` reales, con los campos simulados que el próximo
+prompt indique explícitamente documentados en el modelo y el README. El
+Sprint de Branding sigue como hito grande pendiente, todavía sin número
+de prompt asignado.
 
 ## 11. Sugerencia de versionado (aún no aplicada)
 
@@ -302,6 +385,16 @@ Contexto y reglas:
   `flutter analyze` — el comando estándar de Flutter funciona
   directamente.
 
+### Actualización — Estado del entorno tras el Prompt 42 y el Sprint de Consolidación
+
+- `flutter analyze` sigue en `No issues found!` con los 12 features
+  nuevos (31–42) incluidos.
+- `flutter test` pasa **613/613 tests** (333 previos + los agregados
+  por cada feature de los Prompts 31–42, incluyendo `settings`).
+- `flutter run -d windows` compila y corre sin errores (dispositivo
+  físico Realme RMX3938 seguía sin conectarse durante esta racha de
+  prompts; sigue pendiente como buena práctica, no bloqueante).
+
 ## Estado del repositorio al cierre de esta sesión (previo al Prompt 31)
 
 Este handoff se generó justo antes de cerrar la conversación por límite
@@ -326,3 +419,32 @@ conversación) pueda retomar sin ambigüedad:
   de continuar, seguiendo la misma disciplina de "leer
   PROJECT_STATUS.md → confirmar repo oficial → `git status` → confirmar
   qué cambios corresponden a qué prompt" usada en cada prompt anterior.
+
+## Estado del repositorio al cierre de esta sesión (Sprint de Consolidación, previo al Prompt 43)
+
+Este es el handoff vigente — más reciente que el bloque anterior (que
+se conserva como registro histórico, sin eliminar).
+
+- **Todo el trabajo de los Prompts 31–42 fue aprobado explícitamente
+  por el usuario**, prompt por prompt, verificando en cada uno
+  `flutter analyze` + `flutter test` + `flutter run -d windows` + `git
+  status`. El Prompt 39 (`settings`) fue insertado fuera de la
+  numeración original del usuario (ver sección 4) porque el Prompt 40
+  asumía su existencia — confirmado explícitamente con el usuario antes
+  de proceder.
+- Inmediatamente después de actualizar este archivo (Sprint de
+  Consolidación), se ejecutó un **único commit de consolidación** con
+  todo el código nuevo de `apps/mobile/` (los 12 features 31–42 + los
+  cambios mínimos de navegación en `app_shell`/`provider_profile`),
+  **sin incluir `Logo oficial grupo.svg`** (branding sigue congelado,
+  ver sección 7).
+- Si al abrir una nueva sesión `git status` muestra ese commit como el
+  más reciente y el working tree está limpio (salvo, quizás, el
+  `Logo oficial grupo.svg` sin trackear), el estado es exactamente el
+  que se describe en este documento — se puede continuar directamente
+  con el **Prompt 43 — Availability** sin re-verificar nada de los
+  Prompts 19–42.
+- Si el working tree tiene cambios sin commitear más allá del logo,
+  **no asumir que son del Prompt 43** — confirmar con el usuario antes
+  de continuar, siguiendo la misma disciplina usada en cada prompt
+  anterior.

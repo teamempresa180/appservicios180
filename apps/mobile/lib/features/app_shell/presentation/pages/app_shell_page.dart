@@ -3,6 +3,7 @@ import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../marketplace/presentation/pages/marketplace_page.dart';
+import '../../../profile/presentation/pages/profile_page.dart';
 import '../models/shell_navigation_item.dart';
 import '../widgets/app_bottom_navigation.dart';
 import '../widgets/app_navigation_rail.dart';
@@ -16,8 +17,9 @@ import '../widgets/shell_placeholder.dart';
 ///
 /// This is the chrome every future authenticated screen (Home, Search,
 /// Orders, Chat, Profile, ...) will be hosted inside of. "Inicio"
-/// (`HomePage`) and "Buscar" (`MarketplacePage`) have real screens so
-/// far — the other three slots still show a [ShellPlaceholder].
+/// (`HomePage`), "Buscar" (`MarketplacePage`) and "Perfil"
+/// (`ProfilePage`, wired in Prompt 38) have real screens so far — the
+/// "Órdenes" and "Mensajes" slots still show a [ShellPlaceholder].
 /// Navigation between destinations is purely local ([_selectedIndex] via
 /// `setState`) — see the feature README for the GoRouter integration
 /// plan.
@@ -95,12 +97,7 @@ class _AppShellPageState extends State<AppShellPage> {
             description:
                 'Aquí vivirá el Chat entre clientes y proveedores.',
           ),
-          ShellPlaceholder(
-            icon: Icons.person_outline,
-            title: 'Perfil',
-            description:
-                'Aquí vivirán el Perfil de la cuenta y la Configuración.',
-          ),
+          ProfilePage(),
         ],
       ),
     );

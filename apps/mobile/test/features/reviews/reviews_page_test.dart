@@ -1,0 +1,128 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:mobile/core/ui/theme/app_theme.dart';
+import 'package:mobile/core/ui/widgets/app_empty_state.dart';
+import 'package:mobile/core/ui/widgets/app_loading.dart';
+import 'package:mobile/features/reviews/presentation/pages/reviews_page.dart';
+import 'package:mobile/features/reviews/presentation/widgets/review_card.dart';
+import 'package:mobile/features/reviews/presentation/widgets/review_filters.dart';
+import 'package:mobile/features/reviews/presentation/widgets/reviews_summary.dart';
+
+void main() {
+  Widget buildApp({ReviewsViewState state = ReviewsViewState.list}) {
+    return MaterialApp(
+      theme: AppTheme.light,
+      home: Scaffold(body: ReviewsPage(state: state)),
+    );
+  }
+
+  testWidgets('shows the header', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reseñas'), findsOneWidget);
+  });
+
+  testWidgets('shows the six rating filters', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReviewFilters), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Todas'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, '5★'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, '4★'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, '3★'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, '2★'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, '1★'), findsOneWidget);
+  });
+
+  testWidgets('selecting a filter only changes its visual selection', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    final chipBefore = tester.widget<ChoiceChip>(
+      find.widgetWithText(ChoiceChip, '5★'),
+    );
+    expect(chipBefore.selected, isFalse);
+
+    await tester.tap(find.text('5★'));
+    await tester.pumpAndSettle();
+
+    final chipAfter = tester.widget<ChoiceChip>(
+      find.widgetWithText(ChoiceChip, '5★'),
+    );
+    expect(chipAfter.selected, isTrue);
+    // The list is unaffected — still shows every mock review.
+    expect(find.byType(ReviewCard), findsNWidgets(4));
+  });
+
+  testWidgets('shows the aggregate summary derived from every rating', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReviewsSummary), findsOneWidget);
+    // Average of 5, 4, 3, 1 = 3.25 -> 3.3
+    expect(find.text('3.3'), findsOneWidget);
+    expect(find.text('(4 reseñas)'), findsOneWidget);
+  });
+
+  testWidgets('list state shows every mock review with its comment', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReviewCard), findsNWidgets(4));
+    expect(find.text('Excelente trabajo'), findsOneWidget);
+    expect(find.text('Muy buen servicio'), findsOneWidget);
+    expect(find.text('Servicio aceptable'), findsOneWidget);
+    expect(find.text('No quedé satisfecho'), findsOneWidget);
+  });
+
+  testWidgets('shows the edit-dependent action per review', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    // canEdit: review1=true, review2=true, review3=false, review4=false
+    expect(find.text('Editar'), findsNWidgets(2));
+    expect(find.text('Ver detalle'), findsNWidgets(2));
+  });
+
+  testWidgets('loading state shows AppLoading instead of the list', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp(state: ReviewsViewState.loading));
+    // The indeterminate CircularProgressIndicator never settles, so
+    // pumpAndSettle can't be used — but the message's FadeIn does need
+    // a couple of pumps to resolve, or its delayed Future leaves a
+    // dangling Timer at test teardown.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(AppLoading), findsOneWidget);
+    expect(find.byType(ReviewCard), findsNothing);
+  });
+
+  testWidgets('empty state shows AppEmptyState instead of the list', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp(state: ReviewsViewState.empty));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppEmptyState), findsOneWidget);
+    expect(find.byType(ReviewCard), findsNothing);
+  });
+
+  testWidgets('does not build its own Scaffold', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Scaffold), findsOneWidget);
+    expect(find.byType(AppBar), findsNothing);
+  });
+}

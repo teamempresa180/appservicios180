@@ -134,6 +134,14 @@ README de `service_detail`.
 Chat, mensajes, agenda/booking real, solicitudes reales, pagos, lookup
 por ID (un único proveedor fijo), conexión a Backend/Firebase/API,
 gestión de estado (Provider/Riverpod/Bloc/Cubit/ViewModel),
-persistencia. Los botones "Solicitar servicio" y "Chat" no hacen nada.
-Todo el contenido mostrado (excepto las entidades de dominio
-compuestas) es simulado o derivado, como se detalla arriba.
+persistencia. El botón "Chat" no hace nada. Todo el contenido mostrado
+(excepto las entidades de dominio compuestas) es simulado o derivado,
+como se detalla arriba.
+
+**Actualización (feature `request_service`)**: el botón "Solicitar
+servicio" en `ProviderActions` ya no es un no-op — ahora navega (vía
+`Navigator.push`, no `GoRouter`) a `RequestServicePage`, el único
+cambio permitido en este feature para ese prompt. Como
+`RequestServicePage` también muestra un único servicio/proveedor fijo
+simulado, esto no depende todavía del proveedor real de este perfil.
+Ver el README de `features/request_service/` para más contexto.

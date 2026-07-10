@@ -8,6 +8,7 @@ import 'package:mobile/features/app_shell/presentation/widgets/app_navigation_ra
 import 'package:mobile/features/app_shell/presentation/widgets/shell_placeholder.dart';
 import 'package:mobile/features/home/presentation/pages/home_page.dart';
 import 'package:mobile/features/marketplace/presentation/pages/marketplace_page.dart';
+import 'package:mobile/features/profile/presentation/pages/profile_page.dart';
 
 void main() {
   Widget buildApp() {
@@ -123,13 +124,7 @@ void main() {
       ),
     );
     expect(updatedBottomNav.selectedIndex, 4);
-    expect(
-      find.text(
-        'Aquí vivirán el Perfil de la cuenta y la Configuración.',
-        skipOffstage: false,
-      ),
-      findsOneWidget,
-    );
+    expect(find.byType(ProfilePage, skipOffstage: false), findsOneWidget);
   });
 
   testWidgets('tapping a navigation rail destination selects it', (
@@ -177,18 +172,19 @@ void main() {
 
       // All five destinations are already built (IndexedStack keeps every
       // child in the tree, it only paints the selected one): Home
-      // (Inicio), Marketplace (Buscar) plus three placeholders. The
-      // default finder skips "offstage" widgets, so the non-selected
-      // ones must be looked up with skipOffstage: false to prove they
-      // exist.
+      // (Inicio), Marketplace (Buscar), Profile (Perfil) plus two
+      // placeholders (Órdenes, Mensajes). The default finder skips
+      // "offstage" widgets, so the non-selected ones must be looked up
+      // with skipOffstage: false to prove they exist.
       expect(find.byType(HomePage, skipOffstage: false), findsOneWidget);
       expect(
         find.byType(MarketplacePage, skipOffstage: false),
         findsOneWidget,
       );
+      expect(find.byType(ProfilePage, skipOffstage: false), findsOneWidget);
       expect(
         find.byType(ShellPlaceholder, skipOffstage: false),
-        findsNWidgets(3),
+        findsNWidgets(2),
       );
 
       await tester.tap(
@@ -211,9 +207,10 @@ void main() {
         find.byType(MarketplacePage, skipOffstage: false),
         findsOneWidget,
       );
+      expect(find.byType(ProfilePage, skipOffstage: false), findsOneWidget);
       expect(
         find.byType(ShellPlaceholder, skipOffstage: false),
-        findsNWidgets(3),
+        findsNWidgets(2),
       );
     },
   );
