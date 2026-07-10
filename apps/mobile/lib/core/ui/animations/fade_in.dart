@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../tokens/app_curves.dart';
 import '../tokens/app_durations.dart';
 
 /// Generic fade-in helper. No Lottie/Rive — plain implicit animation.
@@ -23,7 +24,7 @@ class FadeIn extends StatelessWidget {
         return AnimatedOpacity(
           opacity: started ? 1 : 0,
           duration: duration,
-          curve: Curves.easeOut,
+          curve: AppCurves.standard,
           child: child,
         );
       },

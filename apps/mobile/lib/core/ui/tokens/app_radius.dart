@@ -6,4 +6,8 @@ abstract final class AppRadius {
   static const double radius16 = 16;
   static const double radius20 = 20;
   static const double radius24 = 24;
+
+  /// Fully rounded ("pill") corners — official radius for chips (see
+  /// Sprint 2 Branding & UX, Etapa 1).
+  static const double radiusPill = 999;
 }

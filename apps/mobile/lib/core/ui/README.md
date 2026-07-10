@@ -1,5 +1,16 @@
 # Core UI — Design System Base
 
+> **Sprint 2 (Branding & UX), Etapa 1**: ya existe una identidad visual
+> oficial aprobada (nombre "Servicios 180°", paleta derivada del logo,
+> tipografía, especificación de componentes) — ver
+> [`BRANDING.md`](BRANDING.md) para el detalle completo. Los tokens
+> nuevos (`theme/app_brand_palette.dart`, `theme/app_typography.dart`,
+> `tokens/app_curves.dart`, `tokens/app_image_size.dart`) ya existen y
+> compilan, pero **`AppTheme.light` todavía no los usa** — la sección
+> "Por qué todavía no existe identidad visual" más abajo describe el
+> estado *previo* a esta Etapa; la adopción real (recolorear
+> `ColorScheme`/`textTheme`) es una Etapa posterior del mismo Sprint.
+
 ## Filosofía del Design System
 
 Este directorio es la única fuente de verdad para cómo se ve la aplicación:
@@ -122,13 +133,18 @@ sistema listo para recibir la marca real sin tocar ningún widget.
 ```
 core/ui/
   README.md
+  BRANDING.md              (Sprint 2 — identidad oficial, ver arriba)
   theme/
-    app_theme.dart        (AppColors + AppTheme.light)
+    app_theme.dart         (AppColors + AppTheme.light — activo hoy)
+    app_brand_palette.dart (AppBrandPalette — paleta oficial, aún no wireada)
+    app_typography.dart    (AppTypography — tipografía oficial, aún no wireada)
   tokens/
     app_spacing.dart
     app_radius.dart
     app_elevation.dart
     app_durations.dart
+    app_curves.dart        (AppCurves — nombra las curvas ya usadas por las animaciones)
+    app_image_size.dart    (AppImageSize — escala oficial, aún no retro-aplicada)
   widgets/
     app_button.dart
     app_text_field.dart

@@ -17,6 +17,12 @@ abstract final class AppIcons {
   static const IconData error = Icons.error_outline;
   static const IconData success = Icons.check_circle_outline;
   static const IconData empty = Icons.inbox_outlined;
-  static const IconData more = Icons.more_vert;
+
+  /// Official overflow-menu icon. The visual audit (Sprint 2 Branding
+  /// & UX, Etapa 1) found features split between `more_horiz` (3
+  /// places) and `more_vert` (1 place) with no shared token driving
+  /// either choice — `more_horiz` was picked as official since it was
+  /// already the majority.
+  static const IconData more = Icons.more_horiz;
   static const IconData chevronRight = Icons.chevron_right;
 }

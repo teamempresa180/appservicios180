@@ -256,6 +256,13 @@ flutter test              ✅ 748/748 tests
 flutter run -d windows    ✅ compila y corre sin errores
 ```
 
+### Verificación Flutter (actualizada — Sprint 2 Etapa 1 aprobada)
+```
+flutter analyze          ✅ No issues found!
+flutter test              ✅ 748/748 tests (sin cambios — solo tokens nuevos, nada wireado)
+flutter run -d windows    ✅ compila y corre sin errores, visualmente idéntico
+```
+
 **Nota de entorno**: el problema del carácter `°` (que afectaba
 `flutter analyze`/`flutter build windows` en la ruta antigua bajo
 `Grupo empresarial 180°`) **no existe** en la ruta oficial
@@ -628,18 +635,37 @@ oficialmente cerrado con el Prompt 51. Resumen:
   repositorio pero **intencionalmente sin trackear** desde el inicio
   del proyecto, reservado para el Sprint de Branding.
 
-## Sprint 2 — Branding & UX (iniciado)
+## Sprint 2 — Branding & UX (en curso)
 
-**Etapa 1 — Fundación del Design System oficial**, en curso. Objetivo:
-construir la identidad visual oficial (nombre "Servicios 180°",
-paleta, tipografía, espaciados, radios, elevaciones, sombras,
-animaciones, iconografía, estilos de botones/campos/cards/diálogos/
-bottom sheets/chips) a partir del análisis de `Logo oficial grupo.svg`,
-e integrarla como nuevos tokens/tema en `core/ui/`, **sin rediseñar
-todavía ninguna pantalla existente** — esa aplicación consistente a
-todos los features es el objetivo de las siguientes etapas del Sprint
-2. Ver el handoff de esta sesión para el detalle completo de la
-auditoría visual, el análisis del logo y las decisiones de diseño.
+### Etapa 1 — Fundación del Design System oficial (aprobada y consolidada)
+
+Construyó la identidad visual oficial completa (nombre "Servicios
+180°", paleta con escalas 50–900 derivadas exactamente de
+`Logo oficial grupo.svg`, tipografía, especificación de animaciones,
+iconografía, estilos de botones/campos/cards/diálogos/bottom sheets/
+chips), documentada íntegramente en `apps/mobile/lib/core/ui/BRANDING.md`.
+Se agregaron los tokens (`AppBrandPalette`, `AppTypography`,
+`AppCurves`, `AppImageSize`, `AppRadius.radiusPill`) y se resolvió la
+inconsistencia de ícono "más opciones" (`AppIcons.more` → `more_horiz`)
+y se nombraron las curvas de animación ya usadas por
+`FadeIn`/`ScaleIn`/`SlideIn` (mismo comportamiento, solo tokens). **No
+se conectó nada al tema activo todavía** — decisión deliberada,
+documentada en el propio `BRANDING.md`: la aplicación consistente del
+branding a todas las pantallas es el objetivo de la Etapa 2. Verificado
+con `flutter analyze` (`No issues found!`) y `flutter test` (748/748,
+sin cambios, ya que ningún comportamiento visual se tocó).
+
+### Etapa 2 — Aplicación del Branding al Core UI (en curso)
+
+Objetivo: conectar `AppBrandPalette`/`AppTypography`/`AppCurves` al
+`AppTheme` activo (`ColorScheme` + `textTheme`), extender `AppButton`
+con variantes Tonal/Outlined/Text, actualizar `AppTextField`/`AppCard`,
+y crear los componentes nuevos (`AppChip`/`AppDialog`/
+`AppBottomSheet`/`AppSnackBar`/`AppAvatar`/`AppBadge`/
+`AppLoadingIndicator`) — todo exclusivamente dentro de `core/ui/`, sin
+tocar ningún feature ni la navegación. Las pantallas existentes heredan
+el nuevo tema automáticamente, sin cambios propios. Ver el handoff de
+esta sesión para el árbol completo y las decisiones de refactor.
 
 ## 11. Sugerencia de versionado (aún no aplicada)
 
@@ -1102,6 +1128,44 @@ anteriores (que se conservan como registro histórico, sin eliminar).
   **no asumir que corresponden a la siguiente etapa del Sprint 2** —
   confirmar con el usuario antes de continuar, siguiendo la misma
   disciplina usada en cada prompt anterior.
+
+## Estado del repositorio al cierre de esta sesión (Sprint 2 Etapa 1 consolidada, Etapa 2 en curso)
+
+Este es el handoff vigente — más reciente que los once bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+
+- **La Etapa 1 del Sprint 2 (fundación del Design System oficial) fue
+  aprobada explícitamente por el usuario**, verificada con `flutter
+  analyze` (`No issues found!`), `flutter test` (748/748), `dart
+  format .` y `git status`.
+- Se creó un **único commit exclusivo de esta consolidación** con el
+  mensaje `Sprint 2 Etapa 1 - Official branding foundation (tokens
+  only, not wired)` (ver `git log -1` para el hash exacto — no se fija
+  aquí el hash literal por la misma razón de auto-referencia explicada
+  en secciones anteriores). Incluye `BRANDING.md`,
+  `app_brand_palette.dart`, `app_typography.dart`, `app_curves.dart`,
+  `app_image_size.dart`, el ajuste de `AppIcons.more`, y las animaciones
+  refactorizadas para usar `AppCurves` — **sin incluir
+  `Logo oficial grupo.svg`** (sigue sin trackear, ver sección 7). Nada
+  de esto tocó ningún feature ni el tema activo.
+- `git status` tras el commit quedó exactamente:
+  ```
+  On branch main
+  Untracked files:
+          Logo oficial grupo.svg
+  nothing added to commit but untracked files present
+  ```
+- **A partir de esta sesión comienza la Etapa 2 — Aplicación del
+  Branding al Core UI**: conectar los tokens de la Etapa 1 al
+  `AppTheme` activo (`ColorScheme`/`textTheme`), extender `AppButton`
+  con variantes, actualizar `AppTextField`/`AppCard`, y construir
+  `AppChip`/`AppDialog`/`AppBottomSheet`/`AppSnackBar`/`AppAvatar`/
+  `AppBadge`/`AppLoadingIndicator` — todo dentro de `core/ui/`, sin
+  tocar features/navegación. Las pantallas heredan el nuevo tema
+  automáticamente.
+- Si el working tree tiene cambios sin commitear más allá del logo,
+  **no asumir que corresponden a la siguiente etapa** — confirmar con
+  el usuario antes de continuar.
 - **A partir de esta sesión, el usuario solicitó un modo de trabajo
   optimizado**: fases grandes (analizar → implementar todo el feature
   → navegación → tests → verificación final única) en vez de narrar

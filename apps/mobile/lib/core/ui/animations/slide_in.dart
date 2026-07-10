@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../tokens/app_curves.dart';
 import '../tokens/app_durations.dart';
 
 /// Where a [SlideIn] enters the screen from.
@@ -31,7 +32,7 @@ class SlideIn extends StatelessWidget {
     return TweenAnimationBuilder<Offset>(
       tween: Tween(begin: _beginOffset, end: Offset.zero),
       duration: duration,
-      curve: Curves.easeOut,
+      curve: AppCurves.standard,
       builder: (context, offset, builtChild) {
         return Transform.translate(offset: offset, child: builtChild);
       },

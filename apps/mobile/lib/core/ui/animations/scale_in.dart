@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../tokens/app_curves.dart';
 import '../tokens/app_durations.dart';
 
 /// Generic scale-in helper. No Lottie/Rive — plain implicit animation.
@@ -19,7 +20,7 @@ class ScaleIn extends StatelessWidget {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: beginScale, end: 1),
       duration: duration,
-      curve: Curves.easeOutBack,
+      curve: AppCurves.playful,
       builder: (context, scale, builtChild) {
         return Transform.scale(scale: scale, child: builtChild);
       },
