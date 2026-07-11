@@ -14,7 +14,12 @@
 > Domain/Application permanecen independientes de Prisma, todo el
 > código específico vive en `infrastructure/` de cada módulo. Primera
 > implementación real: bounded context Identity & Access
-> (`identity`/`authentication`/`credentials`).
+> (`identity`/`authentication`/`credentials`) — **Application e
+> Infrastructure ya completos** (Use Cases reales, repositorios Prisma,
+> migración aplicada, 202 tests entre unit/integration/e2e). Sin
+> Controllers REST conectados todavía (fuera de alcance de esta etapa)
+> y **sin commitear** — pendiente de aprobación del usuario. Ver
+> `PROJECT_STATUS.md`, sección "Prompt 59", para el detalle completo.
 
 ## 1. Estado real del proyecto
 

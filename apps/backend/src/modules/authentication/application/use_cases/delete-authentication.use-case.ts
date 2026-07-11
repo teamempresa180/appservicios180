@@ -1,19 +1,19 @@
+import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { AuthenticationRepository } from '../../domain/interfaces/authentication-repository.interface';
+import { AuthenticationId } from '../../domain/value-objects/authentication-id.value-object';
 import { DeleteAuthenticationCommand } from '../commands/delete-authentication.command';
 
-/**
- * Use case skeleton. Dependencies are wired correctly; the orchestration
- * logic itself is intentionally not implemented in this phase.
- */
 export class DeleteAuthenticationUseCase {
   constructor(
     private readonly authenticationRepository: AuthenticationRepository,
   ) {}
 
-  execute(command: DeleteAuthenticationCommand): Promise<void> {
-    void this.authenticationRepository;
-    throw new Error(
-      `DeleteAuthenticationUseCase.execute is not implemented yet (received: ${JSON.stringify(command)})`,
-    );
+  async execute(command: DeleteAuthenticationCommand): Promise<void> {
+    const id = AuthenticationId.fromString(command.id);
+    const existing = await this.authenticationRepository.findById(id);
+    if (!existing) {
+      throw new NotFoundException(`Authentication ${command.id} not found`);
+    }
+    await this.authenticationRepository.delete(id);
   }
 }

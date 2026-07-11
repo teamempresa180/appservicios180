@@ -56,25 +56,42 @@ Cada uno con: entidad, value objects, interfaz de repositorio, tests
 
 ### Application — ✅ 100% completo (22 módulos de negocio, sin Core)
 Cada módulo tiene `application/{commands,queries,use_cases,dto,mappers}/`.
-Los Use Cases tienen el repositorio inyectado por constructor pero
-`execute()` siempre lanza `Error("Not implemented yet")` — es
-intencional, no un bug.
+**Estado por bounded context:**
+- **Identity & Access (Identity, Authentication, Credentials)** — ✅
+  Use Cases con lógica real (Create/Update/Delete/Get/List/Search),
+  validadores estructurales, mappers Domain↔DTO. Ver la sección "Sprint
+  3 — Etapa 2" más abajo para el detalle completo.
+- **Los otros 19 módulos** — placeholder: `execute()` sigue lanzando
+  `Error("Not implemented yet")`, intencional, sin tocar en esta etapa.
 
-### Presentation — ✅ 100% completo (22 controllers REST)
+### Presentation — ✅ 100% completo (22 controllers REST, sin lógica real)
 Cada módulo tiene `presentation/{controllers,routes,swagger}/` +
 `<módulo>.module.ts`. Todos registrados en `AppModule`. Swagger disponible
-en `/docs` (`@nestjs/swagger` instalado). Los Use Cases se inyectan vía
-`useFactory` con el repositorio como `undefined` (placeholder explícito,
-documentado en cada `*.module.ts`) — **no existe ninguna implementación de
-repositorio ni conexión a base de datos todavía**.
+en `/docs` (`@nestjs/swagger` instalado). Los controllers de Identity,
+Authentication y Credentials siguen devolviendo `"Not implemented yet"` a
+propósito — **conectar Application/Infrastructure reales a los
+Controllers REST es trabajo explícitamente fuera de alcance de Sprint 3
+Etapa 2**, quedará para una etapa futura.
 
-### Infrastructure — ❌ No iniciada (carpetas vacías, reservadas)
+### Infrastructure — 🟡 Parcial: Identity & Access completo, resto reservado
+- **Identity, Authentication, Credentials** — ✅ Repositorios reales
+  (`Prisma*Repository`), mappers Domain↔Prisma, wireados por DI en sus
+  `*.module.ts` vía Symbol tokens (`IDENTITY_REPOSITORY`,
+  `AUTHENTICATION_REPOSITORY`, `CREDENTIAL_REPOSITORY`).
+- **Persistencia** — ✅ Prisma + PostgreSQL, oficial desde esta sesión
+  (ver "Decisión de persistencia" más abajo). `prisma/schema.prisma`
+  (3 modelos + 6 enums), migración real generada contra Postgres en
+  Docker, seed sintético, `PrismaService` app-wide con conexión lazy
+  (no bloquea build/test/e2e sin DB viva).
+- **Los otros 19 módulos** — carpetas vacías, reservadas, sin tocar.
 
-### Verificación backend (último estado conocido)
+### Verificación backend (último estado conocido — Sprint 3 Etapa 2, Prompt 59)
 ```
-npm run build   ✅
-npm run lint    ✅ 0 errores, 0 warnings
-npx jest        ✅ 51/51 suites, 113/113 tests
+npm run build          ✅
+npm run lint            ✅ 0 errores, 0 warnings
+npm test                 ✅ 69 suites, 188/188 tests
+npm run test:e2e        ✅ 1/1
+npm run test:integration ✅ 3 suites, 14/14 tests (requiere Postgres vivo)
 ```
 
 ## 4. Estado de Flutter (`apps/mobile`)
@@ -1720,3 +1737,88 @@ anteriores (que se conservan como registro histórico, sin eliminar).
 - Si el working tree tiene cambios sin commitear más allá del logo,
   **no asumir que corresponden a una etapa posterior** — confirmar con
   el usuario antes de continuar.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 59 — Sprint 3 Etapa 2, Identity & Access — consolidado)
+
+Este es el handoff vigente — más reciente que los diecinueve bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+**El Prompt 59 fue aprobado por el usuario y consolidado en el Prompt
+60** (Fase 1: commit único, ver sección de cierre del Prompt 60 más
+abajo para el hash y el detalle del commit).
+
+- **Decisión de persistencia (confirmada por el usuario en esta
+  sesión, vía pregunta explícita porque no existía ninguna decisión
+  previa documentada)**: **Prisma + PostgreSQL** es la estrategia
+  oficial de persistencia del proyecto a partir de Sprint 3. Reglas
+  vinculantes: Domain y Application permanecen 100% independientes de
+  Prisma; todo código específico de Prisma (`@prisma/client`,
+  `PrismaClient`, queries) vive exclusivamente en `infrastructure/` de
+  cada módulo, vía repositorios/mappers/adaptadores. Verificado por
+  grep: cero imports de `@prisma/client` fuera de `infrastructure/` en
+  los 3 módulos tocados.
+- **Fase 2 (Análisis)**: dominio Identity/Authentication/Credentials
+  analizado a partir del código existente únicamente — sin inventar
+  reglas de negocio no documentadas.
+- **Fase 3 (Application)**: implementación completa para los 3
+  módulos — validadores estructurales, Use Cases reales
+  (Create/Get/Update/Delete/List/Search, estos dos últimos nuevos),
+  `PaginatedResult<T>` agregado a `core/application/` (consumidor real:
+  los 3 List use cases). `CreateAuthenticationUseCase`/
+  `CreateCredentialUseCase` verifican que la `Identity` referenciada
+  exista antes de crear. `Get*UseCase` lanza `NotFoundException` en vez
+  de devolver `null`.
+- **Fase 4–5 (Infrastructure + Persistencia)**: repositorios reales
+  (`Prisma{Identity,Authentication,Credential}Repository`) inyectando
+  `PrismaService` (app-wide, conexión lazy — no eager `$connect()`,
+  para no romper build/test/e2e sin DB viva), mappers Domain↔Prisma,
+  wireados por DI vía Symbol tokens
+  (`IDENTITY_REPOSITORY`/`AUTHENTICATION_REPOSITORY`/`CREDENTIAL_REPOSITORY`)
+  en los `*.module.ts` de presentación (sin tocar Controllers).
+  `prisma/schema.prisma` (`IdentityModel`/`AuthenticationModel`/
+  `CredentialModel` + 6 enums), migración real generada y aplicada
+  contra un Postgres temporal en Docker
+  (`20260711183332_init_identity_access`), `prisma/seed.ts` (datos
+  sintéticos, bloqueado en `NODE_ENV=production`). `DATABASE_URL`
+  agregado a `env.validation.ts`/`config.service.ts`/`.env.example`
+  con default no-credential para no romper tests existentes.
+- **Fase 6 (Tests)**: 3 niveles nuevos, todos verificados —
+  - Unit (Application, con repositorios fake en memoria en
+    `application/use_cases/test-support/`, sin Prisma ni I/O).
+  - Unit (mappers Prisma, round-trip Domain↔Prisma, sin DB).
+  - Integration (`*.integration.spec.ts`, contra Postgres real en
+    Docker; script/config separados `test:integration` +
+    `test/jest-integration.json`, excluidos del `npm test` por defecto
+    vía `testPathIgnorePatterns`, mismo patrón que `test:e2e`).
+  - Resultado: `npm test` 69 suites/188 tests, `npm run test:e2e`
+    1/1, `npm run test:integration` 3 suites/14 tests — todos
+    pasando.
+- **Fase 7 (Auditoría)**: sin duplicación real ni violaciones de capa
+  encontradas — verificado por grep que ningún archivo de
+  `domain/`/`application/`/`presentation/` en los 3 módulos importa
+  `@prisma/client`. 31 errores de ESLint aparecidos durante el
+  desarrollo (`@typescript-eslint/require-await` en los repositorios
+  fake en memoria, `@typescript-eslint/unbound-method` en callbacks de
+  mappers pasados a `.map()`) fueron corregidos, no silenciados —
+  `npm run lint` queda en 0 errores. Los Controllers REST de estos 3
+  módulos siguen sin tocar (`"Not implemented yet"`), a propósito —
+  fuera de alcance explícito de esta etapa.
+- Verificaciones finales — todas pasando:
+  ```
+  npm run build            ✅
+  npm run lint              ✅ 0 errores, 0 warnings
+  npm test                   ✅ 69 suites, 188/188
+  npm run test:e2e          ✅ 1/1
+  npm run test:integration  ✅ 3 suites, 14/14
+  flutter analyze            ✅ No issues found!
+  flutter test                ✅ 748/748 (sin cambios — ningún archivo Flutter tocado)
+  flutter build windows      ✅ Build exitoso (mobile.exe)
+  ```
+- Todo este trabajo (Fase 2–7 del Prompt 59) quedó **consolidado en un
+  único commit** durante la Fase 1 del Prompt 60 — ver la sección de
+  cierre "Prompt 60" más abajo para el hash exacto y el detalle del
+  commit.
+- Contenedor Docker temporal `appservicios-pg-temp` (puerto `55432`):
+  se detuvo al cerrar las verificaciones del Prompt 59 (Fase 0 del
+  Prompt 60), y se volvió a levantar únicamente si Sprint 3 Etapa 3
+  (Profiles) requirió pruebas de integración contra Postgres — ver la
+  sección de cierre "Prompt 60" para su estado final.

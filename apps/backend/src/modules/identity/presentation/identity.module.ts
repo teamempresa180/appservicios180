@@ -4,39 +4,56 @@ import { CreateIdentityUseCase } from '../application/use_cases/create-identity.
 import { UpdateIdentityUseCase } from '../application/use_cases/update-identity.use-case';
 import { DeleteIdentityUseCase } from '../application/use_cases/delete-identity.use-case';
 import { GetIdentityUseCase } from '../application/use_cases/get-identity.use-case';
-import { IdentityRepository } from '../domain/interfaces/identity-repository.interface';
+import { ListIdentityUseCase } from '../application/use_cases/list-identity.use-case';
+import { SearchIdentityUseCase } from '../application/use_cases/search-identity.use-case';
+import {
+  IDENTITY_REPOSITORY,
+  IdentityRepository,
+} from '../domain/interfaces/identity-repository.interface';
+import { PrismaIdentityRepository } from '../infrastructure/persistence/prisma-identity.repository';
 
 /**
- * Wires the Identity presentation layer to its Use Cases.
- *
- * No concrete IdentityRepository exists yet (Infrastructure layer is not
- * built). Each Use Case is constructed with an unset repository reference —
- * this is safe because every Use Case currently throws before touching it.
- * Once a real repository provider exists, replace this placeholder wiring.
+ * Wires the Identity presentation layer to its Use Cases, which are
+ * wired to the real `PrismaIdentityRepository` (Sprint 3, Etapa 2) via
+ * the `IDENTITY_REPOSITORY` DI token — Use Cases depend on the
+ * `IdentityRepository` interface only, never on `PrismaIdentityRepository`
+ * directly.
  */
 @Module({
   controllers: [IdentityController],
   providers: [
+    { provide: IDENTITY_REPOSITORY, useClass: PrismaIdentityRepository },
     {
       provide: CreateIdentityUseCase,
-      useFactory: () =>
-        new CreateIdentityUseCase(undefined as unknown as IdentityRepository),
+      useFactory: (repo: IdentityRepository) => new CreateIdentityUseCase(repo),
+      inject: [IDENTITY_REPOSITORY],
     },
     {
       provide: UpdateIdentityUseCase,
-      useFactory: () =>
-        new UpdateIdentityUseCase(undefined as unknown as IdentityRepository),
+      useFactory: (repo: IdentityRepository) => new UpdateIdentityUseCase(repo),
+      inject: [IDENTITY_REPOSITORY],
     },
     {
       provide: DeleteIdentityUseCase,
-      useFactory: () =>
-        new DeleteIdentityUseCase(undefined as unknown as IdentityRepository),
+      useFactory: (repo: IdentityRepository) => new DeleteIdentityUseCase(repo),
+      inject: [IDENTITY_REPOSITORY],
     },
     {
       provide: GetIdentityUseCase,
-      useFactory: () =>
-        new GetIdentityUseCase(undefined as unknown as IdentityRepository),
+      useFactory: (repo: IdentityRepository) => new GetIdentityUseCase(repo),
+      inject: [IDENTITY_REPOSITORY],
+    },
+    {
+      provide: ListIdentityUseCase,
+      useFactory: (repo: IdentityRepository) => new ListIdentityUseCase(repo),
+      inject: [IDENTITY_REPOSITORY],
+    },
+    {
+      provide: SearchIdentityUseCase,
+      useFactory: (repo: IdentityRepository) => new SearchIdentityUseCase(repo),
+      inject: [IDENTITY_REPOSITORY],
     },
   ],
+  exports: [IDENTITY_REPOSITORY],
 })
 export class IdentityPresentationModule {}

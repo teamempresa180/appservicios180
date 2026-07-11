@@ -1,0 +1,121 @@
+// Prisma schema — Sprint 3, Etapa 2 (Identity & Access).
+//
+// Only the persistence shape for `identity`/`authentication`/
+// `credentials` (the first bounded context implemented end-to-end).
+// Every other module's tables are added when that module gets its own
+// Infrastructure layer, following the roadmap in
+// `SPRINT3_PREPARATION.md` — not created speculatively here.
+//
+// Field names/types mirror each domain entity's `Props` interface
+// exactly (see `domain/entities/*.entity.ts`); enums mirror each
+// domain value object's TypeScript enum 1:1. Domain/Application never
+// import from this file or from `@prisma/client` — only
+// `infrastructure/persistence/*.mapper.ts` in each module does.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DocumentType {
+  NATIONAL_ID
+  PASSPORT
+  FOREIGN_ID
+  TAX_ID
+  OTHER
+
+  @@map("document_type")
+}
+
+enum IdentityStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  ARCHIVED
+
+  @@map("identity_status")
+}
+
+enum AuthMethodType {
+  PASSWORD
+  BIOMETRIC
+  ONE_TIME_CODE
+  THIRD_PARTY
+  OTHER
+
+  @@map("auth_method_type")
+}
+
+enum AuthenticationStatus {
+  ACTIVE
+  INACTIVE
+  LOCKED
+  REVOKED
+
+  @@map("authentication_status")
+}
+
+enum CredentialType {
+  PASSWORD
+  RECOVERY_CODE
+  SECURITY_KEY
+  OTHER
+
+  @@map("credential_type")
+}
+
+enum CredentialStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+
+  @@map("credential_status")
+}
+
+model IdentityModel {
+  id             String         @id
+  fullName       String         @map("full_name")
+  documentType   DocumentType   @map("document_type")
+  documentNumber String         @map("document_number")
+  birthDate      DateTime       @map("birth_date")
+  status         IdentityStatus
+  createdAt      DateTime       @map("created_at")
+  updatedAt      DateTime       @map("updated_at")
+
+  authentications AuthenticationModel[]
+  credentials     CredentialModel[]
+
+  @@map("identities")
+}
+
+model AuthenticationModel {
+  id         String               @id
+  identityId String               @map("identity_id")
+  methodType AuthMethodType       @map("method_type")
+  status     AuthenticationStatus
+  createdAt  DateTime             @map("created_at")
+  updatedAt  DateTime             @map("updated_at")
+
+  identity IdentityModel @relation(fields: [identityId], references: [id])
+
+  @@index([identityId])
+  @@map("authentications")
+}
+
+model CredentialModel {
+  id         String           @id
+  identityId String           @map("identity_id")
+  type       CredentialType
+  status     CredentialStatus
+  createdAt  DateTime         @map("created_at")
+  updatedAt  DateTime         @map("updated_at")
+
+  identity IdentityModel @relation(fields: [identityId], references: [id])
+
+  @@index([identityId])
+  @@map("credentials")
+}

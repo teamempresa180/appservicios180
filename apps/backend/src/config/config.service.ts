@@ -26,4 +26,8 @@ export class ConfigService {
   get isProduction(): boolean {
     return this.env.NODE_ENV === 'production';
   }
+
+  get databaseUrl(): string {
+    return this.env.DATABASE_URL;
+  }
 }
