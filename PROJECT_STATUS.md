@@ -521,6 +521,25 @@ auditorías de performance/accesibilidad/i18n — todo sin agregar
 backend, HTTP, Firebase ni gestión de estado, y sin romper ningún
 comportamiento existente. Ya en curso al cierre de este documento.
 
+### Actualización — Prompt 57 completado (cierre definitivo de Sprint 2, preparación de Sprint 3)
+
+**Prompt 57 — Cierre definitivo del Sprint 2 y preparación para Sprint
+3**. **Aprobado por el usuario y consolidado.** Auditó los 17 features
+sin `mapper`/`dto` (15/17 migran con el patrón exacto de los 6 de
+referencia; 2 excepciones documentadas: `marketplace` necesita 3
+mappers, `search` necesita 2 métodos nuevos en su repositorio),
+auditó la arquitectura completa buscando bloqueos para Sprint 3 (no se
+encontró ninguno), y creó `SPRINT3_PREPARATION.md` (estado real,
+qué sigue siendo mock, orden de migración, riesgos, roadmap completo
+de Sprint 3 por Bounded Context). Trabajo puramente de análisis y
+documentación — ningún archivo de Flutter se modificó más allá de
+`PROJECT_STATUS.md`. Verificado con `dart format .` (0 cambios),
+`flutter analyze` (`No issues found!`), `flutter test` (748/748) y
+`flutter build windows`. El siguiente hito es el **Prompt 58 — Sprint
+3, Etapa 1 — Shared Kernel + Infraestructura Backend**: primer trabajo
+real sobre `apps/backend` (NestJS) desde el cierre de Sprint 1 — sin
+tocar Flutter, sin reemplazar ningún mock todavía.
+
 ### Actualización — Prompt 56 completado (Sprint 2, Etapa 6)
 
 **Prompt 56 — Preparación para Backend (Frontend Infrastructure)**.
@@ -1584,3 +1603,45 @@ anteriores (que se conservan como registro histórico, sin eliminar).
 - Si el working tree tiene cambios sin commitear más allá del logo y
   `SPRINT3_PREPARATION.md`, **no asumir que corresponden a Sprint 3** —
   confirmar con el usuario antes de continuar.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 57 consolidado — Sprint 2 cerrado definitivamente, Sprint 3 Etapa 1 en curso)
+
+Este es el handoff vigente — más reciente que los diecisiete bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+
+- **El Prompt 57 (cierre definitivo de Sprint 2 + preparación de
+  Sprint 3) fue aprobado explícitamente por el usuario**, verificado
+  con `dart format .` (0 cambios), `flutter analyze` (`No issues
+  found!`), `flutter test` (748/748), `flutter build windows` y `git
+  status`.
+- Se creó un **único commit exclusivo del Prompt 57** con el mensaje
+  `Prompt 57 - Sprint 2 close + Sprint 3 preparation (audit +
+  SPRINT3_PREPARATION.md)` (ver `git log -1` para el hash exacto — no
+  se fija aquí el hash literal por la misma razón de auto-referencia
+  explicada en secciones anteriores). Incluye `SPRINT3_PREPARATION.md`
+  y la actualización de este documento — **sin incluir `Logo oficial
+  grupo.svg`** (sigue sin trackear, ver sección 7). Ningún archivo de
+  Flutter cambió de comportamiento.
+- `git status` tras el commit quedó exactamente:
+  ```
+  On branch main
+  Untracked files:
+          Logo oficial grupo.svg
+  nothing added to commit but untracked files present
+  ```
+- **A partir de esta sesión comienza Sprint 3 — Etapa 1: Shared
+  Kernel + Infraestructura Backend** (Prompt 58): primer trabajo real
+  sobre `apps/backend` (NestJS) desde el cierre de Sprint 1 —
+  implementar el Shared Kernel (solo value objects/clases realmente
+  reutilizadas por el dominio, justificadas contra los 22 módulos
+  existentes, no por analogía), infraestructura base de dominio,
+  jerarquía de excepciones, validadores, y bootstrap de NestJS
+  (`main.ts`, `app.module.ts`, `config/`, `logger/`, `filters/`,
+  `pipes/`, `interceptors/`) — **sin implementar JWT, HTTP,
+  Controllers, Services, Repositories reales, base de datos, Prisma,
+  TypeORM ni Firebase**, y **sin tocar Flutter ni reemplazar ningún
+  mock todavía**. **Esta etapa queda pendiente de aprobación del
+  usuario antes de commitear.**
+- Si el working tree tiene cambios sin commitear más allá del logo,
+  **no asumir que corresponden a una etapa posterior** — confirmar con
+  el usuario antes de continuar.
