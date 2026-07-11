@@ -22,11 +22,17 @@
 > (Identity & Access → Profiles → Trust & Compliance → ...), se
 > implementó **`Profile`** (dentro del bounded context Profiles &
 > Contact) hasta Infrastructure, mismo patrón exacto que Identity &
-> Access. `Contact`/`Address` — el resto de este bounded context —
-> **siguen sin Application/Infrastructure real**, quedan para una
-> etapa futura. Sin Controllers REST conectados todavía y **sin
-> commitear** — pendiente de aprobación del usuario. Ver
-> `PROJECT_STATUS.md`, sección "Prompt 60", para el detalle completo.
+> Access. **Consolidado en el commit `2626a4b`** (Prompt 61, Fase 1).
+>
+> **Actualización (Prompt 61)**: se completaron **`Contact`** y
+> **`Address`** hasta Infrastructure, mismo patrón exacto. **Con esto,
+> el bounded context Profiles & Contact (Profile/Contact/Address)
+> queda 100% completo hasta Infrastructure** — el siguiente hito del
+> roadmap (sección 11) es Trust & Compliance
+> (`Trust`/`Verification`/`Audit`). Sin Controllers REST conectados
+> todavía y **sin commitear** — pendiente de aprobación del usuario.
+> Ver `PROJECT_STATUS.md`, sección "Prompt 61", para el detalle
+> completo.
 
 ## 1. Estado real del proyecto
 

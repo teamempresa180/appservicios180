@@ -1,11 +1,12 @@
-// Prisma schema — Sprint 3, Etapa 2 (Identity & Access) + Etapa 3 (Profile).
+// Prisma schema — Sprint 3, Etapa 2 (Identity & Access) + Etapa 3
+// (Profile) + Etapa 4 (Contact & Address).
 //
 // Only the persistence shape for `identity`/`authentication`/
-// `credentials`/`profiles` (bounded contexts implemented end-to-end so
-// far). `Contact`/`Address` (rest of the Profiles bounded context) and
-// every other module's tables are added when that module gets its own
-// Infrastructure layer, following the roadmap in
-// `SPRINT3_PREPARATION.md` — not created speculatively here.
+// `credentials`/`profiles`/`contact`/`address` (bounded contexts
+// implemented end-to-end so far). Every other module's tables are
+// added when that module gets its own Infrastructure layer, following
+// the roadmap in `SPRINT3_PREPARATION.md` — not created speculatively
+// here.
 //
 // Field names/types mirror each domain entity's `Props` interface
 // exactly (see `domain/entities/*.entity.ts`); enums mirror each
@@ -93,6 +94,41 @@ enum ProfileStatus {
   @@map("profile_status")
 }
 
+enum ContactType {
+  EMAIL
+  PHONE
+  OTHER
+
+  @@map("contact_type")
+}
+
+enum ContactStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+
+  @@map("contact_status")
+}
+
+enum AddressType {
+  HOME
+  WORK
+  BILLING
+  SERVICE
+  EMERGENCY
+  OTHER
+
+  @@map("address_type")
+}
+
+enum AddressStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+
+  @@map("address_status")
+}
+
 model IdentityModel {
   id             String         @id
   fullName       String         @map("full_name")
@@ -106,6 +142,8 @@ model IdentityModel {
   authentications AuthenticationModel[]
   credentials     CredentialModel[]
   profiles        ProfileModel[]
+  contacts        ContactModel[]
+  addresses       AddressModel[]
 
   @@map("identities")
 }
@@ -153,4 +191,39 @@ model ProfileModel {
 
   @@index([identityId])
   @@map("profiles")
+}
+
+model ContactModel {
+  id         String        @id
+  identityId String        @map("identity_id")
+  type       ContactType
+  value      String
+  status     ContactStatus
+  createdAt  DateTime      @map("created_at")
+  updatedAt  DateTime      @map("updated_at")
+
+  identity IdentityModel @relation(fields: [identityId], references: [id])
+
+  @@index([identityId])
+  @@map("contacts")
+}
+
+model AddressModel {
+  id          String        @id
+  identityId  String        @map("identity_id")
+  alias       String
+  fullAddress String        @map("full_address")
+  city        String
+  state       String
+  country     String
+  postalCode  String        @map("postal_code")
+  type        AddressType
+  status      AddressStatus
+  createdAt   DateTime      @map("created_at")
+  updatedAt   DateTime      @map("updated_at")
+
+  identity IdentityModel @relation(fields: [identityId], references: [id])
+
+  @@index([identityId])
+  @@map("addresses")
 }

@@ -71,8 +71,41 @@ async function main(): Promise<void> {
     update: {},
   });
 
+  await prisma.contactModel.upsert({
+    where: { id: 'seed-contact-1' },
+    create: {
+      id: 'seed-contact-1',
+      identityId: identity.id,
+      type: 'EMAIL',
+      value: 'dev.seed.user@example.com',
+      status: 'ACTIVE',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+
+  await prisma.addressModel.upsert({
+    where: { id: 'seed-address-1' },
+    create: {
+      id: 'seed-address-1',
+      identityId: identity.id,
+      alias: 'Home',
+      fullAddress: 'Calle Falsa 123',
+      city: 'Bogotá',
+      state: 'Cundinamarca',
+      country: 'Colombia',
+      postalCode: '110111',
+      type: 'HOME',
+      status: 'ACTIVE',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+
   console.log(
-    'Seed complete: 1 Identity, 1 Authentication, 1 Credential, 1 Profile.',
+    'Seed complete: 1 Identity, 1 Authentication, 1 Credential, 1 Profile, 1 Contact, 1 Address.',
   );
 }
 

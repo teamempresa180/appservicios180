@@ -61,13 +61,12 @@ Cada módulo tiene `application/{commands,queries,use_cases,dto,mappers}/`.
   Use Cases con lógica real (Create/Update/Delete/Get/List/Search),
   validadores estructurales, mappers Domain↔DTO. Ver la sección "Sprint
   3 — Etapa 2" más abajo para el detalle completo.
-- **Profile** (dentro de Profiles & Contact) — ✅ mismo tratamiento que
-  Identity & Access: Use Cases reales, validador estructural, mappers.
-  Ver "Sprint 3 — Etapa 3" más abajo.
-- **Los otros 18 módulos** (incluye `Contact`/`Address`, mismo bounded
-  context que `Profile` pero fuera de alcance de esta etapa) —
-  placeholder: `execute()` sigue lanzando `Error("Not implemented
-  yet")`, intencional, sin tocar todavía.
+- **Profile, Contact, Address** (bounded context Profiles & Contact
+  completo) — ✅ mismo tratamiento que Identity & Access: Use Cases
+  reales, validador estructural, mappers. Ver "Sprint 3 — Etapa 3" y
+  "Etapa 4" más abajo.
+- **Los otros 16 módulos** — placeholder: `execute()` sigue lanzando
+  `Error("Not implemented yet")`, intencional, sin tocar todavía.
 
 ### Presentation — ✅ 100% completo (22 controllers REST, sin lógica real)
 Cada módulo tiene `presentation/{controllers,routes,swagger}/` +
@@ -78,34 +77,34 @@ propósito — **conectar Application/Infrastructure reales a los
 Controllers REST es trabajo explícitamente fuera de alcance de Sprint 3
 Etapa 2**, quedará para una etapa futura.
 
-### Infrastructure — 🟡 Parcial: Identity & Access + Profile completos, resto reservado
+### Infrastructure — 🟡 Parcial: Identity & Access + Profiles & Contact completos, resto reservado
 - **Identity, Authentication, Credentials** — ✅ Repositorios reales
   (`Prisma*Repository`), mappers Domain↔Prisma, wireados por DI en sus
   `*.module.ts` vía Symbol tokens (`IDENTITY_REPOSITORY`,
   `AUTHENTICATION_REPOSITORY`, `CREDENTIAL_REPOSITORY`).
-- **Profile** — ✅ mismo tratamiento: `PrismaProfileRepository`, mapper
-  Domain↔Prisma, wireado vía `PROFILE_REPOSITORY`.
-  `CreateProfileUseCase` verifica que la `Identity` referenciada exista
-  (importa `IdentityPresentationModule`), igual que `Authentication`/
-  `Credential`. `Contact`/`Address` (resto del bounded context
-  Profiles & Contact) **siguen sin Infrastructure** — explícitamente
-  fuera de alcance de esta etapa.
+- **Profile, Contact, Address** — ✅ mismo tratamiento: `Prisma*Repository`
+  + mapper Domain↔Prisma por módulo, wireados vía `PROFILE_REPOSITORY`/
+  `CONTACT_REPOSITORY`/`ADDRESS_REPOSITORY`. `Create*UseCase` de los 3
+  verifica que la `Identity` referenciada exista (importan
+  `IdentityPresentationModule`), igual que `Authentication`/`Credential`.
+  **Con esto, el bounded context Profiles & Contact queda completo
+  hasta Infrastructure.**
 - **Persistencia** — ✅ Prisma + PostgreSQL, oficial desde Prompt 59
   (ver "Decisión de persistencia" más abajo). `prisma/schema.prisma`
-  (4 modelos + 8 enums tras Prompt 60), 2 migraciones reales generadas
+  (6 modelos + 12 enums tras Prompt 61), 3 migraciones reales generadas
   contra Postgres en Docker, seed sintético (1 Identity + 1
-  Authentication + 1 Credential + 1 Profile), `PrismaService` app-wide
-  con conexión lazy (no bloquea build/test/e2e sin DB viva).
-- **Los otros 18 módulos** (incluye `Contact`/`Address`) — carpetas
-  vacías, reservadas, sin tocar.
+  Authentication + 1 Credential + 1 Profile + 1 Contact + 1 Address),
+  `PrismaService` app-wide con conexión lazy (no bloquea build/test/e2e
+  sin DB viva).
+- **Los otros 16 módulos** — carpetas vacías, reservadas, sin tocar.
 
-### Verificación backend (último estado conocido — Sprint 3 Etapa 3, Prompt 60)
+### Verificación backend (último estado conocido — Sprint 3 Etapa 4, Prompt 61)
 ```
 npm run build          ✅
 npm run lint            ✅ 0 errores, 0 warnings
-npm test                 ✅ 72 suites, 212/212 tests
+npm test                 ✅ 78 suites, 262/262 tests
 npm run test:e2e        ✅ 1/1
-npm run test:integration ✅ 4 suites, 21/21 tests (requiere Postgres vivo)
+npm run test:integration ✅ 6 suites, 35/35 tests (requiere Postgres vivo)
 ```
 
 ## 4. Estado de Flutter (`apps/mobile`)
@@ -1929,3 +1928,91 @@ hash y el detalle del commit).
   Prompt 61), y se volvió a levantar únicamente cuando Sprint 3 Etapa 4
   (Contact & Address) requirió pruebas de integración contra Postgres
   — ver la sección de cierre "Prompt 61" para su estado final.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 61 — Sprint 3 Etapa 4, Contact & Address — consolidado)
+
+Este es el handoff vigente — más reciente que los veintiún bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+**El Prompt 61 fue aprobado por el usuario y consolidado en el Prompt
+62** (Fase 1 — ver la sección de cierre "Prompt 62" más abajo para el
+hash y el detalle del commit).
+
+- **Fase 0**: verificado que el repositorio coincidía exactamente con
+  el cierre del Prompt 60 (último commit = Prompt 59, working tree con
+  el trabajo de Prompt 60 sin commitear, contenedor
+  `appservicios-pg-temp` detenido).
+- **Fase 1 (Consolidación Prompt 60)**: `npm run build`/`lint`/`test`
+  (212/212)/`test:integration` (21/21)/`test:e2e` (1/1) +
+  `flutter analyze`/`test` (748/748)/`build windows`, todos ✅.
+  Contenedor Docker levantado solo para `test:integration` y detenido
+  inmediatamente después. **Commit único `2626a4b`** ("Prompt 60 -
+  Profile Application + Infrastructure (Prisma + PostgreSQL)"),
+  excluyendo `Logo oficial grupo.svg`. Con este commit, Sprint 3 Etapa
+  3 queda oficialmente cerrada.
+- **Fase 2 (Análisis)**: `Contact`/`Address` analizados junto a
+  `Profile`/`Identity` — ambos estructuralmente análogos a `Profile`
+  (referencian `IdentityId` únicamente, `findByIdentityId` devuelve
+  array por lo que múltiples registros por Identity están permitidos,
+  sin relación directa con `Profile`). Sin invariantes de formato
+  documentadas (ni validación de email/teléfono en `Contact` ni de
+  geolocalización/código postal en `Address`) — no se inventó ninguna.
+- **Fase 3 (Application)**: `ContactValidator`/`AddressValidator`
+  (validación estructural), Use Cases reales para ambos módulos
+  (Create/Get/Update/Delete/List/Search). `CreateContactUseCase`/
+  `CreateAddressUseCase` inyectan `IdentityRepository` para verificar
+  que la `Identity` referenciada exista, mismo patrón que
+  `CreateProfileUseCase`. `UpdateContactUseCase` solo modifica
+  `value`/`status` (no `type`); `UpdateAddressUseCase` solo modifica
+  `alias`/`fullAddress`/`status` (no `city`/`state`/`country`/
+  `postalCode`/`type`) — limitado exactamente a lo que exponen
+  `UpdateContactCommand`/`UpdateAddressCommand`, mismo criterio que
+  `UpdateProfileUseCase` con `avatarUrl`/`bio`.
+- **Fase 4–5 (Infrastructure + Persistencia)**: `PrismaContactRepository`/
+  `PrismaAddressRepository` inyectando `PrismaService`, mappers
+  Domain↔Prisma, wireados vía `CONTACT_REPOSITORY`/`ADDRESS_REPOSITORY`
+  en `contact.module.ts`/`address.module.ts` (ambos ahora importan
+  `IdentityPresentationModule`). `prisma/schema.prisma` ganó
+  `ContactModel`/`AddressModel` + enums `ContactType`/`ContactStatus`/
+  `AddressType`/`AddressStatus` (`@@map`'d, FK a `identities`, índice
+  en `identity_id`). Migración real `20260711212512_add_contact_address`
+  generada y aplicada contra el Postgres temporal en Docker.
+  `prisma/seed.ts` ganó un `Contact` y un `Address` sintéticos
+  adicionales.
+- **Fase 6 (Tests)**: mismos 3 niveles que Prompts 59–60 para ambos
+  módulos — unit (Application, con `InMemoryContactRepository`/
+  `InMemoryAddressRepository` + `InMemoryIdentityRepository`, sin
+  Prisma), unit (`ContactPrismaMapper`/`AddressPrismaMapper`,
+  round-trip, sin DB), integration (contra Postgres real, cada uno crea
+  una `Identity` real primero para satisfacer el FK). Resultado: `npm
+  test` 78 suites/262 tests (+50 sobre Prompt 60), `npm run
+  test:integration` 6 suites/35 tests (+14), `npm run test:e2e` 1/1 —
+  todos pasando.
+- **Fase 7 (Auditoría)**: verificado por grep que ningún archivo de
+  `domain/`/`application/`/`presentation/` de `contact`/`address`
+  importa `@prisma/client`; sin `TODO`/`FIXME` nuevos (el único "Not
+  implemented yet" restante son los Controllers REST, intencional);
+  sin dependencias nuevas en `package.json`/`package-lock.json`
+  (confirmado por `git diff --stat`, sin salida); `npm run lint`
+  limpio, sin correcciones manuales necesarias. **Con este prompt, el
+  bounded context Profiles & Contact (Profile/Contact/Address) queda
+  100% completo hasta Infrastructure.**
+- Verificaciones finales — todas pasando:
+  ```
+  npm run build            ✅
+  npm run lint              ✅ 0 errores, 0 warnings
+  npm test                   ✅ 78 suites, 262/262
+  npm run test:e2e          ✅ 1/1
+  npm run test:integration  ✅ 6 suites, 35/35
+  flutter analyze            ✅ No issues found!
+  flutter test                ✅ 748/748 (sin cambios — ningún archivo Flutter tocado)
+  flutter build windows      ✅ Build exitoso (mobile.exe)
+  ```
+- Todo este trabajo (Fase 2–7 del Prompt 61) quedó **consolidado en un
+  único commit** durante la Fase 1 del Prompt 62 — ver la sección de
+  cierre "Prompt 62" más abajo para el hash exacto y el detalle del
+  commit.
+- Contenedor Docker temporal `appservicios-pg-temp` (puerto `55432`):
+  se detuvo al cerrar las verificaciones del Prompt 61 (Fase 1 del
+  Prompt 62), y se volvió a levantar únicamente cuando Sprint 3 Etapa 5
+  (Verification, Trust & Audit) requirió pruebas de integración contra
+  Postgres — ver la sección de cierre "Prompt 62" para su estado final.
