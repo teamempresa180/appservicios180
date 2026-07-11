@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/icons/app_icons.dart';
+import '../../../../core/ui/tokens/app_curves.dart';
+import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../marketplace/presentation/pages/marketplace_page.dart';
@@ -30,6 +31,13 @@ class AppShellPage extends StatefulWidget {
   /// Below this width, use [AppBottomNavigation]; at or above it, use
   /// [AppNavigationRail].
   static const double wideBreakpoint = 900;
+
+  /// Caps how wide the body content stretches on desktop/wide windows
+  /// (e.g. a maximized Windows window). Purely a desktop reading-comfort
+  /// measure — the breakpoint/layout switch above is unchanged, this
+  /// only centers the already-wide layout's content instead of letting
+  /// cards/text stretch edge-to-edge at very large widths.
+  static const double maxContentWidth = 1200;
 
   /// Single source of truth for the navigation surface. Both
   /// [AppBottomNavigation] and [AppNavigationRail] render from this same
@@ -79,7 +87,8 @@ class _AppShellPageState extends State<AppShellPage> {
   }
 
   Widget _buildBody() {
-    return FadeIn(
+    return _TabFade(
+      index: _selectedIndex,
       child: IndexedStack(
         index: _selectedIndex,
         children: const [
@@ -124,7 +133,15 @@ class _AppShellPageState extends State<AppShellPage> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.space16),
-                child: body,
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: AppShellPage.maxContentWidth,
+                    ),
+                    child: body,
+                  ),
+                ),
               ),
             ),
           ],
@@ -144,5 +161,58 @@ class _AppShellPageState extends State<AppShellPage> {
         onTap: _onDestinationSelected,
       ),
     );
+  }
+}
+
+/// Fades [child] in whenever [index] changes, without unmounting it —
+/// unlike wrapping the `IndexedStack` in a plain `FadeIn` (which only
+/// plays once, on the Shell's very first build), this retriggers on
+/// every destination switch, so moving between "Inicio"/"Buscar"/
+/// "Órdenes"/"Mensajes"/"Perfil" reads as a soft cross-fade instead of
+/// an instant cut. Deliberately keeps `IndexedStack` itself as the
+/// direct child of `build()` (not recreated), so every destination's
+/// scroll position/state stays preserved exactly as before.
+class _TabFade extends StatefulWidget {
+  const _TabFade({required this.index, required this.child});
+
+  final int index;
+  final Widget child;
+
+  @override
+  State<_TabFade> createState() => _TabFadeState();
+}
+
+class _TabFadeState extends State<_TabFade>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: AppDurations.medium,
+    )..forward();
+    _opacity = CurvedAnimation(parent: _controller, curve: AppCurves.standard);
+  }
+
+  @override
+  void didUpdateWidget(covariant _TabFade oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.index != widget.index) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(opacity: _opacity, child: widget.child);
   }
 }

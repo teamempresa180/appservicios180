@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_search_data.dart';
@@ -67,7 +66,7 @@ class SearchPage extends StatelessWidget {
           icon: Icons.search_off,
         );
       case SearchViewState.results:
-        return SlideIn(child: SearchResults(results: _buildResults()));
+        return SearchResults(results: _buildResults());
     }
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../extensions/context_theme_extensions.dart';
 import '../theme/app_brand_palette.dart';
+import '../tokens/app_durations.dart';
 import '../tokens/app_radius.dart';
 import '../tokens/app_spacing.dart';
 
@@ -50,7 +51,9 @@ class AppBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = this.color ?? _colorFor(tone);
 
-    return Container(
+    return AnimatedContainer(
+      duration: AppDurations.fast,
+      curve: Curves.easeOut,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.space12,
         vertical: AppSpacing.space4,
@@ -59,11 +62,15 @@ class AppBadge extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppRadius.radiusPill),
       ),
-      child: Text(
-        label,
-        style: context.textStyles.labelMedium?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
+      child: AnimatedSwitcher(
+        duration: AppDurations.fast,
+        child: Text(
+          label,
+          key: ValueKey(label),
+          style: context.textStyles.labelMedium?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );

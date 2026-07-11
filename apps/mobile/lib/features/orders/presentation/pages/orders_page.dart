@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_orders_data.dart';
 import '../../models/order_display.dart';
@@ -52,7 +51,7 @@ class OrdersPage extends StatelessWidget {
       case OrdersViewState.empty:
         return const OrderEmptyState();
       case OrdersViewState.list:
-        return SlideIn(child: OrdersList(orders: _buildOrders()));
+        return OrdersList(orders: _buildOrders());
     }
   }
 

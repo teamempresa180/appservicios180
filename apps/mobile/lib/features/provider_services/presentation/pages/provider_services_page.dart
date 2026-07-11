@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/animations/scale_in.dart';
-import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_provider_services_data.dart';
@@ -67,7 +66,7 @@ class ProviderServicesPage extends StatelessWidget {
             const SizedBox(height: AppSpacing.space16),
             const AddServiceButton(),
             const SizedBox(height: AppSpacing.space16),
-            SlideIn(child: ServicesList(services: services)),
+            ServicesList(services: services),
           ],
         );
     }

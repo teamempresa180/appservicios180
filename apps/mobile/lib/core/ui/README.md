@@ -22,6 +22,18 @@
 > de reconstruir `SingleChildScrollView`+`Column`, `AppCard`+`Column`+
 > `AppSectionTitle`, o un `Row(spaceBetween)` a mano.
 
+> **Sprint 2, Etapa 5**: microinteracciones y UX global. Las listas
+> verticales (`NotificationsList`, `OrdersList`, `ServicesList`,
+> `ScheduleList`, `SearchResults`, `WeeklySchedule` y los bucles
+> inline de `address_management`/`contact_management`/`security`/
+> `reviews`/`settings`) ahora entran con una **animación escalonada**
+> (`FadeIn(delay: staggerDelayFor(index))` envolviendo un `SlideIn`
+> por ítem) en vez de un único `SlideIn` sobre toda la lista. `AppChip`
+> gana un estado seleccionado más claro (borde + ícono de check
+> animado) y `AppBadge` cruza suavemente cuando su `label` cambia. Ver
+> la sección "Reglas de UX (Etapa 5)" más abajo para el detalle
+> completo y qué NO se tocó.
+
 ## Filosofía del Design System
 
 Este directorio es la única fuente de verdad para cómo se ve la aplicación:
@@ -110,6 +122,66 @@ propio tema, no los widgets que lo consumen.
   gráfico en sí (`Logo oficial grupo.svg` sigue sin trackear).
 - No agregar lógica de negocio a ningún widget de `core/ui` — solo
   presentación.
+
+## Reglas de UX (Etapa 5)
+
+- **Listas verticales**: todo listado de tarjetas/filas (`*_list.dart`,
+  o un `for` inline dentro de una página) debe entrar con animación
+  **escalonada**, no como bloque único: envolver cada ítem en
+  `FadeIn(delay: staggerDelayFor(index), child: SlideIn(child: <Item>))`.
+  `staggerDelayFor` (en `tokens/app_durations.dart`) calcula
+  `index * AppDurations.staggerStep`, con un tope
+  (`AppDurations.staggerCap`) para que una lista larga no siga
+  animando ítems mucho después de que el usuario ya hizo scroll. No
+  envolver además la lista completa en un `SlideIn`/`FadeIn` adicional
+  — sería una animación duplicada sobre la misma entrada.
+- **Navegación entre destinos del Shell**: `AppShellPage` usa
+  `IndexedStack` para preservar el estado de cada destino (scroll,
+  etc.) al cambiar de pestaña — envolverlo en un `FadeIn` normal no
+  sirve, porque ese widget solo anima una vez, en el primer build. El
+  cross-fade en cada cambio de pestaña lo da un wrapper interno
+  (`_TabFade`, privado de `app_shell_page.dart`) que reinicia un
+  `AnimationController` cuando cambia el índice seleccionado, sin
+  desmontar el `IndexedStack`. No es un componente nuevo de
+  `core/ui/animations/` — es la forma correcta de lograr "fade al
+  cambiar", que `FadeIn` no cubre por diseño (su delay es de un solo
+  disparo).
+- **Botones**: ya cubiertos — `AppButton` usa `FilledButton`/
+  `FilledButton.tonal`/`OutlinedButton`/`TextButton`, los cuatro
+  widgets oficiales de Material 3, así que hover (desktop), focus,
+  pressed y ripple ya vienen gratis del framework. No agregar
+  `MouseRegion`/`Focus` manuales encima.
+- **Chips**: `AppChip(selected: true)` ahora se distingue con un borde
+  de `context.colors.primary` y un ícono de check animado (`AnimatedSwitcher`,
+  `AppDurations.fast`) además del cambio de color de contenedor — el
+  estado seleccionado debe leerse sin depender solo del contraste de
+  color.
+- **Badges**: `AppBadge` envuelve su texto en un `AnimatedSwitcher`
+  (`AppDurations.fast`) para que un cambio de `label` (p. ej. un
+  conteo que se actualiza) haga un cruce suave en vez de un salto
+  instantáneo.
+- **Loading/Empty/Feedback**: ya estaban unificados antes de esta
+  etapa — los 17 `*_loading.dart` de cada feature reutilizan
+  `AppLoading`, los 18 `*_empty_state.dart` reutilizan `AppEmptyState`
+  (que ya anima su ícono con `ScaleIn`), y ningún feature construye un
+  `SnackBar`/`showDialog`/`showModalBottomSheet` a mano — todos usan
+  (o no necesitan todavía) `AppSnackBar`/`AppDialog`/`AppBottomSheet`.
+  Auditado en esta etapa, sin cambios necesarios.
+- **Desktop**: `AppShellPage` centra y limita el contenido a
+  `maxContentWidth` (1200) en el layout ancho (`AppNavigationRail`,
+  ≥900px) para que las tarjetas no se estiren de borde a borde en una
+  ventana de Windows maximizada — el breakpoint/switch de layout en sí
+  no cambió. Hover/cursor/scroll en escritorio ya funcionan gratis vía
+  Material (`InkWell`/`FilledButton`/etc. muestran `SystemMouseCursors.click`;
+  el scroll con rueda del mouse y la scrollbar de escritorio los da
+  `ScrollConfiguration` por defecto) — auditado, sin cambios
+  necesarios.
+- **Qué NO se tocó**: `ChatMessages` (lista de una conversación ya
+  existente, no "ítems apareciendo" — un stagger ahí leería como si
+  los mensajes se escribieran en cascada, confuso) y
+  `RecentOrders`/`PendingRequests` (filas de texto cortas dentro de
+  una sola `AppSection` del dashboard, ya animada como bloque) se
+  dejaron sin stagger deliberadamente.
 
 ## Cómo agregar nuevos widgets
 

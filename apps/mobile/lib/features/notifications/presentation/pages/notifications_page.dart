@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_notifications_data.dart';
 import '../../models/notification_display.dart';
@@ -64,9 +63,7 @@ class NotificationsPage extends StatelessWidget {
       case NotificationsViewState.empty:
         return const NotificationsEmptyState();
       case NotificationsViewState.list:
-        return SlideIn(
-          child: NotificationsList(notifications: _buildNotifications()),
-        );
+        return NotificationsList(notifications: _buildNotifications());
     }
   }
 

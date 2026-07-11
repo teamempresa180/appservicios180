@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
+import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../models/security_display.dart';
@@ -53,15 +55,18 @@ class SecurityPage extends StatelessWidget {
           children: [
             ScaleIn(child: SecurityStatistics(data: data)),
             const SizedBox(height: AppSpacing.space16),
-            SlideIn(
-              child: Column(
-                children: [
-                  for (final authMethod in data.authMethods) ...[
-                    AuthMethodCard(authMethod: authMethod),
-                    const SizedBox(height: AppSpacing.space12),
-                  ],
+            Column(
+              children: [
+                for (final (index, authMethod) in data.authMethods.indexed) ...[
+                  FadeIn(
+                    delay: staggerDelayFor(index),
+                    child: SlideIn(
+                      child: AuthMethodCard(authMethod: authMethod),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.space12),
                 ],
-              ),
+              ],
             ),
             const AddAuthMethodButton(),
             const SizedBox(height: AppSpacing.space16),

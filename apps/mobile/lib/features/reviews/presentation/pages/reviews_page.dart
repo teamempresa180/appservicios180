@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
+import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_reviews_data.dart';
@@ -61,15 +63,16 @@ class ReviewsPage extends StatelessWidget {
           children: [
             ScaleIn(child: ReviewsSummary(reviews: reviews)),
             const SizedBox(height: AppSpacing.space16),
-            SlideIn(
-              child: Column(
-                children: [
-                  for (final review in reviews) ...[
-                    ReviewCard(data: review),
-                    const SizedBox(height: AppSpacing.space12),
-                  ],
+            Column(
+              children: [
+                for (final (index, review) in reviews.indexed) ...[
+                  FadeIn(
+                    delay: staggerDelayFor(index),
+                    child: SlideIn(child: ReviewCard(data: review)),
+                  ),
+                  const SizedBox(height: AppSpacing.space12),
                 ],
-              ),
+              ],
             ),
           ],
         );

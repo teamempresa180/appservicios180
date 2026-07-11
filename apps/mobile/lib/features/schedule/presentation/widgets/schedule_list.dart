@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import '../../../../core/ui/animations/fade_in.dart';
+import '../../../../core/ui/animations/slide_in.dart';
+import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../../../schedule/entities/schedule.dart';
 import 'schedule_block_card.dart';
 
 /// Renders every real `Schedule` block via `ScheduleBlockCard`, sorted
-/// by `startDateTime`.
+/// by `startDateTime`, entering with a staggered fade+slide (see
+/// `staggerDelayFor`).
 class ScheduleList extends StatelessWidget {
   const ScheduleList({super.key, required this.schedules});
 
@@ -20,8 +24,11 @@ class ScheduleList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const AppSectionTitle(title: 'Bloques de la semana'),
-        for (final schedule in sorted) ...[
-          ScheduleBlockCard(schedule: schedule),
+        for (final (index, schedule) in sorted.indexed) ...[
+          FadeIn(
+            delay: staggerDelayFor(index),
+            child: SlideIn(child: ScheduleBlockCard(schedule: schedule)),
+          ),
           const SizedBox(height: AppSpacing.space8),
         ],
       ],

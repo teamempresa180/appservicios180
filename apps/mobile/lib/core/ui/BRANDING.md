@@ -164,6 +164,80 @@ detectó ningún layout adicional con 5+ apariciones que faltara — la
 auditoría de esta etapa cubrió `presentation/pages/` y
 `presentation/widgets/` de los 30 features.
 
+## UX global y microinteracciones (Etapa 5)
+
+La arquitectura, el Design System (Etapa 3) y los layouts (Etapa 4) ya
+estaban consolidados. Esta etapa es puramente de experiencia de
+usuario — sin funcionalidades nuevas, sin cambios de lógica de
+negocio, sin tocar rutas/`GoRouter`, sin tocar branding ni el logo.
+
+**Auditoría** (recorrido completo de `presentation/pages/` y
+`presentation/widgets/`): la mayoría de la app ya estaba en buen
+estado — los 17 estados de carga usan `AppLoading`, los 18 estados
+vacíos usan `AppEmptyState` (que ya anima su ícono), ningún feature
+construye `SnackBar`/diálogo/bottom sheet a mano, y los botones ya son
+100% Material 3 vía `AppButton`. Se encontraron tres rigideces reales:
+
+1. **Listas sin animación escalonada**: ~18 listas (`NotificationsList`,
+   `OrdersList`, `ServicesList`, `ScheduleList`, `SearchResults`,
+   `WeeklySchedule`, y los `for` inline de `address_management`/
+   `contact_management`/`security`/`reviews`/`settings`) envolvían
+   *toda* la lista en un único `SlideIn`, así que todos los ítems
+   aparecían de golpe, a la vez.
+2. **Cambio de pestaña instantáneo en el Shell**: `AppShellPage`
+   envolvía su `IndexedStack` en un `FadeIn` que solo se ejecuta una
+   vez, en el primer build — cambiar entre "Inicio"/"Buscar"/
+   "Órdenes"/"Mensajes"/"Perfil" era un corte seco, sin transición.
+3. **`AppChip` seleccionado apenas distinguible**: la única diferencia
+   entre seleccionado/no seleccionado era el tono de color de fondo —
+   sin borde ni ícono, poco perceptible a primera vista.
+
+**Correcciones aplicadas**:
+
+- Las ~18 listas ahora entran con `FadeIn(delay: staggerDelayFor(index))`
+  envolviendo un `SlideIn` por ítem — entrada escalonada, tope de 240ms
+  para que listas largas no seguan animando tras el scroll del
+  usuario. Se retiró el `SlideIn` que envolvía la lista completa en
+  cada call site (evita animar dos veces la misma entrada).
+  `staggerDelayFor`/`AppDurations.staggerStep`/`AppDurations.staggerCap`
+  viven en `tokens/app_durations.dart`.
+- `AppShellPage` gana un wrapper interno `_TabFade` (privado del
+  archivo, no un componente nuevo de `core/ui/animations/`) que
+  cruza-desvanece el destino activo cada vez que cambia el índice
+  seleccionado, sin desmontar el `IndexedStack` — cada destino
+  conserva su estado (scroll, etc.) exactamente igual que antes.
+- `AppChip(selected: true)` ahora muestra un borde de
+  `context.colors.primary` y un ícono de check que entra/sale con
+  `AnimatedSwitcher` — de paso se corrigió un overflow que este cambio
+  introdujo en `ProviderSpecialties` (el `Text` dentro del nuevo `Row`
+  necesitaba un `Flexible`+`ellipsis` para poder achicarse en pantallas
+  angostas, ya cubierto por los tests de responsive existentes).
+- `AppBadge` cruza suavemente su texto (`AnimatedSwitcher`) cuando
+  `label` cambia, en vez de saltar instantáneamente — relevante para
+  cuando un conteo se actualice en el futuro.
+- **Desktop**: `AppShellPage` limita el contenido a 1200px de ancho y
+  lo centra en el layout ancho (`AppNavigationRail`, ≥900px), para que
+  las tarjetas no se estiren de borde a borde en una ventana de
+  Windows maximizada. El breakpoint/switch de layout no cambió. Hover/
+  cursor/scroll de escritorio ya funcionaban correctamente sin cambios
+  (los da Material/`ScrollConfiguration` por defecto).
+- **Higiene del repositorio**: `.gitignore` no ignoraba `.idea/` en la
+  raíz del repositorio (solo `apps/mobile/.idea/`), por lo que
+  aparecía como sin trackear en cada `git status` desde que se abrió
+  el proyecto en un IDE JetBrains en la raíz. Se agregó `.idea/` a la
+  sección "Editors / OS" de `.gitignore` — la carpeta en sí no se tocó
+  ni se borró, solo se evita que vuelva a aparecer como pendiente.
+
+**Qué NO se tocó** (deliberado): `ChatMessages` (lista de una
+conversación ya existente — un stagger ahí leería como si los
+mensajes se escribieran en cascada, confuso, no "ítems nuevos
+apareciendo"); `RecentOrders`/`PendingRequests` (filas de texto cortas
+dentro de una sola `AppSection` del dashboard, ya animada como
+bloque); las transiciones de `Navigator.push`/`MaterialPageRoute` (20
+usos) — ya usan la transición Material por defecto de cada plataforma,
+no se detectó ningún corte abrupto que corregir, y no se tocó
+`GoRouter` en ningún caso.
+
 ## Identidad
 
 - **Nombre oficial**: Servicios 180°

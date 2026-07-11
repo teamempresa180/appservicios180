@@ -285,6 +285,14 @@ flutter test               ✅ 748/748 tests (sin cambios — refactor estructur
 flutter build windows     ✅ Build exitoso (mobile.exe)
 ```
 
+### Verificación Flutter (actualizada — Sprint 2 Etapa 5 aprobada, Prompt 55)
+```
+dart format .             ✅ 633 archivos, 0 cambios (ya formateado)
+flutter analyze           ✅ No issues found!
+flutter test               ✅ 748/748 tests (sin cambios — solo UX/microinteracciones)
+flutter build windows     ✅ Build exitoso (mobile.exe)
+```
+
 **Nota de entorno**: el problema del carácter `°` (que afectaba
 `flutter analyze`/`flutter build windows` en la ruta antigua bajo
 `Grupo empresarial 180°`) **no existe** en la ruta oficial
@@ -496,6 +504,22 @@ cambios), `flutter analyze` (`No issues found!`), `flutter test`
 (Sprint 2, Etapa 5 — UX global, microinteracciones y experiencia de
 usuario: FadeIn/ScaleIn/SlideIn donde falte, feedback consistente,
 mejoras de escritorio), ya en curso al cierre de este documento.
+
+### Actualización — Prompt 55 completado (Sprint 2, Etapa 5)
+
+**Prompt 55 — UX global, microinteracciones y experiencia de usuario**.
+**Aprobado por el usuario y consolidado.** Ver detalle completo en la
+sección 4, Sprint 2 Etapa 5. Verificado con `dart format .` (0
+cambios), `flutter analyze` (`No issues found!`), `flutter test`
+(748/748) y `flutter build windows`. El usuario decidió que, en vez de
+seguir con etapas pequeñas, el siguiente hito sea un **Prompt 56 —
+Sprint 2, Etapa 6 — Preparación para Backend (Frontend
+Infrastructure)**, más grande: auditoría y estandarización de
+repositorios, capa `datasources/`/`mappers/` (solo interfaces, sin
+implementación real), DTOs preparados, reducción de acoplamiento,
+auditorías de performance/accesibilidad/i18n — todo sin agregar
+backend, HTTP, Firebase ni gestión de estado, y sin romper ningún
+comportamiento existente. Ya en curso al cierre de este documento.
 
 ## 10. Siguiente prompt sugerido
 
@@ -723,6 +747,33 @@ automáticamente solo por el cambio en `app_theme.dart`. **Ningún
 feature fue tocado.** Verificado con `flutter analyze` (`No issues
 found!`) y `flutter test` (748/748, sin cambios, ya que ningún
 comportamiento de negocio se tocó — solo el tema global).
+
+### Etapa 5 — UX global, microinteracciones y experiencia de usuario (Prompt 55, aprobada y consolidada)
+
+Auditó toda la app buscando rigidez visual y corrigió tres hallazgos
+reales: (1) ~18 listas verticales (`NotificationsList`, `OrdersList`,
+`ServicesList`, `ScheduleList`, `SearchResults`, `WeeklySchedule` y 5
+bucles inline en páginas) animaban toda la lista como un bloque único
+en vez de escalonado — se agregó `staggerDelayFor()` (nuevo en
+`tokens/app_durations.dart`, junto a `AppDurations.staggerStep`/
+`staggerCap`) y cada ítem ahora entra con `FadeIn(delay:
+staggerDelayFor(index))` envolviendo un `SlideIn`; (2) el cambio de
+pestaña en `AppShellPage` era instantáneo porque el `FadeIn` que
+envolvía el `IndexedStack` solo corre una vez al montar — se agregó un
+wrapper interno `_TabFade` que cruza-desvanece el destino activo en
+cada cambio sin desmontar el `IndexedStack` (preserva scroll/estado);
+(3) `AppChip(selected: true)` era poco distinguible — ahora tiene
+borde + ícono de check animado. También: `AppBadge` cruza su texto con
+`AnimatedSwitcher` al cambiar, `AppShellPage` limita el contenido a
+1200px en el layout ancho (desktop), y se agregó `.idea/` (raíz) a
+`.gitignore` (la carpeta seguía sin ignorar, solo `apps/mobile/.idea/`
+lo estaba). Corrigió en el camino un overflow que el cambio de
+`AppChip` introdujo en `ProviderSpecialties` a anchos angostos
+(`Flexible`+ellipsis). Sin funcionalidades nuevas, sin cambios de
+navegación/rutas, sin lógica de negocio, sin tocar branding ni el
+logo. Verificado con `dart format .` (0 cambios), `flutter analyze`
+(`No issues found!`), `flutter test` (748/748) y `flutter build
+windows` (build exitoso).
 
 ### Etapa 4 — Refactor global de layouts reutilizables (Prompt 54, aprobada y consolidada)
 
@@ -1395,3 +1446,47 @@ anteriores (que se conservan como registro histórico, sin eliminar).
 - Si el working tree tiene cambios sin commitear más allá del logo y
   `.idea/`, **no asumir que corresponden a una etapa posterior a la 5**
   — confirmar con el usuario antes de continuar.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 55 consolidado — Sprint 2 Etapa 5 cerrada, Etapa 6 en curso)
+
+Este es el handoff vigente — más reciente que los quince bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+
+- **El Prompt 55 (Sprint 2, Etapa 5 — UX global y microinteracciones)
+  fue aprobado explícitamente por el usuario**, verificado con `dart
+  format .` (0 cambios), `flutter analyze` (`No issues found!`),
+  `flutter test` (748/748), `flutter build windows` y `git status`.
+- Se creó un **único commit exclusivo del Prompt 55** con el mensaje
+  `Prompt 55 - Global UX polish (staggered lists, tab cross-fade,
+  clearer chip selection, desktop max width)` (ver `git log -1` para
+  el hash exacto — no se fija aquí el hash literal por la misma razón
+  de auto-referencia explicada en secciones anteriores). Incluye los
+  22 archivos de la Etapa 5 (ver detalle en la sección 4) y la
+  actualización de este documento — **sin incluir `Logo oficial
+  grupo.svg`** (sigue sin trackear, ver sección 7). `.idea/` (raíz) ya
+  no aparece como pendiente: se agregó a `.gitignore` en esta misma
+  etapa (la carpeta en sí no se tocó). No hubo cambio de navegación ni
+  de lógica de negocio.
+- `git status` tras el commit quedó exactamente:
+  ```
+  On branch main
+  Untracked files:
+          Logo oficial grupo.svg
+  nothing added to commit but untracked files present
+  ```
+- **A partir de esta sesión comienza la Etapa 6 — Preparación para
+  Backend (Frontend Infrastructure)** (Prompt 56), un hito
+  deliberadamente más grande que las etapas anteriores, decisión
+  explícita del usuario: auditar y estandarizar el patrón de
+  repositorios en los 30 features, agregar capas `datasources/`
+  (interfaces `LocalDataSource`/`RemoteDataSource`, sin
+  implementación) y `mappers/` (Domain → Display, eliminando
+  conversiones manuales), preparar DTOs (solo estructura, sin
+  JSON/HTTP), reducir acoplamiento, y auditar
+  performance/accesibilidad/i18n — todo sin agregar backend, HTTP,
+  Firebase ni gestión de estado (Provider/Riverpod/Bloc/GetX), sin
+  romper tests, sin cambiar navegación/UX/branding. **Esta etapa queda
+  pendiente de aprobación del usuario antes de commitear.**
+- Si el working tree tiene cambios sin commitear más allá del logo,
+  **no asumir que corresponden a una etapa posterior a la 6** —
+  confirmar con el usuario antes de continuar.

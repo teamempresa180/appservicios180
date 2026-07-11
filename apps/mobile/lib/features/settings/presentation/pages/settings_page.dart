@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
+import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../address_management/presentation/pages/address_management_page.dart';
@@ -91,18 +93,21 @@ class SettingsPage extends StatelessWidget {
         return const SettingsEmptyState();
       case SettingsViewState.information:
         final data = _buildData();
-        return SlideIn(
-          child: Column(
-            children: [
-              for (final option in data.options) ...[
-                SettingsOptionTile(
-                  option: option,
-                  onTap: _onTapFor(context, option),
+        return Column(
+          children: [
+            for (final (index, option) in data.options.indexed) ...[
+              FadeIn(
+                delay: staggerDelayFor(index),
+                child: SlideIn(
+                  child: SettingsOptionTile(
+                    option: option,
+                    onTap: _onTapFor(context, option),
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.space8),
-              ],
+              ),
+              const SizedBox(height: AppSpacing.space8),
             ],
-          ),
+          ],
         );
     }
   }

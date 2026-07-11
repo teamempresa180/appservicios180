@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
+import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_addresses_data.dart';
@@ -58,15 +60,16 @@ class AddressManagementPage extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SlideIn(
-              child: Column(
-                children: [
-                  for (final address in addresses) ...[
-                    AddressCard(data: address),
-                    const SizedBox(height: AppSpacing.space12),
-                  ],
+            Column(
+              children: [
+                for (final (index, address) in addresses.indexed) ...[
+                  FadeIn(
+                    delay: staggerDelayFor(index),
+                    child: SlideIn(child: AddressCard(data: address)),
+                  ),
+                  const SizedBox(height: AppSpacing.space12),
                 ],
-              ),
+              ],
             ),
             const AddAddressButton(),
             const SizedBox(height: AppSpacing.space16),

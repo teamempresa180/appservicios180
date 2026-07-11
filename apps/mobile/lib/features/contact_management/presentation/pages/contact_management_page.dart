@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
+import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../models/contact_management_display.dart';
@@ -53,15 +55,16 @@ class ContactManagementPage extends StatelessWidget {
           children: [
             ScaleIn(child: ContactsStatistics(data: data)),
             const SizedBox(height: AppSpacing.space16),
-            SlideIn(
-              child: Column(
-                children: [
-                  for (final contact in data.contacts) ...[
-                    ContactCard(contact: contact),
-                    const SizedBox(height: AppSpacing.space12),
-                  ],
+            Column(
+              children: [
+                for (final (index, contact) in data.contacts.indexed) ...[
+                  FadeIn(
+                    delay: staggerDelayFor(index),
+                    child: SlideIn(child: ContactCard(contact: contact)),
+                  ),
+                  const SizedBox(height: AppSpacing.space12),
                 ],
-              ),
+              ],
             ),
             const AddContactButton(),
           ],

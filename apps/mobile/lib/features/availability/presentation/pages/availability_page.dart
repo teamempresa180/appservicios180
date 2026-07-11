@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/animations/scale_in.dart';
-import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_availability_data.dart';
@@ -57,7 +56,7 @@ class AvailabilityPage extends StatelessWidget {
           children: [
             ScaleIn(child: AvailabilityStatistics(data: data)),
             const SizedBox(height: AppSpacing.space16),
-            SlideIn(child: WeeklySchedule(availabilities: data.availabilities)),
+            WeeklySchedule(availabilities: data.availabilities),
             const SizedBox(height: AppSpacing.space16),
             const AvailabilityActions(),
             const SizedBox(height: AppSpacing.space16),
