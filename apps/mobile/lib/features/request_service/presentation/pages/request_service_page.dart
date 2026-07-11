@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_request_service_data.dart';
 import '../../models/request_service_data.dart';
 import '../../repositories/mock_request_service_repository.dart';
@@ -49,12 +49,11 @@ class RequestServicePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = _buildData();
 
-    return SingleChildScrollView(
-      child: Column(
+    return AppPageBody(
+      header: RequestServiceHeader(data: data),
+      body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          FadeIn(child: RequestServiceHeader(data: data)),
-          const SizedBox(height: AppSpacing.space16),
           SlideIn(child: ServiceSummary(data: data)),
           const SizedBox(height: AppSpacing.space16),
           SlideIn(child: ProviderSummary(data: data)),

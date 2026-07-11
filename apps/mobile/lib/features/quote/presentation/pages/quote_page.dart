@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_quote_data.dart';
 import '../../models/quote_data.dart';
 import '../../repositories/mock_quote_repository.dart';
@@ -47,12 +47,11 @@ class QuotePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = _buildData();
 
-    return SingleChildScrollView(
-      child: Column(
+    return AppPageBody(
+      header: QuoteHeader(data: data),
+      body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          FadeIn(child: QuoteHeader(data: data)),
-          const SizedBox(height: AppSpacing.space16),
           SlideIn(child: ServiceResume(data: data)),
           const SizedBox(height: AppSpacing.space16),
           SlideIn(child: ProviderResume(data: data)),

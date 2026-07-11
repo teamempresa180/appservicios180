@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/icons/app_icons.dart';
-import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_search_data.dart';
 import '../../models/search_result.dart';
 import '../../repositories/mock_search_repository.dart';
@@ -74,17 +73,10 @@ class SearchPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const FadeIn(child: SearchHeader()),
-          const SizedBox(height: AppSpacing.space16),
-          const SearchInputBar(),
-          const SizedBox(height: AppSpacing.space16),
-          _buildBody(),
-        ],
-      ),
+    return AppPageBody(
+      header: const SearchHeader(),
+      toolbar: const [SearchInputBar()],
+      body: _buildBody(),
     );
   }
 }

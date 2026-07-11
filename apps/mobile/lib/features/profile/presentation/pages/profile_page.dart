@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_profile_data.dart';
 import '../../models/profile_display.dart';
 import '../../repositories/mock_profile_repository.dart';
@@ -70,15 +70,9 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          FadeIn(child: ProfileHeader(data: _buildData())),
-          const SizedBox(height: AppSpacing.space16),
-          _buildBody(),
-        ],
-      ),
+    return AppPageBody(
+      header: ProfileHeader(data: _buildData()),
+      body: _buildBody(),
     );
   }
 }

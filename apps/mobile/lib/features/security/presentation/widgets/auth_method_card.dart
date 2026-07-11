@@ -6,6 +6,7 @@ import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_badge.dart';
 import '../../../../core/ui/widgets/app_card.dart';
+import '../../../../core/ui/widgets/app_icon_row.dart';
 import 'auth_method_actions.dart';
 
 /// A single real `Authentication` method: type icon, label and status
@@ -80,22 +81,16 @@ class AuthMethodCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                _iconFor(authMethod.methodType),
-                color: context.colors.primary,
-              ),
-              const SizedBox(width: AppSpacing.space8),
-              Expanded(
-                child: Text(
-                  _typeLabel(authMethod.methodType),
-                  overflow: TextOverflow.ellipsis,
-                  style: context.textStyles.bodyMedium,
-                ),
-              ),
-              AppBadge(label: _statusLabel(authMethod.status), color: color),
-            ],
+          AppIconRow(
+            icon: _iconFor(authMethod.methodType),
+            iconColor: context.colors.primary,
+            iconSize: null,
+            padded: false,
+            title: _typeLabel(authMethod.methodType),
+            trailing: AppBadge(
+              label: _statusLabel(authMethod.status),
+              color: color,
+            ),
           ),
           const SizedBox(height: AppSpacing.space12),
           const AuthMethodActions(),

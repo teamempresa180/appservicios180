@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
-import '../../../../core/ui/widgets/app_card.dart';
-import '../../../../core/ui/widgets/app_section_title.dart';
+import '../../../../core/ui/widgets/app_section.dart';
 import '../../models/security_display.dart';
 import 'credential_card.dart';
 
@@ -16,22 +15,19 @@ class CredentialsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const AppSectionTitle(title: 'Credenciales'),
-          Text(
-            '${data.activeCredentialsCount} activas · '
-            '${data.expiredCredentialsCount} expiradas · '
-            '${data.revokedCredentialsCount} revocadas',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: AppSpacing.space8),
-          for (final credential in data.credentials)
-            CredentialCard(credential: credential),
-        ],
-      ),
+    return AppSection(
+      title: 'Credenciales',
+      children: [
+        Text(
+          '${data.activeCredentialsCount} activas · '
+          '${data.expiredCredentialsCount} expiradas · '
+          '${data.revokedCredentialsCount} revocadas',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: AppSpacing.space8),
+        for (final credential in data.credentials)
+          CredentialCard(credential: credential),
+      ],
     );
   }
 }

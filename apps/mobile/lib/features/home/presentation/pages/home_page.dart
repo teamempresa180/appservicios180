@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
-import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../mock/mock_user_role.dart';
 import '../models/user_role.dart';
 import '../widgets/client_home_content.dart';
@@ -21,18 +20,12 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     const role = MockUserRole.current;
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const FadeIn(child: HomeHeader(role: role)),
-          const SizedBox(height: AppSpacing.space16),
-          switch (role) {
-            UserRole.client => const ClientHomeContent(),
-            UserRole.provider => const ProviderHomeContent(),
-          },
-        ],
-      ),
+    return AppPageBody(
+      header: const HomeHeader(role: role),
+      body: switch (role) {
+        UserRole.client => const ClientHomeContent(),
+        UserRole.provider => const ProviderHomeContent(),
+      },
     );
   }
 }

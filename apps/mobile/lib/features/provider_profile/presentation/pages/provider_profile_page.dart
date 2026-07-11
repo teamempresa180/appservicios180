@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_provider_profile_data.dart';
 import '../../models/provider_profile_data.dart';
 import '../../repositories/mock_provider_profile_repository.dart';
@@ -54,12 +54,11 @@ class ProviderProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = _buildData();
 
-    return SingleChildScrollView(
-      child: Column(
+    return AppPageBody(
+      header: ProviderProfileHeader(data: data),
+      body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          FadeIn(child: ProviderProfileHeader(data: data)),
-          const SizedBox(height: AppSpacing.space16),
           SlideIn(child: ProviderInformation(data: data)),
           const SizedBox(height: AppSpacing.space16),
           ScaleIn(child: ProviderStatistics(data: data)),

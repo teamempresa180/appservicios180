@@ -277,6 +277,14 @@ flutter analyze           ✅ No issues found!
 flutter test               ✅ 748/748 tests (sin cambios — refactor puramente visual, mismo comportamiento)
 ```
 
+### Verificación Flutter (actualizada — Sprint 2 Etapa 4 aprobada, Prompt 54)
+```
+dart format .             ✅ 633 archivos, 0 cambios (ya formateado)
+flutter analyze           ✅ No issues found!
+flutter test               ✅ 748/748 tests (sin cambios — refactor estructural, mismo comportamiento)
+flutter build windows     ✅ Build exitoso (mobile.exe)
+```
+
 **Nota de entorno**: el problema del carácter `°` (que afectaba
 `flutter analyze`/`flutter build windows` en la ruta antigua bajo
 `Grupo empresarial 180°`) **no existe** en la ruta oficial
@@ -473,6 +481,21 @@ comportamiento visual, navegación ni lógica de negocio. Verificado con
 `AppPageHeader`, `AppSectionHeader`, `AppSection`, `AppInfoRow`,
 `AppActionRow`, `AppPagePadding`, `AppPageBody`), ya en curso al cierre
 de este documento.
+
+### Actualización — Prompt 54 completado (Sprint 2, Etapa 4)
+
+**Prompt 54 — Refactor global de layouts reutilizables (visual/
+estructural, sin funcionalidades nuevas)**. **Aprobado por el usuario y
+consolidado.** Creó 6 layouts nuevos en `core/ui/widgets/`
+(`AppPageBody`, `AppSection`, `AppInfoRow`, `AppActionRow`,
+`AppStatGrid`, `AppIconRow`) y migró ~50 archivos para usarlos en vez
+de reconstruir la misma estructura por feature — ver detalle en la
+sección 4, Sprint 2 Etapa 4. Verificado con `dart format .` (0
+cambios), `flutter analyze` (`No issues found!`), `flutter test`
+(748/748) y `flutter build windows`. El siguiente hito es el Prompt 55
+(Sprint 2, Etapa 5 — UX global, microinteracciones y experiencia de
+usuario: FadeIn/ScaleIn/SlideIn donde falte, feedback consistente,
+mejoras de escritorio), ya en curso al cierre de este documento.
 
 ## 10. Siguiente prompt sugerido
 
@@ -700,6 +723,31 @@ automáticamente solo por el cambio en `app_theme.dart`. **Ningún
 feature fue tocado.** Verificado con `flutter analyze` (`No issues
 found!`) y `flutter test` (748/748, sin cambios, ya que ningún
 comportamiento de negocio se tocó — solo el tema global).
+
+### Etapa 4 — Refactor global de layouts reutilizables (Prompt 54, aprobada y consolidada)
+
+Auditó `apps/mobile/lib/features` (páginas y widgets, no solo Sprint 2)
+buscando estructuras repetidas y extrajo a `core/ui/widgets/` seis
+layouts nuevos: `AppPageBody` (raíz de página: header fade-in +
+toolbar opcional + body — reemplazó el esqueleto `SingleChildScrollView
++ Column` de ~22 `*_page.dart`), `AppSection` (`AppCard` + `AppSectionTitle`
++ children — reemplazó ese wrapper en `PaymentInformation`,
+`ServiceInformation`, `CredentialsSection`, `AuditLogSection`,
+`PriceBreakdown`, los seis `*_statistics.dart`, etc.), `AppInfoRow`
+(fila etiqueta→valor `spaceBetween`), `AppActionRow` (`Wrap` estándar
+de botones — 7 `*_actions.dart`), `AppStatGrid` (`GridView.count` para
+tiles de estadísticas, con `crossAxisCount`/`childAspectRatio`
+parametrizables para preservar cada proporción original) y
+`AppIconRow` (ícono + texto + trailing, con tamaño/color/padding
+parametrizables). Migró ~50 archivos sin alterar comportamiento visual
+ni navegación; documentó explícitamente los casos **no** migrados
+porque forzarlos habría cambiado el comportamiento (`ChatPage`/
+`PaymentsPage` con header condicional al estado, `PaymentSummary` con
+overflow por `Flexible`+ellipsis, `ScheduleBlockCard` sin ícono, entre
+otros — ver `BRANDING.md`, sección "Adopción de layouts (Etapa 4)").
+Verificado con `dart format .` (0 cambios), `flutter analyze` (`No
+issues found!`), `flutter test` (748/748, sin cambios) y `flutter
+build windows` (build exitoso).
 
 ### Etapa 3 — Adopción global del Design System (Prompt 53, aprobada y consolidada)
 
@@ -1302,4 +1350,48 @@ anteriores (que se conservan como registro histórico, sin eliminar).
   que se apruebe explícitamente).
 - Si el working tree tiene cambios sin commitear más allá del logo y
   `.idea/`, **no asumir que corresponden a una etapa posterior a la 4**
+  — confirmar con el usuario antes de continuar.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 54 consolidado — Sprint 2 Etapa 4 cerrada, Etapa 5 en curso)
+
+Este es el handoff vigente — más reciente que los catorce bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+
+- **El Prompt 54 (Sprint 2, Etapa 4 — refactor global de layouts
+  reutilizables) fue aprobado explícitamente por el usuario**,
+  verificado con `dart format .` (0 cambios), `flutter analyze` (`No
+  issues found!`), `flutter test` (748/748), `flutter build windows` y
+  `git status`.
+- Se creó un **único commit exclusivo del Prompt 54** con el mensaje
+  `Prompt 54 - Global reusable layouts (AppPageBody/AppSection/
+  AppInfoRow/AppActionRow/AppStatGrid/AppIconRow)` (ver `git log -1`
+  para el hash exacto — no se fija aquí el hash literal por la misma
+  razón de auto-referencia explicada en secciones anteriores). Incluye
+  los 6 layouts nuevos y los ~50 archivos migrados (ver detalle en la
+  sección 4, Sprint 2 Etapa 4) y la actualización de este documento —
+  **sin incluir `Logo oficial grupo.svg` ni la carpeta `.idea/`** (ambos
+  siguen sin trackear, ver sección 7). No hubo cambio de navegación ni
+  de lógica de negocio.
+- `git status` tras el commit quedó exactamente:
+  ```
+  On branch main
+  Untracked files:
+          .idea/
+          Logo oficial grupo.svg
+  nothing added to commit but untracked files present
+  ```
+- **A partir de esta sesión comienza la Etapa 5 — UX global,
+  microinteracciones y experiencia de usuario** (Prompt 55): auditar
+  toda la app en busca de rigidez visual (transiciones inexistentes,
+  loaders poco naturales, scrolls abruptos), aplicar
+  `FadeIn`/`ScaleIn`/`SlideIn` donde falte (listas, cards, empty
+  states), verificar que botones/chips/badges/avatares usen los
+  estados Material 3 y las animaciones oficiales, revisar feedback
+  (SnackBar/Dialog/BottomSheet) y mejorar la experiencia de escritorio
+  (hover/cursor/anchuras) sin tocar responsive. Es trabajo puramente de
+  UX — sin funcionalidades nuevas, sin cambios de navegación/rutas, sin
+  lógica de negocio, sin tocar branding ni el logo. **Esta etapa queda
+  pendiente de aprobación del usuario antes de commitear.**
+- Si el working tree tiene cambios sin commitear más allá del logo y
+  `.idea/`, **no asumir que corresponden a una etapa posterior a la 5**
   — confirmar con el usuario antes de continuar.

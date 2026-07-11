@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../models/provider_display.dart';
 import '../../models/service_display.dart';
 import '../../repositories/mock_category_repository.dart';
@@ -56,14 +56,12 @@ class MarketplacePage extends StatelessWidget {
         ),
     ];
 
-    return SingleChildScrollView(
-      child: Column(
+    return AppPageBody(
+      header: const MarketplaceHeader(),
+      toolbar: const [MarketplaceSearchBar()],
+      body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const FadeIn(child: MarketplaceHeader()),
-          const SizedBox(height: AppSpacing.space16),
-          const MarketplaceSearchBar(),
-          const SizedBox(height: AppSpacing.space16),
           SlideIn(child: CategoriesSection(categories: categories)),
           const SizedBox(height: AppSpacing.space16),
           SlideIn(child: FeaturedServices(services: serviceDisplays)),

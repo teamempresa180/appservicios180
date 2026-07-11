@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
-import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_categories_data.dart';
 import '../../models/category_display.dart';
 import '../../repositories/mock_category_repository.dart';
@@ -42,18 +41,11 @@ class CategoriesPage extends StatelessWidget {
               ),
           ];
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const FadeIn(child: CategoriesHeader()),
-          const SizedBox(height: AppSpacing.space16),
-          if (isLoading)
-            const AppLoading(message: 'Cargando categorías...')
-          else
-            SlideIn(child: CategoriesGrid(categories: categories)),
-        ],
-      ),
+    return AppPageBody(
+      header: const CategoriesHeader(),
+      body: isLoading
+          ? const AppLoading(message: 'Cargando categorías...')
+          : SlideIn(child: CategoriesGrid(categories: categories)),
     );
   }
 }

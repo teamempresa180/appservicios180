@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_addresses_data.dart';
 import '../../models/address_display.dart';
 import '../../repositories/mock_address_management_repository.dart';
@@ -78,15 +78,6 @@ class AddressManagementPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const FadeIn(child: AddressesHeader()),
-          const SizedBox(height: AppSpacing.space16),
-          _buildBody(),
-        ],
-      ),
-    );
+    return AppPageBody(header: const AddressesHeader(), body: _buildBody());
   }
 }

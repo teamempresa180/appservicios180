@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_service_detail_data.dart';
 import '../../models/service_detail_data.dart';
 import '../../repositories/mock_service_detail_repository.dart';
@@ -49,12 +49,11 @@ class ServiceDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = _buildData();
 
-    return SingleChildScrollView(
-      child: Column(
+    return AppPageBody(
+      header: ServiceDetailHeader(data: data),
+      body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          FadeIn(child: ServiceDetailHeader(data: data)),
-          const SizedBox(height: AppSpacing.space16),
           ScaleIn(child: ServiceGallery(images: data.images)),
           const SizedBox(height: AppSpacing.space16),
           SlideIn(child: ServiceInformation(data: data)),

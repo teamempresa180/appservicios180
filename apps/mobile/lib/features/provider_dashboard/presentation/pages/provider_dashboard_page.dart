@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../availability/presentation/pages/availability_page.dart';
 import '../../../provider_services/presentation/pages/provider_services_page.dart';
 import '../../../schedule/presentation/pages/schedule_page.dart';
@@ -122,15 +122,9 @@ class ProviderDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          FadeIn(child: DashboardHeader(data: _buildData())),
-          const SizedBox(height: AppSpacing.space16),
-          _buildBody(context),
-        ],
-      ),
+    return AppPageBody(
+      header: DashboardHeader(data: _buildData()),
+      body: _buildBody(context),
     );
   }
 }

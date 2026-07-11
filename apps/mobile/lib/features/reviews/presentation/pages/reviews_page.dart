@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_reviews_data.dart';
 import '../../models/review_display.dart';
 import '../../repositories/mock_reviews_repository.dart';
@@ -78,17 +78,10 @@ class ReviewsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const FadeIn(child: ReviewsHeader()),
-          const SizedBox(height: AppSpacing.space16),
-          const ReviewFilters(),
-          const SizedBox(height: AppSpacing.space16),
-          _buildBody(),
-        ],
-      ),
+    return AppPageBody(
+      header: const ReviewsHeader(),
+      toolbar: const [ReviewFilters()],
+      body: _buildBody(),
     );
   }
 }

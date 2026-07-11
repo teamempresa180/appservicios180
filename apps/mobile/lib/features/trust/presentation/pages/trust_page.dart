@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_trust_data.dart';
 import '../../models/trust_display.dart';
 import '../../repositories/mock_trust_repository.dart';
@@ -56,15 +56,9 @@ class TrustPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          FadeIn(child: TrustHeader(data: _buildData())),
-          const SizedBox(height: AppSpacing.space16),
-          _buildBody(),
-        ],
-      ),
+    return AppPageBody(
+      header: TrustHeader(data: _buildData()),
+      body: _buildBody(),
     );
   }
 }

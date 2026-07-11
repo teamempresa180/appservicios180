@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_action_row.dart';
 import '../../../../core/ui/widgets/app_button.dart';
 
 /// "Desactivar"/"Eliminar" actions for one authentication method.
@@ -14,10 +14,8 @@ class AuthMethodActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: AppSpacing.space8,
-      runSpacing: AppSpacing.space8,
-      children: [
+    return AppActionRow(
+      actions: [
         AppButton(
           label: 'Desactivar',
           onPressed: onDisable ?? () {},

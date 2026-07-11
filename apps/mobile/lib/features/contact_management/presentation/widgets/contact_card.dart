@@ -6,6 +6,7 @@ import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_badge.dart';
 import '../../../../core/ui/widgets/app_card.dart';
+import '../../../../core/ui/widgets/app_icon_row.dart';
 import 'contact_actions.dart';
 
 /// A single real `Contact`: type icon, value and status badge. No
@@ -57,19 +58,16 @@ class ContactCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(_iconFor(contact.type), color: context.colors.primary),
-              const SizedBox(width: AppSpacing.space8),
-              Expanded(
-                child: Text(
-                  contact.value,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.textStyles.bodyMedium,
-                ),
-              ),
-              AppBadge(label: _statusLabel(contact.status), color: color),
-            ],
+          AppIconRow(
+            icon: _iconFor(contact.type),
+            iconColor: context.colors.primary,
+            iconSize: null,
+            padded: false,
+            title: contact.value,
+            trailing: AppBadge(
+              label: _statusLabel(contact.status),
+              color: color,
+            ),
           ),
           const SizedBox(height: AppSpacing.space12),
           const ContactActions(),

@@ -4,6 +4,7 @@ import '../../../../audit/models/audit_action_type.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_icon_row.dart';
 
 /// A single real `Audit` entry: action icon, description (real,
 /// passthrough of `Audit.description`) and a formatted timestamp. No
@@ -44,32 +45,13 @@ class AuditLogEntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.space8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            _iconFor(entry.actionType),
-            size: AppSpacing.space20,
-            color: context.colors.secondary,
-          ),
-          const SizedBox(width: AppSpacing.space8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(entry.description, style: context.textStyles.bodyMedium),
-                const SizedBox(height: AppSpacing.space4),
-                Text(
-                  _formatDate(entry.occurredAt),
-                  style: context.textStyles.bodySmall,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return AppIconRow(
+      icon: _iconFor(entry.actionType),
+      iconColor: context.colors.secondary,
+      verticalPadding: AppSpacing.space8,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      title: entry.description,
+      subtitle: _formatDate(entry.occurredAt),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_icon_row.dart';
 
 /// A single verification step row. `isCompleted` reflects whether this
 /// label came from the **simulated** `completedSteps` or
@@ -20,21 +21,13 @@ class VerificationStepCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.space4),
-      child: Row(
-        children: [
-          Icon(
-            isCompleted ? AppIcons.success : Icons.radio_button_unchecked,
-            size: AppSpacing.space16,
-            color: isCompleted
-                ? context.colors.primary
-                : context.colors.secondary,
-          ),
-          const SizedBox(width: AppSpacing.space8),
-          Expanded(child: Text(label, style: context.textStyles.bodyMedium)),
-        ],
-      ),
+    return AppIconRow(
+      icon: isCompleted ? AppIcons.success : Icons.radio_button_unchecked,
+      iconSize: AppSpacing.space16,
+      iconColor: isCompleted
+          ? context.colors.primary
+          : context.colors.secondary,
+      title: label,
     );
   }
 }

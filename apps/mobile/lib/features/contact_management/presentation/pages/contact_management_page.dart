@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../models/contact_management_display.dart';
 import '../../repositories/mock_contact_management_repository.dart';
 import '../widgets/add_contact_button.dart';
@@ -71,15 +71,6 @@ class ContactManagementPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const FadeIn(child: ContactsHeader()),
-          const SizedBox(height: AppSpacing.space16),
-          _buildBody(),
-        ],
-      ),
-    );
+    return AppPageBody(header: const ContactsHeader(), body: _buildBody());
   }
 }

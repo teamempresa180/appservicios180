@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../address_management/presentation/pages/address_management_page.dart';
 import '../../../contact_management/presentation/pages/contact_management_page.dart';
 import '../../../security/presentation/pages/security_page.dart';
@@ -109,15 +109,9 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          FadeIn(child: SettingsHeader(data: _buildData())),
-          const SizedBox(height: AppSpacing.space16),
-          _buildBody(context),
-        ],
-      ),
+    return AppPageBody(
+      header: SettingsHeader(data: _buildData()),
+      body: _buildBody(context),
     );
   }
 }

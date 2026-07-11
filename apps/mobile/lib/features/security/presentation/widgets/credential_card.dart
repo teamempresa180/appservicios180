@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
-import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_badge.dart';
+import '../../../../core/ui/widgets/app_icon_row.dart';
 import '../../../../credentials/entities/credential.dart';
 import '../../../../credentials/models/credential_status.dart';
 import '../../../../credentials/models/credential_type.dart';
@@ -68,26 +68,11 @@ class CredentialCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _statusColor(context, credential.status);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.space4),
-      child: Row(
-        children: [
-          Icon(
-            _iconFor(credential.type),
-            size: AppSpacing.space20,
-            color: context.colors.primary,
-          ),
-          const SizedBox(width: AppSpacing.space8),
-          Expanded(
-            child: Text(
-              _typeLabel(credential.type),
-              overflow: TextOverflow.ellipsis,
-              style: context.textStyles.bodyMedium,
-            ),
-          ),
-          AppBadge(label: _statusLabel(credential.status), color: color),
-        ],
-      ),
+    return AppIconRow(
+      icon: _iconFor(credential.type),
+      iconColor: context.colors.primary,
+      title: _typeLabel(credential.type),
+      trailing: AppBadge(label: _statusLabel(credential.status), color: color),
     );
   }
 }

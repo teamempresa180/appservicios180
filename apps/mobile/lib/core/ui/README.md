@@ -11,6 +11,17 @@
 > [`BRANDING.md`](BRANDING.md) para el detalle completo de la
 > migración y el origen de cada token en el logo.
 
+> **Sprint 2, Etapa 4**: el Design System ya no cubre solo componentes
+> visuales — también cubre **layouts** (estructuras repetidas: raíz de
+> página con scroll, secciones tituladas, filas de información/acción,
+> grillas de estadísticas). `AppPageBody`, `AppSection`, `AppInfoRow`,
+> `AppActionRow`, `AppStatGrid` y `AppIconRow` reemplazaron la
+> duplicación estructural que existía en `presentation/pages/*.dart` y
+> `presentation/widgets/*.dart` de prácticamente todos los features.
+> Toda pantalla/widget nuevo **debe** reutilizar estos layouts en vez
+> de reconstruir `SingleChildScrollView`+`Column`, `AppCard`+`Column`+
+> `AppSectionTitle`, o un `Row(spaceBetween)` a mano.
+
 ## Filosofía del Design System
 
 Este directorio es la única fuente de verdad para cómo se ve la aplicación:
@@ -46,6 +57,12 @@ propio tema, no los widgets que lo consumen.
 | `AppAvatar` | Círculo con iniciales o ícono. **Obligatorio para avatares de persona** — no reconstruir un `CircleAvatar` de usuario a mano. | Reemplazó los 10 `CircleAvatar` de persona que existían en `provider_profile`/`profile`/`reviews`/`chat`/`payments`/`quote`/`request_service`/`service_detail`/`marketplace`/`home`. Sin foto real — placeholder neutro (ver "Qué NO contiene"). |
 | `AppBadge` | Pastilla pequeña de estado/conteo. **Obligatorio para badges de estado** — no reconstruir un `Container`+`BoxDecoration` de pill a mano. | 5 tonos semánticos (`neutral`/`info`/`success`/`warning`/`error`) o un `color` ya resuelto por el caller (para status badges que derivan el color de un enum de dominio). Reemplazó los 10 pills de estado duplicados en `orders`/`payments`/`provider_services`/`address_management`/`security`/`contact_management`/`schedule`/`trust`/`verification`. |
 | `FadeIn` / `ScaleIn` / `SlideIn` | Animaciones de entrada. | Curvas ahora nombradas en `AppCurves` (`standard`/`playful`) — mismo comportamiento, sin cambios visuales. Únicas animaciones permitidas — no crear nuevas sin aprobación. |
+| `AppPageBody` | Raíz de página: header (fade-in) + toolbar opcional (barras de búsqueda, tabs de filtro) + body, dentro de un `SingleChildScrollView`. **Obligatorio** para pantallas de lista/detalle nuevas — no reconstruir `SingleChildScrollView(child: Column(...))` a mano. | Reemplazó el esqueleto idéntico de ~20 `*_page.dart`. No agrega `SafeArea` (las páginas ya viven dentro del `Scaffold`/`SafeArea` del `AppShell`). Deliberadamente **no** usado en `ChatPage`/`PaymentsPage`: en esos dos el header solo debe aparecer en el estado "con datos", no en loading/empty, así que sigue construido a mano dentro de `_buildBody()`. |
+| `AppSection` | Bloque de contenido titulado dentro de `AppCard` (`AppSectionTitle` + lista de `children`). **Obligatorio** — no reconstruir `AppCard(child: Column(children: [AppSectionTitle(...), ...]))` a mano. | Reemplazó ese wrapper en la mayoría de widgets "de resumen"/"de información" (`PaymentInformation`, `ServiceInformation`, `CredentialsSection`, `AuditLogSection`, `PriceBreakdown`, los `*_statistics.dart`, etc.). |
+| `AppInfoRow` | Fila etiqueta → valor, alineada a los extremos (`spaceBetween`). **Obligatorio** para este patrón — no reconstruir `Row(mainAxisAlignment: spaceBetween, children: [Text(label), Text(value)])`. | `labelStyle`/`valueStyle` opcionales (default `bodyMedium`/`titleMedium`); `padded` opcional agrega el `EdgeInsets.symmetric(vertical: space4)` que usan las filas repetidas en lista (p. ej. `PriceBreakdown`). No forzado en `PaymentSummary` (usa `Flexible`+ellipsis para valores largos, un comportamiento distinto que este widget no reproduce) ni en `ProviderServices` (nombre truncado con `Expanded`+ellipsis) — ver "Qué NO se migró" en `BRANDING.md`. |
+| `AppActionRow` | `Wrap` de 2–3 `AppButton` con el `spacing`/`runSpacing` estándar. **Obligatorio** para grupos de acciones — no reconstruir el `Wrap` a mano. | Reemplazó el mismo `Wrap` en los 7 `*_actions.dart` que usaban ese patrón. `ProfileActions` no lo usa (es una `Column` de 3 botones apilados, un patrón distinto). |
+| `AppStatGrid` | `GridView.count` (`shrinkWrap`+`NeverScrollableScrollPhysics`) que envuelve una lista de `AppStatTile`. **Obligatorio** para grillas de estadísticas. | `crossAxisCount`/`childAspectRatio` opcionales (default `2`/`1.7`) — cada `*_statistics.dart` conserva su proporción original pasándolos explícitamente cuando difiere (p. ej. `contacts_statistics` usa 3 columnas). |
+| `AppIconRow` | Ícono + título (+ subtítulo opcional) + trailing opcional. **Obligatorio** para filas "ícono + texto (+ badge)". | `iconSize`/`iconColor`/`padded`/`verticalPadding`/`crossAxisAlignment` opcionales para que cada caso (`CredentialCard`, `AuditLogEntryCard`, `TrustFactorCard`, `VerificationStepCard`, la fila interna de `ContactCard`/`AuthMethodCard`) conserve su tamaño/color/espaciado original exacto. No forzado en `ScheduleBlockCard` (usa una etiqueta de día, no un ícono). |
 
 ## Buenas prácticas
 
@@ -138,6 +155,12 @@ core/ui/
     app_snack_bar.dart        (nuevo)
     app_avatar.dart           (nuevo)
     app_badge.dart            (nuevo)
+    app_page_body.dart        (nuevo — Etapa 4, layout)
+    app_section.dart          (nuevo — Etapa 4, layout)
+    app_info_row.dart         (nuevo — Etapa 4, layout)
+    app_action_row.dart       (nuevo — Etapa 4, layout)
+    app_stat_grid.dart        (nuevo — Etapa 4, layout)
+    app_icon_row.dart         (nuevo — Etapa 4, layout)
   animations/
     fade_in.dart
     scale_in.dart

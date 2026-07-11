@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
-import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_divider.dart';
-import '../../../../core/ui/widgets/app_section_title.dart';
+import '../../../../core/ui/widgets/app_info_row.dart';
+import '../../../../core/ui/widgets/app_section.dart';
 import '../../models/quote_data.dart';
 
 /// Cost breakdown: subtotal (real, `Quote.proposedPrice`), travel fee,
@@ -14,71 +14,49 @@ class PriceBreakdown extends StatelessWidget {
 
   final QuoteData data;
 
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const AppSectionTitle(title: 'Desglose de costos'),
-          _PriceRow(label: 'Subtotal', amount: data.subtotal, context: context),
-          _PriceRow(
-            label: 'Desplazamiento',
-            amount: data.travelFee,
-            context: context,
-          ),
-          _PriceRow(
-            label: 'Descuento',
-            amount: -data.discount,
-            context: context,
-          ),
-          _PriceRow(label: 'Impuestos', amount: data.taxes, context: context),
-          const AppDivider(),
-          const SizedBox(height: AppSpacing.space4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Total', style: context.textStyles.titleMedium),
-              Text(
-                '\$${data.total.toStringAsFixed(2)}',
-                style: context.textStyles.titleMedium,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PriceRow extends StatelessWidget {
-  const _PriceRow({
-    required this.label,
-    required this.amount,
-    required this.context,
-  });
-
-  final String label;
-  final num amount;
-  final BuildContext context;
-
-  String get _formattedAmount {
+  String _formatAmount(num amount) {
     return amount < 0
         ? '-\$${(-amount).toStringAsFixed(2)}'
         : '\$${amount.toStringAsFixed(2)}';
   }
 
   @override
-  Widget build(BuildContext _) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.space4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: context.textStyles.bodyMedium),
-          Text(_formattedAmount, style: context.textStyles.bodyMedium),
-        ],
-      ),
+  Widget build(BuildContext context) {
+    return AppSection(
+      title: 'Desglose de costos',
+      children: [
+        AppInfoRow(
+          label: 'Subtotal',
+          value: _formatAmount(data.subtotal),
+          valueStyle: context.textStyles.bodyMedium,
+          padded: true,
+        ),
+        AppInfoRow(
+          label: 'Desplazamiento',
+          value: _formatAmount(data.travelFee),
+          valueStyle: context.textStyles.bodyMedium,
+          padded: true,
+        ),
+        AppInfoRow(
+          label: 'Descuento',
+          value: _formatAmount(-data.discount),
+          valueStyle: context.textStyles.bodyMedium,
+          padded: true,
+        ),
+        AppInfoRow(
+          label: 'Impuestos',
+          value: _formatAmount(data.taxes),
+          valueStyle: context.textStyles.bodyMedium,
+          padded: true,
+        ),
+        const AppDivider(),
+        const SizedBox(height: AppSpacing.space4),
+        AppInfoRow(
+          label: 'Total',
+          value: _formatAmount(data.total),
+          labelStyle: context.textStyles.titleMedium,
+        ),
+      ],
     );
   }
 }

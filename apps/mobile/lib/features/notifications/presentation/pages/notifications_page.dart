@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
-import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../mock/mock_notifications_data.dart';
 import '../../models/notification_display.dart';
 import '../../repositories/mock_notifications_repository.dart';
@@ -73,17 +72,10 @@ class NotificationsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const FadeIn(child: NotificationsHeader()),
-          const SizedBox(height: AppSpacing.space16),
-          const NotificationFilterTabs(),
-          const SizedBox(height: AppSpacing.space16),
-          _buildBody(),
-        ],
-      ),
+    return AppPageBody(
+      header: const NotificationsHeader(),
+      toolbar: const [NotificationFilterTabs()],
+      body: _buildBody(),
     );
   }
 }

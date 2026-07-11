@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/widgets/app_card.dart';
-import '../../../../core/ui/widgets/app_section_title.dart';
+import '../../../../core/ui/widgets/app_section.dart';
 import '../../models/security_display.dart';
 import 'audit_log_entry_card.dart';
 
@@ -15,15 +14,12 @@ class AuditLogSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const AppSectionTitle(title: 'Actividad reciente'),
-          for (final entry in data.sortedAuditLog)
-            AuditLogEntryCard(entry: entry),
-        ],
-      ),
+    return AppSection(
+      title: 'Actividad reciente',
+      children: [
+        for (final entry in data.sortedAuditLog)
+          AuditLogEntryCard(entry: entry),
+      ],
     );
   }
 }

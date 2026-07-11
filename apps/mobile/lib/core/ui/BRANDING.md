@@ -19,6 +19,13 @@ a propósito, ver `PROJECT_STATUS.md` sección 7).
   (no solo los construidos en Sprint 2) y se reemplazó toda
   duplicación visual real por los componentes oficiales. Detalle
   completo en la sección "Adopción global (Etapa 3)" más abajo.
+- **Etapa 4 — Adopción de layouts, en curso (pendiente de aprobación
+  del usuario).** Mismo criterio que la Etapa 3, aplicado a
+  *estructuras* en vez de a componentes: `AppPageBody`, `AppSection`,
+  `AppInfoRow`, `AppActionRow`, `AppStatGrid` y `AppIconRow`
+  reemplazaron la duplicación de layout real detectada en
+  `presentation/pages/` y `presentation/widgets/`. Detalle completo en
+  la sección "Adopción de layouts (Etapa 4)" más abajo.
 - Lo que sigue pendiente (agregar Poppins, decidir sobre el logo,
   retro-aplicar `AppImageSize`) se detalla al final de este documento.
 
@@ -75,6 +82,87 @@ archivo):
   curado — p. ej. `Icons.email_outlined`, `Icons.workspace_premium_
   outlined`) se dejaron como están; agregarlos todos a `AppIcons`
   desnaturalizaría el propósito de un set *curado*.
+
+## Adopción de layouts (Etapa 4)
+
+La adopción del Design System (Etapa 3) cubrió **componentes**
+(botones, chips, badges, avatares). La Etapa 4 hace lo mismo para
+**layouts**: las estructuras de página/sección repetidas en
+`presentation/pages/*.dart` y `presentation/widgets/*.dart` en
+prácticamente todos los features. Seis widgets nuevos en `core/ui/widgets/`
+(ver la tabla de `README.md` para el detalle de cada uno):
+
+- **`AppPageBody`**: reemplazó el esqueleto `SingleChildScrollView(child:
+  Column(crossAxisAlignment: stretch, children: [FadeIn(header), gap,
+  body]))` repetido casi idéntico en ~20 `*_page.dart` (`home`,
+  `marketplace`, `categories`, `search`, `orders`, `notifications`,
+  `reviews`, `profile`, `settings`, `security`, `trust`, `verification`,
+  `schedule`, `contact_management`, `address_management`,
+  `availability`, `provider_services`, `provider_dashboard`,
+  `service_detail`, `provider_profile`, `quote`, `request_service`).
+  **Deliberadamente no aplicado** en `ChatPage`/`PaymentsPage`: ahí el
+  header solo debe aparecer en el estado "con datos" (no en
+  loading/empty), un comportamiento que `AppPageBody` no reproduce
+  porque siempre renderiza el header si se le pasa uno — forzarlo
+  habría cambiado el comportamiento visual, así que esos dos páginas
+  siguen construyendo el header a mano dentro de `_buildBody()`.
+- **`AppSection`**: reemplazó el wrapper `AppCard(child: Column(children:
+  [AppSectionTitle(...), ...]))` en los widgets "de resumen"/"de
+  información" que lo usaban tal cual (`PaymentInformation`,
+  `PaymentBreakdown`, `ServiceInformation`, `ServiceSummary`,
+  `PriceBreakdown`, `ProviderServices`, `ProviderAvailability`,
+  `CredentialsSection`, `AuditLogSection`, y los seis `*_statistics.dart`
+  que además usan `AppStatGrid` adentro).
+- **`AppInfoRow`**: reemplazó la fila `Row(mainAxisAlignment:
+  spaceBetween, children: [Text(label), Text(value)])` en
+  `PaymentBreakdown`, `ServiceInformation`, `ServiceSummary` y las 5
+  filas de `PriceBreakdown` (incluida su clase privada `_PriceRow`,
+  eliminada). **No aplicado** en `PaymentSummary` (su `_InfoRow` privado
+  usa `Flexible`+`TextOverflow.ellipsis`+alineación al final para
+  valores largos — un comportamiento de overflow que `AppInfoRow` no
+  reproduce) ni en `ProviderServices`'s fila de nombre de servicio (usa
+  `Expanded`+ellipsis de una sola línea) — forzarlos habría cambiado
+  cómo se recortan los textos largos.
+- **`AppActionRow`**: reemplazó el `Wrap(spacing: space8, runSpacing:
+  space8, children: [...])` en los 7 `*_actions.dart` que lo usaban
+  (`AddressActions`, `AuthMethodActions`, `VerificationActions`,
+  `ContactActions`, `AvailabilityActions`, `ServiceActions`,
+  `QuickActions`). `ProfileActions` no se tocó — es una `Column` de 3
+  botones apilados, un patrón distinto, no un `Wrap`.
+- **`AppStatGrid`**: reemplazó el `GridView.count` (`shrinkWrap` +
+  `NeverScrollableScrollPhysics` + spacing fijo) en los 6
+  `*_statistics.dart` que ya usaban `AppStatTile` en grilla
+  (`SecurityStatistics`, `AvailabilityStatistics`,
+  `ContactsStatistics`, `DashboardStatistics`, `ServicesStatistics`,
+  `ScheduleStatistics`). `crossAxisCount`/`childAspectRatio` quedaron
+  como parámetros explícitos por cada llamada para preservar la
+  proporción exacta que cada pantalla ya tenía (p. ej.
+  `ContactsStatistics` sigue en 3 columnas, `DashboardStatistics` sigue
+  con `childAspectRatio: 2.4`). `ProviderStatistics` (un `Row` de 3
+  columnas, no una grilla) y `ProfileStatistics` (una barra de progreso,
+  no tiles) no encajan en esta forma y se dejaron intactos.
+- **`AppIconRow`**: reemplazó la fila "ícono + texto (+ badge)" en
+  `CredentialCard`, `AuditLogEntryCard`, `TrustFactorCard`,
+  `VerificationStepCard`, y la fila interna de `ContactCard`/
+  `AuthMethodCard`. Ganó parámetros (`iconSize`, `iconColor`, `padded`,
+  `verticalPadding`, `crossAxisAlignment`) precisamente para que cada
+  uno de esos 6 usos conservara su tamaño de ícono, color y padding
+  original exacto — nada cambió visualmente pese a compartir ahora el
+  mismo widget. `ScheduleBlockCard` no se tocó: su primera columna es
+  una etiqueta de día (`SizedBox` de ancho fijo con texto), no un
+  ícono, así que no encaja en la forma de `AppIconRow`.
+
+**Revisión arquitectónica — redundancia entre layouts nuevos y
+existentes**: ninguno de los seis reemplaza a un componente `App*` ya
+existente; son ortogonales (`AppSection` compone `AppCard`+
+`AppSectionTitle` en vez de duplicarlos, `AppStatGrid` compone
+`AppStatTile`, `AppIconRow` no compone `AppBadge` pero acepta uno como
+`trailing`). Tampoco hay redundancia *entre* los seis: cada uno cubre
+una forma estructural distinta (raíz de página, contenedor con título,
+fila de dos valores, grupo de botones, grilla, fila con ícono). No se
+detectó ningún layout adicional con 5+ apariciones que faltara — la
+auditoría de esta etapa cubrió `presentation/pages/` y
+`presentation/widgets/` de los 30 features.
 
 ## Identidad
 
