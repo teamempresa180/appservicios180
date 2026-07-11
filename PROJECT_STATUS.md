@@ -521,6 +521,22 @@ auditorías de performance/accesibilidad/i18n — todo sin agregar
 backend, HTTP, Firebase ni gestión de estado, y sin romper ningún
 comportamiento existente. Ya en curso al cierre de este documento.
 
+### Actualización — Prompt 56 completado (Sprint 2, Etapa 6)
+
+**Prompt 56 — Preparación para Backend (Frontend Infrastructure)**.
+**Aprobado por el usuario y consolidado.** Decisión explícita del
+usuario de agrupar varias fases pequeñas en una etapa más grande tras
+cerrar Sprint 1 + Sprint 2 Etapas 1–5. Ver detalle completo en la
+sección 4 y en [`apps/mobile/ARCHITECTURE.md`](apps/mobile/ARCHITECTURE.md).
+Verificado con `dart format .` (0 cambios), `flutter analyze` (`No
+issues found!`), `flutter test` (748/748) y `flutter build windows`.
+Con este prompt se cierra oficialmente el **Sprint 2 (Branding & UX +
+preparación de infraestructura)**. El siguiente hito es el **Prompt
+57 — Cierre definitivo del Sprint 2 y preparación para Sprint 3**:
+consolidación, auditoría de los 17 features sin mapper/DTO, auditoría
+arquitectónica previa al backend, y creación de
+`SPRINT3_PREPARATION.md` (sin commitear ese documento todavía).
+
 ## 10. Siguiente prompt sugerido
 
 **Prompt 31 — Request Service (flujo de solicitud, visual)** *(nota
@@ -747,6 +763,43 @@ automáticamente solo por el cambio en `app_theme.dart`. **Ningún
 feature fue tocado.** Verificado con `flutter analyze` (`No issues
 found!`) y `flutter test` (748/748, sin cambios, ya que ningún
 comportamiento de negocio se tocó — solo el tema global).
+
+### Etapa 6 — Preparación para Backend / Frontend Infrastructure (Prompt 56, aprobada y consolidada)
+
+Sin agregar backend, HTTP, Firebase ni gestión de estado — solo
+infraestructura frontend lista para Sprint 3. Ver
+[`apps/mobile/ARCHITECTURE.md`](apps/mobile/ARCHITECTURE.md) para el
+detalle completo del patrón de capas. Resumen:
+
+- **Auditoría de repositorios** (23 features de datos, 7 features de
+  navegación/auth sin datos): confirmó naming 100% consistente
+  (`XRepository`/`MockXRepository`), pero encontró que 18/23 páginas
+  importan `mock/` directamente además de pasar por el repositorio, 2
+  páginas (`categories`, `marketplace`) componían datos inline sin
+  `_buildData()`, y 5 `Display` usan sufijos distintos
+  (`XData`/`SearchResult` en vez de `XDisplay`).
+- **Estandarización**: `categories_page.dart`/`marketplace_page.dart`
+  ganaron métodos `_build*()` con el mismo criterio que las otras 21
+  páginas.
+- **`datasources/`**: `<X>LocalDataSource`/`<X>RemoteDataSource` (solo
+  interfaces, sin implementación) creadas para los 23 features de
+  datos — 52 archivos nuevos, puramente aditivos.
+- **`mappers/`+`dtos/`**: patrón completo (mapper creado y *wireado*
+  en la página, DTO preparado) implementado en 6 features de
+  referencia — `security`, `settings`, `trust`, `verification`,
+  `profile`, `provider_dashboard` — elegidos porque sus páginas
+  llamaban `_buildData()` dos veces por build; wirear el mapper
+  corrigió ese bug de performance real de paso. Los otros 17 features
+  quedan documentados con el mismo patrón listo para aplicar
+  mecánicamente.
+- **Accesibilidad/performance/i18n**: auditados — `flutter analyze`
+  limpio (sin `const` faltante), los 7 `IconButton` de la app ya
+  tienen `tooltip`, y la falta de `intl`/`flutter_localizations` queda
+  documentada como el primer paso real de i18n (no agregado aquí por
+  la restricción de "no agregar dependencias").
+- Verificado con `dart format .` (0 cambios), `flutter analyze` (`No
+  issues found!`) y `flutter test` (748/748, sin cambios de
+  comportamiento — todo el trabajo es aditivo o interno a `_buildData()`).
 
 ### Etapa 5 — UX global, microinteracciones y experiencia de usuario (Prompt 55, aprobada y consolidada)
 
@@ -1489,4 +1542,45 @@ anteriores (que se conservan como registro histórico, sin eliminar).
   pendiente de aprobación del usuario antes de commitear.**
 - Si el working tree tiene cambios sin commitear más allá del logo,
   **no asumir que corresponden a una etapa posterior a la 6** —
+  confirmar con el usuario antes de continuar.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 56 consolidado — Sprint 2 cerrado, preparación de Sprint 3 en curso)
+
+Este es el handoff vigente — más reciente que los dieciséis bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+
+- **El Prompt 56 (Sprint 2, Etapa 6 — preparación para backend) fue
+  aprobado explícitamente por el usuario**, verificado con `dart
+  format .` (0 cambios), `flutter analyze` (`No issues found!`),
+  `flutter test` (748/748), `flutter build windows` y `git status`.
+- Se creó un **único commit exclusivo del Prompt 56** con el mensaje
+  `Prompt 56 - Frontend infrastructure prep for backend (datasources,
+  mappers, DTOs)` (ver `git log -1` para el hash exacto — no se fija
+  aquí el hash literal por la misma razón de auto-referencia explicada
+  en secciones anteriores). Incluye `apps/mobile/ARCHITECTURE.md`,
+  `datasources/` en los 23 features de datos, `mappers/`+`dtos/`
+  wireados en los 6 features de referencia, el fix de estandarización
+  en `categories`/`marketplace`, y la actualización de este documento
+  — **sin incluir `Logo oficial grupo.svg`, archivos de IDE ni
+  temporales**. No hubo cambio de navegación, UX ni branding.
+- **Con este commit se cierra oficialmente el Sprint 2** (Branding &
+  UX, Etapas 1–6, Prompts 52–56).
+- `git status` tras el commit quedó exactamente:
+  ```
+  On branch main
+  Untracked files:
+          Logo oficial grupo.svg
+  nothing added to commit but untracked files present
+  ```
+- **A partir de esta sesión comienza la preparación de Sprint 3**
+  (Prompt 57): auditoría de los 17 features sin `mapper`/`dto` (¿se
+  pueden migrar con el mismo patrón?), auditoría arquitectónica
+  completa buscando bloqueos para empezar el backend, revisión crítica
+  de riesgos de tener que rehacer trabajo, y creación de
+  `SPRINT3_PREPARATION.md` con el estado real del proyecto y el
+  roadmap de Sprint 3. **Es trabajo de análisis y documentación —
+  ningún archivo de Flutter se modifica.** `SPRINT3_PREPARATION.md`
+  queda sin commitear, pendiente de aprobación del usuario.
+- Si el working tree tiene cambios sin commitear más allá del logo y
+  `SPRINT3_PREPARATION.md`, **no asumir que corresponden a Sprint 3** —
   confirmar con el usuario antes de continuar.

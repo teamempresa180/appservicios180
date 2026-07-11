@@ -3,6 +3,7 @@ import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
+import '../../mappers/verification_mapper.dart';
 import '../../mock/mock_verification_data.dart';
 import '../../models/verification_display.dart';
 import '../../repositories/mock_verification_repository.dart';
@@ -34,11 +35,8 @@ class VerificationPage extends StatelessWidget {
   final VerificationViewState state;
 
   VerificationDisplay _buildData() {
-    final repository = MockVerificationRepository();
-
-    return VerificationDisplay(
-      identity: repository.getIdentity(),
-      profile: repository.getProfile(),
+    return VerificationMapper.toDisplay(
+      repository: MockVerificationRepository(),
       verificationStatus: mockVerificationStatus,
       completedSteps: mockVerificationCompletedSteps,
       pendingSteps: mockVerificationPendingSteps,
@@ -47,14 +45,13 @@ class VerificationPage extends StatelessWidget {
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(VerificationDisplay data) {
     switch (state) {
       case VerificationViewState.loading:
         return const VerificationLoading();
       case VerificationViewState.empty:
         return const VerificationEmptyState();
       case VerificationViewState.information:
-        final data = _buildData();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -76,9 +73,11 @@ class VerificationPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final data = _buildData();
+
     return AppPageBody(
-      header: VerificationHeader(data: _buildData()),
-      body: _buildBody(),
+      header: VerificationHeader(data: data),
+      body: _buildBody(data),
     );
   }
 }

@@ -3,6 +3,7 @@ import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
+import '../../mappers/profile_mapper.dart';
 import '../../mock/mock_profile_data.dart';
 import '../../models/profile_display.dart';
 import '../../repositories/mock_profile_repository.dart';
@@ -31,26 +32,20 @@ class ProfilePage extends StatelessWidget {
   final ProfileViewState state;
 
   ProfileDisplay _buildData() {
-    final repository = MockProfileRepository();
-
-    return ProfileDisplay(
-      profile: repository.getProfile(),
-      identity: repository.getIdentity(),
-      contacts: repository.getContacts(),
-      address: repository.getAddress(),
+    return ProfileMapper.toDisplay(
+      repository: MockProfileRepository(),
       completionPercentage: mockProfileCompletionPercentage,
       profileCompletionItems: mockProfileCompletionItems,
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(ProfileDisplay data) {
     switch (state) {
       case ProfileViewState.loading:
         return const ProfileLoading();
       case ProfileViewState.empty:
         return const ProfileEmptyState();
       case ProfileViewState.information:
-        final data = _buildData();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -70,9 +65,11 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final data = _buildData();
+
     return AppPageBody(
-      header: ProfileHeader(data: _buildData()),
-      body: _buildBody(),
+      header: ProfileHeader(data: data),
+      body: _buildBody(data),
     );
   }
 }

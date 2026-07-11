@@ -3,6 +3,7 @@ import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
+import '../../mappers/trust_mapper.dart';
 import '../../mock/mock_trust_data.dart';
 import '../../models/trust_display.dart';
 import '../../repositories/mock_trust_repository.dart';
@@ -26,23 +27,19 @@ class TrustPage extends StatelessWidget {
   final TrustViewState state;
 
   TrustDisplay _buildData() {
-    final repository = MockTrustRepository();
-
-    return TrustDisplay(
-      identity: repository.getIdentity(),
-      trust: repository.getTrust(),
+    return TrustMapper.toDisplay(
+      repository: MockTrustRepository(),
       factors: mockTrustFactors,
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(TrustDisplay data) {
     switch (state) {
       case TrustViewState.loading:
         return const TrustLoading();
       case TrustViewState.empty:
         return const TrustEmptyState();
       case TrustViewState.information:
-        final data = _buildData();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -56,9 +53,11 @@ class TrustPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final data = _buildData();
+
     return AppPageBody(
-      header: TrustHeader(data: _buildData()),
-      body: _buildBody(),
+      header: TrustHeader(data: data),
+      body: _buildBody(data),
     );
   }
 }

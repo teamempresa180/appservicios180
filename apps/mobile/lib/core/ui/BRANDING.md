@@ -19,13 +19,25 @@ a propósito, ver `PROJECT_STATUS.md` sección 7).
   (no solo los construidos en Sprint 2) y se reemplazó toda
   duplicación visual real por los componentes oficiales. Detalle
   completo en la sección "Adopción global (Etapa 3)" más abajo.
-- **Etapa 4 — Adopción de layouts, en curso (pendiente de aprobación
-  del usuario).** Mismo criterio que la Etapa 3, aplicado a
-  *estructuras* en vez de a componentes: `AppPageBody`, `AppSection`,
-  `AppInfoRow`, `AppActionRow`, `AppStatGrid` y `AppIconRow`
-  reemplazaron la duplicación de layout real detectada en
-  `presentation/pages/` y `presentation/widgets/`. Detalle completo en
-  la sección "Adopción de layouts (Etapa 4)" más abajo.
+- **Etapa 4 — Adopción de layouts, completada.** Mismo criterio que la
+  Etapa 3, aplicado a *estructuras* en vez de a componentes:
+  `AppPageBody`, `AppSection`, `AppInfoRow`, `AppActionRow`,
+  `AppStatGrid` y `AppIconRow` reemplazaron la duplicación de layout
+  real detectada en `presentation/pages/` y `presentation/widgets/`.
+  Detalle completo en la sección "Adopción de layouts (Etapa 4)" más
+  abajo.
+- **Etapa 5 — UX global y microinteracciones, completada.** Listas con
+  entrada escalonada, cross-fade entre pestañas del Shell, estado
+  seleccionado de `AppChip` más claro, ancho máximo de contenido en
+  escritorio. Detalle completo en la sección "UX global y
+  microinteracciones (Etapa 5)" más abajo.
+- **Etapa 6 — Preparación para Backend, en curso.** No es una etapa de
+  branding/Design System — es infraestructura de datos
+  (`repositories/`/`datasources/`/`mappers/`/`dtos/`) para que Sprint 3
+  pueda conectar un backend real sin reestructurar nada. No toca
+  branding ni ningún componente `App*`. Ver
+  [`apps/mobile/ARCHITECTURE.md`](../../ARCHITECTURE.md) para el
+  detalle completo.
 - Lo que sigue pendiente (agregar Poppins, decidir sobre el logo,
   retro-aplicar `AppImageSize`) se detalla al final de este documento.
 

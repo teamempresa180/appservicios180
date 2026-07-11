@@ -7,6 +7,7 @@ import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../address_management/presentation/pages/address_management_page.dart';
 import '../../../contact_management/presentation/pages/contact_management_page.dart';
 import '../../../security/presentation/pages/security_page.dart';
+import '../../mappers/settings_mapper.dart';
 import '../../models/settings_display.dart';
 import '../../models/settings_option.dart';
 import '../../repositories/mock_settings_repository.dart';
@@ -28,12 +29,7 @@ class SettingsPage extends StatelessWidget {
   final SettingsViewState state;
 
   SettingsDisplay _buildData() {
-    final repository = MockSettingsRepository();
-
-    return SettingsDisplay(
-      profile: repository.getProfile(),
-      options: repository.getOptions(),
-    );
+    return SettingsMapper.toDisplay(MockSettingsRepository());
   }
 
   void _openAddresses(BuildContext context) {
@@ -85,14 +81,13 @@ class SettingsPage extends StatelessWidget {
     }
   }
 
-  Widget _buildBody(BuildContext context) {
+  Widget _buildBody(BuildContext context, SettingsDisplay data) {
     switch (state) {
       case SettingsViewState.loading:
         return const SettingsLoading();
       case SettingsViewState.empty:
         return const SettingsEmptyState();
       case SettingsViewState.information:
-        final data = _buildData();
         return Column(
           children: [
             for (final (index, option) in data.options.indexed) ...[
@@ -114,9 +109,11 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final data = _buildData();
+
     return AppPageBody(
-      header: SettingsHeader(data: _buildData()),
-      body: _buildBody(context),
+      header: SettingsHeader(data: data),
+      body: _buildBody(context, data),
     );
   }
 }

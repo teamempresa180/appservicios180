@@ -28,18 +28,24 @@ class CategoriesPage extends StatelessWidget {
   final bool isLoading;
   final bool forceEmpty;
 
+  /// Composes the display list from the repository — same
+  /// `_build*()` naming/placement convention every other data-driven
+  /// feature's page uses (see the feature README).
+  List<CategoryDisplay> _buildCategories() {
+    if (forceEmpty) return const <CategoryDisplay>[];
+
+    return [
+      for (final category in MockCategoryRepository().getAll())
+        CategoryDisplay(
+          category: category,
+          servicesCount: mockCategoryServicesCount[category.id.value] ?? 0,
+        ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final categories = forceEmpty
-        ? const <CategoryDisplay>[]
-        : [
-            for (final category in MockCategoryRepository().getAll())
-              CategoryDisplay(
-                category: category,
-                servicesCount:
-                    mockCategoryServicesCount[category.id.value] ?? 0,
-              ),
-          ];
+    final categories = _buildCategories();
 
     return AppPageBody(
       header: const CategoriesHeader(),

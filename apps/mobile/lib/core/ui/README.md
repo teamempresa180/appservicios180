@@ -22,6 +22,13 @@
 > de reconstruir `SingleChildScrollView`+`Column`, `AppCard`+`Column`+
 > `AppSectionTitle`, o un `Row(spaceBetween)` a mano.
 
+> **Sprint 2, Etapa 6**: este documento sigue siendo solo sobre
+> presentación (Design System + layouts). El patrón de capas de datos
+> (`repositories/`/`datasources/`/`mappers/`/`dtos/`) que prepara el
+> frontend para un backend real está documentado aparte, en
+> [`apps/mobile/ARCHITECTURE.md`](../../../ARCHITECTURE.md) — no
+> afecta a nada de lo que hay en este archivo.
+
 > **Sprint 2, Etapa 5**: microinteracciones y UX global. Las listas
 > verticales (`NotificationsList`, `OrdersList`, `ServicesList`,
 > `ScheduleList`, `SearchResults`, `WeeklySchedule` y los bucles

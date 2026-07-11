@@ -6,6 +6,7 @@ import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../availability/presentation/pages/availability_page.dart';
 import '../../../provider_services/presentation/pages/provider_services_page.dart';
 import '../../../schedule/presentation/pages/schedule_page.dart';
+import '../../mappers/provider_dashboard_mapper.dart';
 import '../../mock/mock_provider_dashboard_data.dart';
 import '../../models/provider_dashboard_display.dart';
 import '../../repositories/mock_provider_dashboard_repository.dart';
@@ -39,15 +40,8 @@ class ProviderDashboardPage extends StatelessWidget {
   final ProviderDashboardViewState state;
 
   ProviderDashboardDisplay _buildData() {
-    final repository = MockProviderDashboardRepository();
-
-    return ProviderDashboardDisplay(
-      provider: repository.getProvider(),
-      profile: repository.getProfile(),
-      orders: repository.getOrders(),
-      quotes: repository.getQuotes(),
-      reviews: repository.getReviews(),
-      payments: repository.getPayments(),
+    return ProviderDashboardMapper.toDisplay(
+      repository: MockProviderDashboardRepository(),
       todayEarnings: mockDashboardTodayEarnings,
       weeklyEarnings: mockDashboardWeeklyEarnings,
       monthlyEarnings: mockDashboardMonthlyEarnings,
@@ -89,14 +83,13 @@ class ProviderDashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context) {
+  Widget _buildBody(BuildContext context, ProviderDashboardDisplay data) {
     switch (state) {
       case ProviderDashboardViewState.loading:
         return const DashboardLoading();
       case ProviderDashboardViewState.empty:
         return const DashboardEmptyState();
       case ProviderDashboardViewState.information:
-        final data = _buildData();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -122,9 +115,11 @@ class ProviderDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final data = _buildData();
+
     return AppPageBody(
-      header: DashboardHeader(data: _buildData()),
-      body: _buildBody(context),
+      header: DashboardHeader(data: data),
+      body: _buildBody(context, data),
     );
   }
 }

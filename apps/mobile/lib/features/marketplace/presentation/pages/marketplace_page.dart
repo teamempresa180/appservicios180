@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../category/entities/category.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
@@ -23,38 +24,50 @@ import '../widgets/search_bar.dart';
 class MarketplacePage extends StatelessWidget {
   const MarketplacePage({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    final categoryRepository = MockCategoryRepository();
-    final serviceRepository = MockServiceRepository();
-    final providerRepository = MockProviderRepository();
+  static final _categoryRepository = MockCategoryRepository();
+  static final _serviceRepository = MockServiceRepository();
+  static final _providerRepository = MockProviderRepository();
 
-    final categories = categoryRepository.getAll();
-    final services = serviceRepository.getFeatured();
-    final providers = providerRepository.getRecommended();
+  /// Composes each display list from its repository — same
+  /// `_build*()` naming/placement convention every other data-driven
+  /// feature's page uses (see the feature README). Three separate
+  /// `_build*()` methods (not one `_buildData()`) because this feature
+  /// composes three independent repositories, unlike every other
+  /// feature's single composed `*Display`.
+  List<Category> _buildCategories() => _categoryRepository.getAll();
 
-    final serviceDisplays = [
-      for (final service in services)
+  List<ServiceDisplay> _buildServices() {
+    return [
+      for (final service in _serviceRepository.getFeatured())
         ServiceDisplay(
           service: service,
-          providerName: providerRepository
+          providerName: _providerRepository
               .profileOf(service.providerId)
               .displayName,
           categoryName:
-              categoryRepository.getById(service.categoryId)?.name ?? '',
-          rating: serviceRepository.ratingOf(service.id),
+              _categoryRepository.getById(service.categoryId)?.name ?? '',
+          rating: _serviceRepository.ratingOf(service.id),
         ),
     ];
+  }
 
-    final providerDisplays = [
-      for (final provider in providers)
+  List<ProviderDisplay> _buildProviders() {
+    return [
+      for (final provider in _providerRepository.getRecommended())
         ProviderDisplay(
           provider: provider,
-          profile: providerRepository.profileOf(provider.id),
-          rating: providerRepository.ratingOf(provider.id),
-          servicesCount: providerRepository.servicesCountOf(provider.id),
+          profile: _providerRepository.profileOf(provider.id),
+          rating: _providerRepository.ratingOf(provider.id),
+          servicesCount: _providerRepository.servicesCountOf(provider.id),
         ),
     ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = _buildCategories();
+    final serviceDisplays = _buildServices();
+    final providerDisplays = _buildProviders();
 
     return AppPageBody(
       header: const MarketplaceHeader(),

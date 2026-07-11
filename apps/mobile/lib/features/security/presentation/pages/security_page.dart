@@ -5,6 +5,7 @@ import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
+import '../../mappers/security_mapper.dart';
 import '../../models/security_display.dart';
 import '../../repositories/mock_security_repository.dart';
 import '../widgets/add_auth_method_button.dart';
@@ -32,24 +33,16 @@ class SecurityPage extends StatelessWidget {
   final SecurityViewState state;
 
   SecurityDisplay _buildData() {
-    final repository = MockSecurityRepository();
-
-    return SecurityDisplay(
-      identity: repository.getIdentity(),
-      authMethods: repository.getAuthMethods(),
-      credentials: repository.getCredentials(),
-      auditLog: repository.getAuditLog(),
-    );
+    return SecurityMapper.toDisplay(MockSecurityRepository());
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(SecurityDisplay data) {
     switch (state) {
       case SecurityViewState.loading:
         return const SecurityLoading();
       case SecurityViewState.empty:
         return const SecurityEmptyState();
       case SecurityViewState.information:
-        final data = _buildData();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -80,9 +73,11 @@ class SecurityPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final data = _buildData();
+
     return AppPageBody(
-      header: SecurityHeader(data: _buildData()),
-      body: _buildBody(),
+      header: SecurityHeader(data: data),
+      body: _buildBody(data),
     );
   }
 }
