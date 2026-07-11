@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ConfigModule } from './config/config.module';
+import { LoggerModule } from './common/logger/logger.module';
 import { IdentityPresentationModule } from './modules/identity/presentation/identity.module';
 import { ProfilesPresentationModule } from './modules/profiles/presentation/profile.module';
 import { AuthenticationPresentationModule } from './modules/authentication/presentation/authentication.module';
@@ -26,6 +28,8 @@ import { AuditPresentationModule } from './modules/audit/presentation/audit.modu
 
 @Module({
   imports: [
+    ConfigModule,
+    LoggerModule,
     IdentityPresentationModule,
     ProfilesPresentationModule,
     AuthenticationPresentationModule,

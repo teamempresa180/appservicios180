@@ -7,6 +7,15 @@
 > todavía** — queda pendiente de tu aprobación explícita, igual que su
 > contenido no implica ningún cambio de código.
 
+> **Actualización (Prompt 59)**: la sección 8 de este documento
+> señalaba la ausencia de una decisión de persistencia como riesgo
+> medio. **Ya está resuelta**: el usuario confirmó **Prisma +
+> PostgreSQL** como estrategia oficial de persistencia del proyecto —
+> Domain/Application permanecen independientes de Prisma, todo el
+> código específico vive en `infrastructure/` de cada módulo. Primera
+> implementación real: bounded context Identity & Access
+> (`identity`/`authentication`/`credentials`).
+
 ## 1. Estado real del proyecto
 
 - **Sprint 1** (Prompts 19–51): los 23 módulos de dominio (Domain

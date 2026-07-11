@@ -521,6 +521,31 @@ auditorías de performance/accesibilidad/i18n — todo sin agregar
 backend, HTTP, Firebase ni gestión de estado, y sin romper ningún
 comportamiento existente. Ya en curso al cierre de este documento.
 
+### Actualización — Prompt 58 completado (Sprint 3, Etapa 1)
+
+**Prompt 58 — Shared Kernel + Infraestructura Backend**. **Aprobado por
+el usuario y consolidado.** Primer trabajo real sobre `apps/backend`
+desde el cierre de Sprint 1. Auditó los 22 módulos de dominio antes de
+tocar nada: confirmó que `Entity`/`ValueObject`/`DomainException`/
+`generateId()` ya existían en `modules/core/` (Shared Kernel ya
+funcionando, usado por los 22 módulos) y que **ningún módulo tiene
+consumidor real** para `Money`/`Email`/`PhoneNumber`/`DocumentNumber`/
+`Percentage`/`Rating`/`AggregateRoot`/`DomainEvent`/`Result`/`Either` —
+por lo tanto **no se crearon** (decisión documentada explícitamente en
+`modules/core/README.md`, siguiendo la instrucción explícita del
+usuario de no inventar clases sin consumidor real). Sí se agregó la
+jerarquía de excepciones (`NotFoundException`/`ValidationException`/
+`BusinessRuleException` extendiendo `DomainException`, con tests) y el
+bootstrap completo de NestJS: `ConfigModule`/`ConfigService` (propio,
+sin dependencias nuevas), `LoggerModule`/`AppLogger`,
+`DomainExceptionFilter`+`AllExceptionsFilter` (manejo global de
+errores), `LoggingInterceptor`, todo registrado en `main.ts`. Sin
+JWT, HTTP, Controllers, Services, Repositories reales, base de datos,
+Prisma, TypeORM ni Firebase — sin tocar Flutter. Verificado con `npm
+run build`, `npm run lint`, `jest` (132/132, antes 113/113 —
++19 tests), `jest e2e` (1/1), `dart format .`, `flutter analyze`,
+`flutter test` (748/748) y `flutter build windows`.
+
 ### Actualización — Prompt 57 completado (cierre definitivo de Sprint 2, preparación de Sprint 3)
 
 **Prompt 57 — Cierre definitivo del Sprint 2 y preparación para Sprint
@@ -1642,6 +1667,56 @@ anteriores (que se conservan como registro histórico, sin eliminar).
   TypeORM ni Firebase**, y **sin tocar Flutter ni reemplazar ningún
   mock todavía**. **Esta etapa queda pendiente de aprobación del
   usuario antes de commitear.**
+- Si el working tree tiene cambios sin commitear más allá del logo,
+  **no asumir que corresponden a una etapa posterior** — confirmar con
+  el usuario antes de continuar.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 58 consolidado — Sprint 3 Etapa 1 cerrada, Etapa 2 en curso)
+
+Este es el handoff vigente — más reciente que los dieciocho bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+
+- **El Prompt 58 (Sprint 3, Etapa 1 — Shared Kernel + Infraestructura
+  Backend) fue aprobado explícitamente por el usuario**, verificado
+  con `npm run build`, `npm run lint`, `jest` (132/132), `jest e2e`
+  (1/1), `dart format .`, `flutter analyze`, `flutter test` (748/748)
+  y `flutter build windows`.
+- Se creó un **único commit exclusivo del Prompt 58** con el mensaje
+  `Prompt 58 - Shared Kernel review + NestJS bootstrap infrastructure`
+  (ver `git log -1` para el hash exacto — no se fija aquí el hash
+  literal por la misma razón de auto-referencia explicada en secciones
+  anteriores). Incluye la jerarquía de excepciones nueva en
+  `modules/core/domain/exceptions/`, `config/`, `common/` (logger,
+  filters, interceptors, pipes/middlewares reservados),
+  `.env.example`, y la actualización de `modules/core/README.md` y de
+  este documento — **sin incluir `Logo oficial grupo.svg`**. Ningún
+  archivo de Flutter cambió.
+- **Decisión de persistencia tomada en esta sesión (Prompt 59)**: el
+  usuario confirmó **Prisma + PostgreSQL** como estrategia oficial de
+  persistencia del proyecto a partir de Sprint 3 — no había ninguna
+  decisión previa documentada (Fase 5 del Prompt 59 pedía "elegir la
+  estrategia ya definida por el proyecto", pero no existía; se
+  preguntó explícitamente al usuario en vez de asumir). Domain y
+  Application permanecen 100% independientes de Prisma — todo código
+  específico de Prisma vive exclusivamente en `infrastructure/` de
+  cada módulo, vía repositorios/mappers/adaptadores.
+- `git status` tras el commit del Prompt 58 quedó exactamente:
+  ```
+  On branch main
+  Untracked files:
+          Logo oficial grupo.svg
+  nothing added to commit but untracked files present
+  ```
+- **A partir de esta sesión comienza Sprint 3 — Etapa 2: Identity &
+  Access (Backend)** (Prompt 59): primer bounded context implementado
+  completo — Domain (ya existía) → Application (use cases reales,
+  commands, queries, ports, DTOs, mappers, validadores) →
+  Infrastructure (repositorios reales con Prisma, mappers, adaptadores,
+  factories) → Persistencia (schema Prisma, migraciones reales
+  generadas contra PostgreSQL en Docker, seeds, configuración) → Tests.
+  **Sin Controllers/endpoints todavía, sin JWT/login/registro, sin
+  tocar Flutter.** Esta etapa queda pendiente de aprobación del
+  usuario antes de commitear.
 - Si el working tree tiene cambios sin commitear más allá del logo,
   **no asumir que corresponden a una etapa posterior** — confirmar con
   el usuario antes de continuar.
