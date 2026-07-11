@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../animations/fade_in.dart';
 import '../tokens/app_spacing.dart';
+import 'app_loading_indicator.dart';
 
 /// Generic centered loading indicator. No domain meaning.
 class AppLoading extends StatelessWidget {
@@ -14,12 +15,7 @@ class AppLoading extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // `strokeCap: round` is the Material 3 look for indeterminate
-          // circular progress (vs. the squared-off Material 2 default).
-          const CircularProgressIndicator(
-            strokeWidth: 3,
-            strokeCap: StrokeCap.round,
-          ),
+          const AppLoadingIndicator(),
           if (message != null) ...[
             const SizedBox(height: AppSpacing.space12),
             FadeIn(

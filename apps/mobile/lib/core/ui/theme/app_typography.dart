@@ -20,9 +20,9 @@ import 'package:flutter/material.dart';
 /// Roboto) — the weight/size/letter-spacing decisions are final, only
 /// the Display/Headline/Title typeface swap is deferred.
 ///
-/// **Not wired into `AppTheme.light.textTheme` yet** — see
-/// `app_brand_palette.dart` for why (the whole brand rollout is a
-/// later Sprint 2 Etapa).
+/// Wired into `AppTheme.light.textTheme` since Sprint 2, Etapa 2 (each
+/// role recolored to `colorScheme.onSurface`/`secondary600` there,
+/// since this file only owns size/weight/spacing, never color).
 abstract final class AppTypography {
   static const String? _pendingApprovalDisplayFontFamily = null;
 

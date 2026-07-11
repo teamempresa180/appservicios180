@@ -7,12 +7,11 @@ import 'package:flutter/material.dart';
 /// stop noted in each comment is the one active tone would use in a
 /// single (light) theme.
 ///
-/// **Not wired into `AppTheme`/`ColorScheme` yet.** This file only
-/// makes the official tokens available to compile against — applying
-/// them across the app is a later Etapa of Sprint 2 (see
-/// `PROJECT_STATUS.md`), not this one. `AppTheme.light` keeps using
-/// the neutral placeholder palette (`AppColors` in `app_theme.dart`)
-/// until that Etapa.
+/// Wired into `AppTheme.light`'s `ColorScheme` since Sprint 2, Etapa 2
+/// — every color the app renders ultimately resolves to one of these
+/// constants. The old neutral placeholder (`AppColors`) was removed
+/// from `app_theme.dart` once this palette took over; nothing else in
+/// the codebase referenced it.
 abstract final class AppBrandPalette {
   // ---------------------------------------------------------------
   // Primary — "Oro 180°". Traced to the logo's gold radial gradients

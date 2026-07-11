@@ -1,11 +1,22 @@
-# Servicios 180° — Branding oficial (Sprint 2, Etapa 1)
+# Servicios 180° — Branding oficial (Sprint 2)
 
 Este documento es la fuente de verdad de la identidad visual oficial de
 **Servicios 180°**, construida a partir del análisis de
 `Logo oficial grupo.svg` (raíz del repositorio — sigue **sin trackear**
-a propósito, ver `PROJECT_STATUS.md` sección 7). Define **tokens y
-especificaciones**; la aplicación consistente de esta identidad a todas
-las pantallas existentes es una Etapa posterior del Sprint 2, no esta.
+a propósito, ver `PROJECT_STATUS.md` sección 7).
+
+- **Etapa 1** definió los tokens (paleta, tipografía, curvas, tamaños de
+  imagen) sin conectarlos al tema activo.
+- **Etapa 2** conectó `AppBrandPalette`/`AppTypography`/`AppCurves` a
+  `AppTheme.light` (`ColorScheme`/`textTheme`) y construyó los
+  componentes `App*` que faltaban (`AppButton` con variantes,
+  `AppChip`, `AppDialog`, `AppBottomSheet`, `AppSnackBar`, `AppAvatar`,
+  `AppBadge`, `AppLoadingIndicator`, `AppStatTile`) — **sin tocar
+  ningún feature**. Las pantallas heredan la identidad automáticamente.
+- Lo que sigue pendiente (retro-aplicar `AppChip`/`AppStatTile`/
+  `AppIcons`/`AppImageSize` dentro de los features existentes, agregar
+  Poppins, decidir sobre el logo) se detalla al final de este
+  documento.
 
 ## Identidad
 
@@ -112,47 +123,80 @@ pantallas existentes queda para una Etapa posterior).
 
 ## Botones
 
-- **Filled** (ya existe como `AppButton`): fondo Primary 500, texto
-  blanco, radio 8, altura 48, sin elevación (plano, minimalista).
-- **Tonal** *(nuevo, por construir en una Etapa posterior)*: fondo
-  Primary 100, texto Primary 900, mismo radio/altura que Filled — para
-  acciones de énfasis medio.
-- **Outlined** *(nuevo, por construir)*: transparente, borde 1.5px
-  Secondary 300, texto Primary 700 — para acciones secundarias junto a
-  un CTA principal.
-- **Text** *(hoy resuelto ad hoc con `TextButton` crudo en los pies de
-  `login`/`register` — por formalizar)*: sin fondo/borde, texto Primary
-  700, altura mínima de toque 44.
+Las 4 variantes ya existen en un único `AppButton` (`variant:
+AppButtonVariant.filled/tonal/outlined/text`, default `filled` —
+retrocompatible), compartiendo forma (radio 8), altura (48), padding y
+el cross-fade de carga; solo el `ButtonStyle` (de qué rol del
+`ColorScheme` toma color) cambia por variante:
+
+- **Filled** (default): `FilledButton` — fondo Primary 500, texto
+  `onPrimary` (Secondary 900), sin elevación.
+- **Tonal**: `FilledButton.tonal` — fondo `primaryContainer` (Primary
+  100), texto `onPrimaryContainer` (Primary 900) — para acciones de
+  énfasis medio.
+- **Outlined**: `OutlinedButton` — transparente, borde `outline`
+  (Secondary 300) — para acciones secundarias junto a un CTA principal.
+- **Text**: `TextButton` — sin fondo/borde, texto `primary` — para
+  acciones de baja jerarquía (p. ej. pies de formulario).
+
+**No retro-aplicado** en `login`/`register` (siguen usando `TextButton`
+crudo) — reemplazarlos por `AppButton(variant: .text)` es trabajo de
+feature, fuera de alcance de esta Etapa (ver Fase 4).
 
 ## Campos
 
-Estilo oficial (ya construido en `AppTextField`, valores a repuntar a
-la paleta de marca en la Etapa de aplicación): relleno con Surface,
-radio 8, borde de foco Primary 500 (2px), borde de error Error 500.
+Estilo oficial, ya construido en `AppTextField` — no requirió ningún
+cambio de código propio: relleno Surface 200, radio 8, borde de foco
+Primary 500 (2px), borde de error Error 500, todo ya vive en
+`AppTheme.light.inputDecorationTheme`.
 
 ## Cards
 
-Estilo oficial: fondo Surface, radio 12, elevación `level1`. Se agrega
-como refinamiento (Etapa posterior) un borde de 1px Secondary 200 para
-dar definición sutil en fondos blancos, ya que la paleta minimalista
-puede leerse plana sin él.
+Estilo oficial, ya construido en `AppCard`/`cardTheme` — tampoco
+requirió cambios de código propio: fondo Surface 200, radio 12,
+elevación `level1`, borde de 1px Secondary 200 (ya incluido en el
+`cardTheme.shape.side` desde antes de esta Etapa, ahora coloreado con
+la paleta oficial).
 
 ## Diálogos
 
-Estilo oficial *(por construir)*: fondo Surface, radio 16, elevación
-`level8`, ancho máximo 400.
+Construido como `AppDialog` (`AppDialog.show(...)`): fondo Surface
+(heredado del `Dialog` de Material), radio 16, elevación `level8`,
+ancho máximo 400px. **No usado en ningún feature todavía** — solo el
+componente existe.
 
 ## Bottom Sheets
 
-Estilo oficial *(por construir)*: fondo Surface, esquinas superiores
-radio 20, manija de arrastre 32×4 en Secondary 300, elevación `level4`.
+Construido como `AppBottomSheet` (`AppBottomSheet.show(...)`): fondo
+Surface, esquinas superiores radio 20, manija de arrastre (32×4,
+`outline`), elevación `level4`. **No usado en ningún feature
+todavía**.
 
 ## Chips
 
-Estilo oficial *(por construir)*: forma píldora (`radiusPill`), fondo
-Secondary 100 (no seleccionado) / Primary 100 (seleccionado), texto en
-el tono 900 correspondiente, altura 32, padding horizontal
-`AppSpacing.space12`.
+Construido como `AppChip`: forma píldora (`radiusPill`), fondo
+`secondaryContainer` (no seleccionado) / `primaryContainer`
+(seleccionado), texto en el `on*Container` correspondiente. **No
+reemplaza ningún chip existente** (p. ej. `CategoryChip` en
+`marketplace`) — solo el componente existe, listo para adoptarse en una
+Etapa posterior.
+
+## SnackBar, Avatar, Badge, Loading Indicator (nuevos, no especificados originalmente en Fase 4 pero pedidos en la Etapa 2)
+
+- **`AppSnackBar`**: 4 tonos semánticos (`info`/`success`/`warning`/
+  `error`), color de fondo tomado directamente de
+  `AppBrandPalette.*500`, radio 8, comportamiento flotante.
+- **`AppAvatar`**: círculo con iniciales o ícono, colores
+  `secondaryContainer`/`onSecondaryContainer` — sin foto real (no existe
+  almacenamiento de imágenes en el proyecto).
+- **`AppBadge`**: punto/etiqueta pequeña con 5 tonos (`neutral`/
+  `info`/`success`/`warning`/`error`), mismo patrón de color que ya
+  usan `OrderStatusBadge`/`ContactCard`/etc. en los features — un
+  primitivo genérico sobre el que esos badges ad hoc podrían
+  reconstruirse en una Etapa posterior (no retrofitado).
+- **`AppLoadingIndicator`**: el spinner de `AppLoading` extraído a su
+  propio widget (sin mensaje), para poder usarse solo en contextos
+  donde no aplica el `Center`+mensaje de `AppLoading`.
 
 ## Tamaños de imagen
 
@@ -166,18 +210,25 @@ de alcance de esta Etapa.
 
 ## Qué queda para las siguientes Etapas del Sprint 2
 
-1. Reemplazar `AppColors`/`ColorScheme` en `app_theme.dart` por
-   `AppBrandPalette` (recolorea automáticamente todas las pantallas,
-   sin tocarlas — ese es el punto de tener el Design System).
-2. Reemplazar `ThemeData.textTheme` por `AppTypography` (mismo
-   argumento).
-3. Aprobar y agregar `google_fonts` (o assets) para Poppins.
-4. Construir `AppButtonTonal`/`AppButtonOutlined`/`AppButtonText`,
-   `AppDialog`, `AppBottomSheet`, `AppChip` como nuevos widgets `App*`.
-5. Retro-aplicar `AppImageSize` en los 12 archivos que la auditoría
-   señaló.
-6. Extraer el widget `_StatTile` duplicado (7 features idénticos) a un
-   `AppStatTile` compartido en `core/ui/widgets/`.
-7. Adoptar `AppIcons` en los ~98 usos de `Icons.*` crudos detectados.
+Completado en la Etapa 2 (ver arriba): `ColorScheme`/`textTheme`
+conectados, `AppButton` con 4 variantes, `AppChip`/`AppDialog`/
+`AppBottomSheet`/`AppSnackBar`/`AppAvatar`/`AppBadge`/
+`AppLoadingIndicator`/`AppStatTile` construidos, curva de "más
+opciones" resuelta. Pendiente para Etapas posteriores:
+
+1. Aprobar y agregar `google_fonts` (o assets) para Poppins
+   (Display/Headline/Title siguen en Roboto hasta esa aprobación).
+2. Retro-aplicar `AppImageSize` en los 12 archivos que la auditoría
+   señaló (`marketplace`/`service_detail`/`provider_profile`/
+   `verification`/`request_service`).
+3. Retro-aplicar `AppStatTile` en los 7 features que hoy reimplementan
+   `_StatTile` de forma idéntica.
+4. Adoptar `AppChip` en `marketplace`'s `CategoryChip` y cualquier otro
+   chip ad hoc existente.
+5. Adoptar `AppIcons` en los ~98 usos de `Icons.*` crudos detectados.
+6. Reemplazar el `TextButton` crudo de `login`/`register` por
+   `AppButton(variant: AppButtonVariant.text)`.
+7. Adoptar `AppDialog`/`AppBottomSheet`/`AppSnackBar` donde un feature
+   necesite ese patrón (ninguno los usa todavía).
 8. Decidir si el logo aparece en `SplashPage`/`AppTopBar` y, si es así,
    agregarlo al repositorio (sigue sin trackear hasta esa decisión).

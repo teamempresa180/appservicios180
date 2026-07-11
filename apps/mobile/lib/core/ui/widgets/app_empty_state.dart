@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../animations/scale_in.dart';
+import '../icons/app_icons.dart';
 import '../tokens/app_spacing.dart';
 import 'app_button.dart';
 
@@ -11,7 +12,7 @@ class AppEmptyState extends StatelessWidget {
     super.key,
     required this.title,
     this.description,
-    this.icon = Icons.inbox_outlined,
+    this.icon = AppIcons.empty,
     this.actionLabel,
     this.onActionPressed,
   });

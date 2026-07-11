@@ -263,6 +263,13 @@ flutter test              ✅ 748/748 tests (sin cambios — solo tokens nuevos,
 flutter run -d windows    ✅ compila y corre sin errores, visualmente idéntico
 ```
 
+### Verificación Flutter (actualizada — Sprint 2 Etapa 2 aprobada, Prompt 52)
+```
+flutter analyze          ✅ No issues found!
+flutter test              ✅ 748/748 tests (sin cambios — ningún feature tocado, solo core/ui)
+flutter run -d windows    ✅ compila y corre — identidad oficial ya aplicada automáticamente
+```
+
 **Nota de entorno**: el problema del carácter `°` (que afectaba
 `flutter analyze`/`flutter build windows` en la ruta antigua bajo
 `Grupo empresarial 180°`) **no existe** en la ruta oficial
@@ -655,17 +662,34 @@ branding a todas las pantallas es el objetivo de la Etapa 2. Verificado
 con `flutter analyze` (`No issues found!`) y `flutter test` (748/748,
 sin cambios, ya que ningún comportamiento visual se tocó).
 
-### Etapa 2 — Aplicación del Branding al Core UI (en curso)
+### Etapa 2 — Aplicación del Branding al Core UI (Prompt 52, aprobada y consolidada)
 
-Objetivo: conectar `AppBrandPalette`/`AppTypography`/`AppCurves` al
-`AppTheme` activo (`ColorScheme` + `textTheme`), extender `AppButton`
-con variantes Tonal/Outlined/Text, actualizar `AppTextField`/`AppCard`,
-y crear los componentes nuevos (`AppChip`/`AppDialog`/
-`AppBottomSheet`/`AppSnackBar`/`AppAvatar`/`AppBadge`/
-`AppLoadingIndicator`) — todo exclusivamente dentro de `core/ui/`, sin
-tocar ningún feature ni la navegación. Las pantallas existentes heredan
-el nuevo tema automáticamente, sin cambios propios. Ver el handoff de
-esta sesión para el árbol completo y las decisiones de refactor.
+Conectó `AppBrandPalette`/`AppTypography` al `AppTheme.light` activo
+(`ColorScheme`/`textTheme` construidos exclusivamente desde la paleta
+oficial; `AppColors` provisional eliminado por completo — no tenía
+ningún uso fuera de `app_theme.dart`). Extendió `AppButton` con 4
+variantes (`filled`/`tonal`/`outlined`/`text`, default `filled` —
+retrocompatible, cero cambios en los ~40 call sites existentes) y creó
+8 componentes nuevos: `AppLoadingIndicator`, `AppStatTile`, `AppChip`,
+`AppDialog`, `AppBottomSheet`, `AppSnackBar`, `AppAvatar`, `AppBadge`.
+`AppTextField`/`AppCard`/`AppDivider` no requirieron ningún cambio de
+código — ya eran 100% theme-driven, así que heredaron la marca
+automáticamente solo por el cambio en `app_theme.dart`. **Ningún
+feature fue tocado.** Verificado con `flutter analyze` (`No issues
+found!`) y `flutter test` (748/748, sin cambios, ya que ningún
+comportamiento de negocio se tocó — solo el tema global).
+
+### Etapa 3 — Adopción global del Design System (en curso)
+
+Objetivo: recorrer **todos** los features de `apps/mobile/lib/features`
+(no solo los nuevos) y reemplazar toda duplicación visual por los
+componentes oficiales de `core/ui` construidos en la Etapa 2:
+`AppStatTile` (elimina 7 `_StatTile` privados duplicados), `AppChip`,
+`AppBadge`, `AppAvatar`, `AppLoadingIndicator`, variantes de
+`AppButton`, `AppDialog`, `AppBottomSheet`, `AppSnackBar`, y adopción
+completa de `AppIcons` (agregando los íconos que falten). Sin crear
+funcionalidades nuevas, sin romper navegación ni lógica de negocio. Ver
+el handoff de esta sesión para el resumen completo de la migración.
 
 ## 11. Sugerencia de versionado (aún no aplicada)
 
@@ -1166,6 +1190,35 @@ anteriores (que se conservan como registro histórico, sin eliminar).
 - Si el working tree tiene cambios sin commitear más allá del logo,
   **no asumir que corresponden a la siguiente etapa** — confirmar con
   el usuario antes de continuar.
+
+## Estado del repositorio al cierre de esta sesión (Sprint 2 Etapa 2 consolidada, Etapa 3 en curso)
+
+Este es el handoff vigente — más reciente que los doce bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+
+- **La Etapa 2 del Sprint 2 (Prompt 52 — aplicación del branding al
+  Core UI) fue aprobada explícitamente por el usuario**, verificada con
+  `flutter analyze` (`No issues found!`), `flutter test` (748/748),
+  `dart format .` y `git status`.
+- Se creó un **único commit exclusivo de esta consolidación** con el
+  mensaje `Sprint 2 Etapa 2 - Branding wired into AppTheme + new App*
+  components` (ver `git log -1` para el hash exacto — no se fija aquí
+  el hash literal por la misma razón de auto-referencia explicada en
+  secciones anteriores). Incluye `app_theme.dart` reescrito, `AppButton`
+  con variantes, y los 8 componentes nuevos — **sin incluir
+  `Logo oficial grupo.svg`** (sigue sin trackear, ver sección 7) **ni
+  la carpeta `.idea/`** (metadata de IDE, sin relación con el proyecto,
+  dejada intacta sin trackear). Ningún feature fue tocado.
+- **A partir de esta sesión comienza la Etapa 3 — Adopción global del
+  Design System**: reemplazar en todos los features la duplicación
+  visual (`_StatTile` y equivalentes, chips/badges/avatares/spinners ad
+  hoc, botones Material crudos, diálogos/bottom sheets/snackbars
+  manuales, iconografía sin `AppIcons`) por los componentes oficiales
+  de `core/ui`. Es un refactor visual, no funcional — sin nuevas
+  pantallas, sin cambios de navegación ni de lógica de negocio.
+- Si el working tree tiene cambios sin commitear más allá del logo (y
+  `.idea/`), **no asumir que corresponden a la siguiente etapa** —
+  confirmar con el usuario antes de continuar.
 - **A partir de esta sesión, el usuario solicitó un modo de trabajo
   optimizado**: fases grandes (analizar → implementar todo el feature
   → navegación → tests → verificación final única) en vez de narrar
