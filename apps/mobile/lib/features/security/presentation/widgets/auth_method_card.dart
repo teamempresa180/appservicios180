@@ -3,8 +3,8 @@ import '../../../../authentication/entities/authentication.dart';
 import '../../../../authentication/models/auth_method_type.dart';
 import '../../../../authentication/models/authentication_status.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
-import '../../../../core/ui/tokens/app_radius.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_badge.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import 'auth_method_actions.dart';
 
@@ -94,23 +94,7 @@ class AuthMethodCard extends StatelessWidget {
                   style: context.textStyles.bodyMedium,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.space12,
-                  vertical: AppSpacing.space4,
-                ),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppRadius.radius8),
-                ),
-                child: Text(
-                  _statusLabel(authMethod.status),
-                  style: context.textStyles.bodySmall?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+              AppBadge(label: _statusLabel(authMethod.status), color: color),
             ],
           ),
           const SizedBox(height: AppSpacing.space12),

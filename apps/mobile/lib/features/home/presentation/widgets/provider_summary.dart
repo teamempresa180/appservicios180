@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 import 'stat_card.dart';
@@ -51,9 +52,7 @@ class ProviderSummary extends StatelessWidget {
               label: 'Calificación',
             ),
             StatCard(
-              icon: isAvailable
-                  ? Icons.check_circle_outline
-                  : Icons.cancel_outlined,
+              icon: isAvailable ? AppIcons.success : Icons.cancel_outlined,
               value: isAvailable ? 'Disponible' : 'No disponible',
               label: 'Disponibilidad',
             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../audit/entities/audit.dart';
 import '../../../../audit/models/audit_action_type.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 
 /// A single real `Audit` entry: action icon, description (real,
@@ -19,9 +20,9 @@ class AuditLogEntryCard extends StatelessWidget {
       case AuditActionType.created:
         return Icons.add_circle_outline;
       case AuditActionType.updated:
-        return Icons.edit_outlined;
+        return AppIcons.edit;
       case AuditActionType.deleted:
-        return Icons.delete_outline;
+        return AppIcons.delete;
       case AuditActionType.accessed:
         return Icons.visibility_outlined;
       case AuditActionType.loggedIn:
@@ -29,7 +30,7 @@ class AuditLogEntryCard extends StatelessWidget {
       case AuditActionType.loggedOut:
         return Icons.logout_outlined;
       case AuditActionType.other:
-        return Icons.info_outline;
+        return AppIcons.info;
     }
   }
 

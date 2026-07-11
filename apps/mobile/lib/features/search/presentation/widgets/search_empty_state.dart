@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 
 /// Visual-only empty state for the Search screen. Configurable so it
@@ -10,7 +11,7 @@ class SearchEmptyState extends StatelessWidget {
     super.key,
     required this.title,
     required this.description,
-    this.icon = Icons.search,
+    this.icon = AppIcons.search,
   });
 
   final String title;

@@ -3,6 +3,7 @@ import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
+import '../../../../core/ui/widgets/app_stat_tile.dart';
 import '../../models/availability_display.dart';
 
 /// Summary: weekly availability percentage, active/inactive days
@@ -29,19 +30,19 @@ class AvailabilityStatistics extends StatelessWidget {
             mainAxisSpacing: AppSpacing.space8,
             crossAxisSpacing: AppSpacing.space8,
             children: [
-              _StatTile(
+              AppStatTile(
                 label: 'Disponibilidad semanal',
                 value: '${data.weeklyAvailabilityPercentage.round()}%',
               ),
-              _StatTile(
+              AppStatTile(
                 label: 'Días activos',
                 value: '${data.activeDaysCount}',
               ),
-              _StatTile(
+              AppStatTile(
                 label: 'Días inactivos',
                 value: '${data.inactiveDaysCount}',
               ),
-              _StatTile(
+              AppStatTile(
                 label: 'Próxima disponibilidad',
                 value: data.nextAvailableLabel,
               ),
@@ -51,36 +52,6 @@ class AvailabilityStatistics extends StatelessWidget {
           Text(data.workingHoursLabel, style: context.textStyles.bodySmall),
         ],
       ),
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: context.textStyles.titleSmall,
-        ),
-        Text(
-          label,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: context.textStyles.bodySmall,
-        ),
-      ],
     );
   }
 }

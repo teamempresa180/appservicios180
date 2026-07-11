@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_avatar.dart';
 import '../mock/mock_home_data.dart';
 import '../models/user_role.dart';
 
@@ -16,11 +17,7 @@ class HomeHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        CircleAvatar(
-          radius: AppSpacing.space24,
-          backgroundColor: context.colors.primary,
-          child: Icon(Icons.person, color: context.colors.onPrimary),
-        ),
+        const AppAvatar(),
         const SizedBox(width: AppSpacing.space12),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,

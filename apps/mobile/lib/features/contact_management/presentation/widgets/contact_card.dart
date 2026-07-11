@@ -3,8 +3,8 @@ import '../../../../contact/entities/contact.dart';
 import '../../../../contact/models/contact_status.dart';
 import '../../../../contact/models/contact_type.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
-import '../../../../core/ui/tokens/app_radius.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_badge.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import 'contact_actions.dart';
 
@@ -68,23 +68,7 @@ class ContactCard extends StatelessWidget {
                   style: context.textStyles.bodyMedium,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.space12,
-                  vertical: AppSpacing.space4,
-                ),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppRadius.radius8),
-                ),
-                child: Text(
-                  _statusLabel(contact.status),
-                  style: context.textStyles.bodySmall?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+              AppBadge(label: _statusLabel(contact.status), color: color),
             ],
           ),
           const SizedBox(height: AppSpacing.space12),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/widgets/app_text_field.dart';
 
 /// Search input field. Reuses `AppTextField`'s `prefixIcon` support.
@@ -28,7 +29,7 @@ class _SearchInputBarState extends State<SearchInputBar> {
     return AppTextField(
       controller: _controller,
       hint: 'Buscar servicios o profesionales',
-      prefixIcon: Icons.search,
+      prefixIcon: AppIcons.search,
       onChanged: (_) {},
     );
   }

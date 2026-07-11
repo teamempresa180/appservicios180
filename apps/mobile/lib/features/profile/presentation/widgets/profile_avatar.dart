@@ -1,20 +1,17 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/extensions/context_theme_extensions.dart';
+import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_avatar.dart';
 
-/// Simulated avatar: a `CircleAvatar` with a generic person Material
-/// Icon. No real photo — no official branding/identity exists yet.
-/// Same approach as `ProviderAvatar` in `provider_profile`.
+/// Simulated avatar — thin wrapper over `AppAvatar`, same approach as
+/// `ProviderAvatar` in `provider_profile`. No real photo — no official
+/// branding/identity exists yet.
 class ProfileAvatar extends StatelessWidget {
-  const ProfileAvatar({super.key, this.radius = 32});
+  const ProfileAvatar({super.key, this.radius = AppSpacing.space32});
 
   final double radius;
 
   @override
   Widget build(BuildContext context) {
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: context.colors.primary,
-      child: Icon(Icons.person, size: radius, color: context.colors.onPrimary),
-    );
+    return AppAvatar(radius: radius);
   }
 }

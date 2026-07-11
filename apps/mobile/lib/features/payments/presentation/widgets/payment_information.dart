@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_avatar.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../models/payment_display.dart';
@@ -25,11 +26,7 @@ class PaymentInformation extends StatelessWidget {
           const SizedBox(height: AppSpacing.space16),
           Row(
             children: [
-              CircleAvatar(
-                radius: AppSpacing.space24,
-                backgroundColor: context.colors.primary,
-                child: Icon(Icons.person, color: context.colors.onPrimary),
-              ),
+              const AppAvatar(),
               const SizedBox(width: AppSpacing.space12),
               Expanded(
                 child: Column(

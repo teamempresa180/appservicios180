@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
-import '../../../../core/ui/extensions/context_theme_extensions.dart';
+import '../../../../core/ui/widgets/app_stat_tile.dart';
 import '../../../../service/models/service_status.dart';
 import '../../models/provider_service_display.dart';
 
@@ -44,10 +44,13 @@ class ServicesStatistics extends StatelessWidget {
             mainAxisSpacing: AppSpacing.space8,
             crossAxisSpacing: AppSpacing.space8,
             children: [
-              _StatTile(label: 'Servicios activos', value: '$activeCount'),
-              _StatTile(label: 'Servicios pausados', value: '$pausedCount'),
-              _StatTile(label: 'Total de solicitudes', value: '$totalRequests'),
-              _StatTile(
+              AppStatTile(label: 'Servicios activos', value: '$activeCount'),
+              AppStatTile(label: 'Servicios pausados', value: '$pausedCount'),
+              AppStatTile(
+                label: 'Total de solicitudes',
+                value: '$totalRequests',
+              ),
+              AppStatTile(
                 label: 'Total de visualizaciones',
                 value: '$totalViews',
               ),
@@ -55,31 +58,6 @@ class ServicesStatistics extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(value, style: context.textStyles.titleMedium),
-        Text(
-          label,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: context.textStyles.bodySmall,
-        ),
-      ],
     );
   }
 }

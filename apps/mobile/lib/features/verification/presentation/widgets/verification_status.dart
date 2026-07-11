@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
-import '../../../../core/ui/tokens/app_radius.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_badge.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../models/verification_display.dart';
@@ -36,23 +36,7 @@ class VerificationStatusCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const AppSectionTitle(title: 'Estado de verificación'),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.space12,
-              vertical: AppSpacing.space4,
-            ),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppRadius.radius8),
-            ),
-            child: Text(
-              data.verificationStatus.label,
-              style: context.textStyles.bodySmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
+          AppBadge(label: data.verificationStatus.label, color: color),
           const SizedBox(height: AppSpacing.space8),
           Text(
             'Tiempo estimado de revisión: ${data.estimatedReviewTime}',

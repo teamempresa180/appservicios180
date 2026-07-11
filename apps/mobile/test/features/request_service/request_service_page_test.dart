@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/ui/theme/app_theme.dart';
+import 'package:mobile/core/ui/widgets/app_chip.dart';
 import 'package:mobile/features/request_service/presentation/pages/request_service_page.dart';
 import 'package:mobile/features/request_service/presentation/widgets/address_summary.dart';
 import 'package:mobile/features/request_service/presentation/widgets/attachments_section.dart';
@@ -92,9 +93,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(PrioritySelector), findsOneWidget);
-    final chip = tester.widget<ChoiceChip>(
-      find.widgetWithText(ChoiceChip, 'Normal'),
-    );
+    final chip = tester.widget<AppChip>(find.widgetWithText(AppChip, 'Normal'));
     expect(chip.selected, isTrue);
   });
 

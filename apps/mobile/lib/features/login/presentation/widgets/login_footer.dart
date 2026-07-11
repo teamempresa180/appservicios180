@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_button.dart';
 
 /// Bottom links of the Login screen: "forgot password" and "create
 /// account". Both currently route to Register — password recovery has no
@@ -19,18 +20,22 @@ class LoginFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        TextButton(
+        AppButton(
+          label: '¿Olvidaste tu contraseña?',
           onPressed: onForgotPassword,
-          child: const Text('¿Olvidaste tu contraseña?'),
+          variant: AppButtonVariant.text,
+          expand: false,
         ),
         const SizedBox(height: AppSpacing.space8),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text('¿No tienes cuenta? ', style: context.textStyles.bodyMedium),
-            TextButton(
+            AppButton(
+              label: 'Crear cuenta',
               onPressed: onCreateAccount,
-              child: const Text('Crear cuenta'),
+              variant: AppButtonVariant.text,
+              expand: false,
             ),
           ],
         ),

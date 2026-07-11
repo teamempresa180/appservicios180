@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
@@ -24,7 +25,7 @@ class PaymentMethodCard extends StatelessWidget {
       case PaymentMethod.digitalWallet:
         return Icons.account_balance_wallet_outlined;
       case PaymentMethod.other:
-        return Icons.more_horiz;
+        return AppIcons.more;
     }
   }
 

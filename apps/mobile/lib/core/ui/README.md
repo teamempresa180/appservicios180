@@ -1,14 +1,15 @@
 # Core UI — Design System Base
 
-> **Sprint 2 (Branding & UX), Etapa 2**: el branding oficial ya está
-> conectado. `AppTheme.light` construye su `ColorScheme` y `textTheme`
-> exclusivamente desde `AppBrandPalette`/`AppTypography` — ver
-> [`BRANDING.md`](BRANDING.md) para el detalle de cada token y su
-> origen en el logo. Ningún feature fue modificado: todas las
-> pantallas heredan la nueva identidad automáticamente porque siempre
-> consumieron el tema de forma indirecta (`Theme.of(context)`,
-> `context.colors.*`, `context.textStyles.*`), nunca colores/tipografía
-> hardcodeados.
+> **Sprint 2 (Branding & UX), Etapa 3**: el branding oficial no solo
+> está conectado (Etapa 2) — ya es de **adopción obligatoria** en todo
+> el proyecto (Etapa 3). `AppStatTile`, `AppChip`, `AppBadge`,
+> `AppAvatar` y las variantes de `AppButton` reemplazaron toda
+> duplicación visual real que existía en los features (`_StatTile`
+> privados, `ChoiceChip`/`Chip` sueltos, pills de estado repetidos,
+> `CircleAvatar` de persona, `TextButton` crudo). Cualquier pantalla
+> nueva **debe** usar estos componentes en vez de reconstruirlos — ver
+> [`BRANDING.md`](BRANDING.md) para el detalle completo de la
+> migración y el origen de cada token en el logo.
 
 ## Filosofía del Design System
 
@@ -30,20 +31,20 @@ propio tema, no los widgets que lo consumen.
 |---|---|---|
 | `AppScaffold` | Estructura de página genérica (título opcional, body, FAB). | No soporta `bottomNavigationBar`/`NavigationRail` — el `AppShell` construye su propio `Scaffold` de Flutter para eso. |
 | `AppCard` | Contenedor de contenido. | `elevation` (opcional, default `AppElevation.level1`) da una sombra sutil; el borde de 1px viene del `cardTheme` global. |
-| `AppButton` | Botón con 4 variantes. | `variant` (`AppButtonVariant.filled`/`tonal`/`outlined`/`text`, default `filled` — retrocompatible). Estados: normal, pressed (automático de Material), disabled (`onPressed: null`), loading (`isLoading: true`, cross-fade suave al spinner). Altura mínima uniforme (48). |
+| `AppButton` | Botón con 4 variantes. **Obligatorio** — no usar `ElevatedButton`/`FilledButton`/`OutlinedButton`/`TextButton` crudos. | `variant` (`AppButtonVariant.filled`/`tonal`/`outlined`/`text`, default `filled` — retrocompatible). Estados: normal, pressed (automático de Material), disabled (`onPressed: null`), loading (`isLoading: true`, cross-fade suave al spinner). Altura mínima uniforme (48). |
 | `AppTextField` | Campo de texto. | `prefixIcon`/`suffixIcon` opcionales (Material Icons / widgets). Focus, error y disabled ya tienen bordes distintos vía el tema — no hace falta configurarlos por pantalla. |
 | `AppLoading` | Indicador de carga centrado con mensaje opcional. | Delega en `AppLoadingIndicator`; el mensaje aparece con `FadeIn`. |
 | `AppLoadingIndicator` | Solo el spinner circular, sin mensaje. | `strokeCap: round` (look Material 3); tamaño configurable. |
 | `AppEmptyState` | Estado vacío (sin resultados, sin datos). | `actionLabel`/`onActionPressed` opcionales renderizan un `AppButton`; ícono default ahora `AppIcons.empty`. |
 | `AppSectionTitle` | Encabezado de sección. | `subtitle` opcional; `actionLabel`/`onActionTap` renderizan un "Ver todo" (`trailing` sigue disponible y tiene prioridad si se pasa). |
 | `AppDivider` | Separador con espaciado vertical consistente. | Color 100% desde `dividerTheme` — sin cambios de código en esta Etapa. |
-| `AppStatTile` | Valor + etiqueta apilados (tarjeta de estadística genérica). | Nuevo — extrae el patrón que 7 features (`security`, `contact_management`, `schedule`, `provider_services`, `availability`, `provider_dashboard`, `provider_profile`) reimplementaban de forma idéntica como `_StatTile` privado. **Los 7 archivos originales no fueron tocados** (retrofit pendiente de una Etapa posterior, ver `BRANDING.md`). |
-| `AppChip` | Chip genérico (seleccionado/no seleccionado). | Forma píldora (`AppRadius.radiusPill`). Creado, aún no reemplaza ningún chip existente en features. |
-| `AppDialog` | Diálogo modal genérico. | `AppDialog.show(...)` — radio 16, elevación `level8`, ancho máximo 400. |
-| `AppBottomSheet` | Bottom sheet modal genérico. | `AppBottomSheet.show(...)` — esquinas superiores radio 20, manija de arrastre incluida, elevación `level4`. |
-| `AppSnackBar` | SnackBar genérico con 4 tonos semánticos. | `AppSnackBar.show(context, message, type: AppSnackBarType.info/success/warning/error)`. |
-| `AppAvatar` | Círculo con iniciales o ícono. | Sin foto real — placeholder neutro (ver "Qué NO contiene"). |
-| `AppBadge` | Punto o etiqueta pequeña de estado/conteo. | 5 tonos semánticos (`neutral`/`info`/`success`/`warning`/`error`). |
+| `AppStatTile` | Valor + etiqueta apilados (tarjeta de estadística genérica). **Obligatorio** — no reimplementar un `_StatTile`/`StatisticsTile` privado. | Reemplazó los 7 `_StatTile` idénticos que existían en `security`/`contact_management`/`schedule`/`provider_services`/`availability`/`provider_dashboard`/`provider_profile`. Soporta un `icon` opcional (variante centrada, la única de las 7 que no era idéntica al resto). |
+| `AppChip` | Chip genérico (seleccionado/no seleccionado). **Obligatorio** — no usar `Chip`/`ChoiceChip`/`FilterChip`/`InputChip` crudos para chips estándar. | Forma píldora (`AppRadius.radiusPill`). Reemplazó los 5 `ChoiceChip`/`Chip` que existían en `notifications`/`reviews`/`orders`/`request_service`/`provider_profile`. |
+| `AppDialog` | Diálogo modal genérico. | `AppDialog.show(...)` — radio 16, elevación `level8`, ancho máximo 400. Ningún feature lo necesita todavía. |
+| `AppBottomSheet` | Bottom sheet modal genérico. | `AppBottomSheet.show(...)` — esquinas superiores radio 20, manija de arrastre incluida, elevación `level4`. Ningún feature lo necesita todavía. |
+| `AppSnackBar` | SnackBar genérico con 4 tonos semánticos. | `AppSnackBar.show(context, message, type: AppSnackBarType.info/success/warning/error)`. Ningún feature lo necesita todavía. |
+| `AppAvatar` | Círculo con iniciales o ícono. **Obligatorio para avatares de persona** — no reconstruir un `CircleAvatar` de usuario a mano. | Reemplazó los 10 `CircleAvatar` de persona que existían en `provider_profile`/`profile`/`reviews`/`chat`/`payments`/`quote`/`request_service`/`service_detail`/`marketplace`/`home`. Sin foto real — placeholder neutro (ver "Qué NO contiene"). |
+| `AppBadge` | Pastilla pequeña de estado/conteo. **Obligatorio para badges de estado** — no reconstruir un `Container`+`BoxDecoration` de pill a mano. | 5 tonos semánticos (`neutral`/`info`/`success`/`warning`/`error`) o un `color` ya resuelto por el caller (para status badges que derivan el color de un enum de dominio). Reemplazó los 10 pills de estado duplicados en `orders`/`payments`/`provider_services`/`address_management`/`security`/`contact_management`/`schedule`/`trust`/`verification`. |
 | `FadeIn` / `ScaleIn` / `SlideIn` | Animaciones de entrada. | Curvas ahora nombradas en `AppCurves` (`standard`/`playful`) — mismo comportamiento, sin cambios visuales. Únicas animaciones permitidas — no crear nuevas sin aprobación. |
 
 ## Buenas prácticas

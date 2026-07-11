@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_avatar.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import '../../models/provider_display.dart';
 
@@ -20,11 +21,7 @@ class ProviderCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircleAvatar(
-              radius: AppSpacing.space24,
-              backgroundColor: context.colors.primary,
-              child: Icon(Icons.person, color: context.colors.onPrimary),
-            ),
+            const AppAvatar(),
             const SizedBox(height: AppSpacing.space8),
             Text(
               display.name,

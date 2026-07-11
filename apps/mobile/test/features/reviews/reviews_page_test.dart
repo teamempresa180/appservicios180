@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/ui/theme/app_theme.dart';
+import 'package:mobile/core/ui/widgets/app_chip.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
 import 'package:mobile/features/reviews/presentation/pages/reviews_page.dart';
@@ -29,12 +30,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ReviewFilters), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'Todas'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, '5★'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, '4★'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, '3★'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, '2★'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, '1★'), findsOneWidget);
+    expect(find.widgetWithText(AppChip, 'Todas'), findsOneWidget);
+    expect(find.widgetWithText(AppChip, '5★'), findsOneWidget);
+    expect(find.widgetWithText(AppChip, '4★'), findsOneWidget);
+    expect(find.widgetWithText(AppChip, '3★'), findsOneWidget);
+    expect(find.widgetWithText(AppChip, '2★'), findsOneWidget);
+    expect(find.widgetWithText(AppChip, '1★'), findsOneWidget);
   });
 
   testWidgets('selecting a filter only changes its visual selection', (
@@ -43,16 +44,16 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    final chipBefore = tester.widget<ChoiceChip>(
-      find.widgetWithText(ChoiceChip, '5★'),
+    final chipBefore = tester.widget<AppChip>(
+      find.widgetWithText(AppChip, '5★'),
     );
     expect(chipBefore.selected, isFalse);
 
     await tester.tap(find.text('5★'));
     await tester.pumpAndSettle();
 
-    final chipAfter = tester.widget<ChoiceChip>(
-      find.widgetWithText(ChoiceChip, '5★'),
+    final chipAfter = tester.widget<AppChip>(
+      find.widgetWithText(AppChip, '5★'),
     );
     expect(chipAfter.selected, isTrue);
     // The list is unaffected — still shows every mock review.

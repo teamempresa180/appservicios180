@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_card.dart';
+import '../../../../core/ui/widgets/app_chip.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../models/request_priority.dart';
 
@@ -35,10 +36,10 @@ class _PrioritySelectorState extends State<PrioritySelector> {
           Wrap(
             spacing: AppSpacing.space8,
             children: RequestPriority.values.map((priority) {
-              return ChoiceChip(
-                label: Text(priority.label),
+              return AppChip(
+                label: priority.label,
                 selected: _priority == priority,
-                onSelected: (_) => setState(() => _priority = priority),
+                onTap: () => setState(() => _priority = priority),
               );
             }).toList(),
           ),

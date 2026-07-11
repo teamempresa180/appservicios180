@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
+import '../../../../core/ui/widgets/app_stat_tile.dart';
 import '../../models/contact_management_display.dart';
 
 /// Summary: per-status contact counts — all **derived** from the real
@@ -27,44 +28,13 @@ class ContactsStatistics extends StatelessWidget {
             mainAxisSpacing: AppSpacing.space8,
             crossAxisSpacing: AppSpacing.space8,
             children: [
-              _StatTile(label: 'Activos', value: '${data.activeCount}'),
-              _StatTile(label: 'Inactivos', value: '${data.inactiveCount}'),
-              _StatTile(label: 'Archivados', value: '${data.archivedCount}'),
+              AppStatTile(label: 'Activos', value: '${data.activeCount}'),
+              AppStatTile(label: 'Inactivos', value: '${data.inactiveCount}'),
+              AppStatTile(label: 'Archivados', value: '${data.archivedCount}'),
             ],
           ),
         ],
       ),
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final textStyles = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: textStyles.titleSmall,
-        ),
-        Text(
-          label,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: textStyles.bodySmall,
-        ),
-      ],
     );
   }
 }

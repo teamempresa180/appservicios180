@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../availability/entities/availability.dart';
 import '../../../../availability/models/availability_status.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
@@ -31,7 +32,7 @@ class ProviderAvailability extends StatelessWidget {
           Row(
             children: [
               Icon(
-                isActive ? Icons.check_circle_outline : Icons.cancel_outlined,
+                isActive ? AppIcons.success : Icons.cancel_outlined,
                 color: context.colors.primary,
               ),
               const SizedBox(width: AppSpacing.space8),

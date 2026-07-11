@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 
 /// A single row for a simulated trust factor. Generic (only receives a
@@ -17,7 +18,7 @@ class TrustFactorCard extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            Icons.check_circle_outline,
+            AppIcons.success,
             size: AppSpacing.space20,
             color: context.colors.primary,
           ),

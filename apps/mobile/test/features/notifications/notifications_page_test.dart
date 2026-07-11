@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/ui/theme/app_theme.dart';
+import 'package:mobile/core/ui/widgets/app_chip.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
 import 'package:mobile/features/notifications/presentation/pages/notifications_page.dart';
@@ -30,11 +31,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(NotificationFilterTabs), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'Todas'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'No leídas'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'Pedidos'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'Pagos'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'Mensajes'), findsOneWidget);
+    expect(find.widgetWithText(AppChip, 'Todas'), findsOneWidget);
+    expect(find.widgetWithText(AppChip, 'No leídas'), findsOneWidget);
+    expect(find.widgetWithText(AppChip, 'Pedidos'), findsOneWidget);
+    expect(find.widgetWithText(AppChip, 'Pagos'), findsOneWidget);
+    expect(find.widgetWithText(AppChip, 'Mensajes'), findsOneWidget);
   });
 
   testWidgets('selecting a tab only changes its visual selection', (
@@ -43,16 +44,16 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    final chipBefore = tester.widget<ChoiceChip>(
-      find.widgetWithText(ChoiceChip, 'No leídas'),
+    final chipBefore = tester.widget<AppChip>(
+      find.widgetWithText(AppChip, 'No leídas'),
     );
     expect(chipBefore.selected, isFalse);
 
     await tester.tap(find.text('No leídas'));
     await tester.pumpAndSettle();
 
-    final chipAfter = tester.widget<ChoiceChip>(
-      find.widgetWithText(ChoiceChip, 'No leídas'),
+    final chipAfter = tester.widget<AppChip>(
+      find.widgetWithText(AppChip, 'No leídas'),
     );
     expect(chipAfter.selected, isTrue);
     // The list is unaffected — still shows every mock notification.

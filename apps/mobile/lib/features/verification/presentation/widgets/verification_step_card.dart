@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 
 /// A single verification step row. `isCompleted` reflects whether this
@@ -24,9 +25,7 @@ class VerificationStepCard extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            isCompleted
-                ? Icons.check_circle_outline
-                : Icons.radio_button_unchecked,
+            isCompleted ? AppIcons.success : Icons.radio_button_unchecked,
             size: AppSpacing.space16,
             color: isCompleted
                 ? context.colors.primary

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../availability/entities/availability.dart';
 import '../../../../availability/models/availability_status.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import 'time_slot.dart';
@@ -51,9 +52,7 @@ class DayScheduleCard extends StatelessWidget {
                 Row(
                   children: [
                     Icon(
-                      isAvailable
-                          ? Icons.check_circle_outline
-                          : Icons.cancel_outlined,
+                      isAvailable ? AppIcons.success : Icons.cancel_outlined,
                       size: AppSpacing.space16,
                       color: isAvailable
                           ? context.colors.primary

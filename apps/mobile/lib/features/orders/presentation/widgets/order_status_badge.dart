@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
-import '../../../../core/ui/tokens/app_radius.dart';
-import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_badge.dart';
 import '../../../../order/models/order_status.dart';
 import '../../models/order_display.dart';
 
@@ -10,7 +9,7 @@ import '../../models/order_display.dart';
 /// `Order.status` — never a hardcoded `Color` literal, per the
 /// project's rule that only the Design System picks colors (see the
 /// feature README for why `OrderDisplay` itself doesn't store a
-/// `statusColor`).
+/// `statusColor`). Renders via `AppBadge`.
 class OrderStatusBadge extends StatelessWidget {
   const OrderStatusBadge({super.key, required this.data});
 
@@ -33,24 +32,9 @@ class OrderStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _colorFor(context, data.order.status);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.space12,
-        vertical: AppSpacing.space4,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(AppRadius.radius8),
-      ),
-      child: Text(
-        data.statusText,
-        style: context.textStyles.bodySmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+    return AppBadge(
+      label: data.statusText,
+      color: _colorFor(context, data.order.status),
     );
   }
 }

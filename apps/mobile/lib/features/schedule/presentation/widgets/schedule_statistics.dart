@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
+import '../../../../core/ui/widgets/app_stat_tile.dart';
 import '../../models/schedule_display.dart';
 
 /// Summary: per-status block counts and total open hours — all
@@ -27,16 +28,19 @@ class ScheduleStatistics extends StatelessWidget {
             mainAxisSpacing: AppSpacing.space8,
             crossAxisSpacing: AppSpacing.space8,
             children: [
-              _StatTile(label: 'Bloques abiertos', value: '${data.openCount}'),
-              _StatTile(
+              AppStatTile(
+                label: 'Bloques abiertos',
+                value: '${data.openCount}',
+              ),
+              AppStatTile(
                 label: 'Bloques completados',
                 value: '${data.completedCount}',
               ),
-              _StatTile(
+              AppStatTile(
                 label: 'Bloques bloqueados',
                 value: '${data.blockedCount}',
               ),
-              _StatTile(
+              AppStatTile(
                 label: 'Bloques cancelados',
                 value: '${data.cancelledCount}',
               ),
@@ -49,37 +53,6 @@ class ScheduleStatistics extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final textStyles = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: textStyles.titleSmall,
-        ),
-        Text(
-          label,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: textStyles.bodySmall,
-        ),
-      ],
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_avatar.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import '../../models/review_display.dart';
 import 'review_actions.dart';
@@ -22,15 +23,7 @@ class ReviewCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: AppSpacing.space16,
-                backgroundColor: context.colors.primary,
-                child: Icon(
-                  Icons.person,
-                  size: AppSpacing.space16,
-                  color: context.colors.onPrimary,
-                ),
-              ),
+              const AppAvatar(radius: AppSpacing.space16),
               const SizedBox(width: AppSpacing.space8),
               Expanded(
                 child: Text(

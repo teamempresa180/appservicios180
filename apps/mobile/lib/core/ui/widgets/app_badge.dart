@@ -9,20 +9,27 @@ import '../tokens/app_spacing.dart';
 /// plain count, `error` for an alert count).
 enum AppBadgeTone { neutral, info, success, warning, error }
 
-/// Generic small pill/dot for a status label or a count. No domain
-/// meaning — the caller supplies the text and picks a [tone]. Distinct
-/// from a status badge built ad hoc per feature (e.g.
-/// `OrderStatusBadge`): this is the reusable primitive those could be
-/// built on top of in a later Etapa (not retrofitted yet).
+/// Generic small pill for a status label or a count. No domain meaning
+/// — the caller supplies the text and either picks a [tone] or, when a
+/// status color must be derived from a domain enum the way
+/// `OrderStatusBadge`/`PaymentStatusBadge`/`ServiceStatusBadge` do
+/// (switching on `OrderStatus`/`PaymentStatus`/`ServiceStatus`, entities
+/// this widget must never import), passes that already-resolved
+/// [color] directly — the domain-aware `switch` stays in the feature
+/// widget, only the pill rendering is shared here.
 class AppBadge extends StatelessWidget {
   const AppBadge({
     super.key,
     required this.label,
     this.tone = AppBadgeTone.neutral,
+    this.color,
   });
 
   final String label;
   final AppBadgeTone tone;
+
+  /// Overrides [tone]'s color when set — see the class doc.
+  final Color? color;
 
   Color _colorFor(AppBadgeTone tone) {
     switch (tone) {
@@ -41,7 +48,7 @@ class AppBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _colorFor(tone);
+    final color = this.color ?? _colorFor(tone);
 
     return Container(
       padding: const EdgeInsets.symmetric(

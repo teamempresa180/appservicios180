@@ -270,6 +270,13 @@ flutter test              ✅ 748/748 tests (sin cambios — ningún feature toc
 flutter run -d windows    ✅ compila y corre — identidad oficial ya aplicada automáticamente
 ```
 
+### Verificación Flutter (actualizada — Sprint 2 Etapa 3 aprobada, Prompt 53)
+```
+dart format .             ✅ 627 archivos, 0 cambios (ya formateado)
+flutter analyze           ✅ No issues found!
+flutter test               ✅ 748/748 tests (sin cambios — refactor puramente visual, mismo comportamiento)
+```
+
 **Nota de entorno**: el problema del carácter `°` (que afectaba
 `flutter analyze`/`flutter build windows` en la ruta antigua bajo
 `Grupo empresarial 180°`) **no existe** en la ruta oficial
@@ -451,6 +458,21 @@ test` 635/635, `flutter run -d windows`, `git status`). Ver la tabla de
 features en la sección 4 para el detalle. Consolidado con commit
 exclusivo (ver sección de cierre de sesión más abajo para el hash) tras
 `dart format .` + re-verificación de `flutter analyze`/`flutter test`.
+
+### Actualización — Prompt 53 completado (Sprint 2, Etapa 3)
+
+**Prompt 53 — Adopción global del Design System (visual, sin
+funcionalidades nuevas)**. **Aprobado por el usuario y consolidado.**
+Migró los 58 archivos afectados (ver detalle en la sección 4, Sprint 2
+Etapa 3) para que todos los features usen `AppStatTile`/`AppBadge`/
+`AppAvatar` en vez de widgets privados duplicados, sin alterar
+comportamiento visual, navegación ni lógica de negocio. Verificado con
+`dart format .` (0 cambios), `flutter analyze` (`No issues found!`) y
+`flutter test` (748/748, sin cambios). El siguiente hito es el Prompt
+54 (Sprint 2, Etapa 4 — refactor global de layouts reutilizables:
+`AppPageHeader`, `AppSectionHeader`, `AppSection`, `AppInfoRow`,
+`AppActionRow`, `AppPagePadding`, `AppPageBody`), ya en curso al cierre
+de este documento.
 
 ## 10. Siguiente prompt sugerido
 
@@ -679,17 +701,28 @@ feature fue tocado.** Verificado con `flutter analyze` (`No issues
 found!`) y `flutter test` (748/748, sin cambios, ya que ningún
 comportamiento de negocio se tocó — solo el tema global).
 
-### Etapa 3 — Adopción global del Design System (en curso)
+### Etapa 3 — Adopción global del Design System (Prompt 53, aprobada y consolidada)
 
-Objetivo: recorrer **todos** los features de `apps/mobile/lib/features`
-(no solo los nuevos) y reemplazar toda duplicación visual por los
-componentes oficiales de `core/ui` construidos en la Etapa 2:
-`AppStatTile` (elimina 7 `_StatTile` privados duplicados), `AppChip`,
-`AppBadge`, `AppAvatar`, `AppLoadingIndicator`, variantes de
-`AppButton`, `AppDialog`, `AppBottomSheet`, `AppSnackBar`, y adopción
-completa de `AppIcons` (agregando los íconos que falten). Sin crear
-funcionalidades nuevas, sin romper navegación ni lógica de negocio. Ver
-el handoff de esta sesión para el resumen completo de la migración.
+Recorrió **todos** los features de `apps/mobile/lib/features` (no solo
+los nuevos) y reemplazó duplicación visual por los componentes
+oficiales de `core/ui` construidos en la Etapa 2: adopción de
+`AppStatTile` (elimina `_StatTile`/tiles de estadísticas duplicados en
+`availability`, `contact_management`, `provider_dashboard`,
+`provider_profile`, `provider_services`, `schedule`, `security`),
+`AppBadge` (unifica badges de estado ad hoc en `address_management`,
+`orders`, `payments`, `provider_services`, `security`, `trust`,
+`verification`) y `AppAvatar` (unifica avatares circulares con
+iniciales/imagen en `chat`, `home`, `profile`, `provider_profile`).
+También se ajustaron `BRANDING.md`/`README.md` de `core/ui` para
+documentar el uso real de estos tres componentes y se afinaron
+pequeños detalles de los propios `AppAvatar`/`AppBadge`/`AppStatTile`
+(parámetros nuevos necesarios para cubrir los casos de uso encontrados
+en los features). Sin crear funcionalidades nuevas, sin romper
+navegación ni lógica de negocio, sin tocar mocks. **58 archivos
+modificados, 394 inserciones / 644 eliminaciones** (reducción neta de
+~250 líneas de duplicación). Verificado con `flutter analyze` (`No
+issues found!`), `flutter test` (748/748, sin cambios de
+comportamiento) y `dart format .`.
 
 ## 11. Sugerencia de versionado (aún no aplicada)
 
@@ -1228,3 +1261,45 @@ anteriores (que se conservan como registro histórico, sin eliminar).
   windows`) y todas las restricciones arquitectónicas se mantienen
   exactamente iguales — solo cambia el nivel de detalle del reporte
   intermedio, no el proceso de calidad.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 53 consolidado — Sprint 2 Etapa 3 cerrada, Etapa 4 en curso)
+
+Este es el handoff vigente — más reciente que los trece bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+
+- **El Prompt 53 (Sprint 2, Etapa 3 — adopción global del Design
+  System) fue aprobado explícitamente por el usuario**, verificado con
+  `dart format .` (0 cambios), `flutter analyze` (`No issues found!`),
+  `flutter test` (748/748) y `git status`.
+- Se creó un **único commit exclusivo del Prompt 53** con el mensaje
+  `Prompt 53 - Global Design System adoption (AppStatTile/AppBadge/
+  AppAvatar)` (ver `git log -1` para el hash exacto — no se fija aquí
+  el hash literal por la misma razón de auto-referencia explicada en
+  secciones anteriores). Incluye los 58 archivos migrados (ver detalle
+  en la sección 4, Sprint 2 Etapa 3) y la actualización de este
+  documento — **sin incluir `Logo oficial grupo.svg` ni la carpeta
+  `.idea/`** (ambos siguen sin trackear, ver sección 7). No hubo cambio
+  de navegación ni de lógica de negocio.
+- `git status` tras el commit quedó exactamente:
+  ```
+  On branch main
+  Untracked files:
+          .idea/
+          Logo oficial grupo.svg
+  nothing added to commit but untracked files present
+  ```
+- **A partir de esta sesión comienza la Etapa 4 — Refactor global de
+  layouts y estructuras reutilizables** (Prompt 54): auditar
+  `apps/mobile/lib/features` en busca de estructuras repetidas (Page
+  Headers, Section Headers, Sections, Info Rows, Action Rows, Page
+  Padding, Scroll Body), extraer los layouts que realmente aporten
+  reutilización a `core/ui/widgets/`, migrar todos los features, limpiar
+  código muerto y documentar en `core/ui/README.md`/`BRANDING.md`. Es
+  un refactor estructural, no funcional — sin nuevas pantallas, sin
+  cambios de navegación ni de lógica de negocio, sin tocar branding ni
+  el logo. **Esta etapa queda pendiente de aprobación del usuario antes
+  de commitear** (no sigue la disciplina "1 prompt = 1 commit" hasta
+  que se apruebe explícitamente).
+- Si el working tree tiene cambios sin commitear más allá del logo y
+  `.idea/`, **no asumir que corresponden a una etapa posterior a la 4**
+  — confirmar con el usuario antes de continuar.

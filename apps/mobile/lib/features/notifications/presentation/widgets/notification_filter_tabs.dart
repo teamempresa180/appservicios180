@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_chip.dart';
 
 /// The five purely-visual tabs this screen can show. No real filtering
 /// happens when a tab is selected — see the feature README (same
@@ -54,10 +55,10 @@ class _NotificationFilterTabsState extends State<NotificationFilterTabs> {
       child: Row(
         children: [
           for (final tab in NotificationTab.values) ...[
-            ChoiceChip(
-              label: Text(tab.label),
+            AppChip(
+              label: tab.label,
               selected: _selected == tab,
-              onSelected: (_) => setState(() => _selected = tab),
+              onTap: () => setState(() => _selected = tab),
             ),
             const SizedBox(width: AppSpacing.space8),
           ],

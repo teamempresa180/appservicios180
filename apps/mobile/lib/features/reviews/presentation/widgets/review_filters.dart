@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_chip.dart';
 
 /// The six purely-visual filters this screen can show. No real
 /// filtering happens when one is selected — see the feature README
@@ -54,10 +55,10 @@ class _ReviewFiltersState extends State<ReviewFilters> {
       child: Row(
         children: [
           for (final filter in ReviewFilter.values) ...[
-            ChoiceChip(
-              label: Text(filter.label),
+            AppChip(
+              label: filter.label,
               selected: _selected == filter,
-              onSelected: (_) => setState(() => _selected = filter),
+              onTap: () => setState(() => _selected = filter),
             ),
             const SizedBox(width: AppSpacing.space8),
           ],

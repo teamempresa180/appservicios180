@@ -13,10 +13,68 @@ a propósito, ver `PROJECT_STATUS.md` sección 7).
   `AppChip`, `AppDialog`, `AppBottomSheet`, `AppSnackBar`, `AppAvatar`,
   `AppBadge`, `AppLoadingIndicator`, `AppStatTile`) — **sin tocar
   ningún feature**. Las pantallas heredan la identidad automáticamente.
-- Lo que sigue pendiente (retro-aplicar `AppChip`/`AppStatTile`/
-  `AppIcons`/`AppImageSize` dentro de los features existentes, agregar
-  Poppins, decidir sobre el logo) se detalla al final de este
-  documento.
+- **Etapa 3 — Adopción global del Design System, completada.** El
+  Design System ya no es solo la fuente de verdad *disponible* — es la
+  fuente de verdad *en uso*: se recorrieron los ~50 features existentes
+  (no solo los construidos en Sprint 2) y se reemplazó toda
+  duplicación visual real por los componentes oficiales. Detalle
+  completo en la sección "Adopción global (Etapa 3)" más abajo.
+- Lo que sigue pendiente (agregar Poppins, decidir sobre el logo,
+  retro-aplicar `AppImageSize`) se detalla al final de este documento.
+
+## Adopción global (Etapa 3)
+
+Recorrida completa de `apps/mobile/lib/features/` — no solo los
+features del Sprint 2. Reemplazos aplicados donde existía duplicación
+**real** (mismo widget, misma estructura, repetido en más de un
+archivo):
+
+- **`AppStatTile`**: los 7 `_StatTile` privados idénticos
+  (`security`, `contact_management`, `schedule`, `provider_services`,
+  `availability`, `provider_dashboard`, `provider_profile`) fueron
+  **eliminados** — sus 7 pantallas ahora usan `AppStatTile` (que ganó
+  un parámetro `icon` opcional para cubrir la única variante entre los
+  siete, la de `provider_profile`, sin perder esa diferencia).
+- **`AppChip`**: los 5 usos de `ChoiceChip`/`Chip` (`notifications`,
+  `reviews`, `orders`, `request_service`, `provider_profile`) fueron
+  **reemplazados**.
+- **`AppBadge`**: los 10 "pill" de estado duplicados (5 con nombre
+  propio — `OrderStatusBadge`/`PaymentStatusBadge`/
+  `ServiceStatusBadge`/`DefaultAddressBadge`, y 5 en línea —
+  `credential_card`/`auth_method_card`/`contact_card`/
+  `schedule_block_card`/`trust_score_card`/`verification_status`)
+  fueron **reemplazados**. El color sigue calculándose en cada feature
+  (el `switch` sobre el enum de dominio es lógica de negocio que
+  `core/ui` no debe conocer) — solo el render del pill se delegó a
+  `AppBadge`, que ganó un parámetro `color` opcional para recibir ese
+  color ya resuelto. `NotificationStatusBadge` (un punto de 8×8, no un
+  pill con texto) se dejó intacto — no es el mismo widget.
+- **`AppAvatar`**: los 10 `CircleAvatar` que representaban una persona
+  (`provider_avatar`, `profile_avatar`, `review_card`, `chat`'s
+  `provider_header`, `payment_information`, `quote`'s
+  `provider_resume`, `request_service`'s `provider_summary`,
+  `service_detail`'s `provider_information`, `marketplace`'s
+  `provider_card`, `home_header`) fueron **reemplazados** — el diseño
+  de `AppAvatar` en sí se ajustó para igualar exactamente el patrón que
+  esos 10 ya compartían (`Icons.person`, `context.colors.primary`/
+  `onPrimary`, tamaño de ícono = radio), así que no hubo ningún cambio
+  visual. `NotificationIcon`'s `CircleAvatar` se dejó intacto — no
+  representa una persona, representa una categoría de notificación.
+- **`AppButton`**: el `TextButton` crudo de `login`/`register` (pies de
+  formulario) fue **reemplazado** por `AppButton(variant:
+  AppButtonVariant.text, expand: false)`.
+- **`AppLoadingIndicator`**, **`AppDialog`**, **`AppBottomSheet`**,
+  **`AppSnackBar`**: sin cambios — la auditoría confirmó que ningún
+  feature tenía `CircularProgressIndicator`/`showDialog`+`AlertDialog`/
+  `showModalBottomSheet`/`SnackBar` manual duplicado para reemplazar.
+- **`AppIcons`**: adoptado en los 16 usos de `Icons.*` que coincidían
+  exactamente con un valor ya definido (`search`, `edit_outlined`,
+  `delete_outline`, `info_outline`, `chevron_right`, `more_horiz`,
+  `check_circle_outline` → `AppIcons.success`). El resto de los
+  `Icons.*` restantes (glifos específicos de dominio sin equivalente
+  curado — p. ej. `Icons.email_outlined`, `Icons.workspace_premium_
+  outlined`) se dejaron como están; agregarlos todos a `AppIcons`
+  desnaturalizaría el propósito de un set *curado*.
 
 ## Identidad
 
@@ -139,9 +197,9 @@ el cross-fade de carga; solo el `ButtonStyle` (de qué rol del
 - **Text**: `TextButton` — sin fondo/borde, texto `primary` — para
   acciones de baja jerarquía (p. ej. pies de formulario).
 
-**No retro-aplicado** en `login`/`register` (siguen usando `TextButton`
-crudo) — reemplazarlos por `AppButton(variant: .text)` es trabajo de
-feature, fuera de alcance de esta Etapa (ver Fase 4).
+**Adoptado globalmente en la Etapa 3**: `login`/`register` ya usan
+`AppButton(variant: AppButtonVariant.text)` en sus pies de formulario
+— el `TextButton` crudo fue eliminado.
 
 ## Campos
 
@@ -162,38 +220,46 @@ la paleta oficial).
 
 Construido como `AppDialog` (`AppDialog.show(...)`): fondo Surface
 (heredado del `Dialog` de Material), radio 16, elevación `level8`,
-ancho máximo 400px. **No usado en ningún feature todavía** — solo el
-componente existe.
+ancho máximo 400px. **No usado en ningún feature todavía** — la
+auditoría de la Etapa 3 confirmó que ningún feature tenía un
+`showDialog`+`AlertDialog` manual que reemplazar; el componente existe,
+listo para cuando algún feature lo necesite.
 
 ## Bottom Sheets
 
 Construido como `AppBottomSheet` (`AppBottomSheet.show(...)`): fondo
 Surface, esquinas superiores radio 20, manija de arrastre (32×4,
 `outline`), elevación `level4`. **No usado en ningún feature
-todavía**.
+todavía** — misma razón que `AppDialog`.
 
 ## Chips
 
-Construido como `AppChip`: forma píldora (`radiusPill`), fondo
-`secondaryContainer` (no seleccionado) / `primaryContainer`
-(seleccionado), texto en el `on*Container` correspondiente. **No
-reemplaza ningún chip existente** (p. ej. `CategoryChip` en
-`marketplace`) — solo el componente existe, listo para adoptarse en una
-Etapa posterior.
+Adoptado globalmente en la Etapa 3: forma píldora (`radiusPill`),
+fondo `secondaryContainer` (no seleccionado) / `primaryContainer`
+(seleccionado), texto en el `on*Container` correspondiente. Reemplaza
+los 5 `ChoiceChip`/`Chip` que existían en `notifications`/`reviews`/
+`orders`/`request_service`/`provider_profile`. `CategoryChip` en
+`marketplace` **no** es un chip real de Material (es una tarjeta
+icono+etiqueta con nombre coincidente) — no calificaba para el
+reemplazo, se dejó intacto.
 
 ## SnackBar, Avatar, Badge, Loading Indicator (nuevos, no especificados originalmente en Fase 4 pero pedidos en la Etapa 2)
 
 - **`AppSnackBar`**: 4 tonos semánticos (`info`/`success`/`warning`/
   `error`), color de fondo tomado directamente de
   `AppBrandPalette.*500`, radio 8, comportamiento flotante.
-- **`AppAvatar`**: círculo con iniciales o ícono, colores
-  `secondaryContainer`/`onSecondaryContainer` — sin foto real (no existe
-  almacenamiento de imágenes en el proyecto).
-- **`AppBadge`**: punto/etiqueta pequeña con 5 tonos (`neutral`/
-  `info`/`success`/`warning`/`error`), mismo patrón de color que ya
-  usan `OrderStatusBadge`/`ContactCard`/etc. en los features — un
-  primitivo genérico sobre el que esos badges ad hoc podrían
-  reconstruirse en una Etapa posterior (no retrofitado).
+- **`AppAvatar`**: círculo con iniciales o ícono. Rediseñado en la
+  Etapa 3 para igualar exactamente el patrón que 10 features ya
+  compartían (`Icons.person`, `context.colors.primary`/`onPrimary`,
+  tamaño de ícono = radio) — **adoptado globalmente**, cero cambios
+  visuales.
+- **`AppBadge`**: pastilla de estado con 5 tonos (`neutral`/`info`/
+  `success`/`warning`/`error`) o un `color` ya resuelto por el caller.
+  **Adoptado globalmente en la Etapa 3** por los 10 badges de estado
+  que antes duplicaban el mismo `Container`+`BoxDecoration` — el
+  `switch` sobre cada enum de dominio permanece en cada feature (lógica
+  de negocio, no le corresponde a `core/ui`), solo el render del pill
+  se delegó aquí.
 - **`AppLoadingIndicator`**: el spinner de `AppLoading` extraído a su
   propio widget (sin mensaje), para poder usarse solo en contextos
   donde no aplica el `Center`+mensaje de `AppLoading`.
@@ -210,25 +276,23 @@ de alcance de esta Etapa.
 
 ## Qué queda para las siguientes Etapas del Sprint 2
 
-Completado en la Etapa 2 (ver arriba): `ColorScheme`/`textTheme`
-conectados, `AppButton` con 4 variantes, `AppChip`/`AppDialog`/
-`AppBottomSheet`/`AppSnackBar`/`AppAvatar`/`AppBadge`/
-`AppLoadingIndicator`/`AppStatTile` construidos, curva de "más
-opciones" resuelta. Pendiente para Etapas posteriores:
+Completado en la Etapa 2: `ColorScheme`/`textTheme` conectados,
+`AppButton` con 4 variantes, `AppChip`/`AppDialog`/`AppBottomSheet`/
+`AppSnackBar`/`AppAvatar`/`AppBadge`/`AppLoadingIndicator`/
+`AppStatTile` construidos, curva de "más opciones" resuelta.
+Completado en la Etapa 3: adopción global de `AppStatTile`/`AppChip`/
+`AppBadge`/`AppAvatar`/variantes de `AppButton`/`AppIcons` (donde
+existía un equivalente exacto) en todos los features existentes (ver
+"Adopción global (Etapa 3)" arriba). Pendiente para Etapas
+posteriores:
 
 1. Aprobar y agregar `google_fonts` (o assets) para Poppins
    (Display/Headline/Title siguen en Roboto hasta esa aprobación).
 2. Retro-aplicar `AppImageSize` en los 12 archivos que la auditoría
    señaló (`marketplace`/`service_detail`/`provider_profile`/
-   `verification`/`request_service`).
-3. Retro-aplicar `AppStatTile` en los 7 features que hoy reimplementan
-   `_StatTile` de forma idéntica.
-4. Adoptar `AppChip` en `marketplace`'s `CategoryChip` y cualquier otro
-   chip ad hoc existente.
-5. Adoptar `AppIcons` en los ~98 usos de `Icons.*` crudos detectados.
-6. Reemplazar el `TextButton` crudo de `login`/`register` por
-   `AppButton(variant: AppButtonVariant.text)`.
-7. Adoptar `AppDialog`/`AppBottomSheet`/`AppSnackBar` donde un feature
-   necesite ese patrón (ninguno los usa todavía).
-8. Decidir si el logo aparece en `SplashPage`/`AppTopBar` y, si es así,
+   `verification`/`request_service`) — trabajo de layout, no de
+   duplicación de widgets, por eso quedó fuera de la Etapa 3.
+3. Adoptar `AppDialog`/`AppBottomSheet`/`AppSnackBar` donde algún
+   feature futuro necesite ese patrón (ninguno lo necesita todavía).
+4. Decidir si el logo aparece en `SplashPage`/`AppTopBar` y, si es así,
    agregarlo al repositorio (sigue sin trackear hasta esa decisión).

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
+import '../../../../core/ui/widgets/app_stat_tile.dart';
 import '../../models/provider_dashboard_display.dart';
 
 /// Order/rating statistics. `activeOrdersCount`/`completedOrdersCount`/
@@ -29,19 +29,19 @@ class DashboardStatistics extends StatelessWidget {
             mainAxisSpacing: AppSpacing.space8,
             crossAxisSpacing: AppSpacing.space8,
             children: [
-              _StatTile(
+              AppStatTile(
                 label: 'Órdenes activas',
                 value: '${data.activeOrdersCount}',
               ),
-              _StatTile(
+              AppStatTile(
                 label: 'Órdenes finalizadas',
                 value: '${data.completedOrdersCount}',
               ),
-              _StatTile(
+              AppStatTile(
                 label: 'Solicitudes pendientes',
                 value: '${data.pendingRequestsCount}',
               ),
-              _StatTile(
+              AppStatTile(
                 label: 'Calificación promedio',
                 value: data.averageRating.toStringAsFixed(1),
               ),
@@ -49,25 +49,6 @@ class DashboardStatistics extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(value, style: context.textStyles.titleMedium),
-        Text(label, style: context.textStyles.bodySmall),
-      ],
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../mock/mock_search_data.dart';
 import '../../models/search_result.dart';
@@ -57,7 +58,7 @@ class SearchPage extends StatelessWidget {
         return const SearchEmptyState(
           title: 'Busca un servicio',
           description: 'Escribe algo para comenzar a buscar.',
-          icon: Icons.search,
+          icon: AppIcons.search,
         );
       case SearchViewState.noResults:
         return const SearchEmptyState(

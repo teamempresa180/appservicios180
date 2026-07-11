@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
@@ -27,7 +28,7 @@ class ProviderPerformance extends StatelessWidget {
             value: data.averageResponseTime,
           ),
           _PerformanceRow(
-            icon: Icons.check_circle_outline,
+            icon: AppIcons.success,
             label: 'Tasa de aceptación',
             value: '${(data.acceptanceRate * 100).round()}%',
           ),

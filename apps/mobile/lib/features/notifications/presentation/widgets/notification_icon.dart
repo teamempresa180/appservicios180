@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../models/notification_display.dart';
 
@@ -23,7 +24,7 @@ class NotificationIcon extends StatelessWidget {
       case NotificationCategory.chat:
         return Icons.chat_bubble_outline;
       case NotificationCategory.system:
-        return Icons.info_outline;
+        return AppIcons.info;
     }
   }
 

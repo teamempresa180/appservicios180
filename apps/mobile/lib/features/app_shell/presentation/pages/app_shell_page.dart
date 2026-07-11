@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/animations/fade_in.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../marketplace/presentation/pages/marketplace_page.dart';
@@ -42,7 +43,7 @@ class AppShellPage extends StatefulWidget {
     ),
     ShellNavigationItem(
       icon: Icons.search_outlined,
-      selectedIcon: Icons.search,
+      selectedIcon: AppIcons.search,
       label: 'Buscar',
       index: 1,
     ),
