@@ -55,7 +55,25 @@ async function main(): Promise<void> {
     update: {},
   });
 
-  console.log('Seed complete: 1 Identity, 1 Authentication, 1 Credential.');
+  await prisma.profileModel.upsert({
+    where: { id: 'seed-profile-1' },
+    create: {
+      id: 'seed-profile-1',
+      identityId: identity.id,
+      displayName: 'Dev Seed User',
+      avatarUrl: null,
+      bio: null,
+      visibility: 'PUBLIC',
+      status: 'ACTIVE',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+
+  console.log(
+    'Seed complete: 1 Identity, 1 Authentication, 1 Credential, 1 Profile.',
+  );
 }
 
 main()

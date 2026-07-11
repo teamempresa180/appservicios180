@@ -1,8 +1,9 @@
-// Prisma schema — Sprint 3, Etapa 2 (Identity & Access).
+// Prisma schema — Sprint 3, Etapa 2 (Identity & Access) + Etapa 3 (Profile).
 //
 // Only the persistence shape for `identity`/`authentication`/
-// `credentials` (the first bounded context implemented end-to-end).
-// Every other module's tables are added when that module gets its own
+// `credentials`/`profiles` (bounded contexts implemented end-to-end so
+// far). `Contact`/`Address` (rest of the Profiles bounded context) and
+// every other module's tables are added when that module gets its own
 // Infrastructure layer, following the roadmap in
 // `SPRINT3_PREPARATION.md` — not created speculatively here.
 //
@@ -76,6 +77,22 @@ enum CredentialStatus {
   @@map("credential_status")
 }
 
+enum ProfileVisibility {
+  PUBLIC
+  PRIVATE
+  CONTACTS_ONLY
+
+  @@map("profile_visibility")
+}
+
+enum ProfileStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+
+  @@map("profile_status")
+}
+
 model IdentityModel {
   id             String         @id
   fullName       String         @map("full_name")
@@ -88,6 +105,7 @@ model IdentityModel {
 
   authentications AuthenticationModel[]
   credentials     CredentialModel[]
+  profiles        ProfileModel[]
 
   @@map("identities")
 }
@@ -118,4 +136,21 @@ model CredentialModel {
 
   @@index([identityId])
   @@map("credentials")
+}
+
+model ProfileModel {
+  id          String            @id
+  identityId  String            @map("identity_id")
+  displayName String            @map("display_name")
+  avatarUrl   String?           @map("avatar_url")
+  bio         String?
+  visibility  ProfileVisibility
+  status      ProfileStatus
+  createdAt   DateTime          @map("created_at")
+  updatedAt   DateTime          @map("updated_at")
+
+  identity IdentityModel @relation(fields: [identityId], references: [id])
+
+  @@index([identityId])
+  @@map("profiles")
 }

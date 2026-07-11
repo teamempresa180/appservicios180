@@ -1,18 +1,26 @@
+import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ProfileRepository } from '../../domain/interfaces/profile-repository.interface';
-import { ProfileDto } from '../dto/profile.dto';
+import { ProfileId } from '../../domain/value-objects/profile-id.value-object';
 import { GetProfileQuery } from '../queries/get-profile.query';
+import { ProfileDto } from '../dto/profile.dto';
+import { ProfileMapper } from '../mappers/profile.mapper';
 
 /**
- * Use case skeleton. Dependencies are wired correctly; the orchestration
- * logic itself is intentionally not implemented in this phase.
+ * Fetches a single Profile by id. Throws `NotFoundException` instead
+ * of returning `null` — same pattern as `GetIdentityUseCase`, so the
+ * caller (a future controller) maps that to a 404 via
+ * `DomainExceptionFilter` without checking for `null` itself.
  */
 export class GetProfileUseCase {
   constructor(private readonly profileRepository: ProfileRepository) {}
 
-  execute(query: GetProfileQuery): Promise<ProfileDto | null> {
-    void this.profileRepository;
-    throw new Error(
-      `GetProfileUseCase.execute is not implemented yet (received: ${JSON.stringify(query)})`,
+  async execute(query: GetProfileQuery): Promise<ProfileDto> {
+    const profile = await this.profileRepository.findById(
+      ProfileId.fromString(query.id),
     );
+    if (!profile) {
+      throw new NotFoundException(`Profile ${query.id} not found`);
+    }
+    return ProfileMapper.toDto(profile);
   }
 }

@@ -15,11 +15,18 @@
 > código específico vive en `infrastructure/` de cada módulo. Primera
 > implementación real: bounded context Identity & Access
 > (`identity`/`authentication`/`credentials`) — **Application e
-> Infrastructure ya completos** (Use Cases reales, repositorios Prisma,
-> migración aplicada, 202 tests entre unit/integration/e2e). Sin
-> Controllers REST conectados todavía (fuera de alcance de esta etapa)
-> y **sin commitear** — pendiente de aprobación del usuario. Ver
-> `PROJECT_STATUS.md`, sección "Prompt 59", para el detalle completo.
+> Infrastructure completos, consolidados en el commit `b948fad`**
+> (Prompt 60, Fase 1).
+>
+> **Actualización (Prompt 60)**: siguiendo el orden de la sección 5
+> (Identity & Access → Profiles → Trust & Compliance → ...), se
+> implementó **`Profile`** (dentro del bounded context Profiles &
+> Contact) hasta Infrastructure, mismo patrón exacto que Identity &
+> Access. `Contact`/`Address` — el resto de este bounded context —
+> **siguen sin Application/Infrastructure real**, quedan para una
+> etapa futura. Sin Controllers REST conectados todavía y **sin
+> commitear** — pendiente de aprobación del usuario. Ver
+> `PROJECT_STATUS.md`, sección "Prompt 60", para el detalle completo.
 
 ## 1. Estado real del proyecto
 
