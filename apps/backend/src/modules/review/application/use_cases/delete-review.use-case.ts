@@ -1,16 +1,22 @@
+import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ReviewRepository } from '../../domain/interfaces/review-repository.interface';
+import { ReviewId } from '../../domain/value-objects/review-id.value-object';
 import { DeleteReviewCommand } from '../commands/delete-review.command';
 
 /**
- * Use case skeleton. Dependencies are wired correctly; the orchestration
- * logic itself is intentionally not implemented in this phase.
+ * Deletes an existing Review. No cascade rule is documented for what
+ * this means for aggregate reputation scores — same criterion as
+ * every other `Delete*UseCase`.
  */
 export class DeleteReviewUseCase {
   constructor(private readonly reviewRepository: ReviewRepository) {}
 
-  execute(command: DeleteReviewCommand): Promise<void> {
-    void this.reviewRepository;
-    void command;
-    throw new Error('Not implemented yet');
+  async execute(command: DeleteReviewCommand): Promise<void> {
+    const id = ReviewId.fromString(command.id);
+    const existing = await this.reviewRepository.findById(id);
+    if (!existing) {
+      throw new NotFoundException(`Review ${command.id} not found`);
+    }
+    await this.reviewRepository.delete(id);
   }
 }

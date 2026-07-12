@@ -1,17 +1,43 @@
+import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { Review } from '../../domain/entities/review.entity';
 import { ReviewRepository } from '../../domain/interfaces/review-repository.interface';
-import { ReviewDto } from '../dto/review.dto';
+import { ReviewId } from '../../domain/value-objects/review-id.value-object';
 import { UpdateReviewCommand } from '../commands/update-review.command';
+import { ReviewDto } from '../dto/review.dto';
+import { ReviewMapper } from '../mappers/review.mapper';
+import { ReviewValidator } from '../validators/review.validator';
 
 /**
- * Use case skeleton. Dependencies are wired correctly; the orchestration
- * logic itself is intentionally not implemented in this phase.
+ * Updates the mutable fields of an existing Review (`title`,
+ * `comment`) — `orderId`/`providerId`/`reviewerIdentityId`/`rating`/
+ * `status` are not offered by `UpdateReviewCommand`, so they stay
+ * untouched.
  */
 export class UpdateReviewUseCase {
   constructor(private readonly reviewRepository: ReviewRepository) {}
 
-  execute(command: UpdateReviewCommand): Promise<ReviewDto> {
-    void this.reviewRepository;
-    void command;
-    throw new Error('Not implemented yet');
+  async execute(command: UpdateReviewCommand): Promise<ReviewDto> {
+    ReviewValidator.validateUpdate(command);
+
+    const id = ReviewId.fromString(command.id);
+    const existing = await this.reviewRepository.findById(id);
+    if (!existing) {
+      throw new NotFoundException(`Review ${command.id} not found`);
+    }
+
+    const updated = new Review(existing.id, {
+      orderId: existing.orderId,
+      providerId: existing.providerId,
+      reviewerIdentityId: existing.reviewerIdentityId,
+      rating: existing.rating,
+      title: command.title ?? existing.title,
+      comment: command.comment ?? existing.comment,
+      status: existing.status,
+      createdAt: existing.createdAt,
+      updatedAt: new Date(),
+    });
+
+    await this.reviewRepository.save(updated);
+    return ReviewMapper.toDto(updated);
   }
 }

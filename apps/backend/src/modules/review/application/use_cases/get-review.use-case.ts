@@ -1,17 +1,21 @@
 import { ReviewRepository } from '../../domain/interfaces/review-repository.interface';
+import { ReviewId } from '../../domain/value-objects/review-id.value-object';
 import { ReviewDto } from '../dto/review.dto';
+import { ReviewMapper } from '../mappers/review.mapper';
 import { GetReviewQuery } from '../queries/get-review.query';
 
 /**
- * Use case skeleton. Dependencies are wired correctly; the orchestration
- * logic itself is intentionally not implemented in this phase.
+ * Fetches a single Review by id, returning `null` when not found —
+ * matches the `Promise<ReviewDto | null>` signature already declared
+ * for this use case.
  */
 export class GetReviewUseCase {
   constructor(private readonly reviewRepository: ReviewRepository) {}
 
-  execute(query: GetReviewQuery): Promise<ReviewDto | null> {
-    void this.reviewRepository;
-    void query;
-    throw new Error('Not implemented yet');
+  async execute(query: GetReviewQuery): Promise<ReviewDto | null> {
+    const review = await this.reviewRepository.findById(
+      ReviewId.fromString(query.id),
+    );
+    return review ? ReviewMapper.toDto(review) : null;
   }
 }

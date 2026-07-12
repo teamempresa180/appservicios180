@@ -245,7 +245,7 @@ async function main(): Promise<void> {
     update: {},
   });
 
-  await prisma.quoteModel.upsert({
+  const quote = await prisma.quoteModel.upsert({
     where: { id: 'seed-quote-1' },
     create: {
       id: 'seed-quote-1',
@@ -262,8 +262,42 @@ async function main(): Promise<void> {
     update: {},
   });
 
+  await prisma.paymentModel.upsert({
+    where: { id: 'seed-payment-1' },
+    create: {
+      id: 'seed-payment-1',
+      quoteId: quote.id,
+      orderId: order.id,
+      payerIdentityId: identity.id,
+      receiverProviderId: provider.id,
+      amount: 50,
+      method: 'CARD',
+      status: 'PENDING',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+
+  await prisma.reviewModel.upsert({
+    where: { id: 'seed-review-1' },
+    create: {
+      id: 'seed-review-1',
+      orderId: order.id,
+      providerId: provider.id,
+      reviewerIdentityId: identity.id,
+      rating: 5,
+      title: 'Great service',
+      comment: 'Very professional and on time.',
+      status: 'PENDING',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+
   console.log(
-    'Seed complete: 1 Identity, 1 Authentication, 1 Credential, 1 Profile, 1 Contact, 1 Address, 1 Verification, 1 Trust, 1 Audit, 1 Provider, 1 Availability, 1 Schedule, 1 Category, 1 Service, 1 Order, 1 Quote.',
+    'Seed complete: 1 Identity, 1 Authentication, 1 Credential, 1 Profile, 1 Contact, 1 Address, 1 Verification, 1 Trust, 1 Audit, 1 Provider, 1 Availability, 1 Schedule, 1 Category, 1 Service, 1 Order, 1 Quote, 1 Payment, 1 Review.',
   );
 }
 

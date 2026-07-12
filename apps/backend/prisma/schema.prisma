@@ -1,15 +1,27 @@
 // Prisma schema — Sprint 3, Etapa 2 (Identity & Access) + Etapa 3
 // (Profile) + Etapa 4 (Contact & Address) + Etapa 5 (Verification,
 // Trust & Audit) + Etapa 6 (Category & Service) + Etapa 7 (Provider,
-// Availability & Schedule) + Etapa 8 (Fulfillment: Order & Quote).
+// Availability & Schedule) + Etapa 8 (Fulfillment: Order & Quote) +
+// Etapa 9 (Payments & Reputation: Payment & Review).
 //
 // Only the persistence shape for `identity`/`authentication`/
 // `credentials`/`profiles`/`contact`/`address`/`verification`/
 // `trust`/`audit`/`category`/`service`/`provider`/`availability`/
-// `schedule`/`order`/`quote` (bounded contexts implemented end-to-end
-// so far). Every other module's tables are added when that module
-// gets its own Infrastructure layer, following the roadmap in
-// `SPRINT3_PREPARATION.md` — not created speculatively here.
+// `schedule`/`order`/`quote`/`payment`/`review` (bounded contexts
+// implemented end-to-end so far). Every other module's tables are
+// added when that module gets its own Infrastructure layer, following
+// the roadmap in `SPRINT3_PREPARATION.md` — not created speculatively
+// here.
+//
+// `PaymentModel.quoteId`/`orderId`/`payerIdentityId`/
+// `receiverProviderId` and `ReviewModel.orderId`/`providerId`/
+// `reviewerIdentityId` are real `@relation`s — Quote, Order, Identity
+// and Provider all already had tables by the time Payment/Review were
+// implemented (Sprint 3, Etapa 9), so no relation was deferred.
+// Neither `PaymentModel.quoteId` nor `ReviewModel.orderId` is
+// `@unique`: `PaymentRepository.findByQuoteId` and
+// `ReviewRepository.findByOrderId` both return arrays, confirmed from
+// the domain code itself — no 1:1 invariant was invented.
 //
 // `OrderModel.identityId`/`providerId`/`serviceId` and
 // `QuoteModel.orderId`/`providerId` are real `@relation`s — Identity,
@@ -336,6 +348,34 @@ enum QuoteType {
   @@map("quote_type")
 }
 
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+
+  @@map("payment_status")
+}
+
+enum PaymentMethod {
+  CARD
+  BANK_TRANSFER
+  CASH
+  DIGITAL_WALLET
+  OTHER
+
+  @@map("payment_method")
+}
+
+enum ReviewStatus {
+  PENDING
+  PUBLISHED
+  HIDDEN
+  ARCHIVED
+
+  @@map("review_status")
+}
+
 model IdentityModel {
   id             String         @id
   fullName       String         @map("full_name")
@@ -356,6 +396,8 @@ model IdentityModel {
   auditRecords    AuditModel[]
   provider        ProviderModel?
   orders          OrderModel[]
+  paymentsPaid    PaymentModel[]
+  reviewsWritten  ReviewModel[]
 
   @@map("identities")
 }
@@ -540,6 +582,8 @@ model ProviderModel {
   schedules     ScheduleModel[]
   orders        OrderModel[]
   quotes        QuoteModel[]
+  paymentsReceived PaymentModel[]
+  reviewsReceived  ReviewModel[]
 
   @@index([providerProfileId])
   @@map("providers")
@@ -594,6 +638,8 @@ model OrderModel {
   provider ProviderModel @relation(fields: [providerId], references: [id])
   service  ServiceModel  @relation(fields: [serviceId], references: [id])
   quotes   QuoteModel[]
+  payments PaymentModel[]
+  reviews  ReviewModel[]
 
   @@index([identityId])
   @@index([providerId])
@@ -613,10 +659,57 @@ model QuoteModel {
   createdAt         DateTime    @map("created_at")
   updatedAt         DateTime    @map("updated_at")
 
-  order    OrderModel    @relation(fields: [orderId], references: [id])
-  provider ProviderModel @relation(fields: [providerId], references: [id])
+  order    OrderModel     @relation(fields: [orderId], references: [id])
+  provider ProviderModel  @relation(fields: [providerId], references: [id])
+  payments PaymentModel[]
 
   @@index([orderId])
   @@index([providerId])
   @@map("quotes")
+}
+
+model PaymentModel {
+  id                 String        @id
+  quoteId            String        @map("quote_id")
+  orderId            String        @map("order_id")
+  payerIdentityId    String        @map("payer_identity_id")
+  receiverProviderId String        @map("receiver_provider_id")
+  amount             Float
+  method             PaymentMethod
+  status             PaymentStatus
+  createdAt          DateTime      @map("created_at")
+  updatedAt          DateTime      @map("updated_at")
+
+  quote           QuoteModel    @relation(fields: [quoteId], references: [id])
+  order           OrderModel    @relation(fields: [orderId], references: [id])
+  payerIdentity   IdentityModel @relation(fields: [payerIdentityId], references: [id])
+  receiverProvider ProviderModel @relation(fields: [receiverProviderId], references: [id])
+
+  @@index([quoteId])
+  @@index([orderId])
+  @@index([payerIdentityId])
+  @@index([receiverProviderId])
+  @@map("payments")
+}
+
+model ReviewModel {
+  id                 String       @id
+  orderId            String       @map("order_id")
+  providerId         String       @map("provider_id")
+  reviewerIdentityId String       @map("reviewer_identity_id")
+  rating             Float
+  title              String
+  comment            String
+  status             ReviewStatus
+  createdAt          DateTime     @map("created_at")
+  updatedAt          DateTime     @map("updated_at")
+
+  order            OrderModel    @relation(fields: [orderId], references: [id])
+  provider         ProviderModel @relation(fields: [providerId], references: [id])
+  reviewerIdentity IdentityModel @relation(fields: [reviewerIdentityId], references: [id])
+
+  @@index([orderId])
+  @@index([providerId])
+  @@index([reviewerIdentityId])
+  @@map("reviews")
 }

@@ -92,7 +92,20 @@ Cada módulo tiene `application/{commands,queries,use_cases,dto,mappers}/`.
   desde el dominio existente, no desde notas de sesiones previas.
   Tampoco hay comando/caso de uso Delete en ninguno de los dos módulos
   (no estaba en el skeleton). Ver "Sprint 3 — Etapa 8" más abajo.
-- **Los otros 7 módulos** — placeholder: `execute()` sigue lanzando
+- **Payment, Review** (bounded context Payments & Reputation) — ✅
+  mismo tratamiento: Use Cases reales, validador estructural, mappers.
+  `CreatePaymentUseCase` verifica Quote, Order, Identity (pagador) y
+  Provider (receptor) reales; `CreateReviewUseCase` verifica Order,
+  Provider e Identity (reviewer) reales. **Hallazgo de auditoría: no
+  existe invariante de unicidad Quote↔Payment ni Order↔Review** —
+  `PaymentRepository.findByQuoteId` y `ReviewRepository.findByOrderId`
+  devuelven arrays, confirmado desde el dominio existente. `Payment`
+  tiene comando Cancel (sin Delete, igual que `Order`); `Review` sí
+  tiene comando Delete (a diferencia de `Order`/`Quote` — estaba en su
+  skeleton original). `ReviewRating.of()` no valida escala (según su
+  propio comentario de dominio), así que `ReviewValidator` tampoco
+  inventa un rango 1-5. Ver "Sprint 3 — Etapa 9" más abajo.
+- **Los otros 5 módulos** — placeholder: `execute()` sigue lanzando
   `Error("Not implemented yet")`, intencional, sin tocar todavía.
 
 ### Presentation — ✅ 100% completo (22 controllers REST, sin lógica real)
@@ -104,7 +117,7 @@ propósito — **conectar Application/Infrastructure reales a los
 Controllers REST es trabajo explícitamente fuera de alcance de Sprint 3
 Etapa 2**, quedará para una etapa futura.
 
-### Infrastructure — 🟡 Parcial: Identity & Access + Profiles & Contact + Trust & Compliance + Marketplace + Fulfillment completos, resto reservado
+### Infrastructure — 🟡 Parcial: Identity & Access + Profiles & Contact + Trust & Compliance + Marketplace + Fulfillment + Payments & Reputation completos, resto reservado
 - **Identity, Authentication, Credentials** — ✅ Repositorios reales
   (`Prisma*Repository`), mappers Domain↔Prisma, wireados por DI en sus
   `*.module.ts` vía Symbol tokens (`IDENTITY_REPOSITORY`,
@@ -148,24 +161,35 @@ Etapa 2**, quedará para una etapa futura.
   `QuoteModel.orderId` es una columna indexada normal (no `@unique`):
   una Order puede recibir múltiples Quotes. **Con esto, el bounded
   context Fulfillment queda completo hasta Infrastructure.**
+- **Payment, Review** — ✅ mismo tratamiento: `Prisma*Repository` +
+  mapper Domain↔Prisma, wireados vía `PAYMENT_REPOSITORY`/
+  `REVIEW_REPOSITORY`. `PaymentModel.quoteId`/`orderId`/
+  `payerIdentityId`/`receiverProviderId` y `ReviewModel.orderId`/
+  `providerId`/`reviewerIdentityId` son `@relation`es reales desde el
+  inicio — Quote, Order, Identity y Provider ya tenían tabla cuando se
+  implementó este prompt, ninguna referencia quedó diferida. Ni
+  `PaymentModel.quoteId` ni `ReviewModel.orderId` son `@unique`: un
+  Quote puede tener múltiples Payments, una Order puede recibir
+  múltiples Reviews. **Con esto, el bounded context Payments &
+  Reputation queda completo hasta Infrastructure.**
 - **Persistencia** — ✅ Prisma + PostgreSQL, oficial desde Prompt 59
   (ver "Decisión de persistencia" más abajo). `prisma/schema.prisma`
-  (16 modelos + 32 enums tras Prompt 65), 7 migraciones reales
+  (18 modelos + 35 enums tras Prompt 66), 8 migraciones reales
   generadas contra Postgres en Docker, seed sintético (1 Identity + 1
   Authentication + 1 Credential + 1 Profile + 1 Contact + 1 Address +
   1 Verification + 1 Trust + 1 Audit + 1 Provider + 1 Availability +
-  1 Schedule + 1 Category + 1 Service + 1 Order + 1 Quote),
-  `PrismaService` app-wide con conexión lazy (no bloquea
+  1 Schedule + 1 Category + 1 Service + 1 Order + 1 Quote + 1 Payment +
+  1 Review), `PrismaService` app-wide con conexión lazy (no bloquea
   build/test/e2e sin DB viva).
-- **Los otros 7 módulos** — carpetas vacías, reservadas, sin tocar.
+- **Los otros 5 módulos** — carpetas vacías, reservadas, sin tocar.
 
-### Verificación backend (último estado conocido — Sprint 3 Etapa 8, Prompt 65)
+### Verificación backend (último estado conocido — Sprint 3 Etapa 9, Prompt 66)
 ```
 npm run build          ✅
 npm run lint            ✅ 0 errores, 0 warnings
-npm test                 ✅ 108 suites, 466/466 tests
+npm test                 ✅ 114 suites, 513/513 tests
 npm run test:e2e        ✅ 1/1
-npm run test:integration ✅ 16 suites, 99/99 tests (requiere Postgres vivo)
+npm run test:integration ✅ 18 suites, 117/117 tests (requiere Postgres vivo)
 ```
 
 ## 4. Estado de Flutter (`apps/mobile`)
@@ -2616,4 +2640,182 @@ hash y el detalle del commit).
   `test:integration` de Order/Quote), se detuvo al cierre de esa
   sesión, y se volvió a levantar únicamente para las verificaciones de
   `test:integration` de la Fase 1 del Prompt 66 — sintético/desechable,
+  sin datos reales.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 66 — Sprint 3 Etapa 9, Payments & Reputation: Payment & Review — consolidado)
+
+Este es el handoff vigente — más reciente que los veintiséis bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+**El Prompt 66 fue aprobado por el usuario y consolidado en el Prompt
+67** (Fase 1 — ver la sección de cierre "Prompt 67" más abajo para el
+hash y el detalle del commit).
+
+- **Fase 0**: verificado que el repositorio coincidía exactamente con
+  el cierre del Prompt 65 (último commit = Prompt 64 `65cead2`,
+  working tree con el trabajo de Prompt 65 sin commitear, contenedor
+  `appservicios-pg-temp` detenido). `PROJECT_STATUS.md`/
+  `SPRINT3_PREPARATION.md` revisados. Sin cambios de código en esta
+  fase.
+- **Fase 1 (Consolidación Prompt 65)**: `npm run build`/`lint`/`test`
+  (466/466)/`test:integration` (99/99)/`test:e2e` (1/1) +
+  `flutter analyze`/`test` (748/748)/`build windows`, todos ✅.
+  Contenedor Docker levantado solo para `test:integration` y detenido
+  inmediatamente después. **Commit único `eada935`** ("Sprint 3, Etapa
+  8: Order & Quote (Fulfillment) hasta Infrastructure"), excluyendo
+  `Logo oficial grupo.svg`. Con este commit, Sprint 3 Etapa 8 queda
+  oficialmente cerrada.
+- **Fase 2 (Auditoría del dominio Payments & Reputation)**: `Payment`/
+  `Review` analizados por completo antes de escribir código.
+  Hallazgos reales:
+  - `Payment.props`: `quoteId`, `orderId`, `payerIdentityId`,
+    `receiverProviderId`, `amount`, `method` (`PaymentMethod`:
+    Card/BankTransfer/Cash/DigitalWallet/Other), `status`
+    (`PaymentStatus`: Pending/Completed/Failed/Cancelled).
+    `PaymentRepository` original: `findById`/`findByQuoteId`/
+    `findByOrderId`/`findByPayerIdentityId`/
+    `findByReceiverProviderId`/`save` — sin `delete`/`list`/`search`.
+  - `Review.props`: `orderId`, `providerId`, `reviewerIdentityId`,
+    `rating` (`ReviewRating`, sin validación de escala por diseño —
+    ver su propio comentario de dominio), `title`, `comment`, `status`
+    (`ReviewStatus`: Pending/Published/Hidden/Archived).
+    `ReviewRepository` original: `findById`/`findByOrderId`/
+    `findByProviderId`/`findByReviewerIdentityId`/`save` — sin
+    `delete`/`list`/`search`.
+  - **Hallazgo clave**: `PaymentRepository.findByQuoteId` y
+    `ReviewRepository.findByOrderId` devuelven arrays (`Payment[]`/
+    `Review[]`), no un registro único — **no existe ningún invariante
+    1:1 Quote↔Payment ni Order↔Review**, confirmado desde el código de
+    dominio real, no inventado.
+  - Comandos ya existentes en el skeleton: `CreatePaymentCommand`/
+    `UpdatePaymentCommand` (solo `status`)/`CancelPaymentCommand` (sin
+    Delete — mismo criterio que `Order`); `CreateReviewCommand`/
+    `UpdateReviewCommand` (solo `title`/`comment`)/
+    `DeleteReviewCommand` (**Review sí tiene Delete**, a diferencia de
+    Order/Quote — estaba en su skeleton original, respetado tal cual).
+    `ListPaymentQuery`/`SearchPaymentQuery`/`ListReviewQuery`/
+    `SearchReviewQuery` ya existían en el skeleton (sin Use Case
+    todavía) — mismo patrón que Order/Quote/Provider/Service: se
+    implementaron `List*UseCase`/`Search*UseCase` nuevos y se añadió
+    `list()`/`search()` a ambas interfaces de repositorio (`delete()`
+    también se añadió a `ReviewRepository`, pero no a
+    `PaymentRepository`, coherente con la ausencia de
+    `DeletePaymentCommand`).
+  - `GetPaymentUseCase`/`GetReviewUseCase` ya declaraban la firma
+    `Promise<Dto | null>` en el skeleton — mismo patrón que
+    `GetOrderUseCase`/`GetQuoteUseCase`, respetado tal cual.
+  - Dependencias con módulos ya implementados: `Payment` referencia
+    `Quote`, `Order`, `Identity` (pagador) y `Provider` (receptor) —
+    los cuatro con Infrastructure real desde antes de este prompt
+    (Quote/Order desde Prompt 65, Identity desde Etapa 2, Provider
+    desde Etapa 7); `Review` referencia `Order`, `Provider` e
+    `Identity` (reviewer) — los tres también con Infrastructure real
+    desde antes. Ninguna verificación quedó diferida.
+- **Fase 3 (Application)**: `PaymentValidator`/`ReviewValidator`
+  (validación estructural — campos requeridos, montos positivos,
+  enums válidos; `ReviewValidator` solo valida que `rating` sea un
+  número real, sin imponer un rango 1-5 que el dominio no declara).
+  Use Cases reales:
+  - `CreatePaymentUseCase` verifica Quote, Order, Identity pagadora y
+    Provider receptor, crea el Payment en estado `Pending`.
+  - `UpdatePaymentUseCase` actualiza únicamente `status`.
+  - `CancelPaymentUseCase` transiciona a `Cancelled`, sin guarda de
+    estado previo — mismo criterio que `CancelOrderUseCase`.
+  - `GetPaymentUseCase`/`ListPaymentUseCase`/`SearchPaymentUseCase`
+    (búsqueda por `method`).
+  - `CreateReviewUseCase` verifica Order, Provider e Identity
+    reviewer, crea la Review en estado `Pending`.
+  - `UpdateReviewUseCase` actualiza únicamente `title`/`comment`.
+  - `DeleteReviewUseCase` elimina la Review, sin regla de cascada
+    documentada — mismo criterio que todo `Delete*UseCase` anterior.
+  - `GetReviewUseCase`/`ListReviewUseCase`/`SearchReviewUseCase`
+    (búsqueda por `title`/`comment`).
+- **Fase 4–5 (Infrastructure + Persistencia)**: `PrismaPaymentRepository`/
+  `PrismaReviewRepository` inyectando `PrismaService`, mappers
+  Domain↔Prisma, wireados vía `PAYMENT_REPOSITORY`/`REVIEW_REPOSITORY`.
+  `payment.module.ts` importa `QuotePresentationModule`,
+  `OrderPresentationModule`, `IdentityPresentationModule` y
+  `ProviderPresentationModule`; `review.module.ts` importa
+  `OrderPresentationModule`, `ProviderPresentationModule` e
+  `IdentityPresentationModule`. `prisma/schema.prisma` ganó
+  `PaymentModel`/`ReviewModel` + 3 enums (`PaymentStatus`/
+  `PaymentMethod`/`ReviewStatus`), con `@relation`es reales a
+  `QuoteModel`/`OrderModel`/`IdentityModel`/`ProviderModel` (`Payment`)
+  y a `OrderModel`/`ProviderModel`/`IdentityModel` (`Review`) desde el
+  inicio — ninguna FK quedó diferida. Ni `PaymentModel.quoteId` ni
+  `ReviewModel.orderId` son `@unique` (ver hallazgo de Fase 2).
+  Migración real `20260712190259_add_payment_review` generada y
+  aplicada limpia contra el Postgres temporal en Docker, sin
+  incidentes. `prisma/seed.ts` ganó 1 Payment + 1 Review sintéticos.
+- **Fase 6 (Tests)**: mismos 3 niveles que Prompts 59–65 para ambos
+  módulos — unit (Application, con `InMemoryPaymentRepository`/
+  `InMemoryReviewRepository`, más `InMemoryIdentityRepository`/
+  `InMemoryProviderRepository`/`InMemoryOrderRepository`/
+  `InMemoryQuoteRepository`/`InMemoryServiceRepository`/
+  `InMemoryCategoryRepository` para las verificaciones cruzadas), unit
+  (mappers, round-trip, sin DB), integration (contra Postgres real,
+  cada test crea Identity+Profile+Provider+Category+Service+Order(+Quote
+  para Payment) reales antes de crear el Payment/Review, para
+  satisfacer los FKs). Resultado: `npm test` 114 suites/513 tests (+47
+  sobre Prompt 65), `npm run test:integration` 18 suites/117 tests
+  (+18), `npm run test:e2e` 1/1 — todos pasando.
+- **Fase 7 (Auditoría)**: verificado por grep que ningún archivo de
+  `domain/`/`application/` de `payment`/`review` importa
+  `@prisma/client`; sin dependencias nuevas en `package.json`/
+  `package-lock.json`; sin TODOs nuevos; `List*UseCase`/
+  `Search*UseCase` de ambos módulos están cableados en su
+  `*.module.ts` pero no expuestos por el Controller — mismo criterio
+  ya establecido para Order/Quote/Provider/Service. `npm run lint`
+  limpio, solo formateo automático de Prettier. Mismo hallazgo
+  documentado y no corregido que en prompts anteriores: los
+  `README.md` de `payment`/`review` siguen describiendo el skeleton
+  original (patrón preexistente en todo el repositorio, no un
+  problema introducido por este prompt).
+- Verificaciones finales — todas pasando:
+  ```
+  npm run build            ✅
+  npm run lint              ✅ 0 errores, 0 warnings
+  npm test                   ✅ 114 suites, 513/513
+  npm run test:e2e          ✅ 1/1
+  npm run test:integration  ✅ 18 suites, 117/117
+  flutter analyze            ✅ No issues found!
+  flutter test                ✅ 748/748 (sin cambios — ningún archivo Flutter tocado)
+  flutter build windows      ✅ Build exitoso (mobile.exe)
+  ```
+- `git status` al cierre de esta sesión — **trabajo de Fase 2–7 del
+  Prompt 66 presente en el working tree, sin commitear**, además del
+  logo histórico:
+  ```
+  On branch main
+  Modified: PROJECT_STATUS.md, apps/backend/prisma/schema.prisma,
+  apps/backend/prisma/seed.ts,
+  apps/backend/src/modules/payment/application/use_cases/{cancel,create,get,update}-payment.use-case.ts,
+  apps/backend/src/modules/payment/domain/interfaces/payment-repository.interface.ts,
+  apps/backend/src/modules/payment/presentation/payment.module.ts,
+  apps/backend/src/modules/review/application/use_cases/{create,delete,get,update}-review.use-case.ts,
+  apps/backend/src/modules/review/domain/interfaces/review-repository.interface.ts,
+  apps/backend/src/modules/review/presentation/review.module.ts
+  Untracked: apps/backend/prisma/migrations/20260712190259_add_payment_review/,
+  apps/backend/src/modules/payment/application/use_cases/{list,search}-payment.use-case.ts,
+  apps/backend/src/modules/payment/application/use_cases/payment.use-cases.spec.ts,
+  apps/backend/src/modules/payment/application/use_cases/test-support/,
+  apps/backend/src/modules/payment/application/validators/,
+  apps/backend/src/modules/payment/infrastructure/persistence/,
+  apps/backend/src/modules/review/application/use_cases/{list,search}-review.use-case.ts,
+  apps/backend/src/modules/review/application/use_cases/review.use-cases.spec.ts,
+  apps/backend/src/modules/review/application/use_cases/test-support/,
+  apps/backend/src/modules/review/application/validators/,
+  apps/backend/src/modules/review/infrastructure/persistence/,
+  Logo oficial grupo.svg (histórico, sin trackear)
+  ```
+  (`SPRINT3_PREPARATION.md` también modificado — actualizado en esta
+  misma Fase 9.)
+- Todo este trabajo (Fase 2–7 del Prompt 66) quedó **consolidado en un
+  único commit** durante la Fase 1 del Prompt 67 — ver la sección de
+  cierre "Prompt 67" más abajo para el hash y el detalle del commit.
+- **Contenedor Docker temporal `appservicios-pg-temp` (puerto
+  `55432`)**: se usó dos veces durante el Prompt 66 (generar/aplicar
+  la migración `add_payment_review`, correr `npx prisma db seed` y
+  `test:integration` de Payment/Review), se detuvo al cierre de esa
+  sesión, y se volvió a levantar únicamente para las verificaciones de
+  `test:integration` de la Fase 1 del Prompt 67 — sintético/desechable,
   sin datos reales.

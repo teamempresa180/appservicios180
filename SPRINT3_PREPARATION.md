@@ -91,6 +91,27 @@
 > expuestos por el Controller). Trabajo completo hasta Infrastructure.
 > Consolidado en un único commit durante la Fase 1 del Prompt 66 — ver
 > `PROJECT_STATUS.md`, sección "Prompt 65", para el detalle completo.
+>
+> **Actualización (Prompt 66)**: se completaron **`Payment`** y
+> **`Review`** hasta Infrastructure — bounded context Payments &
+> Reputation. **Hallazgo de la auditoría (Fase 2)**:
+> `PaymentRepository.findByQuoteId` y `ReviewRepository.findByOrderId`
+> devuelven arrays, no un registro único — **no existe ningún
+> invariante 1:1 Quote↔Payment ni Order↔Review**, confirmado desde el
+> dominio real. `Payment` tiene comando Cancel, sin Delete (mismo
+> criterio que `Order`); **`Review` sí tiene comando Delete** — estaba
+> en su skeleton original, a diferencia de `Order`/`Quote`.
+> `ReviewRating.of()` no valida escala por diseño (según su propio
+> comentario de dominio), así que `ReviewValidator` tampoco impone un
+> rango 1-5 inventado. `CreatePaymentUseCase` verifica `Quote`,
+> `Order`, `Identity` (pagador) y `Provider` (receptor); 
+> `CreateReviewUseCase` verifica `Order`, `Provider` e `Identity`
+> (reviewer) — los siete ya tenían Infrastructure real, sin ninguna
+> dependencia diferida. `GetPaymentUseCase`/`GetReviewUseCase`
+> devuelven `null` en vez de lanzar `NotFoundException`, mismo patrón
+> que Order/Quote. Trabajo completo hasta Infrastructure. Consolidado
+> en un único commit durante la Fase 1 del Prompt 67 — ver
+> `PROJECT_STATUS.md`, sección "Prompt 66", para el detalle completo.
 
 ## 1. Estado real del proyecto
 
