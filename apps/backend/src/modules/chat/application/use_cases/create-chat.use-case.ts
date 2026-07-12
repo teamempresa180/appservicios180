@@ -1,17 +1,71 @@
+import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
+import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
+import { OrderRepository } from '../../../order/domain/interfaces/order-repository.interface';
+import { OrderId } from '../../../order/domain/value-objects/order-id.value-object';
+import { ProviderRepository } from '../../../provider/domain/interfaces/provider-repository.interface';
+import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
+import { Chat } from '../../domain/entities/chat.entity';
 import { ChatRepository } from '../../domain/interfaces/chat-repository.interface';
-import { ChatDto } from '../dto/chat.dto';
+import { ChatId } from '../../domain/value-objects/chat-id.value-object';
+import { ChatStatus } from '../../domain/value-objects/chat-status.value-object';
 import { CreateChatCommand } from '../commands/create-chat.command';
+import { ChatDto } from '../dto/chat.dto';
+import { ChatMapper } from '../mappers/chat.mapper';
+import { ChatValidator } from '../validators/chat.validator';
 
 /**
- * Use case skeleton. Dependencies are wired correctly; the orchestration
- * logic itself is intentionally not implemented in this phase.
+ * Creates a new Chat between a client and a provider tied to an
+ * Order, always in `Active` status. Depends on `OrderRepository`,
+ * `IdentityRepository` and `ProviderRepository` to verify the
+ * referenced Order, client Identity and Provider all exist before
+ * creating the chat — all three already have Infrastructure (Order
+ * since Sprint 3 Etapa 8, Identity since Etapa 2, Provider since Etapa
+ * 7), so none of these checks is deferred.
  */
 export class CreateChatUseCase {
-  constructor(private readonly chatRepository: ChatRepository) {}
+  constructor(
+    private readonly chatRepository: ChatRepository,
+    private readonly orderRepository: OrderRepository,
+    private readonly identityRepository: IdentityRepository,
+    private readonly providerRepository: ProviderRepository,
+  ) {}
 
-  execute(command: CreateChatCommand): Promise<ChatDto> {
-    void this.chatRepository;
-    void command;
-    throw new Error('Not implemented yet');
+  async execute(command: CreateChatCommand): Promise<ChatDto> {
+    ChatValidator.validateCreate(command);
+
+    const orderId = OrderId.fromString(command.orderId);
+    const order = await this.orderRepository.findById(orderId);
+    if (!order) {
+      throw new NotFoundException(`Order ${command.orderId} not found`);
+    }
+
+    const clientIdentityId = IdentityId.fromString(command.clientIdentityId);
+    const client = await this.identityRepository.findById(clientIdentityId);
+    if (!client) {
+      throw new NotFoundException(
+        `Identity ${command.clientIdentityId} not found`,
+      );
+    }
+
+    const providerId = ProviderId.fromString(command.providerId);
+    const provider = await this.providerRepository.findById(providerId);
+    if (!provider) {
+      throw new NotFoundException(`Provider ${command.providerId} not found`);
+    }
+
+    const now = new Date();
+    const chat = new Chat(ChatId.create(), {
+      orderId,
+      clientIdentityId,
+      providerId,
+      status: ChatStatus.Active,
+      type: command.type,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await this.chatRepository.save(chat);
+    return ChatMapper.toDto(chat);
   }
 }

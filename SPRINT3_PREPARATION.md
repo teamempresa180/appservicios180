@@ -112,6 +112,35 @@
 > que Order/Quote. Trabajo completo hasta Infrastructure. Consolidado
 > en un único commit durante la Fase 1 del Prompt 67 — ver
 > `PROJECT_STATUS.md`, sección "Prompt 66", para el detalle completo.
+>
+> **Actualización (Prompt 67)**: se completaron **`Chat`**,
+> **`Message`**, **`Notification`** y **`Attachment`** hasta
+> Infrastructure — bounded context Communication. **Hallazgo de la
+> auditoría (Fase 2)**: ninguno de los 4 módulos tiene comando
+> Update en su skeleton — sólo Create + transición de estado
+> (`CloseChatCommand`/ninguno/`MarkNotificationAsReadCommand`/ninguno)
+> + Delete donde el skeleton realmente lo ofrecía (`Message`,
+> `Notification`, `Attachment` — **no** `Chat`). `CreateChatUseCase`
+> verifica `Order`/`Identity` (cliente)/`Provider`;
+> `SendMessageUseCase` verifica `Chat`/`Identity` (sender) — `Chat`
+> implementado antes en este mismo prompt, respetando la dependencia
+> real; `CreateNotificationUseCase` verifica sólo `Identity`;
+> `CreateAttachmentUseCase` verifica `Message` — implementado antes
+> en este mismo prompt. Ninguna dependencia quedó diferida.
+> `GetChatUseCase`/`GetMessageUseCase`/`GetNotificationUseCase`/
+> `GetAttachmentUseCase` devuelven `null` en vez de lanzar
+> `NotFoundException`, mismo patrón que Order/Quote/Payment/Review.
+> **Con este prompt, los 22 bounded contexts de negocio del backend
+> quedan 100% completos hasta Infrastructure** — no queda ningún
+> módulo reservado. Trabajo completo hasta Infrastructure. Consolidado
+> en un único commit durante la Fase 1 del Prompt 68 — ver
+> `PROJECT_STATUS.md`, sección "Prompt 67", para el detalle completo.
+> **Con este commit, Sprint 3 queda oficialmente cerrado.** Sprint 4
+> (HTTP Layer / Presentation real) comienza en el Prompt 68 — ver
+> `PROJECT_STATUS.md`, sección "Prompt 68", para su roadmap y avance;
+> este documento (`SPRINT3_PREPARATION.md`) deja de recibir
+> actualizaciones de progreso a partir de aquí, se conserva como
+> registro histórico de Sprint 3.
 
 ## 1. Estado real del proyecto
 

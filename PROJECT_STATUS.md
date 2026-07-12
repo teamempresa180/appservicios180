@@ -105,8 +105,21 @@ Cada módulo tiene `application/{commands,queries,use_cases,dto,mappers}/`.
   skeleton original). `ReviewRating.of()` no valida escala (según su
   propio comentario de dominio), así que `ReviewValidator` tampoco
   inventa un rango 1-5. Ver "Sprint 3 — Etapa 9" más abajo.
-- **Los otros 5 módulos** — placeholder: `execute()` sigue lanzando
-  `Error("Not implemented yet")`, intencional, sin tocar todavía.
+- **Chat, Message, Notification, Attachment** (bounded context
+  Communication) — ✅ mismo tratamiento: Use Cases reales, validador
+  estructural, mappers. **Hallazgo de auditoría: ninguno de los 4
+  módulos tiene comando Update** — sólo Create + transición de estado
+  (`Close`/ninguno/`MarkAsRead`/ninguno) + Delete donde el skeleton
+  realmente lo ofrecía (`Message`, `Notification`, `Attachment` — no
+  `Chat`). `CreateChatUseCase` verifica Order/Identity(cliente)/
+  Provider; `SendMessageUseCase` verifica Chat/Identity(sender) —
+  Chat implementado en este mismo prompt; `CreateNotificationUseCase`
+  verifica sólo Identity; `CreateAttachmentUseCase` verifica Message
+  — implementado en este mismo prompt. Ninguna dependencia quedó
+  diferida. Ver "Sprint 3 — Etapa 10" más abajo.
+- **Ningún módulo de negocio queda pendiente** — los 22 bounded
+  contexts de negocio (todos excepto `Core`) ya tienen Application +
+  Infrastructure completos a partir de este prompt.
 
 ### Presentation — ✅ 100% completo (22 controllers REST, sin lógica real)
 Cada módulo tiene `presentation/{controllers,routes,swagger}/` +
@@ -117,7 +130,7 @@ propósito — **conectar Application/Infrastructure reales a los
 Controllers REST es trabajo explícitamente fuera de alcance de Sprint 3
 Etapa 2**, quedará para una etapa futura.
 
-### Infrastructure — 🟡 Parcial: Identity & Access + Profiles & Contact + Trust & Compliance + Marketplace + Fulfillment + Payments & Reputation completos, resto reservado
+### Infrastructure — ✅ 100% completo: los 9 bounded contexts de negocio (Identity & Access, Profiles & Contact, Trust & Compliance, Marketplace, Fulfillment, Payments & Reputation, Communication) tienen Infrastructure completo
 - **Identity, Authentication, Credentials** — ✅ Repositorios reales
   (`Prisma*Repository`), mappers Domain↔Prisma, wireados por DI en sus
   `*.module.ts` vía Symbol tokens (`IDENTITY_REPOSITORY`,
@@ -172,24 +185,39 @@ Etapa 2**, quedará para una etapa futura.
   Quote puede tener múltiples Payments, una Order puede recibir
   múltiples Reviews. **Con esto, el bounded context Payments &
   Reputation queda completo hasta Infrastructure.**
+- **Chat, Message, Notification, Attachment** — ✅ mismo tratamiento:
+  `Prisma*Repository` + mapper Domain↔Prisma, wireados vía
+  `CHAT_REPOSITORY`/`MESSAGE_REPOSITORY`/`NOTIFICATION_REPOSITORY`/
+  `ATTACHMENT_REPOSITORY`. `ChatModel.orderId`/`clientIdentityId`/
+  `providerId`, `MessageModel.chatId`/`senderIdentityId`,
+  `NotificationModel.identityId` y `AttachmentModel.messageId` son
+  `@relation`es reales desde el inicio — ninguna referencia quedó
+  diferida (Chat y Message implementados en este mismo prompt, uno
+  antes que el otro, respetando su dependencia real). **Con esto, el
+  bounded context Communication queda completo hasta Infrastructure,
+  y los 9 bounded contexts de negocio del backend quedan 100%
+  completos hasta Infrastructure.**
 - **Persistencia** — ✅ Prisma + PostgreSQL, oficial desde Prompt 59
   (ver "Decisión de persistencia" más abajo). `prisma/schema.prisma`
-  (18 modelos + 35 enums tras Prompt 66), 8 migraciones reales
+  (22 modelos + 43 enums tras Prompt 67), 9 migraciones reales
   generadas contra Postgres en Docker, seed sintético (1 Identity + 1
   Authentication + 1 Credential + 1 Profile + 1 Contact + 1 Address +
   1 Verification + 1 Trust + 1 Audit + 1 Provider + 1 Availability +
   1 Schedule + 1 Category + 1 Service + 1 Order + 1 Quote + 1 Payment +
-  1 Review), `PrismaService` app-wide con conexión lazy (no bloquea
-  build/test/e2e sin DB viva).
-- **Los otros 5 módulos** — carpetas vacías, reservadas, sin tocar.
+  1 Review + 1 Chat + 1 Message + 1 Notification + 1 Attachment),
+  `PrismaService` app-wide con conexión lazy (no bloquea build/test/e2e
+  sin DB viva).
+- **No quedan módulos de negocio reservados** — los 22 bounded
+  contexts de negocio tienen Domain, Application e Infrastructure
+  completos.
 
-### Verificación backend (último estado conocido — Sprint 3 Etapa 9, Prompt 66)
+### Verificación backend (último estado conocido — Sprint 3 Etapa 10, Prompt 67)
 ```
 npm run build          ✅
 npm run lint            ✅ 0 errores, 0 warnings
-npm test                 ✅ 114 suites, 513/513 tests
+npm test                 ✅ 126 suites, 583/583 tests
 npm run test:e2e        ✅ 1/1
-npm run test:integration ✅ 18 suites, 117/117 tests (requiere Postgres vivo)
+npm run test:integration ✅ 22 suites, 144/144 tests (requiere Postgres vivo)
 ```
 
 ## 4. Estado de Flutter (`apps/mobile`)
@@ -2819,3 +2847,195 @@ hash y el detalle del commit).
   sesión, y se volvió a levantar únicamente para las verificaciones de
   `test:integration` de la Fase 1 del Prompt 67 — sintético/desechable,
   sin datos reales.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 67 — Sprint 3 Etapa 10, Communication: Chat, Message, Notification & Attachment — consolidado)
+
+Este es el handoff vigente — más reciente que los veintisiete bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+**El Prompt 67 fue aprobado por el usuario y consolidado en el Prompt
+68** (Fase 1 — ver la sección de cierre "Prompt 68" más abajo para el
+hash y el detalle del commit). **Con el Prompt 67, Sprint 3 quedó
+oficialmente cerrado** — los 22 bounded contexts de negocio del
+backend tienen Domain, Application e Infrastructure completos.
+Sprint 4 (HTTP Layer / Presentation real) comienza en el Prompt 68.
+
+- **Fase 0**: verificado que el repositorio coincidía exactamente con
+  el cierre del Prompt 66 (último commit = Prompt 65 `eada935`,
+  working tree con el trabajo de Prompt 66 sin commitear, contenedor
+  `appservicios-pg-temp` detenido). `PROJECT_STATUS.md`/
+  `SPRINT3_PREPARATION.md` revisados. Sin cambios de código en esta
+  fase.
+- **Fase 1 (Consolidación Prompt 66)**: `npm run build`/`lint`/`test`
+  (513/513)/`test:integration` (117/117)/`test:e2e` (1/1) +
+  `flutter analyze`/`test` (748/748)/`build windows`, todos ✅.
+  Contenedor Docker levantado solo para `test:integration` y detenido
+  inmediatamente después. **Commit único `0cf45d2`** ("Sprint 3, Etapa
+  9: Payment & Review (Payments & Reputation) hasta Infrastructure"),
+  excluyendo `Logo oficial grupo.svg`. Con este commit, Sprint 3 Etapa
+  9 queda oficialmente cerrada.
+- **Fase 2 (Auditoría del dominio Communication)**: `Chat`/`Message`/
+  `Notification`/`Attachment` analizados por completo antes de
+  escribir código. Hallazgos reales:
+  - `Chat.props`: `orderId`, `clientIdentityId`, `providerId`,
+    `status` (`ChatStatus`: Active/Archived/Closed), `type`
+    (`ChatType`: OrderRelated/Support/Other). `ChatRepository`
+    original: `findById`/`findByOrderId`/`findByClientIdentityId`/
+    `findByProviderId`/`save` — sin `delete`/`list`/`search`.
+  - `Message.props`: `chatId`, `senderIdentityId`, `content`, `type`
+    (`MessageType`: Text/System/Other), `status` (`MessageStatus`:
+    Sent/Delivered/Read), `sentAt`, `readAt` (nullable).
+    `MessageRepository` original: `findById`/`findByChatId`/
+    `findBySenderIdentityId`/`save` — sin `delete`/`list`/`search`.
+  - `Notification.props`: `identityId`, `title`, `body`, `type`
+    (`NotificationType`: System/Info/Warning/Alert/Other), `status`
+    (`NotificationStatus`: Unread/Read/Archived), `createdAt`, `readAt`
+    (nullable). `NotificationRepository` original: `findById`/
+    `findByIdentityId`/`save` — sin `delete`/`list`/`search`.
+  - `Attachment.props`: `messageId`, `fileName`, `mimeType`,
+    `fileSize`, `type` (`AttachmentType`:
+    Image/Document/Audio/Video/Other), `status` (`AttachmentStatus`:
+    Pending/Available/Failed/Removed), `createdAt` (sin `updatedAt` —
+    entidad de solo-creación). `AttachmentRepository` original:
+    `findById`/`findByMessageId`/`save` — sin `delete`/`list`/`search`.
+  - **Hallazgo clave**: **ninguno de los 4 módulos tiene comando
+    Update** en su skeleton — solo `Create` + una transición de estado
+    puntual (`CloseChatCommand`/ninguna para Message/
+    `MarkNotificationAsReadCommand`/ninguna para Attachment) + `Delete`
+    únicamente donde el skeleton realmente lo ofrecía
+    (`DeleteMessageCommand`, `DeleteNotificationCommand`,
+    `DeleteAttachmentCommand` — **no** existe `DeleteChatCommand`).
+    Confirmado desde el código de dominio real, no inventado.
+  - `ListChatQuery`/`SearchChatQuery` (y equivalentes para los otros
+    3 módulos) ya existían en el skeleton (sin Use Case todavía) —
+    mismo patrón que Order/Quote/Payment/Review: se implementaron
+    `List*UseCase`/`Search*UseCase` nuevos y se añadió `list()`/
+    `search()` a las 4 interfaces de repositorio; `delete()` se
+    añadió solo a `MessageRepository`/`NotificationRepository`/
+    `AttachmentRepository`, no a `ChatRepository`.
+  - `GetChatUseCase`/`GetMessageUseCase`/`GetNotificationUseCase`/
+    `GetAttachmentUseCase` ya declaraban la firma
+    `Promise<Dto | null>` en el skeleton — mismo patrón que
+    Order/Quote/Payment/Review, respetado tal cual.
+  - Dependencias con módulos ya implementados: `Chat` referencia
+    `Order`, `Identity` (cliente) y `Provider` — los tres con
+    Infrastructure real desde antes de este prompt; `Message`
+    referencia `Chat` (implementado antes, en este mismo prompt) e
+    `Identity` (sender); `Notification` referencia únicamente
+    `Identity`; `Attachment` referencia `Message` (implementado antes,
+    en este mismo prompt). El orden de implementación dentro del
+    prompt (Chat → Message → Attachment; Notification independiente)
+    respetó esta cadena de dependencias real. Ninguna verificación
+    quedó diferida.
+- **Fase 3 (Application)**: `ChatValidator`/`MessageValidator`/
+  `NotificationValidator`/`AttachmentValidator` (validación
+  estructural — campos requeridos, enums válidos; ninguno tiene
+  `validateUpdate` porque no existe comando Update). Use Cases reales:
+  - `CreateChatUseCase` verifica Order, Identity (cliente) y Provider,
+    crea el Chat en estado `Active`.
+  - `CloseChatUseCase` transiciona a `Closed`, sin guarda de estado
+    previo — mismo criterio que `CancelOrderUseCase`.
+  - `GetChatUseCase`/`ListChatUseCase`/`SearchChatUseCase` (búsqueda
+    por `type`).
+  - `SendMessageUseCase` verifica Chat e Identity (sender), crea el
+    Message en estado `Sent` con `readAt` sin establecer.
+  - `DeleteMessageUseCase` elimina el Message, sin regla de cascada
+    documentada para `Attachment` — mismo criterio que todo
+    `Delete*UseCase` anterior.
+  - `GetMessageUseCase`/`ListMessageUseCase`/`SearchMessageUseCase`
+    (búsqueda por `content`).
+  - `CreateNotificationUseCase` verifica solo Identity, crea la
+    Notification en estado `Unread` con `readAt` sin establecer.
+  - `MarkNotificationAsReadUseCase` transiciona a `Read` y establece
+    `readAt`, sin guarda de estado previo.
+  - `DeleteNotificationUseCase`/`GetNotificationUseCase`/
+    `ListNotificationUseCase`/`SearchNotificationUseCase` (búsqueda
+    por `title`/`body`).
+  - `CreateAttachmentUseCase` verifica Message, crea el Attachment en
+    estado `Pending`.
+  - `DeleteAttachmentUseCase`/`GetAttachmentUseCase`/
+    `ListAttachmentUseCase`/`SearchAttachmentUseCase` (búsqueda por
+    `fileName`).
+- **Fase 4–5 (Infrastructure + Persistencia)**: `PrismaChatRepository`/
+  `PrismaMessageRepository`/`PrismaNotificationRepository`/
+  `PrismaAttachmentRepository` inyectando `PrismaService`, mappers
+  Domain↔Prisma, wireados vía `CHAT_REPOSITORY`/`MESSAGE_REPOSITORY`/
+  `NOTIFICATION_REPOSITORY`/`ATTACHMENT_REPOSITORY`. `chat.module.ts`
+  importa `OrderPresentationModule`, `IdentityPresentationModule` y
+  `ProviderPresentationModule`; `message.module.ts` importa
+  `ChatPresentationModule` e `IdentityPresentationModule`;
+  `notification.module.ts` importa `IdentityPresentationModule`;
+  `attachment.module.ts` importa `MessagePresentationModule`.
+  `prisma/schema.prisma` ganó `ChatModel`/`MessageModel`/
+  `NotificationModel`/`AttachmentModel` + 8 enums, con `@relation`es
+  reales a `OrderModel`/`IdentityModel`/`ProviderModel` (`Chat`),
+  `ChatModel`/`IdentityModel` (`Message`), `IdentityModel`
+  (`Notification`) y `MessageModel` (`Attachment`) desde el inicio —
+  ninguna FK quedó diferida. Migración real
+  `20260712194156_add_communication` generada y aplicada limpia
+  contra el Postgres temporal en Docker, sin incidentes.
+  `prisma/seed.ts` ganó 1 Chat + 1 Message + 1 Notification + 1
+  Attachment sintéticos.
+- **Fase 6 (Tests)**: mismos 3 niveles que Prompts 59–66 para los 4
+  módulos — unit (Application, con `InMemoryChatRepository`/
+  `InMemoryMessageRepository`/`InMemoryNotificationRepository`/
+  `InMemoryAttachmentRepository`, más `InMemoryIdentityRepository`/
+  `InMemoryProviderRepository`/`InMemoryOrderRepository`/
+  `InMemoryServiceRepository`/`InMemoryCategoryRepository` para las
+  verificaciones cruzadas), unit (mappers, round-trip, sin DB),
+  integration (contra Postgres real, cada test crea la cadena completa
+  de entidades reales — Identity+Profile+Provider+Category+Service+
+  Order(+Chat(+Message)) según el módulo — para satisfacer los FKs).
+  Resultado: `npm test` 126 suites/583 tests (+70 sobre Prompt 66),
+  `npm run test:integration` 22 suites/144 tests (+27), `npm run
+  test:e2e` 1/1 — todos pasando.
+- **Fase 7 (Auditoría)**: verificado por grep que ningún archivo de
+  `domain/`/`application/` de `chat`/`message`/`notification`/
+  `attachment` importa `@prisma/client`; sin dependencias nuevas en
+  `package.json`/`package-lock.json`; sin TODOs nuevos; `List*UseCase`/
+  `Search*UseCase` de los 4 módulos están cableados en su
+  `*.module.ts` pero no expuestos por el Controller — mismo criterio
+  ya establecido para Order/Quote/Payment/Review/Provider/Service.
+  `npm run lint` limpio, solo formateo automático de Prettier. Mismo
+  hallazgo documentado y no corregido que en prompts anteriores: los
+  `README.md` de `chat`/`message`/`notification`/`attachment` siguen
+  describiendo el skeleton original (patrón preexistente en todo el
+  repositorio, no un problema introducido por este prompt).
+- Verificaciones finales — todas pasando:
+  ```
+  npm run build            ✅
+  npm run lint              ✅ 0 errores, 0 warnings
+  npm test                   ✅ 126 suites, 583/583
+  npm run test:e2e          ✅ 1/1
+  npm run test:integration  ✅ 22 suites, 144/144
+  flutter analyze            ✅ No issues found!
+  flutter test                ✅ 748/748 (sin cambios — ningún archivo Flutter tocado)
+  flutter build windows      ✅ Build exitoso (mobile.exe)
+  ```
+- `git status` al cierre de esta sesión — **trabajo de Fase 2–7 del
+  Prompt 67 presente en el working tree, sin commitear**, además del
+  logo histórico:
+  ```
+  On branch main
+  Modified: PROJECT_STATUS.md, apps/backend/prisma/schema.prisma,
+  apps/backend/prisma/seed.ts,
+  apps/backend/src/modules/attachment/{application,domain,presentation}/*,
+  apps/backend/src/modules/chat/{application,domain,presentation}/*,
+  apps/backend/src/modules/message/{application,domain,presentation}/*,
+  apps/backend/src/modules/notification/{application,domain,presentation}/*
+  Untracked: apps/backend/prisma/migrations/20260712194156_add_communication/,
+  apps/backend/src/modules/{attachment,chat,message,notification}/application/{use_cases,validators}/,
+  apps/backend/src/modules/{attachment,chat,message,notification}/infrastructure/,
+  Logo oficial grupo.svg (histórico, sin trackear)
+  ```
+  (`SPRINT3_PREPARATION.md` también modificado — actualizado en esta
+  misma Fase 9.)
+- Todo este trabajo (Fase 2–7 del Prompt 67) quedó **consolidado en un
+  único commit** durante la Fase 1 del Prompt 68 — ver la sección de
+  cierre "Prompt 68" más abajo para el hash y el detalle del commit.
+- **Contenedor Docker temporal `appservicios-pg-temp` (puerto
+  `55432`)**: se usó dos veces durante el Prompt 67 (generar/aplicar
+  la migración `add_communication`, correr `npx prisma db seed` y
+  `test:integration` de Chat/Message/Notification/Attachment), se
+  detuvo al cierre de esa sesión, y se volvió a levantar únicamente
+  para las verificaciones de `test:integration` de la Fase 1 del
+  Prompt 68 — sintético/desechable, sin datos reales.

@@ -2,16 +2,31 @@
 // (Profile) + Etapa 4 (Contact & Address) + Etapa 5 (Verification,
 // Trust & Audit) + Etapa 6 (Category & Service) + Etapa 7 (Provider,
 // Availability & Schedule) + Etapa 8 (Fulfillment: Order & Quote) +
-// Etapa 9 (Payments & Reputation: Payment & Review).
+// Etapa 9 (Payments & Reputation: Payment & Review) + Etapa 10
+// (Communication: Chat, Message, Notification & Attachment).
 //
 // Only the persistence shape for `identity`/`authentication`/
 // `credentials`/`profiles`/`contact`/`address`/`verification`/
 // `trust`/`audit`/`category`/`service`/`provider`/`availability`/
-// `schedule`/`order`/`quote`/`payment`/`review` (bounded contexts
-// implemented end-to-end so far). Every other module's tables are
-// added when that module gets its own Infrastructure layer, following
-// the roadmap in `SPRINT3_PREPARATION.md` — not created speculatively
-// here.
+// `schedule`/`order`/`quote`/`payment`/`review`/`chat`/`message`/
+// `notification`/`attachment` (bounded contexts implemented
+// end-to-end so far). Every other module's tables are added when that
+// module gets its own Infrastructure layer, following the roadmap in
+// `SPRINT3_PREPARATION.md` — not created speculatively here.
+//
+// `ChatModel.orderId`/`clientIdentityId`/`providerId`,
+// `MessageModel.chatId`/`senderIdentityId`,
+// `NotificationModel.identityId` and `AttachmentModel.messageId` are
+// real `@relation`s — Order/Identity/Provider (for Chat), Chat/
+// Identity (for Message), Identity (for Notification) and Message
+// (for Attachment) all already had tables by the time Communication
+// was implemented (Sprint 3, Etapa 10), so no relation was deferred.
+// None of `Chat`/`Message`/`Notification`/`Attachment` has an
+// `UPDATE_*` command in its skeleton — only Create + status-transition
+// commands (`Close`/none/`MarkAsRead`/none) + Delete where the
+// skeleton actually offered it (`Message`, `Notification`,
+// `Attachment` — not `Chat`), confirmed from the domain code itself,
+// not invented.
 //
 // `PaymentModel.quoteId`/`orderId`/`payerIdentityId`/
 // `receiverProviderId` and `ReviewModel.orderId`/`providerId`/
@@ -376,6 +391,75 @@ enum ReviewStatus {
   @@map("review_status")
 }
 
+enum ChatStatus {
+  ACTIVE
+  ARCHIVED
+  CLOSED
+
+  @@map("chat_status")
+}
+
+enum ChatType {
+  ORDER_RELATED
+  SUPPORT
+  OTHER
+
+  @@map("chat_type")
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+
+  @@map("message_status")
+}
+
+enum MessageType {
+  TEXT
+  SYSTEM
+  OTHER
+
+  @@map("message_type")
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  ARCHIVED
+
+  @@map("notification_status")
+}
+
+enum NotificationType {
+  SYSTEM
+  INFO
+  WARNING
+  ALERT
+  OTHER
+
+  @@map("notification_type")
+}
+
+enum AttachmentStatus {
+  PENDING
+  AVAILABLE
+  FAILED
+  REMOVED
+
+  @@map("attachment_status")
+}
+
+enum AttachmentType {
+  IMAGE
+  DOCUMENT
+  AUDIO
+  VIDEO
+  OTHER
+
+  @@map("attachment_type")
+}
+
 model IdentityModel {
   id             String         @id
   fullName       String         @map("full_name")
@@ -398,6 +482,9 @@ model IdentityModel {
   orders          OrderModel[]
   paymentsPaid    PaymentModel[]
   reviewsWritten  ReviewModel[]
+  chatsAsClient   ChatModel[]
+  messagesSent    MessageModel[]
+  notifications   NotificationModel[]
 
   @@map("identities")
 }
@@ -584,6 +671,7 @@ model ProviderModel {
   quotes        QuoteModel[]
   paymentsReceived PaymentModel[]
   reviewsReceived  ReviewModel[]
+  chats            ChatModel[]
 
   @@index([providerProfileId])
   @@map("providers")
@@ -640,6 +728,7 @@ model OrderModel {
   quotes   QuoteModel[]
   payments PaymentModel[]
   reviews  ReviewModel[]
+  chats    ChatModel[]
 
   @@index([identityId])
   @@index([providerId])
@@ -712,4 +801,76 @@ model ReviewModel {
   @@index([providerId])
   @@index([reviewerIdentityId])
   @@map("reviews")
+}
+
+model ChatModel {
+  id               String     @id
+  orderId          String     @map("order_id")
+  clientIdentityId String     @map("client_identity_id")
+  providerId       String     @map("provider_id")
+  status           ChatStatus
+  type             ChatType
+  createdAt        DateTime   @map("created_at")
+  updatedAt        DateTime   @map("updated_at")
+
+  order          OrderModel    @relation(fields: [orderId], references: [id])
+  clientIdentity IdentityModel @relation(fields: [clientIdentityId], references: [id])
+  provider       ProviderModel @relation(fields: [providerId], references: [id])
+  messages       MessageModel[]
+
+  @@index([orderId])
+  @@index([clientIdentityId])
+  @@index([providerId])
+  @@map("chats")
+}
+
+model MessageModel {
+  id               String        @id
+  chatId           String        @map("chat_id")
+  senderIdentityId String        @map("sender_identity_id")
+  content          String
+  type             MessageType
+  status           MessageStatus
+  sentAt           DateTime      @map("sent_at")
+  readAt           DateTime?     @map("read_at")
+
+  chat           ChatModel     @relation(fields: [chatId], references: [id])
+  senderIdentity IdentityModel @relation(fields: [senderIdentityId], references: [id])
+  attachments    AttachmentModel[]
+
+  @@index([chatId])
+  @@index([senderIdentityId])
+  @@map("messages")
+}
+
+model NotificationModel {
+  id         String             @id
+  identityId String             @map("identity_id")
+  title      String
+  body       String
+  type       NotificationType
+  status     NotificationStatus
+  createdAt  DateTime           @map("created_at")
+  readAt     DateTime?          @map("read_at")
+
+  identity IdentityModel @relation(fields: [identityId], references: [id])
+
+  @@index([identityId])
+  @@map("notifications")
+}
+
+model AttachmentModel {
+  id        String           @id
+  messageId String           @map("message_id")
+  fileName  String           @map("file_name")
+  mimeType  String           @map("mime_type")
+  fileSize  Int              @map("file_size")
+  type      AttachmentType
+  status    AttachmentStatus
+  createdAt DateTime         @map("created_at")
+
+  message MessageModel @relation(fields: [messageId], references: [id])
+
+  @@index([messageId])
+  @@map("attachments")
 }

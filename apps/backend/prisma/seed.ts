@@ -296,8 +296,68 @@ async function main(): Promise<void> {
     update: {},
   });
 
+  const chat = await prisma.chatModel.upsert({
+    where: { id: 'seed-chat-1' },
+    create: {
+      id: 'seed-chat-1',
+      orderId: order.id,
+      clientIdentityId: identity.id,
+      providerId: provider.id,
+      status: 'ACTIVE',
+      type: 'ORDER_RELATED',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+
+  const message = await prisma.messageModel.upsert({
+    where: { id: 'seed-message-1' },
+    create: {
+      id: 'seed-message-1',
+      chatId: chat.id,
+      senderIdentityId: identity.id,
+      content: 'Hi, what time works for you?',
+      type: 'TEXT',
+      status: 'SENT',
+      sentAt: new Date(),
+      readAt: null,
+    },
+    update: {},
+  });
+
+  await prisma.notificationModel.upsert({
+    where: { id: 'seed-notification-1' },
+    create: {
+      id: 'seed-notification-1',
+      identityId: identity.id,
+      title: 'Your order was accepted',
+      body: 'Provider accepted your order request.',
+      type: 'INFO',
+      status: 'UNREAD',
+      createdAt: new Date(),
+      readAt: null,
+    },
+    update: {},
+  });
+
+  await prisma.attachmentModel.upsert({
+    where: { id: 'seed-attachment-1' },
+    create: {
+      id: 'seed-attachment-1',
+      messageId: message.id,
+      fileName: 'photo.jpg',
+      mimeType: 'image/jpeg',
+      fileSize: 2048,
+      type: 'IMAGE',
+      status: 'AVAILABLE',
+      createdAt: new Date(),
+    },
+    update: {},
+  });
+
   console.log(
-    'Seed complete: 1 Identity, 1 Authentication, 1 Credential, 1 Profile, 1 Contact, 1 Address, 1 Verification, 1 Trust, 1 Audit, 1 Provider, 1 Availability, 1 Schedule, 1 Category, 1 Service, 1 Order, 1 Quote, 1 Payment, 1 Review.',
+    'Seed complete: 1 Identity, 1 Authentication, 1 Credential, 1 Profile, 1 Contact, 1 Address, 1 Verification, 1 Trust, 1 Audit, 1 Provider, 1 Availability, 1 Schedule, 1 Category, 1 Service, 1 Order, 1 Quote, 1 Payment, 1 Review, 1 Chat, 1 Message, 1 Notification, 1 Attachment.',
   );
 }
 
