@@ -72,8 +72,17 @@ Cada módulo tiene `application/{commands,queries,use_cases,dto,mappers}/`.
   `CreateTrustProfileUseCase` la enforca con `BusinessRuleException`);
   `Audit` es inmutable por diseño (solo Create/Get/List/Search, sin
   Update/Delete). Ver "Sprint 3 — Etapa 5" más abajo.
-- **Los otros 13 módulos** — placeholder: `execute()` sigue lanzando
-  `Error("Not implemented yet")`, intencional, sin tocar todavía.
+- **Category, Service** (Marketplace, parcial) — ✅ mismo tratamiento.
+  **No existe módulo de dominio `Marketplace` ni `Search`** —
+  confirmado por auditoría (grep sin resultados en todo `src/`);
+  "Marketplace" se satisface con Category+Service(+Provider futuro),
+  "Search" con el método `search()` por-repositorio ya usado en todos
+  los módulos anteriores. `CreateServiceUseCase` verifica que la
+  Category exista, **no verifica Provider** (sin Infrastructure
+  todavía). Ver "Sprint 3 — Etapa 6" más abajo.
+- **Los otros 12 módulos** (incluye `Provider`) — placeholder:
+  `execute()` sigue lanzando `Error("Not implemented yet")`,
+  intencional, sin tocar todavía.
 
 ### Presentation — ✅ 100% completo (22 controllers REST, sin lógica real)
 Cada módulo tiene `presentation/{controllers,routes,swagger}/` +
@@ -84,7 +93,7 @@ propósito — **conectar Application/Infrastructure reales a los
 Controllers REST es trabajo explícitamente fuera de alcance de Sprint 3
 Etapa 2**, quedará para una etapa futura.
 
-### Infrastructure — 🟡 Parcial: Identity & Access + Profiles & Contact + Trust & Compliance completos, resto reservado
+### Infrastructure — 🟡 Parcial: Identity & Access + Profiles & Contact + Trust & Compliance + Marketplace (parcial) completos, resto reservado
 - **Identity, Authentication, Credentials** — ✅ Repositorios reales
   (`Prisma*Repository`), mappers Domain↔Prisma, wireados por DI en sus
   `*.module.ts` vía Symbol tokens (`IDENTITY_REPOSITORY`,
@@ -104,20 +113,28 @@ Etapa 2**, quedará para una etapa futura.
   base de datos, no solo en `CreateTrustProfileUseCase`. **Con esto, el
   bounded context Trust & Compliance queda completo hasta
   Infrastructure.**
+- **Category, Service** — ✅ mismo tratamiento: `Prisma*Repository` +
+  mapper Domain↔Prisma, wireados vía `CATEGORY_REPOSITORY`/
+  `SERVICE_REPOSITORY`. `service.module.ts` importa
+  `CategoryPresentationModule` (no un módulo de Provider — no existe
+  todavía). `ServiceModel.providerId` es un campo `String` indexado
+  **sin `@relation`** — no hay tabla `providers` en el schema aún.
 - **Persistencia** — ✅ Prisma + PostgreSQL, oficial desde Prompt 59
   (ver "Decisión de persistencia" más abajo). `prisma/schema.prisma`
-  (9 modelos + 17 enums tras Prompt 62), 4 migraciones reales generadas
-  contra Postgres en Docker, seed sintético (1 Identity + 1
+  (11 modelos + 21 enums tras Prompt 63), 5 migraciones reales
+  generadas contra Postgres en Docker, seed sintético (1 Identity + 1
   Authentication + 1 Credential + 1 Profile + 1 Contact + 1 Address +
-  1 Verification + 1 Trust + 1 Audit), `PrismaService` app-wide con
-  conexión lazy (no bloquea build/test/e2e sin DB viva).
-- **Los otros 13 módulos** — carpetas vacías, reservadas, sin tocar.
+  1 Verification + 1 Trust + 1 Audit + 1 Category + 1 Service),
+  `PrismaService` app-wide con conexión lazy (no bloquea build/test/e2e
+  sin DB viva).
+- **Los otros 12 módulos** (incluye `Provider`) — carpetas vacías,
+  reservadas, sin tocar.
 
-### Verificación backend (último estado conocido — Sprint 3 Etapa 5, Prompt 62)
+### Verificación backend (último estado conocido — Sprint 3 Etapa 6, Prompt 63)
 ```
 npm run build          ✅
 npm run lint            ✅ 0 errores, 0 warnings
-npm test                 ✅ 87 suites, 314/314 tests
+npm test                 ✅ 93 suites, 358/358 tests
 npm run test:e2e        ✅ 1/1
 npm run test:integration ✅ 9 suites, 52/52 tests (requiere Postgres vivo)
 ```
@@ -2139,3 +2156,122 @@ hash y el detalle del commit).
   (Category, Service, Marketplace & Search) requirió pruebas de
   integración contra Postgres — ver la sección de cierre "Prompt 63"
   para su estado final.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 63 — Sprint 3 Etapa 6, Category, Service, Marketplace & Search — consolidado)
+
+Este es el handoff vigente — más reciente que los veintitrés bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+**El Prompt 63 fue aprobado por el usuario y consolidado en el Prompt
+64** (Fase 1 — ver la sección de cierre "Prompt 64" más abajo para el
+hash y el detalle del commit).
+
+- **Fase 0**: verificado que el repositorio coincidía exactamente con
+  el cierre del Prompt 62 (último commit = Prompt 61, working tree con
+  el trabajo de Prompt 62 sin commitear, contenedor
+  `appservicios-pg-temp` detenido).
+- **Fase 1 (Consolidación Prompt 62)**: `npm run build`/`lint`/`test`
+  (314/314)/`test:integration` (52/52)/`test:e2e` (1/1) +
+  `flutter analyze`/`test` (748/748)/`build windows`, todos ✅.
+  Contenedor Docker levantado solo para `test:integration` y detenido
+  inmediatamente después. **Commit único `0242c97`** ("Prompt 62 -
+  Verification, Trust & Audit Application + Infrastructure (Prisma +
+  PostgreSQL)"), excluyendo `Logo oficial grupo.svg`. Con este commit,
+  Sprint 3 Etapa 5 queda oficialmente cerrada.
+- **Fase 2 (Análisis) — hallazgo estructural importante**: **no existe
+  ningún módulo de dominio `Marketplace` ni `Search`** en
+  `apps/backend/src/modules/` — solo `category`, `service` y
+  `provider` existen como carpetas de bounded context (confirmado con
+  `grep -rl "MarketplaceRepository\|SearchRepository\|class
+  Marketplace\|class Search" src/`, cero resultados en las 23
+  carpetas de módulo). El patrón ya establecido en los 9 módulos
+  previos usa un método `search()` por-repositorio (cada uno con su
+  propia `SearchXQuery`/`SearchXUseCase`), nunca una entidad `Search`
+  compartida. Decisión, según la autorización explícita del prompt
+  ("impleméntala únicamente si está justificada... deja la decisión
+  documentada"):
+  - **"Marketplace"** se satisface con `Category` + `Service` (+
+    `Provider` en una etapa futura) — no se crea ningún
+    `MarketplaceModule`/`MarketplaceRepository`, evitando inventar un
+    bounded context o lógica comercial que el dominio no define.
+  - **"Search"** se satisface extendiendo `CategoryRepository`/
+    `ServiceRepository` con `list()`/`search()` — la ampliación mínima
+    de contrato que el propio prompt anticipaba, ya prevista en los
+    `SearchCategoryQuery`/`SearchServiceQuery` existentes desde el
+    skeleton original.
+  - `Category`: entidad de catálogo standalone, sin `IdentityId`, sin
+    jerarquía. `Service`: referencia `providerId` + `categoryId`,
+    `findByProviderId`/`findByCategoryId` devuelven array (múltiples
+    servicios por proveedor/categoría permitidos, sin invariante de
+    unicidad).
+  - **`Provider` queda fuera de alcance de este prompt** (no
+    mencionado en su título/Fases 3-4) — su `ProviderRepository` no
+    tiene Infrastructure todavía. Por lo tanto
+    `CreateServiceUseCase` verifica que la `Category` referenciada
+    exista (sí implementada este prompt) pero **no puede verificar
+    `Provider`** contra una base de datos real — documentado
+    explícitamente como brecha intencional, no un descuido.
+- **Fase 3 (Application)**: `CategoryValidator`/`ServiceValidator`,
+  Use Cases reales para ambos módulos (Create/Get/Update/Delete/List/
+  Search). `CreateServiceUseCase` inyecta `CategoryRepository` (no
+  `ProviderRepository`, ver Fase 2). `UpdateServiceUseCase` solo
+  modifica `basePrice`/`estimatedDuration`/`status` (no
+  `providerId`/`categoryId`/`name`/`description`/`type`) — limitado a
+  lo que expone `UpdateServiceCommand`, mismo criterio que
+  `UpdateTrustProfileUseCase` con `identityId`.
+- **Fase 4–5 (Infrastructure + Persistencia)**:
+  `PrismaCategoryRepository`/`PrismaServiceRepository` inyectando
+  `PrismaService`, mappers Domain↔Prisma, wireados vía
+  `CATEGORY_REPOSITORY`/`SERVICE_REPOSITORY`. `service.module.ts`
+  importa `CategoryPresentationModule` (no un módulo de Provider).
+  `prisma/schema.prisma` ganó `CategoryModel`/`ServiceModel` + enums
+  `CategoryType`/`CategoryStatus`/`ServiceType`/`ServiceStatus`.
+  **`ServiceModel.providerId` es un campo `String` indexado sin
+  `@relation`** — no existe tabla `providers` en el schema todavía,
+  documentado explícitamente en el mapper, el repositorio y el schema
+  mismo. `CategoryModel` sí tiene relación real
+  `services ServiceModel[]` vía `categoryId`. Migración real
+  `20260712105903_add_category_service` generada y aplicada contra el
+  Postgres temporal en Docker. `prisma/seed.ts` ganó 1 Category + 1
+  Service sintéticos (el `providerId` del Service sembrado es un
+  string sintético `seed-provider-1`, no una fila real).
+- **Fase 6 (Tests)**: mismos 3 niveles que Prompts 59–62 para ambos
+  módulos — unit (Application, con `InMemoryCategoryRepository`/
+  `InMemoryServiceRepository`, sin Prisma), unit (mappers, round-trip,
+  sin DB), integration (contra Postgres real; el test de Service crea
+  una Category real primero para satisfacer el FK real, usa un
+  `ProviderId.create()` sintético para el campo sin FK). Resultado:
+  `npm test` 93 suites/358 tests (+44 sobre Prompt 62), `npm run
+  test:integration` 11 suites/67 tests (+15), `npm run test:e2e` 1/1
+  — todos pasando.
+- **Fase 7 (Auditoría)**: verificado por grep que ningún archivo de
+  `domain/`/`application/`/`presentation/` de `category`/`service`
+  importa `@prisma/client`; sin dependencias nuevas en
+  `package.json`/`package-lock.json`; `npm run lint` limpio, solo
+  formateo automático de Prettier (incluyó corregir un error propio de
+  copy-paste: el `replace_all` de un rename dejó
+  `PrismaServiceModelModel` en el import de
+  `service-prisma.mapper.ts`, corregido antes de que `npm run build`
+  fallara). Mismo hallazgo documentado y no corregido que en prompts
+  anteriores: los `README.md` de `application/` de `category`/
+  `service` siguen describiendo el skeleton original.
+- Verificaciones finales — todas pasando:
+  ```
+  npm run build            ✅
+  npm run lint              ✅ 0 errores, 0 warnings
+  npm test                   ✅ 93 suites, 358/358
+  npm run test:e2e          ✅ 1/1
+  npm run test:integration  ✅ 11 suites, 67/67
+  flutter analyze            ✅ No issues found!
+  flutter test                ✅ 748/748 (sin cambios — ningún archivo Flutter tocado)
+  flutter build windows      ✅ Build exitoso (mobile.exe)
+  ```
+- Todo este trabajo (Fase 2–7 del Prompt 63) quedó **consolidado en un
+  único commit** durante la Fase 1 del Prompt 64 — ver la sección de
+  cierre "Prompt 64" más abajo para el hash exacto y el detalle del
+  commit.
+- Contenedor Docker temporal `appservicios-pg-temp` (puerto `55432`):
+  se detuvo al cerrar las verificaciones del Prompt 63 (Fase 1 del
+  Prompt 64), y se volvió a levantar únicamente cuando Sprint 3 Etapa 7
+  (Provider, Availability & Schedule) requirió pruebas de integración
+  contra Postgres — ver la sección de cierre "Prompt 64" para su
+  estado final.

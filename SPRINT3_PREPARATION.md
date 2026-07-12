@@ -33,15 +33,30 @@
 > **Actualización (Prompt 62)**: se completaron **`Verification`**,
 > **`Trust`** y **`Audit`** hasta Infrastructure. **Con esto, el
 > bounded context Trust & Compliance queda 100% completo hasta
-> Infrastructure** — el siguiente hito del roadmap (sección 11) es
-> Marketplace (`Category`/`Service`/`Provider`). Dos invariantes reales
-> del dominio, respetadas sin inventar comportamiento adicional:
-> `Trust` es 1:1 con `Identity` (reforzado con `@unique` en
-> `schema.prisma` además de `BusinessRuleException` en el Use Case);
-> `Audit` es inmutable (solo Create/Get/List/Search). Sin Controllers
-> REST conectados todavía y **sin commitear** — pendiente de
-> aprobación del usuario. Ver `PROJECT_STATUS.md`, sección "Prompt 62",
-> para el detalle completo.
+> Infrastructure.** Dos invariantes reales del dominio, respetadas sin
+> inventar comportamiento adicional: `Trust` es 1:1 con `Identity`
+> (reforzado con `@unique` en `schema.prisma` además de
+> `BusinessRuleException` en el Use Case); `Audit` es inmutable (solo
+> Create/Get/List/Search). Consolidado en el commit `0242c97` (Prompt
+> 63, Fase 1).
+>
+> **Actualización (Prompt 63)**: se completaron **`Category`** y
+> **`Service`** hasta Infrastructure. **Hallazgo estructural de la
+> auditoría**: no existe ningún módulo de dominio `Marketplace` ni
+> `Search` en el backend (confirmado por grep en las 23 carpetas de
+> módulo) — "Marketplace" se satisface con Category+Service(+Provider
+> futuro), "Search" con el método `search()` por-repositorio ya
+> establecido en todos los módulos anteriores; no se creó ningún
+> `MarketplaceModule`/`SearchModule`. **`Provider` queda fuera de
+> alcance** (no mencionado en el título del prompt) — sin
+> Infrastructure todavía, por lo que `CreateServiceUseCase` verifica
+> `Category` pero no `Provider`, y `ServiceModel.providerId` es un
+> campo `String` sin `@relation` en el schema. El bounded context
+> Marketplace queda **parcialmente** completo — falta `Provider` para
+> cerrarlo del todo, siguiente hito natural del roadmap (sección 11).
+> Sin Controllers REST conectados todavía y **sin commitear** —
+> pendiente de aprobación del usuario. Ver `PROJECT_STATUS.md`,
+> sección "Prompt 63", para el detalle completo.
 
 ## 1. Estado real del proyecto
 

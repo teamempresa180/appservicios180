@@ -144,8 +144,44 @@ async function main(): Promise<void> {
     update: {},
   });
 
+  const category = await prisma.categoryModel.upsert({
+    where: { id: 'seed-category-1' },
+    create: {
+      id: 'seed-category-1',
+      name: 'Plumbing',
+      description: 'Pipes and water systems',
+      icon: 'icon-plumbing',
+      color: '#0000FF',
+      status: 'ACTIVE',
+      type: 'STANDARD',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+
+  await prisma.serviceModel.upsert({
+    where: { id: 'seed-service-1' },
+    create: {
+      id: 'seed-service-1',
+      // Synthetic — the Provider bounded context has no table yet
+      // (see PROJECT_STATUS.md, section "Prompt 63").
+      providerId: 'seed-provider-1',
+      categoryId: category.id,
+      name: 'Pipe Repair',
+      description: 'Fixes leaking pipes',
+      basePrice: 50,
+      estimatedDuration: 60,
+      status: 'ACTIVE',
+      type: 'STANDARD',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+
   console.log(
-    'Seed complete: 1 Identity, 1 Authentication, 1 Credential, 1 Profile, 1 Contact, 1 Address, 1 Verification, 1 Trust, 1 Audit.',
+    'Seed complete: 1 Identity, 1 Authentication, 1 Credential, 1 Profile, 1 Contact, 1 Address, 1 Verification, 1 Trust, 1 Audit, 1 Category, 1 Service.',
   );
 }
 

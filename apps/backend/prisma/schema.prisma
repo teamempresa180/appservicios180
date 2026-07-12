@@ -1,13 +1,22 @@
 // Prisma schema — Sprint 3, Etapa 2 (Identity & Access) + Etapa 3
 // (Profile) + Etapa 4 (Contact & Address) + Etapa 5 (Verification,
-// Trust & Audit).
+// Trust & Audit) + Etapa 6 (Category & Service).
 //
 // Only the persistence shape for `identity`/`authentication`/
 // `credentials`/`profiles`/`contact`/`address`/`verification`/
-// `trust`/`audit` (bounded contexts implemented end-to-end so far).
-// Every other module's tables are added when that module gets its own
-// Infrastructure layer, following the roadmap in
+// `trust`/`audit`/`category`/`service` (bounded contexts implemented
+// end-to-end so far). Every other module's tables are added when that
+// module gets its own Infrastructure layer, following the roadmap in
 // `SPRINT3_PREPARATION.md` — not created speculatively here.
+//
+// `ServiceModel.providerId` is a plain indexed String column, no
+// `@relation` — the Provider bounded context has no table yet (see
+// `PROJECT_STATUS.md`, section "Prompt 63", for the audit finding on
+// why Provider verification/FK is deferred to a future stage).
+// There is no `MarketplaceModel`/`SearchModel` — neither exists as a
+// domain entity; "Marketplace" is satisfied by Category+Service(+
+// Provider later), "Search" by the per-model `search()` repository
+// method, same as every other module.
 //
 // Field names/types mirror each domain entity's `Props` interface
 // exactly (see `domain/entities/*.entity.ts`); enums mirror each
@@ -179,6 +188,40 @@ enum AuditActionType {
   @@map("audit_action_type")
 }
 
+enum CategoryType {
+  STANDARD
+  PREMIUM
+  SEASONAL
+  OTHER
+
+  @@map("category_type")
+}
+
+enum CategoryStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+
+  @@map("category_status")
+}
+
+enum ServiceType {
+  STANDARD
+  EXPRESS
+  CUSTOM
+  OTHER
+
+  @@map("service_type")
+}
+
+enum ServiceStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+
+  @@map("service_status")
+}
+
 model IdentityModel {
   id             String         @id
   fullName       String         @map("full_name")
@@ -321,4 +364,40 @@ model AuditModel {
 
   @@index([identityId])
   @@map("audit_records")
+}
+
+model CategoryModel {
+  id          String         @id
+  name        String
+  description String
+  icon        String
+  color       String
+  status      CategoryStatus
+  type        CategoryType
+  createdAt   DateTime       @map("created_at")
+  updatedAt   DateTime       @map("updated_at")
+
+  services ServiceModel[]
+
+  @@map("categories")
+}
+
+model ServiceModel {
+  id                String        @id
+  providerId        String        @map("provider_id")
+  categoryId        String        @map("category_id")
+  name              String
+  description       String
+  basePrice         Float         @map("base_price")
+  estimatedDuration Int           @map("estimated_duration")
+  status            ServiceStatus
+  type              ServiceType
+  createdAt         DateTime      @map("created_at")
+  updatedAt         DateTime      @map("updated_at")
+
+  category CategoryModel @relation(fields: [categoryId], references: [id])
+
+  @@index([providerId])
+  @@index([categoryId])
+  @@map("services")
 }

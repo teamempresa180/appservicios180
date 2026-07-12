@@ -4,38 +4,56 @@ import { CreateCategoryUseCase } from '../application/use_cases/create-category.
 import { UpdateCategoryUseCase } from '../application/use_cases/update-category.use-case';
 import { DeleteCategoryUseCase } from '../application/use_cases/delete-category.use-case';
 import { GetCategoryUseCase } from '../application/use_cases/get-category.use-case';
-import { CategoryRepository } from '../domain/interfaces/category-repository.interface';
+import { ListCategoryUseCase } from '../application/use_cases/list-category.use-case';
+import { SearchCategoryUseCase } from '../application/use_cases/search-category.use-case';
+import {
+  CATEGORY_REPOSITORY,
+  CategoryRepository,
+} from '../domain/interfaces/category-repository.interface';
+import { PrismaCategoryRepository } from '../infrastructure/persistence/prisma-category.repository';
 
 /**
- * Wires the Category presentation layer to its Use Cases.
- *
- * No concrete CategoryRepository exists yet (Infrastructure layer is not
- * built). Each Use Case is constructed with an unset repository reference —
- * this is safe because every Use Case currently throws before touching it.
+ * Wires the Category presentation layer to its Use Cases, which are
+ * wired to the real `PrismaCategoryRepository` (Sprint 3, Etapa 6) via
+ * the `CATEGORY_REPOSITORY` DI token. `Category` is a standalone
+ * catalog entity — no other bounded context's repository is imported
+ * here (unlike every module referencing `IdentityId`).
  */
 @Module({
   controllers: [CategoryController],
   providers: [
+    { provide: CATEGORY_REPOSITORY, useClass: PrismaCategoryRepository },
     {
       provide: CreateCategoryUseCase,
-      useFactory: () =>
-        new CreateCategoryUseCase(undefined as unknown as CategoryRepository),
+      useFactory: (repo: CategoryRepository) => new CreateCategoryUseCase(repo),
+      inject: [CATEGORY_REPOSITORY],
     },
     {
       provide: UpdateCategoryUseCase,
-      useFactory: () =>
-        new UpdateCategoryUseCase(undefined as unknown as CategoryRepository),
+      useFactory: (repo: CategoryRepository) => new UpdateCategoryUseCase(repo),
+      inject: [CATEGORY_REPOSITORY],
     },
     {
       provide: DeleteCategoryUseCase,
-      useFactory: () =>
-        new DeleteCategoryUseCase(undefined as unknown as CategoryRepository),
+      useFactory: (repo: CategoryRepository) => new DeleteCategoryUseCase(repo),
+      inject: [CATEGORY_REPOSITORY],
     },
     {
       provide: GetCategoryUseCase,
-      useFactory: () =>
-        new GetCategoryUseCase(undefined as unknown as CategoryRepository),
+      useFactory: (repo: CategoryRepository) => new GetCategoryUseCase(repo),
+      inject: [CATEGORY_REPOSITORY],
+    },
+    {
+      provide: ListCategoryUseCase,
+      useFactory: (repo: CategoryRepository) => new ListCategoryUseCase(repo),
+      inject: [CATEGORY_REPOSITORY],
+    },
+    {
+      provide: SearchCategoryUseCase,
+      useFactory: (repo: CategoryRepository) => new SearchCategoryUseCase(repo),
+      inject: [CATEGORY_REPOSITORY],
     },
   ],
+  exports: [CATEGORY_REPOSITORY],
 })
 export class CategoryPresentationModule {}
