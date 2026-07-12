@@ -1,17 +1,21 @@
 import { OrderRepository } from '../../domain/interfaces/order-repository.interface';
+import { OrderId } from '../../domain/value-objects/order-id.value-object';
 import { OrderDto } from '../dto/order.dto';
+import { OrderMapper } from '../mappers/order.mapper';
 import { GetOrderQuery } from '../queries/get-order.query';
 
 /**
- * Use case skeleton. Dependencies are wired correctly; the orchestration
- * logic itself is intentionally not implemented in this phase.
+ * Fetches a single Order by id, returning `null` when not found —
+ * matches the `Promise<OrderDto | null>` signature already declared
+ * for this use case.
  */
 export class GetOrderUseCase {
   constructor(private readonly orderRepository: OrderRepository) {}
 
-  execute(query: GetOrderQuery): Promise<OrderDto | null> {
-    void this.orderRepository;
-    void query;
-    throw new Error('Not implemented yet');
+  async execute(query: GetOrderQuery): Promise<OrderDto | null> {
+    const order = await this.orderRepository.findById(
+      OrderId.fromString(query.id),
+    );
+    return order ? OrderMapper.toDto(order) : null;
   }
 }

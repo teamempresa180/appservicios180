@@ -227,8 +227,43 @@ async function main(): Promise<void> {
     update: {},
   });
 
+  const order = await prisma.orderModel.upsert({
+    where: { id: 'seed-order-1' },
+    create: {
+      id: 'seed-order-1',
+      identityId: identity.id,
+      providerId: provider.id,
+      serviceId: 'seed-service-1',
+      title: 'Fix the kitchen sink',
+      description: 'The kitchen sink is leaking under the counter.',
+      scheduledDate: new Date('2026-02-01T09:00:00Z'),
+      status: 'PENDING',
+      priority: 'MEDIUM',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+
+  await prisma.quoteModel.upsert({
+    where: { id: 'seed-quote-1' },
+    create: {
+      id: 'seed-quote-1',
+      orderId: order.id,
+      providerId: provider.id,
+      proposedPrice: 50,
+      estimatedDuration: 60,
+      notes: 'Includes parts and labor.',
+      status: 'PENDING',
+      type: 'STANDARD',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+
   console.log(
-    'Seed complete: 1 Identity, 1 Authentication, 1 Credential, 1 Profile, 1 Contact, 1 Address, 1 Verification, 1 Trust, 1 Audit, 1 Provider, 1 Availability, 1 Schedule, 1 Category, 1 Service.',
+    'Seed complete: 1 Identity, 1 Authentication, 1 Credential, 1 Profile, 1 Contact, 1 Address, 1 Verification, 1 Trust, 1 Audit, 1 Provider, 1 Availability, 1 Schedule, 1 Category, 1 Service, 1 Order, 1 Quote.',
   );
 }
 

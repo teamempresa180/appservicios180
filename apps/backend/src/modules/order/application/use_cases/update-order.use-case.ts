@@ -1,17 +1,45 @@
+import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { Order } from '../../domain/entities/order.entity';
 import { OrderRepository } from '../../domain/interfaces/order-repository.interface';
-import { OrderDto } from '../dto/order.dto';
+import { OrderId } from '../../domain/value-objects/order-id.value-object';
 import { UpdateOrderCommand } from '../commands/update-order.command';
+import { OrderDto } from '../dto/order.dto';
+import { OrderMapper } from '../mappers/order.mapper';
+import { OrderValidator } from '../validators/order.validator';
 
 /**
- * Use case skeleton. Dependencies are wired correctly; the orchestration
- * logic itself is intentionally not implemented in this phase.
+ * Updates the mutable fields of an existing Order (`title`,
+ * `description`, `scheduledDate`, `priority`) — `identityId`/
+ * `providerId`/`serviceId`/`status` are not offered by
+ * `UpdateOrderCommand`; status changes go exclusively through
+ * `CancelOrderUseCase`.
  */
 export class UpdateOrderUseCase {
   constructor(private readonly orderRepository: OrderRepository) {}
 
-  execute(command: UpdateOrderCommand): Promise<OrderDto> {
-    void this.orderRepository;
-    void command;
-    throw new Error('Not implemented yet');
+  async execute(command: UpdateOrderCommand): Promise<OrderDto> {
+    OrderValidator.validateUpdate(command);
+
+    const id = OrderId.fromString(command.id);
+    const existing = await this.orderRepository.findById(id);
+    if (!existing) {
+      throw new NotFoundException(`Order ${command.id} not found`);
+    }
+
+    const updated = new Order(existing.id, {
+      identityId: existing.identityId,
+      providerId: existing.providerId,
+      serviceId: existing.serviceId,
+      title: command.title ?? existing.title,
+      description: command.description ?? existing.description,
+      scheduledDate: command.scheduledDate ?? existing.scheduledDate,
+      status: existing.status,
+      priority: command.priority ?? existing.priority,
+      createdAt: existing.createdAt,
+      updatedAt: new Date(),
+    });
+
+    await this.orderRepository.save(updated);
+    return OrderMapper.toDto(updated);
   }
 }

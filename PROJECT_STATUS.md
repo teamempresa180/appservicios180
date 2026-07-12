@@ -83,7 +83,16 @@ Cada módulo tiene `application/{commands,queries,use_cases,dto,mappers}/`.
   `Provider` tiene invariante 1:1 con `Identity` (mismo patrón que
   `Trust`) y referencia real a `Profile`. Ver "Sprint 3 — Etapa 6" y
   "Etapa 7" más abajo.
-- **Los otros 9 módulos** — placeholder: `execute()` sigue lanzando
+- **Order, Quote** (bounded context Fulfillment) — ✅ mismo
+  tratamiento: Use Cases reales, validador estructural, mappers.
+  `CreateOrderUseCase` verifica Identity, Provider y Service reales;
+  `CreateQuoteUseCase` verifica Order y Provider reales. **Hallazgo de
+  auditoría: no existe invariante "una Order solo acepta una Quote"**
+  — `QuoteRepository.findByOrderId` devuelve `Quote[]`, confirmado
+  desde el dominio existente, no desde notas de sesiones previas.
+  Tampoco hay comando/caso de uso Delete en ninguno de los dos módulos
+  (no estaba en el skeleton). Ver "Sprint 3 — Etapa 8" más abajo.
+- **Los otros 7 módulos** — placeholder: `execute()` sigue lanzando
   `Error("Not implemented yet")`, intencional, sin tocar todavía.
 
 ### Presentation — ✅ 100% completo (22 controllers REST, sin lógica real)
@@ -95,7 +104,7 @@ propósito — **conectar Application/Infrastructure reales a los
 Controllers REST es trabajo explícitamente fuera de alcance de Sprint 3
 Etapa 2**, quedará para una etapa futura.
 
-### Infrastructure — 🟡 Parcial: Identity & Access + Profiles & Contact + Trust & Compliance + Marketplace completos, resto reservado
+### Infrastructure — 🟡 Parcial: Identity & Access + Profiles & Contact + Trust & Compliance + Marketplace + Fulfillment completos, resto reservado
 - **Identity, Authentication, Credentials** — ✅ Repositorios reales
   (`Prisma*Repository`), mappers Domain↔Prisma, wireados por DI en sus
   `*.module.ts` vía Symbol tokens (`IDENTITY_REPOSITORY`,
@@ -130,23 +139,33 @@ Etapa 2**, quedará para una etapa futura.
   `CreateScheduleUseCase` verifican Provider real desde el inicio.
   **Con esto, el bounded context Marketplace queda 100% completo
   hasta Infrastructure.**
+- **Order, Quote** — ✅ mismo tratamiento: `Prisma*Repository` +
+  mapper Domain↔Prisma, wireados vía `ORDER_REPOSITORY`/
+  `QUOTE_REPOSITORY`. `OrderModel.identityId`/`providerId`/`serviceId`
+  y `QuoteModel.orderId`/`providerId` son `@relation`es reales desde
+  el inicio — Identity, Provider y Service ya tenían tabla cuando se
+  implementó este prompt, ninguna referencia quedó diferida.
+  `QuoteModel.orderId` es una columna indexada normal (no `@unique`):
+  una Order puede recibir múltiples Quotes. **Con esto, el bounded
+  context Fulfillment queda completo hasta Infrastructure.**
 - **Persistencia** — ✅ Prisma + PostgreSQL, oficial desde Prompt 59
   (ver "Decisión de persistencia" más abajo). `prisma/schema.prisma`
-  (14 modelos + 29 enums tras Prompt 64), 6 migraciones reales
+  (16 modelos + 32 enums tras Prompt 65), 7 migraciones reales
   generadas contra Postgres en Docker, seed sintético (1 Identity + 1
   Authentication + 1 Credential + 1 Profile + 1 Contact + 1 Address +
   1 Verification + 1 Trust + 1 Audit + 1 Provider + 1 Availability +
-  1 Schedule + 1 Category + 1 Service), `PrismaService` app-wide con
-  conexión lazy (no bloquea build/test/e2e sin DB viva).
-- **Los otros 9 módulos** — carpetas vacías, reservadas, sin tocar.
+  1 Schedule + 1 Category + 1 Service + 1 Order + 1 Quote),
+  `PrismaService` app-wide con conexión lazy (no bloquea
+  build/test/e2e sin DB viva).
+- **Los otros 7 módulos** — carpetas vacías, reservadas, sin tocar.
 
-### Verificación backend (último estado conocido — Sprint 3 Etapa 7, Prompt 64)
+### Verificación backend (último estado conocido — Sprint 3 Etapa 8, Prompt 65)
 ```
 npm run build          ✅
 npm run lint            ✅ 0 errores, 0 warnings
-npm test                 ✅ 102 suites, 419/419 tests
+npm test                 ✅ 108 suites, 466/466 tests
 npm run test:e2e        ✅ 1/1
-npm run test:integration ✅ 14 suites, 85/85 tests (requiere Postgres vivo)
+npm run test:integration ✅ 16 suites, 99/99 tests (requiere Postgres vivo)
 ```
 
 ## 4. Estado de Flutter (`apps/mobile`)
@@ -2414,6 +2433,187 @@ hash y el detalle del commit).
   la migración `add_provider_availability_schedule` con reset
   intermedio, correr `test:integration` de
   Provider/Availability/Schedule/Service), se detuvo al cierre de esa
+  sesión, y se volvió a levantar para las verificaciones de
+  `test:integration` de la Fase 1 del Prompt 65 — ver la sección de
+  cierre "Prompt 65" más abajo para su estado final.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 65 — Sprint 3 Etapa 8, Fulfillment: Order & Quote — consolidado)
+
+Este es el handoff vigente — más reciente que los veinticinco bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+**El Prompt 65 fue aprobado por el usuario y consolidado en el Prompt
+66** (Fase 1 — ver la sección de cierre "Prompt 66" más abajo para el
+hash y el detalle del commit).
+
+- **Fase 0**: verificado que el repositorio coincidía exactamente con
+  el cierre del Prompt 64 (último commit = Prompt 63 `1c137b3`, working
+  tree con el trabajo de Prompt 64 sin commitear, contenedor
+  `appservicios-pg-temp` detenido). `PROJECT_STATUS.md`/
+  `SPRINT3_PREPARATION.md` revisados. Sin cambios de código en esta
+  fase.
+- **Fase 1 (Consolidación Prompt 64)**: `npm run build`/`lint`/`test`
+  (419/419)/`test:integration` (85/85)/`test:e2e` (1/1) +
+  `flutter analyze`/`test` (748/748)/`build windows`, todos ✅.
+  Contenedor Docker levantado solo para `test:integration` y detenido
+  inmediatamente después. **Commit único `65cead2`** ("Sprint 3, Etapa
+  7: Provider, Availability & Schedule hasta Infrastructure"),
+  excluyendo `Logo oficial grupo.svg`. Con este commit, Sprint 3 Etapa
+  7 queda oficialmente cerrada.
+- **Fase 2 (Auditoría del dominio Fulfillment)**: `Order`/`Quote`
+  analizados por completo antes de escribir código. Hallazgos reales:
+  - `Order.props`: `identityId`, `providerId`, `serviceId`, `title`,
+    `description`, `scheduledDate`, `status` (`OrderStatus`:
+    Pending/Accepted/InProgress/Completed/Cancelled/Rejected),
+    `priority` (`OrderPriority`: Low/Medium/High/Urgent).
+    `OrderRepository` original: `findById`/`findByIdentityId`/
+    `findByProviderId`/`save` — sin `delete`/`list`/`search`.
+  - `Quote.props`: `orderId`, `providerId`, `proposedPrice`,
+    `estimatedDuration`, `notes`, `status` (`QuoteStatus`:
+    Pending/Accepted/Rejected/Expired/Withdrawn), `type` (`QuoteType`:
+    Standard/Detailed/Estimate/Other). `QuoteRepository` original:
+    `findById`/`findByOrderId`/`findByProviderId`/`save` — sin
+    `delete`/`list`/`search`.
+  - **Hallazgo clave**: `QuoteRepository.findByOrderId` devuelve
+    `Quote[]` (no un `Quote` único) — **no existe el invariante "una
+    Order solo acepta una Quote"** que mencionaban notas de sesiones
+    anteriores en este mismo archivo. Confirmado desde el código de
+    dominio real, no asumido de notas previas — una misma Order puede
+    recibir Quotes de varios Providers.
+  - Comandos ya existentes en el skeleton: `CreateOrderCommand`/
+    `UpdateOrderCommand`/`CancelOrderCommand` (sin Delete);
+    `CreateQuoteCommand`/`UpdateQuoteCommand`/`AcceptQuoteCommand`/
+    `RejectQuoteCommand` (sin Delete). Ningún comando de Delete existe
+    para ninguno de los dos módulos — mismo criterio que
+    `Verification`/`Trust`: no se inventó ningún caso de uso Delete.
+    `ListOrderQuery`/`SearchOrderQuery`/`ListQuoteQuery`/
+    `SearchQuoteQuery` sí existían en el skeleton (sin Use Case
+    todavía) — mismo patrón que Provider/Service en prompts previos:
+    se implementaron `List*UseCase`/`Search*UseCase` nuevos y se
+    añadió `list()`/`search()` a ambas interfaces de repositorio (no
+    existían originalmente).
+  - `GetOrderUseCase`/`GetQuoteUseCase` ya declaraban la firma
+    `Promise<Dto | null>` en el skeleton — a diferencia de
+    Provider/Service (que lanzan `NotFoundException`), estos dos
+    devuelven `null` cuando no existe el registro; se respetó la firma
+    tal como estaba, sin inventar un comportamiento distinto.
+  - Dependencias con módulos ya implementados: `Order` referencia
+    `Identity`, `Provider` y `Service` (los tres con Infrastructure
+    real desde antes de este prompt); `Quote` referencia `Order`
+    (implementado en este mismo prompt) y `Provider` (con
+    Infrastructure desde Prompt 64) — ninguna verificación quedó
+    diferida.
+- **Fase 3 (Application)**: `OrderValidator`/`QuoteValidator`
+  (validación estructural — campos requeridos, rangos no negativos,
+  enums válidos; sin chequeo de unicidad, coherente con que
+  `findByIdentityId`/`findByProviderId`/`findByOrderId` devuelven
+  arrays). Use Cases reales:
+  - `CreateOrderUseCase` verifica Identity, Provider y Service
+    (inyecta los tres repositorios), crea la Order en estado
+    `Pending`.
+  - `UpdateOrderUseCase` actualiza `title`/`description`/
+    `scheduledDate`/`priority` únicamente (no `status`).
+  - `CancelOrderUseCase` transiciona a `Cancelled`, sin guarda de
+    estado previo — mismo criterio que `UpdateProviderUseCase`
+    (aplica el cambio incondicionalmente a cualquier entidad
+    encontrada).
+  - `GetOrderUseCase`/`ListOrderUseCase`/`SearchOrderUseCase`
+    (búsqueda por `title`/`description`).
+  - `CreateQuoteUseCase` verifica Order y Provider, crea la Quote en
+    estado `Pending`.
+  - `UpdateQuoteUseCase` actualiza `proposedPrice`/
+    `estimatedDuration`/`notes` únicamente.
+  - `AcceptQuoteUseCase`/`RejectQuoteUseCase` transicionan a
+    `Accepted`/`Rejected` respectivamente, mismo criterio sin guarda
+    de estado previo. Sin efecto secundario sobre la Order ni sobre
+    otras Quotes de la misma Order — ni `Order` ni `Quote` exponen tal
+    comportamiento en el dominio.
+  - `GetQuoteUseCase`/`ListQuoteUseCase`/`SearchQuoteUseCase`
+    (búsqueda por `notes`).
+- **Fase 4–5 (Infrastructure + Persistencia)**: `PrismaOrderRepository`/
+  `PrismaQuoteRepository` inyectando `PrismaService`, mappers
+  Domain↔Prisma, wireados vía `ORDER_REPOSITORY`/`QUOTE_REPOSITORY`.
+  `order.module.ts` importa `IdentityPresentationModule`,
+  `ProviderPresentationModule` y `ServicePresentationModule`;
+  `quote.module.ts` importa `OrderPresentationModule` y
+  `ProviderPresentationModule`. `prisma/schema.prisma` ganó
+  `OrderModel`/`QuoteModel` + 4 enums (`OrderStatus`/`OrderPriority`/
+  `QuoteStatus`/`QuoteType`), con `@relation`es reales a
+  `IdentityModel`/`ProviderModel`/`ServiceModel` (`Order`) y a
+  `OrderModel`/`ProviderModel` (`Quote`) desde el inicio — ninguna FK
+  quedó diferida, a diferencia de lo que ocurrió con
+  `Service.providerId` en Prompt 63. `QuoteModel.orderId` es una
+  columna indexada normal, no `@unique` (ver hallazgo de Fase 2).
+  Migración real `20260712183138_add_order_quote` generada y aplicada
+  limpia contra el Postgres temporal en Docker, sin incidentes.
+  `prisma/seed.ts` ganó 1 Order + 1 Quote sintéticos.
+- **Fase 6 (Tests)**: mismos 3 niveles que Prompts 59–64 para ambos
+  módulos — unit (Application, con `InMemoryOrderRepository`/
+  `InMemoryQuoteRepository`, más `InMemoryIdentityRepository`/
+  `InMemoryProviderRepository`/`InMemoryServiceRepository`/
+  `InMemoryCategoryRepository` para las verificaciones cruzadas), unit
+  (mappers, round-trip, sin DB), integration (contra Postgres real,
+  cada test crea Identity+Profile+Provider+Category+Service reales
+  antes de crear la Order/Quote, para satisfacer los FKs). Resultado:
+  `npm test` 108 suites/466 tests (+47 sobre Prompt 64), `npm run
+  test:integration` 16 suites/99 tests (+14), `npm run test:e2e` 1/1
+  — todos pasando.
+- **Fase 7 (Auditoría)**: verificado por grep que ningún archivo de
+  `domain/`/`application/` de `order`/`quote` importa
+  `@prisma/client`; sin dependencias nuevas en `package.json`/
+  `package-lock.json`; sin TODOs nuevos; `List*UseCase`/
+  `Search*UseCase` de ambos módulos están cableados en su
+  `*.module.ts` pero no expuestos por el Controller — mismo criterio
+  ya establecido para Provider/Service (no se agregaron endpoints REST
+  nuevos). `npm run lint` limpio, solo formateo automático de
+  Prettier. Mismo hallazgo documentado y no corregido que en prompts
+  anteriores: los `README.md` de `order`/`quote` siguen describiendo
+  el skeleton original (mismo criterio ya aplicado a Provider/Service:
+  no se tocan, es un patrón preexistente en todo el repositorio, no un
+  problema introducido por este prompt).
+- Verificaciones finales — todas pasando:
+  ```
+  npm run build            ✅
+  npm run lint              ✅ 0 errores, 0 warnings
+  npm test                   ✅ 108 suites, 466/466
+  npm run test:e2e          ✅ 1/1
+  npm run test:integration  ✅ 16 suites, 99/99
+  flutter analyze            ✅ No issues found!
+  flutter test                ✅ 748/748 (sin cambios — ningún archivo Flutter tocado)
+  flutter build windows      ✅ Build exitoso (mobile.exe)
+  ```
+- `git status` al cierre de esta sesión — **trabajo de Fase 2–7 del
+  Prompt 65 presente en el working tree, sin commitear**, además del
+  logo histórico:
+  ```
+  On branch main
+  Modified: PROJECT_STATUS.md, SPRINT3_PREPARATION.md,
+  apps/backend/prisma/schema.prisma, apps/backend/prisma/seed.ts,
+  apps/backend/src/modules/order/application/use_cases/{cancel,create,get,update}-order.use-case.ts,
+  apps/backend/src/modules/order/domain/interfaces/order-repository.interface.ts,
+  apps/backend/src/modules/order/presentation/order.module.ts,
+  apps/backend/src/modules/quote/application/use_cases/{accept,create,get,reject,update}-quote.use-case.ts,
+  apps/backend/src/modules/quote/domain/interfaces/quote-repository.interface.ts,
+  apps/backend/src/modules/quote/presentation/quote.module.ts
+  Untracked: apps/backend/prisma/migrations/20260712183138_add_order_quote/,
+  apps/backend/src/modules/order/application/use_cases/{list,search}-order.use-case.ts,
+  apps/backend/src/modules/order/application/use_cases/order.use-cases.spec.ts,
+  apps/backend/src/modules/order/application/use_cases/test-support/,
+  apps/backend/src/modules/order/application/validators/,
+  apps/backend/src/modules/order/infrastructure/persistence/,
+  apps/backend/src/modules/quote/application/use_cases/{list,search}-quote.use-case.ts,
+  apps/backend/src/modules/quote/application/use_cases/quote.use-cases.spec.ts,
+  apps/backend/src/modules/quote/application/use_cases/test-support/,
+  apps/backend/src/modules/quote/application/validators/,
+  apps/backend/src/modules/quote/infrastructure/persistence/,
+  Logo oficial grupo.svg (histórico, sin trackear)
+  ```
+- Todo este trabajo (Fase 2–7 del Prompt 65) quedó **consolidado en un
+  único commit** durante la Fase 1 del Prompt 66 — ver la sección de
+  cierre "Prompt 66" más abajo para el hash y el detalle del commit.
+- **Contenedor Docker temporal `appservicios-pg-temp` (puerto
+  `55432`)**: se usó dos veces durante el Prompt 65 (generar/aplicar
+  la migración `add_order_quote`, correr `npx prisma db seed` y
+  `test:integration` de Order/Quote), se detuvo al cierre de esa
   sesión, y se volvió a levantar únicamente para las verificaciones de
-  `test:integration` de la Fase 1 del Prompt 65 — sintético/desechable,
+  `test:integration` de la Fase 1 del Prompt 66 — sintético/desechable,
   sin datos reales.

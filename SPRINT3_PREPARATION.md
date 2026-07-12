@@ -67,6 +67,30 @@
 > Controllers REST conectados todavía. Consolidado en un único commit
 > durante la Fase 1 del Prompt 65 — ver `PROJECT_STATUS.md`, sección
 > "Prompt 64", para el detalle completo.
+>
+> **Actualización (Prompt 65)**: se completaron **`Order`** y
+> **`Quote`** hasta Infrastructure — bounded context Fulfillment.
+> **Hallazgo de la auditoría (Fase 2)**: `QuoteRepository.findByOrderId`
+> devuelve `Quote[]` (no un único `Quote`), confirmado desde el propio
+> código de dominio — **no existe el invariante "una Order solo acepta
+> una Quote"** que mencionaban notas de sesiones previas; una misma
+> `Order` puede recibir múltiples `Quote` de distintos Providers, sin
+> que eso se haya inventado ni añadido artificialmente. Tampoco existe
+> comando/caso de uso de Delete en ninguno de los dos módulos (no
+> estaba en el skeleton original), mismo criterio que `Verification`/
+> `Trust`. `CreateOrderUseCase` verifica `Identity`, `Provider` y
+> `Service` (los tres ya tenían Infrastructure); `CreateQuoteUseCase`
+> verifica `Order` y `Provider` (ambos con Infrastructure real para
+> cuando se implementó este prompt, sin ninguna dependencia diferida).
+> `GetOrderUseCase`/`GetQuoteUseCase` devuelven `null` en vez de lanzar
+> `NotFoundException` — respeta la firma `Promise<Dto | null>` ya
+> declarada en el skeleton original de ambos casos de uso, distinta del
+> patrón usado en Provider/Service. Sin Controllers REST para
+> List/Search todavía (mismo criterio que Provider/Service: los casos
+> de uso existen y están cableados en el módulo de Nest, pero no
+> expuestos por el Controller). Trabajo completo hasta Infrastructure.
+> Consolidado en un único commit durante la Fase 1 del Prompt 66 — ver
+> `PROJECT_STATUS.md`, sección "Prompt 65", para el detalle completo.
 
 ## 1. Estado real del proyecto
 

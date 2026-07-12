@@ -1,15 +1,24 @@
 // Prisma schema — Sprint 3, Etapa 2 (Identity & Access) + Etapa 3
 // (Profile) + Etapa 4 (Contact & Address) + Etapa 5 (Verification,
 // Trust & Audit) + Etapa 6 (Category & Service) + Etapa 7 (Provider,
-// Availability & Schedule).
+// Availability & Schedule) + Etapa 8 (Fulfillment: Order & Quote).
 //
 // Only the persistence shape for `identity`/`authentication`/
 // `credentials`/`profiles`/`contact`/`address`/`verification`/
 // `trust`/`audit`/`category`/`service`/`provider`/`availability`/
-// `schedule` (bounded contexts implemented end-to-end so far). Every
-// other module's tables are added when that module gets its own
-// Infrastructure layer, following the roadmap in
+// `schedule`/`order`/`quote` (bounded contexts implemented end-to-end
+// so far). Every other module's tables are added when that module
+// gets its own Infrastructure layer, following the roadmap in
 // `SPRINT3_PREPARATION.md` — not created speculatively here.
+//
+// `OrderModel.identityId`/`providerId`/`serviceId` and
+// `QuoteModel.orderId`/`providerId` are real `@relation`s — Identity,
+// Provider and Service all already had tables by the time Order/Quote
+// were implemented (Sprint 3, Etapa 8), so no relation was deferred.
+// `QuoteModel.orderId` is a plain indexed column (not unique): an
+// Order may receive multiple Quotes from different Providers —
+// `QuoteRepository.findByOrderId` returns `Quote[]`, confirmed from
+// the domain code itself, not assumed from prior notes.
 //
 // `ServiceModel.providerId` is now a real `@relation` to
 // `ProviderModel` (Sprint 3, Etapa 7) — Prompt 63 left it as a plain
@@ -288,6 +297,45 @@ enum ScheduleType {
   @@map("schedule_type")
 }
 
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  REJECTED
+
+  @@map("order_status")
+}
+
+enum OrderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+
+  @@map("order_priority")
+}
+
+enum QuoteStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  WITHDRAWN
+
+  @@map("quote_status")
+}
+
+enum QuoteType {
+  STANDARD
+  DETAILED
+  ESTIMATE
+  OTHER
+
+  @@map("quote_type")
+}
+
 model IdentityModel {
   id             String         @id
   fullName       String         @map("full_name")
@@ -307,6 +355,7 @@ model IdentityModel {
   trust           TrustModel?
   auditRecords    AuditModel[]
   provider        ProviderModel?
+  orders          OrderModel[]
 
   @@map("identities")
 }
@@ -465,6 +514,7 @@ model ServiceModel {
 
   category CategoryModel @relation(fields: [categoryId], references: [id])
   provider ProviderModel @relation(fields: [providerId], references: [id])
+  orders   OrderModel[]
 
   @@index([providerId])
   @@index([categoryId])
@@ -488,6 +538,8 @@ model ProviderModel {
   services      ServiceModel[]
   availabilities AvailabilityModel[]
   schedules     ScheduleModel[]
+  orders        OrderModel[]
+  quotes        QuoteModel[]
 
   @@index([providerProfileId])
   @@map("providers")
@@ -523,4 +575,48 @@ model ScheduleModel {
 
   @@index([providerId])
   @@map("schedules")
+}
+
+model OrderModel {
+  id            String        @id
+  identityId    String        @map("identity_id")
+  providerId    String        @map("provider_id")
+  serviceId     String        @map("service_id")
+  title         String
+  description   String
+  scheduledDate DateTime      @map("scheduled_date")
+  status        OrderStatus
+  priority      OrderPriority
+  createdAt     DateTime      @map("created_at")
+  updatedAt     DateTime      @map("updated_at")
+
+  identity IdentityModel @relation(fields: [identityId], references: [id])
+  provider ProviderModel @relation(fields: [providerId], references: [id])
+  service  ServiceModel  @relation(fields: [serviceId], references: [id])
+  quotes   QuoteModel[]
+
+  @@index([identityId])
+  @@index([providerId])
+  @@index([serviceId])
+  @@map("orders")
+}
+
+model QuoteModel {
+  id                String      @id
+  orderId           String      @map("order_id")
+  providerId        String      @map("provider_id")
+  proposedPrice     Float       @map("proposed_price")
+  estimatedDuration Int         @map("estimated_duration")
+  notes             String
+  status            QuoteStatus
+  type              QuoteType
+  createdAt         DateTime    @map("created_at")
+  updatedAt         DateTime    @map("updated_at")
+
+  order    OrderModel    @relation(fields: [orderId], references: [id])
+  provider ProviderModel @relation(fields: [providerId], references: [id])
+
+  @@index([orderId])
+  @@index([providerId])
+  @@map("quotes")
 }
