@@ -1,41 +1,76 @@
 import { Module } from '@nestjs/common';
+import { IdentityPresentationModule } from '../../identity/presentation/identity.module';
+import {
+  IDENTITY_REPOSITORY,
+  IdentityRepository,
+} from '../../identity/domain/interfaces/identity-repository.interface';
+import { ProfilesPresentationModule } from '../../profiles/presentation/profile.module';
+import {
+  PROFILE_REPOSITORY,
+  ProfileRepository,
+} from '../../profiles/domain/interfaces/profile-repository.interface';
 import { ProviderController } from './controllers/provider.controller';
 import { CreateProviderUseCase } from '../application/use_cases/create-provider.use-case';
 import { UpdateProviderUseCase } from '../application/use_cases/update-provider.use-case';
 import { DeleteProviderUseCase } from '../application/use_cases/delete-provider.use-case';
 import { GetProviderUseCase } from '../application/use_cases/get-provider.use-case';
-import { ProviderRepository } from '../domain/interfaces/provider-repository.interface';
+import { ListProviderUseCase } from '../application/use_cases/list-provider.use-case';
+import { SearchProviderUseCase } from '../application/use_cases/search-provider.use-case';
+import {
+  PROVIDER_REPOSITORY,
+  ProviderRepository,
+} from '../domain/interfaces/provider-repository.interface';
+import { PrismaProviderRepository } from '../infrastructure/persistence/prisma-provider.repository';
 
 /**
- * Wires the Provider presentation layer to its Use Cases.
- *
- * No concrete ProviderRepository exists yet (Infrastructure layer is not
- * built). Each Use Case is constructed with an unset repository reference —
- * this is safe because every Use Case currently throws before touching it.
+ * Wires the Provider presentation layer to its Use Cases, which are
+ * wired to the real `PrismaProviderRepository` (Sprint 3, Etapa 7) via
+ * the `PROVIDER_REPOSITORY` DI token. Imports
+ * `IdentityPresentationModule` and `ProfilesPresentationModule` —
+ * `CreateProviderUseCase` verifies both the referenced Identity and
+ * the referenced Profile exist, and enforces the 1:1 invariant with
+ * Identity before creating a Provider record.
  */
 @Module({
+  imports: [IdentityPresentationModule, ProfilesPresentationModule],
   controllers: [ProviderController],
   providers: [
+    { provide: PROVIDER_REPOSITORY, useClass: PrismaProviderRepository },
     {
       provide: CreateProviderUseCase,
-      useFactory: () =>
-        new CreateProviderUseCase(undefined as unknown as ProviderRepository),
+      useFactory: (
+        providerRepo: ProviderRepository,
+        identityRepo: IdentityRepository,
+        profileRepo: ProfileRepository,
+      ) => new CreateProviderUseCase(providerRepo, identityRepo, profileRepo),
+      inject: [PROVIDER_REPOSITORY, IDENTITY_REPOSITORY, PROFILE_REPOSITORY],
     },
     {
       provide: UpdateProviderUseCase,
-      useFactory: () =>
-        new UpdateProviderUseCase(undefined as unknown as ProviderRepository),
+      useFactory: (repo: ProviderRepository) => new UpdateProviderUseCase(repo),
+      inject: [PROVIDER_REPOSITORY],
     },
     {
       provide: DeleteProviderUseCase,
-      useFactory: () =>
-        new DeleteProviderUseCase(undefined as unknown as ProviderRepository),
+      useFactory: (repo: ProviderRepository) => new DeleteProviderUseCase(repo),
+      inject: [PROVIDER_REPOSITORY],
     },
     {
       provide: GetProviderUseCase,
-      useFactory: () =>
-        new GetProviderUseCase(undefined as unknown as ProviderRepository),
+      useFactory: (repo: ProviderRepository) => new GetProviderUseCase(repo),
+      inject: [PROVIDER_REPOSITORY],
+    },
+    {
+      provide: ListProviderUseCase,
+      useFactory: (repo: ProviderRepository) => new ListProviderUseCase(repo),
+      inject: [PROVIDER_REPOSITORY],
+    },
+    {
+      provide: SearchProviderUseCase,
+      useFactory: (repo: ProviderRepository) => new SearchProviderUseCase(repo),
+      inject: [PROVIDER_REPOSITORY],
     },
   ],
+  exports: [PROVIDER_REPOSITORY],
 })
 export class ProviderPresentationModule {}

@@ -144,6 +144,53 @@ async function main(): Promise<void> {
     update: {},
   });
 
+  const provider = await prisma.providerModel.upsert({
+    where: { id: 'seed-provider-1' },
+    create: {
+      id: 'seed-provider-1',
+      identityId: identity.id,
+      providerProfileId: 'seed-profile-1',
+      status: 'ACTIVE',
+      type: 'INDEPENDENT',
+      experience: 'INTERMEDIATE',
+      biography: 'Dev seed provider biography.',
+      yearsOfExperience: 5,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+
+  await prisma.availabilityModel.upsert({
+    where: { id: 'seed-availability-1' },
+    create: {
+      id: 'seed-availability-1',
+      providerId: provider.id,
+      status: 'ACTIVE',
+      type: 'FULL_TIME',
+      availableFrom: new Date('2026-01-01T08:00:00Z'),
+      availableTo: new Date('2026-01-01T17:00:00Z'),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+
+  await prisma.scheduleModel.upsert({
+    where: { id: 'seed-schedule-1' },
+    create: {
+      id: 'seed-schedule-1',
+      providerId: provider.id,
+      startDateTime: new Date('2026-01-01T09:00:00Z'),
+      endDateTime: new Date('2026-01-01T10:00:00Z'),
+      status: 'OPEN',
+      type: 'REGULAR',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+
   const category = await prisma.categoryModel.upsert({
     where: { id: 'seed-category-1' },
     create: {
@@ -164,9 +211,9 @@ async function main(): Promise<void> {
     where: { id: 'seed-service-1' },
     create: {
       id: 'seed-service-1',
-      // Synthetic — the Provider bounded context has no table yet
-      // (see PROJECT_STATUS.md, section "Prompt 63").
-      providerId: 'seed-provider-1',
+      // Real FK now — Provider has a table since Sprint 3, Etapa 7
+      // (see PROJECT_STATUS.md, section "Prompt 64").
+      providerId: provider.id,
       categoryId: category.id,
       name: 'Pipe Repair',
       description: 'Fixes leaking pipes',
@@ -181,7 +228,7 @@ async function main(): Promise<void> {
   });
 
   console.log(
-    'Seed complete: 1 Identity, 1 Authentication, 1 Credential, 1 Profile, 1 Contact, 1 Address, 1 Verification, 1 Trust, 1 Audit, 1 Category, 1 Service.',
+    'Seed complete: 1 Identity, 1 Authentication, 1 Credential, 1 Profile, 1 Contact, 1 Address, 1 Verification, 1 Trust, 1 Audit, 1 Provider, 1 Availability, 1 Schedule, 1 Category, 1 Service.',
   );
 }
 

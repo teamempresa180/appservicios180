@@ -1,17 +1,76 @@
+import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
+import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
+import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
+import { ProfileRepository } from '../../../profiles/domain/interfaces/profile-repository.interface';
+import { ProfileId } from '../../../profiles/domain/value-objects/profile-id.value-object';
+import { Provider } from '../../domain/entities/provider.entity';
 import { ProviderRepository } from '../../domain/interfaces/provider-repository.interface';
-import { ProviderDto } from '../dto/provider.dto';
+import { ProviderId } from '../../domain/value-objects/provider-id.value-object';
+import { ProviderStatus } from '../../domain/value-objects/provider-status.value-object';
 import { CreateProviderCommand } from '../commands/create-provider.command';
+import { ProviderDto } from '../dto/provider.dto';
+import { ProviderMapper } from '../mappers/provider.mapper';
+import { ProviderValidator } from '../validators/provider.validator';
 
 /**
- * Use case skeleton. Dependencies are wired correctly; the orchestration
- * logic itself is intentionally not implemented in this phase.
+ * Creates a new Provider for an existing Identity, always in `Active`
+ * status. Depends on `IdentityRepository` and `ProfileRepository` (not
+ * just its own) to verify both the referenced Identity and the
+ * referenced Profile (`providerProfileId`) actually exist before
+ * creating a record — `Profile` already has Infrastructure since
+ * Sprint 3 Etapa 3, so this check is real, not deferred. Also enforces
+ * the real domain invariant carried by
+ * `ProviderRepository.findByIdentityId` returning `Provider | null`
+ * (not an array, same shape as `Trust`): **at most one Provider
+ * record per Identity** — throws `BusinessRuleException` if one
+ * already exists.
  */
 export class CreateProviderUseCase {
-  constructor(private readonly providerRepository: ProviderRepository) {}
+  constructor(
+    private readonly providerRepository: ProviderRepository,
+    private readonly identityRepository: IdentityRepository,
+    private readonly profileRepository: ProfileRepository,
+  ) {}
 
-  execute(command: CreateProviderCommand): Promise<ProviderDto> {
-    void this.providerRepository;
-    void command;
-    throw new Error('Not implemented yet');
+  async execute(command: CreateProviderCommand): Promise<ProviderDto> {
+    ProviderValidator.validateCreate(command);
+
+    const identityId = IdentityId.fromString(command.identityId);
+    const identity = await this.identityRepository.findById(identityId);
+    if (!identity) {
+      throw new NotFoundException(`Identity ${command.identityId} not found`);
+    }
+
+    const providerProfileId = ProfileId.fromString(command.providerProfileId);
+    const profile = await this.profileRepository.findById(providerProfileId);
+    if (!profile) {
+      throw new NotFoundException(
+        `Profile ${command.providerProfileId} not found`,
+      );
+    }
+
+    const existing = await this.providerRepository.findByIdentityId(identityId);
+    if (existing) {
+      throw new BusinessRuleException(
+        `Identity ${command.identityId} already has a Provider record`,
+      );
+    }
+
+    const now = new Date();
+    const provider = new Provider(ProviderId.create(), {
+      identityId,
+      providerProfileId,
+      status: ProviderStatus.Active,
+      type: command.type,
+      experience: command.experience,
+      biography: command.biography,
+      yearsOfExperience: command.yearsOfExperience,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await this.providerRepository.save(provider);
+    return ProviderMapper.toDto(provider);
   }
 }

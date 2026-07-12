@@ -47,16 +47,26 @@
 > módulo) — "Marketplace" se satisface con Category+Service(+Provider
 > futuro), "Search" con el método `search()` por-repositorio ya
 > establecido en todos los módulos anteriores; no se creó ningún
-> `MarketplaceModule`/`SearchModule`. **`Provider` queda fuera de
-> alcance** (no mencionado en el título del prompt) — sin
-> Infrastructure todavía, por lo que `CreateServiceUseCase` verifica
-> `Category` pero no `Provider`, y `ServiceModel.providerId` es un
-> campo `String` sin `@relation` en el schema. El bounded context
-> Marketplace queda **parcialmente** completo — falta `Provider` para
-> cerrarlo del todo, siguiente hito natural del roadmap (sección 11).
-> Sin Controllers REST conectados todavía y **sin commitear** —
-> pendiente de aprobación del usuario. Ver `PROJECT_STATUS.md`,
-> sección "Prompt 63", para el detalle completo.
+> `MarketplaceModule`/`SearchModule`. `Provider` quedó fuera de
+> alcance de ese prompt — sin Infrastructure todavía, por lo que
+> `CreateServiceUseCase` verificaba `Category` pero no `Provider`.
+> Consolidado en el commit `1c137b3` (Prompt 64, Fase 1).
+>
+> **Actualización (Prompt 64)**: se completaron **`Provider`**,
+> **`Availability`** y **`Schedule`** hasta Infrastructure. **Con
+> esto, el bounded context Marketplace
+> (Category/Service/Provider/Availability/Schedule) queda 100%
+> completo hasta Infrastructure.** `Provider` tiene el mismo
+> invariante 1:1 con `Identity` que `Trust`
+> (`ProviderModel.identityId` es `@unique`), y referencia real a
+> `Profile`. **La dependencia pendiente de Prompt 63 quedó resuelta**:
+> `CreateServiceUseCase` ahora también verifica `Provider`, y
+> `ServiceModel.providerId` es un `@relation` real a `ProviderModel`
+> en `schema.prisma` — cambio mínimo autorizado explícitamente por el
+> prompt, documentado en el schema y en el propio Use Case. Sin
+> Controllers REST conectados todavía. Consolidado en un único commit
+> durante la Fase 1 del Prompt 65 — ver `PROJECT_STATUS.md`, sección
+> "Prompt 64", para el detalle completo.
 
 ## 1. Estado real del proyecto
 

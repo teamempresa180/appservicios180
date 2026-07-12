@@ -1,6 +1,7 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { CategoryRepository } from '../../../category/domain/interfaces/category-repository.interface';
 import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
+import { ProviderRepository } from '../../../provider/domain/interfaces/provider-repository.interface';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
 import { Service } from '../../domain/entities/service.entity';
 import { ServiceRepository } from '../../domain/interfaces/service-repository.interface';
@@ -13,22 +14,23 @@ import { ServiceValidator } from '../validators/service.validator';
 
 /**
  * Creates a new Service offered by a Provider within a Category,
- * always in `Active` status. Depends on `CategoryRepository` to
- * verify the referenced Category actually exists before creating a
- * service for it — same rule already applied to every other module
- * referencing an entity by ID.
+ * always in `Active` status. Depends on `CategoryRepository` and
+ * `ProviderRepository` to verify both the referenced Category and the
+ * referenced Provider actually exist before creating a service for
+ * it.
  *
- * Does **not** verify that `providerId` references a real `Provider`:
- * the Provider bounded context has no Infrastructure yet (no
- * `PrismaProviderRepository`), out of scope for this stage per the
- * Marketplace roadmap ("Category → Service → Provider"). This is a
- * documented, intentional gap — not an oversight — see
- * `PROJECT_STATUS.md`, section "Prompt 63".
+ * **Resolved dependency (Prompt 63 → Prompt 64)**: Prompt 63 left the
+ * Provider check undone because the Provider bounded context had no
+ * Infrastructure yet. `Provider` now has a real
+ * `PrismaProviderRepository` (Sprint 3, Etapa 7), so this check is no
+ * longer deferred — see `PROJECT_STATUS.md`, section "Prompt 64", for
+ * the full resolution.
  */
 export class CreateServiceUseCase {
   constructor(
     private readonly serviceRepository: ServiceRepository,
     private readonly categoryRepository: CategoryRepository,
+    private readonly providerRepository: ProviderRepository,
   ) {}
 
   async execute(command: CreateServiceCommand): Promise<ServiceDto> {
@@ -40,9 +42,15 @@ export class CreateServiceUseCase {
       throw new NotFoundException(`Category ${command.categoryId} not found`);
     }
 
+    const providerId = ProviderId.fromString(command.providerId);
+    const provider = await this.providerRepository.findById(providerId);
+    if (!provider) {
+      throw new NotFoundException(`Provider ${command.providerId} not found`);
+    }
+
     const now = new Date();
     const service = new Service(ServiceId.create(), {
-      providerId: ProviderId.fromString(command.providerId),
+      providerId,
       categoryId,
       name: command.name,
       description: command.description,

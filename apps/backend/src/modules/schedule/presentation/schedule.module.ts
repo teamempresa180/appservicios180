@@ -1,41 +1,68 @@
 import { Module } from '@nestjs/common';
+import { ProviderPresentationModule } from '../../provider/presentation/provider.module';
+import {
+  PROVIDER_REPOSITORY,
+  ProviderRepository,
+} from '../../provider/domain/interfaces/provider-repository.interface';
 import { ScheduleController } from './controllers/schedule.controller';
 import { CreateScheduleUseCase } from '../application/use_cases/create-schedule.use-case';
 import { UpdateScheduleUseCase } from '../application/use_cases/update-schedule.use-case';
 import { DeleteScheduleUseCase } from '../application/use_cases/delete-schedule.use-case';
 import { GetScheduleUseCase } from '../application/use_cases/get-schedule.use-case';
-import { ScheduleRepository } from '../domain/interfaces/schedule-repository.interface';
+import { ListScheduleUseCase } from '../application/use_cases/list-schedule.use-case';
+import { SearchScheduleUseCase } from '../application/use_cases/search-schedule.use-case';
+import {
+  SCHEDULE_REPOSITORY,
+  ScheduleRepository,
+} from '../domain/interfaces/schedule-repository.interface';
+import { PrismaScheduleRepository } from '../infrastructure/persistence/prisma-schedule.repository';
 
 /**
- * Wires the Schedule presentation layer to its Use Cases.
- *
- * No concrete ScheduleRepository exists yet (Infrastructure layer is not
- * built). Each Use Case is constructed with an unset repository reference —
- * this is safe because every Use Case currently throws before touching it.
+ * Wires the Schedule presentation layer to its Use Cases, which are
+ * wired to the real `PrismaScheduleRepository` (Sprint 3, Etapa 7) via
+ * the `SCHEDULE_REPOSITORY` DI token. Imports
+ * `ProviderPresentationModule` — `CreateScheduleUseCase` verifies the
+ * referenced Provider exists before creating a block for it.
  */
 @Module({
+  imports: [ProviderPresentationModule],
   controllers: [ScheduleController],
   providers: [
+    { provide: SCHEDULE_REPOSITORY, useClass: PrismaScheduleRepository },
     {
       provide: CreateScheduleUseCase,
-      useFactory: () =>
-        new CreateScheduleUseCase(undefined as unknown as ScheduleRepository),
+      useFactory: (
+        scheduleRepo: ScheduleRepository,
+        providerRepo: ProviderRepository,
+      ) => new CreateScheduleUseCase(scheduleRepo, providerRepo),
+      inject: [SCHEDULE_REPOSITORY, PROVIDER_REPOSITORY],
     },
     {
       provide: UpdateScheduleUseCase,
-      useFactory: () =>
-        new UpdateScheduleUseCase(undefined as unknown as ScheduleRepository),
+      useFactory: (repo: ScheduleRepository) => new UpdateScheduleUseCase(repo),
+      inject: [SCHEDULE_REPOSITORY],
     },
     {
       provide: DeleteScheduleUseCase,
-      useFactory: () =>
-        new DeleteScheduleUseCase(undefined as unknown as ScheduleRepository),
+      useFactory: (repo: ScheduleRepository) => new DeleteScheduleUseCase(repo),
+      inject: [SCHEDULE_REPOSITORY],
     },
     {
       provide: GetScheduleUseCase,
-      useFactory: () =>
-        new GetScheduleUseCase(undefined as unknown as ScheduleRepository),
+      useFactory: (repo: ScheduleRepository) => new GetScheduleUseCase(repo),
+      inject: [SCHEDULE_REPOSITORY],
+    },
+    {
+      provide: ListScheduleUseCase,
+      useFactory: (repo: ScheduleRepository) => new ListScheduleUseCase(repo),
+      inject: [SCHEDULE_REPOSITORY],
+    },
+    {
+      provide: SearchScheduleUseCase,
+      useFactory: (repo: ScheduleRepository) => new SearchScheduleUseCase(repo),
+      inject: [SCHEDULE_REPOSITORY],
     },
   ],
+  exports: [SCHEDULE_REPOSITORY],
 })
 export class SchedulePresentationModule {}

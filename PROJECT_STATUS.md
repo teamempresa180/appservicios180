@@ -72,17 +72,19 @@ Cada módulo tiene `application/{commands,queries,use_cases,dto,mappers}/`.
   `CreateTrustProfileUseCase` la enforca con `BusinessRuleException`);
   `Audit` es inmutable por diseño (solo Create/Get/List/Search, sin
   Update/Delete). Ver "Sprint 3 — Etapa 5" más abajo.
-- **Category, Service** (Marketplace, parcial) — ✅ mismo tratamiento.
-  **No existe módulo de dominio `Marketplace` ni `Search`** —
-  confirmado por auditoría (grep sin resultados en todo `src/`);
-  "Marketplace" se satisface con Category+Service(+Provider futuro),
-  "Search" con el método `search()` por-repositorio ya usado en todos
-  los módulos anteriores. `CreateServiceUseCase` verifica que la
-  Category exista, **no verifica Provider** (sin Infrastructure
-  todavía). Ver "Sprint 3 — Etapa 6" más abajo.
-- **Los otros 12 módulos** (incluye `Provider`) — placeholder:
-  `execute()` sigue lanzando `Error("Not implemented yet")`,
-  intencional, sin tocar todavía.
+- **Category, Service, Provider, Availability, Schedule** (Marketplace
+  completo) — ✅ mismo tratamiento. **No existe módulo de dominio
+  `Marketplace` ni `Search`** — confirmado por auditoría (grep sin
+  resultados en todo `src/`); "Marketplace" se satisface con
+  Category+Service+Provider, "Search" con el método `search()`
+  por-repositorio ya usado en todos los módulos anteriores.
+  `CreateServiceUseCase` **ahora verifica también Provider** (deuda
+  resuelta desde Prompt 63 — Provider ya tiene Infrastructure).
+  `Provider` tiene invariante 1:1 con `Identity` (mismo patrón que
+  `Trust`) y referencia real a `Profile`. Ver "Sprint 3 — Etapa 6" y
+  "Etapa 7" más abajo.
+- **Los otros 9 módulos** — placeholder: `execute()` sigue lanzando
+  `Error("Not implemented yet")`, intencional, sin tocar todavía.
 
 ### Presentation — ✅ 100% completo (22 controllers REST, sin lógica real)
 Cada módulo tiene `presentation/{controllers,routes,swagger}/` +
@@ -93,7 +95,7 @@ propósito — **conectar Application/Infrastructure reales a los
 Controllers REST es trabajo explícitamente fuera de alcance de Sprint 3
 Etapa 2**, quedará para una etapa futura.
 
-### Infrastructure — 🟡 Parcial: Identity & Access + Profiles & Contact + Trust & Compliance + Marketplace (parcial) completos, resto reservado
+### Infrastructure — 🟡 Parcial: Identity & Access + Profiles & Contact + Trust & Compliance + Marketplace completos, resto reservado
 - **Identity, Authentication, Credentials** — ✅ Repositorios reales
   (`Prisma*Repository`), mappers Domain↔Prisma, wireados por DI en sus
   `*.module.ts` vía Symbol tokens (`IDENTITY_REPOSITORY`,
@@ -115,28 +117,36 @@ Etapa 2**, quedará para una etapa futura.
   Infrastructure.**
 - **Category, Service** — ✅ mismo tratamiento: `Prisma*Repository` +
   mapper Domain↔Prisma, wireados vía `CATEGORY_REPOSITORY`/
-  `SERVICE_REPOSITORY`. `service.module.ts` importa
-  `CategoryPresentationModule` (no un módulo de Provider — no existe
-  todavía). `ServiceModel.providerId` es un campo `String` indexado
-  **sin `@relation`** — no hay tabla `providers` en el schema aún.
+  `SERVICE_REPOSITORY`. **`ServiceModel.providerId` ahora es un
+  `@relation` real a `ProviderModel`** (resuelto en Prompt 64 — ver
+  "Sprint 3 — Etapa 7" más abajo).
+- **Provider, Availability, Schedule** — ✅ mismo tratamiento:
+  `Prisma*Repository` + mapper Domain↔Prisma, wireados vía
+  `PROVIDER_REPOSITORY`/`AVAILABILITY_REPOSITORY`/
+  `SCHEDULE_REPOSITORY`. `ProviderModel.identityId` es `@unique` —
+  mismo invariante 1:1 que `Trust`. `CreateProviderUseCase` verifica
+  Identity y Profile reales y enforca el 1:1 con
+  `BusinessRuleException`. `CreateAvailabilityUseCase`/
+  `CreateScheduleUseCase` verifican Provider real desde el inicio.
+  **Con esto, el bounded context Marketplace queda 100% completo
+  hasta Infrastructure.**
 - **Persistencia** — ✅ Prisma + PostgreSQL, oficial desde Prompt 59
   (ver "Decisión de persistencia" más abajo). `prisma/schema.prisma`
-  (11 modelos + 21 enums tras Prompt 63), 5 migraciones reales
+  (14 modelos + 29 enums tras Prompt 64), 6 migraciones reales
   generadas contra Postgres en Docker, seed sintético (1 Identity + 1
   Authentication + 1 Credential + 1 Profile + 1 Contact + 1 Address +
-  1 Verification + 1 Trust + 1 Audit + 1 Category + 1 Service),
-  `PrismaService` app-wide con conexión lazy (no bloquea build/test/e2e
-  sin DB viva).
-- **Los otros 12 módulos** (incluye `Provider`) — carpetas vacías,
-  reservadas, sin tocar.
+  1 Verification + 1 Trust + 1 Audit + 1 Provider + 1 Availability +
+  1 Schedule + 1 Category + 1 Service), `PrismaService` app-wide con
+  conexión lazy (no bloquea build/test/e2e sin DB viva).
+- **Los otros 9 módulos** — carpetas vacías, reservadas, sin tocar.
 
-### Verificación backend (último estado conocido — Sprint 3 Etapa 6, Prompt 63)
+### Verificación backend (último estado conocido — Sprint 3 Etapa 7, Prompt 64)
 ```
 npm run build          ✅
 npm run lint            ✅ 0 errores, 0 warnings
-npm test                 ✅ 93 suites, 358/358 tests
+npm test                 ✅ 102 suites, 419/419 tests
 npm run test:e2e        ✅ 1/1
-npm run test:integration ✅ 9 suites, 52/52 tests (requiere Postgres vivo)
+npm run test:integration ✅ 14 suites, 85/85 tests (requiere Postgres vivo)
 ```
 
 ## 4. Estado de Flutter (`apps/mobile`)
@@ -2275,3 +2285,135 @@ hash y el detalle del commit).
   (Provider, Availability & Schedule) requirió pruebas de integración
   contra Postgres — ver la sección de cierre "Prompt 64" para su
   estado final.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 64 — Sprint 3 Etapa 7, Provider, Availability & Schedule — consolidado)
+
+Este es el handoff vigente — más reciente que los veinticuatro bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+**El Prompt 64 fue aprobado por el usuario y consolidado en el Prompt
+65** (Fase 1 — ver la sección de cierre "Prompt 65" más abajo para el
+hash y el detalle del commit).
+
+- **Fase 0**: verificado que el repositorio coincidía exactamente con
+  el cierre del Prompt 63 (último commit = Prompt 62, working tree con
+  el trabajo de Prompt 63 sin commitear, contenedor
+  `appservicios-pg-temp` detenido).
+- **Fase 1 (Consolidación Prompt 63)**: `npm run build`/`lint`/`test`
+  (358/358)/`test:integration` (67/67)/`test:e2e` (1/1) +
+  `flutter analyze`/`test` (748/748)/`build windows`, todos ✅.
+  Contenedor Docker levantado solo para `test:integration` y detenido
+  inmediatamente después. **Commit único `1c137b3`** ("Prompt 63 -
+  Category & Service Application + Infrastructure (Prisma +
+  PostgreSQL)"), excluyendo `Logo oficial grupo.svg`. Con este commit,
+  Sprint 3 Etapa 6 queda oficialmente cerrada.
+- **Fase 2 (Análisis)**: `Provider`/`Availability`/`Schedule`
+  analizados junto a `Service`. Hallazgos reales:
+  - `Provider`: referencia `IdentityId` **con el mismo invariante 1:1
+    que `Trust`** (`findByIdentityId` devuelve `Provider | null`, no
+    array) y `providerProfileId` es una referencia real a `Profile`
+    (Profile ya tenía Infrastructure desde Prompt 60, así que esta
+    verificación es real desde el inicio, no diferida).
+  - `Availability`/`Schedule`: ambos referencian `ProviderId`
+    únicamente, `findByProviderId` devuelve array — múltiples
+    registros por Provider permitidos, sin invariante de unicidad ni
+    de solapamiento de horarios documentada.
+  - **Dependencia pendiente de Prompt 63 resuelta**: `Service.providerId`
+    quedó como campo `String` sin FK real porque `Provider` no tenía
+    Infrastructure. Ahora que `Provider` se implementa en este mismo
+    prompt, `CreateServiceUseCase` **ya verifica que el Provider
+    referenciado exista** (inyecta `ProviderRepository`), y
+    `ServiceModel.providerId` en `schema.prisma` es ahora un
+    `@relation` real a `ProviderModel` — cambio mínimo, documentado en
+    el propio schema, en `CreateServiceUseCase` y en
+    `service.module.ts` (que ahora importa
+    `ProviderPresentationModule` además de
+    `CategoryPresentationModule`).
+- **Fase 3 (Application)**: `ProviderValidator`/
+  `AvailabilityValidator`/`ScheduleValidator`, Use Cases reales para
+  los tres módulos (Create/Get/Update/Delete/List/Search).
+  `CreateProviderUseCase` verifica Identity y Profile, y enforca el
+  1:1 con `BusinessRuleException` — mismo patrón que
+  `CreateTrustProfileUseCase`. `CreateAvailabilityUseCase`/
+  `CreateScheduleUseCase` verifican Provider real e incluyen
+  validación estructural de rango de fechas (`availableFrom` <
+  `availableTo`, `startDateTime` < `endDateTime`).
+- **Fase 4–5 (Infrastructure + Persistencia)**:
+  `PrismaProviderRepository`/`PrismaAvailabilityRepository`/
+  `PrismaScheduleRepository` inyectando `PrismaService`, mappers
+  Domain↔Prisma, wireados vía `PROVIDER_REPOSITORY`/
+  `AVAILABILITY_REPOSITORY`/`SCHEDULE_REPOSITORY`.
+  `provider.module.ts` importa `IdentityPresentationModule` y
+  `ProfilesPresentationModule`; `availability.module.ts`/
+  `schedule.module.ts` importan `ProviderPresentationModule`.
+  `prisma/schema.prisma` ganó `ProviderModel`/`AvailabilityModel`/
+  `ScheduleModel` + 8 enums. **`ProviderModel.identityId` es
+  `@unique`** — invariante 1:1 reforzado también en base de datos,
+  igual que `TrustModel`. **`ServiceModel.providerId` se convirtió en
+  `@relation` real** a `ProviderModel` (ver Fase 2). Migración real
+  `20260712113712_add_provider_availability_schedule` generada y
+  aplicada contra el Postgres temporal en Docker — la primera
+  aplicación falló por datos huérfanos sintéticos de sesiones
+  anteriores en ese contenedor desechable (un `providerId` de prueba
+  sin fila real), resuelto con `prisma migrate reset --force` (base de
+  datos sintética, sin datos reales, seguro de resetear) y
+  reaplicando limpio. `prisma/seed.ts` ganó 1 Provider + 1 Availability
+  + 1 Schedule sintéticos, y el `Service` sembrado ahora referencia el
+  `Provider` real en vez del string sintético anterior.
+- **Fase 6 (Tests)**: mismos 3 niveles que Prompts 59–63 para los tres
+  módulos nuevos — unit (Application, con
+  `InMemoryProviderRepository`/`InMemoryAvailabilityRepository`/
+  `InMemoryScheduleRepository`; `InMemoryProviderRepository.findByIdentityId`
+  replica el contrato singular), unit (mappers, round-trip, sin DB),
+  integration (contra Postgres real, cada uno crea una Identity+Profile
+  reales primero para satisfacer los FKs). **Actualizados también**:
+  `service.use-cases.spec.ts` (ahora inyecta `InMemoryProviderRepository`
+  y verifica el nuevo caso `NotFoundException` cuando el Provider no
+  existe) y `prisma-service.repository.integration.spec.ts` (crea un
+  Provider real en vez de un `ProviderId.create()` sintético, ya que la
+  FK ahora es real). Resultado: `npm test` 102 suites/419 tests (+61
+  sobre Prompt 63), `npm run test:integration` 14 suites/85 tests
+  (+18), `npm run test:e2e` 1/1 — todos pasando.
+- **Fase 7 (Auditoría)**: verificado por grep que ningún archivo de
+  `domain/`/`application/`/`presentation/` de `provider`/
+  `availability`/`schedule` importa `@prisma/client`; sin
+  dependencias nuevas en `package.json`/`package-lock.json`; `npm run
+  lint` limpio, solo formateo automático de Prettier. Mismo hallazgo
+  documentado y no corregido que en prompts anteriores: los
+  `README.md` de `application/` de estos 3 módulos siguen describiendo
+  el skeleton original.
+- Verificaciones finales — todas pasando:
+  ```
+  npm run build            ✅
+  npm run lint              ✅ 0 errores, 0 warnings
+  npm test                   ✅ 102 suites, 419/419
+  npm run test:e2e          ✅ 1/1
+  npm run test:integration  ✅ 14 suites, 85/85
+  flutter analyze            ✅ No issues found!
+  flutter test                ✅ 748/748 (sin cambios — ningún archivo Flutter tocado)
+  flutter build windows      ✅ Build exitoso (mobile.exe)
+  ```
+- `git status` al cierre de esta sesión — **trabajo de Fase 2–7 del
+  Prompt 64 presente en el working tree, sin commitear**, además del
+  logo histórico:
+  ```
+  On branch main
+  Modified: PROJECT_STATUS.md, SPRINT3_PREPARATION.md,
+  apps/backend/prisma/schema.prisma, apps/backend/prisma/seed.ts,
+  apps/backend/src/modules/service/{application,presentation}/*,
+  apps/backend/src/modules/{provider,availability,schedule}/{domain,application,presentation}/*
+  Untracked: apps/backend/prisma/migrations/20260712113712_add_provider_availability_schedule/,
+  apps/backend/src/modules/{provider,availability,schedule}/application/{use_cases,validators}/,
+  apps/backend/src/modules/{provider,availability,schedule}/infrastructure/,
+  Logo oficial grupo.svg (histórico, sin trackear)
+  ```
+- Todo este trabajo (Fase 2–7 del Prompt 64) quedó **consolidado en un
+  único commit** durante la Fase 1 del Prompt 65 — ver la sección de
+  cierre "Prompt 65" más abajo para el hash y el detalle del commit.
+- **Contenedor Docker temporal `appservicios-pg-temp` (puerto
+  `55432`)**: se usó dos veces durante el Prompt 64 (generar/aplicar
+  la migración `add_provider_availability_schedule` con reset
+  intermedio, correr `test:integration` de
+  Provider/Availability/Schedule/Service), se detuvo al cierre de esa
+  sesión, y se volvió a levantar únicamente para las verificaciones de
+  `test:integration` de la Fase 1 del Prompt 65 — sintético/desechable,
+  sin datos reales.

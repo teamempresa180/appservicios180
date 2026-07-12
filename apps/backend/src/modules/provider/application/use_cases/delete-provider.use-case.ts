@@ -1,16 +1,23 @@
+import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ProviderRepository } from '../../domain/interfaces/provider-repository.interface';
+import { ProviderId } from '../../domain/value-objects/provider-id.value-object';
 import { DeleteProviderCommand } from '../commands/delete-provider.command';
 
 /**
- * Use case skeleton. Dependencies are wired correctly; the orchestration
- * logic itself is intentionally not implemented in this phase.
+ * Deletes an existing Provider. No cascade rule is documented for
+ * what happens to `Service`/`Availability`/`Schedule` records
+ * referencing this `ProviderId` — same criterion as every other
+ * `Delete*UseCase`.
  */
 export class DeleteProviderUseCase {
   constructor(private readonly providerRepository: ProviderRepository) {}
 
-  execute(command: DeleteProviderCommand): Promise<void> {
-    void this.providerRepository;
-    void command;
-    throw new Error('Not implemented yet');
+  async execute(command: DeleteProviderCommand): Promise<void> {
+    const id = ProviderId.fromString(command.id);
+    const existing = await this.providerRepository.findById(id);
+    if (!existing) {
+      throw new NotFoundException(`Provider ${command.id} not found`);
+    }
+    await this.providerRepository.delete(id);
   }
 }

@@ -5,7 +5,14 @@ import { CategoryId } from '../../../category/domain/value-objects/category-id.v
 import { CategoryType } from '../../../category/domain/value-objects/category-type.value-object';
 import { CategoryStatus } from '../../../category/domain/value-objects/category-status.value-object';
 import { InMemoryCategoryRepository } from '../../../category/application/use_cases/test-support/in-memory-category.repository';
+import { Provider } from '../../../provider/domain/entities/provider.entity';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
+import { ProviderType } from '../../../provider/domain/value-objects/provider-type.value-object';
+import { ProviderExperience } from '../../../provider/domain/value-objects/provider-experience.value-object';
+import { ProviderStatus } from '../../../provider/domain/value-objects/provider-status.value-object';
+import { InMemoryProviderRepository } from '../../../provider/application/use_cases/test-support/in-memory-provider.repository';
+import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
+import { ProfileId } from '../../../profiles/domain/value-objects/profile-id.value-object';
 import { ServiceType } from '../../domain/value-objects/service-type.value-object';
 import { ServiceStatus } from '../../domain/value-objects/service-status.value-object';
 import { CreateServiceCommand } from '../commands/create-service.command';
@@ -25,12 +32,14 @@ import { SearchServiceUseCase } from './search-service.use-case';
 describe('Service use cases', () => {
   let repository: InMemoryServiceRepository;
   let categoryRepository: InMemoryCategoryRepository;
+  let providerRepository: InMemoryProviderRepository;
   let categoryId: string;
-  const providerId = ProviderId.create().value;
+  let providerId: string;
 
   beforeEach(async () => {
     repository = new InMemoryServiceRepository();
     categoryRepository = new InMemoryCategoryRepository();
+    providerRepository = new InMemoryProviderRepository();
 
     const now = new Date();
     const category = new Category(CategoryId.create(), {
@@ -45,6 +54,20 @@ describe('Service use cases', () => {
     });
     await categoryRepository.save(category);
     categoryId = category.id.value;
+
+    const provider = new Provider(ProviderId.create(), {
+      identityId: IdentityId.create(),
+      providerProfileId: ProfileId.create(),
+      status: ProviderStatus.Active,
+      type: ProviderType.Independent,
+      experience: ProviderExperience.Intermediate,
+      biography: 'bio',
+      yearsOfExperience: 5,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await providerRepository.save(provider);
+    providerId = provider.id.value;
   });
 
   function createCommand(overrides: Partial<{ name: string }> = {}) {
@@ -59,10 +82,17 @@ describe('Service use cases', () => {
     );
   }
 
+  function useCase() {
+    return new CreateServiceUseCase(
+      repository,
+      categoryRepository,
+      providerRepository,
+    );
+  }
+
   describe('CreateServiceUseCase', () => {
     it('creates a Service in Active status', async () => {
-      const useCase = new CreateServiceUseCase(repository, categoryRepository);
-      const dto = await useCase.execute(createCommand());
+      const dto = await useCase().execute(createCommand());
 
       expect(dto.providerId).toBe(providerId);
       expect(dto.categoryId).toBe(categoryId);
@@ -70,9 +100,8 @@ describe('Service use cases', () => {
     });
 
     it('throws NotFoundException when the Category does not exist', async () => {
-      const useCase = new CreateServiceUseCase(repository, categoryRepository);
       await expect(
-        useCase.execute(
+        useCase().execute(
           new CreateServiceCommand(
             providerId,
             'unknown-category',
@@ -86,10 +115,25 @@ describe('Service use cases', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('rejects a negative basePrice', async () => {
-      const useCase = new CreateServiceUseCase(repository, categoryRepository);
+    it('throws NotFoundException when the Provider does not exist', async () => {
       await expect(
-        useCase.execute(
+        useCase().execute(
+          new CreateServiceCommand(
+            'unknown-provider',
+            categoryId,
+            'Pipe Repair',
+            'desc',
+            50,
+            60,
+            ServiceType.Standard,
+          ),
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('rejects a negative basePrice', async () => {
+      await expect(
+        useCase().execute(
           new CreateServiceCommand(
             providerId,
             categoryId,
@@ -104,9 +148,8 @@ describe('Service use cases', () => {
     });
 
     it('rejects an invalid type', async () => {
-      const useCase = new CreateServiceUseCase(repository, categoryRepository);
       await expect(
-        useCase.execute(
+        useCase().execute(
           new CreateServiceCommand(
             providerId,
             categoryId,
@@ -133,10 +176,7 @@ describe('Service use cases', () => {
 
   describe('UpdateServiceUseCase', () => {
     it('updates basePrice, estimatedDuration and status', async () => {
-      const created = await new CreateServiceUseCase(
-        repository,
-        categoryRepository,
-      ).execute(createCommand());
+      const created = await useCase().execute(createCommand());
 
       const updated = await new UpdateServiceUseCase(repository).execute(
         new UpdateServiceCommand(created.id, 75, 90, ServiceStatus.Inactive),
@@ -158,10 +198,7 @@ describe('Service use cases', () => {
 
   describe('DeleteServiceUseCase', () => {
     it('deletes an existing Service', async () => {
-      const created = await new CreateServiceUseCase(
-        repository,
-        categoryRepository,
-      ).execute(createCommand());
+      const created = await useCase().execute(createCommand());
 
       await new DeleteServiceUseCase(repository).execute(
         new DeleteServiceCommand(created.id),
@@ -185,12 +222,8 @@ describe('Service use cases', () => {
 
   describe('ListServiceUseCase', () => {
     it('paginates results', async () => {
-      const createUseCase = new CreateServiceUseCase(
-        repository,
-        categoryRepository,
-      );
-      await createUseCase.execute(createCommand({ name: 'A' }));
-      await createUseCase.execute(createCommand({ name: 'B' }));
+      await useCase().execute(createCommand({ name: 'A' }));
+      await useCase().execute(createCommand({ name: 'B' }));
 
       const page = await new ListServiceUseCase(repository).execute(
         new ListServiceQuery(1, 1),
@@ -203,9 +236,7 @@ describe('Service use cases', () => {
 
   describe('SearchServiceUseCase', () => {
     it('finds Services by name', async () => {
-      await new CreateServiceUseCase(repository, categoryRepository).execute(
-        createCommand({ name: 'Special Service' }),
-      );
+      await useCase().execute(createCommand({ name: 'Special Service' }));
 
       const results = await new SearchServiceUseCase(repository).execute(
         new SearchServiceQuery('special'),

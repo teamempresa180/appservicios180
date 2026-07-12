@@ -1,22 +1,25 @@
 // Prisma schema — Sprint 3, Etapa 2 (Identity & Access) + Etapa 3
 // (Profile) + Etapa 4 (Contact & Address) + Etapa 5 (Verification,
-// Trust & Audit) + Etapa 6 (Category & Service).
+// Trust & Audit) + Etapa 6 (Category & Service) + Etapa 7 (Provider,
+// Availability & Schedule).
 //
 // Only the persistence shape for `identity`/`authentication`/
 // `credentials`/`profiles`/`contact`/`address`/`verification`/
-// `trust`/`audit`/`category`/`service` (bounded contexts implemented
-// end-to-end so far). Every other module's tables are added when that
-// module gets its own Infrastructure layer, following the roadmap in
+// `trust`/`audit`/`category`/`service`/`provider`/`availability`/
+// `schedule` (bounded contexts implemented end-to-end so far). Every
+// other module's tables are added when that module gets its own
+// Infrastructure layer, following the roadmap in
 // `SPRINT3_PREPARATION.md` — not created speculatively here.
 //
-// `ServiceModel.providerId` is a plain indexed String column, no
-// `@relation` — the Provider bounded context has no table yet (see
-// `PROJECT_STATUS.md`, section "Prompt 63", for the audit finding on
-// why Provider verification/FK is deferred to a future stage).
+// `ServiceModel.providerId` is now a real `@relation` to
+// `ProviderModel` (Sprint 3, Etapa 7) — Prompt 63 left it as a plain
+// indexed String column because `Provider` had no table yet; now that
+// it does, the relation was completed (see `PROJECT_STATUS.md`,
+// section "Prompt 64", for the full resolution).
 // There is no `MarketplaceModel`/`SearchModel` — neither exists as a
-// domain entity; "Marketplace" is satisfied by Category+Service(+
-// Provider later), "Search" by the per-model `search()` repository
-// method, same as every other module.
+// domain entity; "Marketplace" is satisfied by Category+Service+
+// Provider, "Search" by the per-model `search()` repository method,
+// same as every other module.
 //
 // Field names/types mirror each domain entity's `Props` interface
 // exactly (see `domain/entities/*.entity.ts`); enums mirror each
@@ -222,6 +225,69 @@ enum ServiceStatus {
   @@map("service_status")
 }
 
+enum ProviderStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  ARCHIVED
+
+  @@map("provider_status")
+}
+
+enum ProviderType {
+  INDEPENDENT
+  FREELANCER
+  COMPANY
+  OTHER
+
+  @@map("provider_type")
+}
+
+enum ProviderExperience {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+
+  @@map("provider_experience")
+}
+
+enum AvailabilityStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+
+  @@map("availability_status")
+}
+
+enum AvailabilityType {
+  FULL_TIME
+  PART_TIME
+  ON_DEMAND
+  SEASONAL
+  OTHER
+
+  @@map("availability_type")
+}
+
+enum ScheduleStatus {
+  OPEN
+  BLOCKED
+  CANCELLED
+  COMPLETED
+
+  @@map("schedule_status")
+}
+
+enum ScheduleType {
+  REGULAR
+  BLOCKED
+  SPECIAL
+  OTHER
+
+  @@map("schedule_type")
+}
+
 model IdentityModel {
   id             String         @id
   fullName       String         @map("full_name")
@@ -240,6 +306,7 @@ model IdentityModel {
   verifications   VerificationModel[]
   trust           TrustModel?
   auditRecords    AuditModel[]
+  provider        ProviderModel?
 
   @@map("identities")
 }
@@ -283,7 +350,8 @@ model ProfileModel {
   createdAt   DateTime          @map("created_at")
   updatedAt   DateTime          @map("updated_at")
 
-  identity IdentityModel @relation(fields: [identityId], references: [id])
+  identity  IdentityModel   @relation(fields: [identityId], references: [id])
+  providers ProviderModel[]
 
   @@index([identityId])
   @@map("profiles")
@@ -396,8 +464,63 @@ model ServiceModel {
   updatedAt         DateTime      @map("updated_at")
 
   category CategoryModel @relation(fields: [categoryId], references: [id])
+  provider ProviderModel @relation(fields: [providerId], references: [id])
 
   @@index([providerId])
   @@index([categoryId])
   @@map("services")
+}
+
+model ProviderModel {
+  id                String             @id
+  identityId        String             @unique @map("identity_id")
+  providerProfileId String             @map("provider_profile_id")
+  status            ProviderStatus
+  type              ProviderType
+  experience        ProviderExperience
+  biography         String
+  yearsOfExperience Int                @map("years_of_experience")
+  createdAt         DateTime           @map("created_at")
+  updatedAt         DateTime           @map("updated_at")
+
+  identity      IdentityModel        @relation(fields: [identityId], references: [id])
+  profile       ProfileModel         @relation(fields: [providerProfileId], references: [id])
+  services      ServiceModel[]
+  availabilities AvailabilityModel[]
+  schedules     ScheduleModel[]
+
+  @@index([providerProfileId])
+  @@map("providers")
+}
+
+model AvailabilityModel {
+  id            String             @id
+  providerId    String             @map("provider_id")
+  status        AvailabilityStatus
+  type          AvailabilityType
+  availableFrom DateTime           @map("available_from")
+  availableTo   DateTime           @map("available_to")
+  createdAt     DateTime           @map("created_at")
+  updatedAt     DateTime           @map("updated_at")
+
+  provider ProviderModel @relation(fields: [providerId], references: [id])
+
+  @@index([providerId])
+  @@map("availabilities")
+}
+
+model ScheduleModel {
+  id            String         @id
+  providerId    String         @map("provider_id")
+  startDateTime DateTime       @map("start_date_time")
+  endDateTime   DateTime       @map("end_date_time")
+  status        ScheduleStatus
+  type          ScheduleType
+  createdAt     DateTime       @map("created_at")
+  updatedAt     DateTime       @map("updated_at")
+
+  provider ProviderModel @relation(fields: [providerId], references: [id])
+
+  @@index([providerId])
+  @@map("schedules")
 }

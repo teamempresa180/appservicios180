@@ -1,17 +1,24 @@
+import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ProviderRepository } from '../../domain/interfaces/provider-repository.interface';
-import { ProviderDto } from '../dto/provider.dto';
+import { ProviderId } from '../../domain/value-objects/provider-id.value-object';
 import { GetProviderQuery } from '../queries/get-provider.query';
+import { ProviderDto } from '../dto/provider.dto';
+import { ProviderMapper } from '../mappers/provider.mapper';
 
 /**
- * Use case skeleton. Dependencies are wired correctly; the orchestration
- * logic itself is intentionally not implemented in this phase.
+ * Fetches a single Provider by id. Throws `NotFoundException` instead
+ * of returning `null` — same pattern as `GetIdentityUseCase`.
  */
 export class GetProviderUseCase {
   constructor(private readonly providerRepository: ProviderRepository) {}
 
-  execute(query: GetProviderQuery): Promise<ProviderDto | null> {
-    void this.providerRepository;
-    void query;
-    throw new Error('Not implemented yet');
+  async execute(query: GetProviderQuery): Promise<ProviderDto> {
+    const provider = await this.providerRepository.findById(
+      ProviderId.fromString(query.id),
+    );
+    if (!provider) {
+      throw new NotFoundException(`Provider ${query.id} not found`);
+    }
+    return ProviderMapper.toDto(provider);
   }
 }

@@ -12,14 +12,15 @@ import { PrismaServiceRepository } from './prisma-service.repository';
  * setup as `PrismaIdentityRepository (integration)`. Excluded from
  * `npm test` (see `testPathIgnorePatterns`).
  *
- * `providerId` is a synthetic string, not a real row — `ServiceModel`
- * has no FK relation to a `providers` table yet (see mapper/repository
- * comments and `PROJECT_STATUS.md`, section "Prompt 63").
+ * `providerId` now references a real `providers` row —
+ * `ServiceModel.providerId` became a real `@relation` in Sprint 3,
+ * Etapa 7 (see `PROJECT_STATUS.md`, section "Prompt 64").
  */
 describe('PrismaServiceRepository (integration)', () => {
   const prisma = new PrismaClient();
   const repository = new PrismaServiceRepository(prisma as never);
   let categoryId: string;
+  let providerId: string;
 
   beforeAll(async () => {
     const category = await prisma.categoryModel.create({
@@ -36,6 +37,47 @@ describe('PrismaServiceRepository (integration)', () => {
       },
     });
     categoryId = category.id;
+
+    const identity = await prisma.identityModel.create({
+      data: {
+        id: `identity-for-service-it-${Date.now()}`,
+        fullName: 'Service Integration Owner',
+        documentType: 'NATIONAL_ID',
+        documentNumber: `IT-SERVICE-${Date.now()}`,
+        birthDate: new Date('1995-06-15'),
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    const profile = await prisma.profileModel.create({
+      data: {
+        id: `profile-for-service-it-${Date.now()}`,
+        identityId: identity.id,
+        displayName: 'Service Integration Owner',
+        avatarUrl: null,
+        bio: null,
+        visibility: 'PUBLIC',
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    const provider = await prisma.providerModel.create({
+      data: {
+        id: `provider-for-service-it-${Date.now()}`,
+        identityId: identity.id,
+        providerProfileId: profile.id,
+        status: 'ACTIVE',
+        type: 'INDEPENDENT',
+        experience: 'INTERMEDIATE',
+        biography: 'bio',
+        yearsOfExperience: 5,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    providerId = provider.id;
   });
 
   afterAll(async () => {
@@ -45,7 +87,7 @@ describe('PrismaServiceRepository (integration)', () => {
   function buildService(overrides: Partial<{ name: string }> = {}) {
     const now = new Date();
     return new Service(ServiceId.create(), {
-      providerId: ProviderId.create(),
+      providerId: ProviderId.fromString(providerId),
       categoryId: CategoryId.fromString(categoryId),
       name: overrides.name ?? 'Integration Test Service',
       description: 'desc',
