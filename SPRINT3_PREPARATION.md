@@ -27,12 +27,21 @@
 > **Actualización (Prompt 61)**: se completaron **`Contact`** y
 > **`Address`** hasta Infrastructure, mismo patrón exacto. **Con esto,
 > el bounded context Profiles & Contact (Profile/Contact/Address)
-> queda 100% completo hasta Infrastructure** — el siguiente hito del
-> roadmap (sección 11) es Trust & Compliance
-> (`Trust`/`Verification`/`Audit`). Sin Controllers REST conectados
-> todavía y **sin commitear** — pendiente de aprobación del usuario.
-> Ver `PROJECT_STATUS.md`, sección "Prompt 61", para el detalle
-> completo.
+> queda 100% completo hasta Infrastructure.** Consolidado en el commit
+> `8ece5a6` (Prompt 62, Fase 1).
+>
+> **Actualización (Prompt 62)**: se completaron **`Verification`**,
+> **`Trust`** y **`Audit`** hasta Infrastructure. **Con esto, el
+> bounded context Trust & Compliance queda 100% completo hasta
+> Infrastructure** — el siguiente hito del roadmap (sección 11) es
+> Marketplace (`Category`/`Service`/`Provider`). Dos invariantes reales
+> del dominio, respetadas sin inventar comportamiento adicional:
+> `Trust` es 1:1 con `Identity` (reforzado con `@unique` en
+> `schema.prisma` además de `BusinessRuleException` en el Use Case);
+> `Audit` es inmutable (solo Create/Get/List/Search). Sin Controllers
+> REST conectados todavía y **sin commitear** — pendiente de
+> aprobación del usuario. Ver `PROJECT_STATUS.md`, sección "Prompt 62",
+> para el detalle completo.
 
 ## 1. Estado real del proyecto
 

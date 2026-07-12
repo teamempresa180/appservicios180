@@ -1,12 +1,13 @@
 // Prisma schema — Sprint 3, Etapa 2 (Identity & Access) + Etapa 3
-// (Profile) + Etapa 4 (Contact & Address).
+// (Profile) + Etapa 4 (Contact & Address) + Etapa 5 (Verification,
+// Trust & Audit).
 //
 // Only the persistence shape for `identity`/`authentication`/
-// `credentials`/`profiles`/`contact`/`address` (bounded contexts
-// implemented end-to-end so far). Every other module's tables are
-// added when that module gets its own Infrastructure layer, following
-// the roadmap in `SPRINT3_PREPARATION.md` — not created speculatively
-// here.
+// `credentials`/`profiles`/`contact`/`address`/`verification`/
+// `trust`/`audit` (bounded contexts implemented end-to-end so far).
+// Every other module's tables are added when that module gets its own
+// Infrastructure layer, following the roadmap in
+// `SPRINT3_PREPARATION.md` — not created speculatively here.
 //
 // Field names/types mirror each domain entity's `Props` interface
 // exactly (see `domain/entities/*.entity.ts`); enums mirror each
@@ -129,6 +130,55 @@ enum AddressStatus {
   @@map("address_status")
 }
 
+enum VerificationType {
+  DOCUMENT
+  FACIAL
+  ADDRESS
+  PHONE
+  EMAIL
+  OTHER
+
+  @@map("verification_type")
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+
+  @@map("verification_status")
+}
+
+enum TrustLevel {
+  LOW
+  MEDIUM
+  HIGH
+  VERY_HIGH
+
+  @@map("trust_level")
+}
+
+enum TrustStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+
+  @@map("trust_status")
+}
+
+enum AuditActionType {
+  CREATED
+  UPDATED
+  DELETED
+  ACCESSED
+  LOGGED_IN
+  LOGGED_OUT
+  OTHER
+
+  @@map("audit_action_type")
+}
+
 model IdentityModel {
   id             String         @id
   fullName       String         @map("full_name")
@@ -144,6 +194,9 @@ model IdentityModel {
   profiles        ProfileModel[]
   contacts        ContactModel[]
   addresses       AddressModel[]
+  verifications   VerificationModel[]
+  trust           TrustModel?
+  auditRecords    AuditModel[]
 
   @@map("identities")
 }
@@ -226,4 +279,46 @@ model AddressModel {
 
   @@index([identityId])
   @@map("addresses")
+}
+
+model VerificationModel {
+  id         String              @id
+  identityId String              @map("identity_id")
+  type       VerificationType
+  status     VerificationStatus
+  verifiedAt DateTime?           @map("verified_at")
+  createdAt  DateTime            @map("created_at")
+  updatedAt  DateTime            @map("updated_at")
+
+  identity IdentityModel @relation(fields: [identityId], references: [id])
+
+  @@index([identityId])
+  @@map("verifications")
+}
+
+model TrustModel {
+  id         String      @id
+  identityId String      @unique @map("identity_id")
+  score      Int
+  level      TrustLevel
+  status     TrustStatus
+  createdAt  DateTime    @map("created_at")
+  updatedAt  DateTime    @map("updated_at")
+
+  identity IdentityModel @relation(fields: [identityId], references: [id])
+
+  @@map("trust_profiles")
+}
+
+model AuditModel {
+  id          String           @id
+  identityId  String           @map("identity_id")
+  actionType  AuditActionType  @map("action_type")
+  description String
+  occurredAt  DateTime         @map("occurred_at")
+
+  identity IdentityModel @relation(fields: [identityId], references: [id])
+
+  @@index([identityId])
+  @@map("audit_records")
 }

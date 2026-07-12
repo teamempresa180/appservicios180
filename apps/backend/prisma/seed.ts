@@ -104,8 +104,48 @@ async function main(): Promise<void> {
     update: {},
   });
 
+  await prisma.verificationModel.upsert({
+    where: { id: 'seed-verification-1' },
+    create: {
+      id: 'seed-verification-1',
+      identityId: identity.id,
+      type: 'DOCUMENT',
+      status: 'PENDING',
+      verifiedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+
+  await prisma.trustModel.upsert({
+    where: { id: 'seed-trust-1' },
+    create: {
+      id: 'seed-trust-1',
+      identityId: identity.id,
+      score: 50,
+      level: 'MEDIUM',
+      status: 'ACTIVE',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+
+  await prisma.auditModel.upsert({
+    where: { id: 'seed-audit-1' },
+    create: {
+      id: 'seed-audit-1',
+      identityId: identity.id,
+      actionType: 'CREATED',
+      description: 'Seed data initialized for local development.',
+      occurredAt: new Date(),
+    },
+    update: {},
+  });
+
   console.log(
-    'Seed complete: 1 Identity, 1 Authentication, 1 Credential, 1 Profile, 1 Contact, 1 Address.',
+    'Seed complete: 1 Identity, 1 Authentication, 1 Credential, 1 Profile, 1 Contact, 1 Address, 1 Verification, 1 Trust, 1 Audit.',
   );
 }
 

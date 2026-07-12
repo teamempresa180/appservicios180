@@ -65,7 +65,14 @@ Cada módulo tiene `application/{commands,queries,use_cases,dto,mappers}/`.
   completo) — ✅ mismo tratamiento que Identity & Access: Use Cases
   reales, validador estructural, mappers. Ver "Sprint 3 — Etapa 3" y
   "Etapa 4" más abajo.
-- **Los otros 16 módulos** — placeholder: `execute()` sigue lanzando
+- **Verification, Trust, Audit** (bounded context Trust & Compliance
+  completo) — ✅ mismo tratamiento, con dos diferencias reales
+  respetadas del dominio: `Trust` tiene invariante 1:1 con `Identity`
+  (`findByIdentityId` devuelve `Trust | null`, no array —
+  `CreateTrustProfileUseCase` la enforca con `BusinessRuleException`);
+  `Audit` es inmutable por diseño (solo Create/Get/List/Search, sin
+  Update/Delete). Ver "Sprint 3 — Etapa 5" más abajo.
+- **Los otros 13 módulos** — placeholder: `execute()` sigue lanzando
   `Error("Not implemented yet")`, intencional, sin tocar todavía.
 
 ### Presentation — ✅ 100% completo (22 controllers REST, sin lógica real)
@@ -77,7 +84,7 @@ propósito — **conectar Application/Infrastructure reales a los
 Controllers REST es trabajo explícitamente fuera de alcance de Sprint 3
 Etapa 2**, quedará para una etapa futura.
 
-### Infrastructure — 🟡 Parcial: Identity & Access + Profiles & Contact completos, resto reservado
+### Infrastructure — 🟡 Parcial: Identity & Access + Profiles & Contact + Trust & Compliance completos, resto reservado
 - **Identity, Authentication, Credentials** — ✅ Repositorios reales
   (`Prisma*Repository`), mappers Domain↔Prisma, wireados por DI en sus
   `*.module.ts` vía Symbol tokens (`IDENTITY_REPOSITORY`,
@@ -89,22 +96,30 @@ Etapa 2**, quedará para una etapa futura.
   `IdentityPresentationModule`), igual que `Authentication`/`Credential`.
   **Con esto, el bounded context Profiles & Contact queda completo
   hasta Infrastructure.**
+- **Verification, Trust, Audit** — ✅ mismo tratamiento:
+  `Prisma*Repository` + mapper Domain↔Prisma, wireados vía
+  `VERIFICATION_REPOSITORY`/`TRUST_REPOSITORY`/`AUDIT_REPOSITORY`.
+  `TrustModel.identityId` es `@unique` en `schema.prisma` — el
+  invariante 1:1 con `Identity` queda reforzado también a nivel de
+  base de datos, no solo en `CreateTrustProfileUseCase`. **Con esto, el
+  bounded context Trust & Compliance queda completo hasta
+  Infrastructure.**
 - **Persistencia** — ✅ Prisma + PostgreSQL, oficial desde Prompt 59
   (ver "Decisión de persistencia" más abajo). `prisma/schema.prisma`
-  (6 modelos + 12 enums tras Prompt 61), 3 migraciones reales generadas
+  (9 modelos + 17 enums tras Prompt 62), 4 migraciones reales generadas
   contra Postgres en Docker, seed sintético (1 Identity + 1
-  Authentication + 1 Credential + 1 Profile + 1 Contact + 1 Address),
-  `PrismaService` app-wide con conexión lazy (no bloquea build/test/e2e
-  sin DB viva).
-- **Los otros 16 módulos** — carpetas vacías, reservadas, sin tocar.
+  Authentication + 1 Credential + 1 Profile + 1 Contact + 1 Address +
+  1 Verification + 1 Trust + 1 Audit), `PrismaService` app-wide con
+  conexión lazy (no bloquea build/test/e2e sin DB viva).
+- **Los otros 13 módulos** — carpetas vacías, reservadas, sin tocar.
 
-### Verificación backend (último estado conocido — Sprint 3 Etapa 4, Prompt 61)
+### Verificación backend (último estado conocido — Sprint 3 Etapa 5, Prompt 62)
 ```
 npm run build          ✅
 npm run lint            ✅ 0 errores, 0 warnings
-npm test                 ✅ 78 suites, 262/262 tests
+npm test                 ✅ 87 suites, 314/314 tests
 npm run test:e2e        ✅ 1/1
-npm run test:integration ✅ 6 suites, 35/35 tests (requiere Postgres vivo)
+npm run test:integration ✅ 9 suites, 52/52 tests (requiere Postgres vivo)
 ```
 
 ## 4. Estado de Flutter (`apps/mobile`)
@@ -2016,3 +2031,111 @@ hash y el detalle del commit).
   Prompt 62), y se volvió a levantar únicamente cuando Sprint 3 Etapa 5
   (Verification, Trust & Audit) requirió pruebas de integración contra
   Postgres — ver la sección de cierre "Prompt 62" para su estado final.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 62 — Sprint 3 Etapa 5, Verification, Trust & Audit — consolidado)
+
+Este es el handoff vigente — más reciente que los veintidós bloques
+anteriores (que se conservan como registro histórico, sin eliminar).
+**El Prompt 62 fue aprobado por el usuario y consolidado en el Prompt
+63** (Fase 1 — ver la sección de cierre "Prompt 63" más abajo para el
+hash y el detalle del commit).
+
+- **Fase 0**: verificado que el repositorio coincidía exactamente con
+  el cierre del Prompt 61 (último commit = Prompt 60, working tree con
+  el trabajo de Prompt 61 sin commitear, contenedor
+  `appservicios-pg-temp` detenido).
+- **Fase 1 (Consolidación Prompt 61)**: `npm run build`/`lint`/`test`
+  (262/262)/`test:integration` (35/35)/`test:e2e` (1/1) +
+  `flutter analyze`/`test` (748/748)/`build windows`, todos ✅.
+  Contenedor Docker levantado solo para `test:integration` y detenido
+  inmediatamente después. **Commit único `8ece5a6`** ("Prompt 61 -
+  Contact & Address Application + Infrastructure (Prisma +
+  PostgreSQL)"), excluyendo `Logo oficial grupo.svg`. Con este commit,
+  Sprint 3 Etapa 4 queda oficialmente cerrada.
+- **Fase 2 (Análisis)**: `Verification`/`Trust`/`Audit` analizados
+  junto a `Identity`. Hallazgos reales, no inventados:
+  - `Verification`: referencia `IdentityId`, `type`/`status` enums,
+    `verifiedAt` nullable. `findByIdentityId` devuelve array — igual
+    que Identity & Access/Profiles & Contact, múltiples verificaciones
+    por Identity permitidas (una por `VerificationType`, por ejemplo).
+  - `Trust`: **invariante real distinta a todo lo anterior** —
+    `TrustRepository.findByIdentityId` devuelve `Trust | null`
+    (singular, no array) — **máximo un registro de Trust por
+    Identity**. Ningún otro módulo del proyecto tiene esta forma.
+  - `Audit`: **inmutable por diseño**, documentado explícitamente en
+    el propio `CreateAuditRecordCommand` ("no update/delete command:
+    audit records are immutable by design") — ningún módulo de
+    Application tenía skeleton de Update/Delete para Audit, así que no
+    se inventó ninguno.
+  - Ninguno de los tres módulos tenía un comando Delete en el
+    skeleton original (a diferencia de Identity/Profile/Contact/
+    Address) — no se agregó `delete()` a `VerificationRepository` ni
+    `TrustRepository`, respetando "no inventar comportamiento".
+- **Fase 3 (Application)**: validadores estructurales
+  (`VerificationValidator`/`TrustValidator`/`AuditValidator`), Use
+  Cases reales para los tres. `Create*UseCase` de los tres verifica
+  que la `Identity` referenciada exista.
+  `CreateTrustProfileUseCase` además enforca la invariante 1:1 —
+  lanza `BusinessRuleException` si la Identity ya tiene un Trust.
+  `UpdateVerificationUseCase` solo modifica `status` (no deriva
+  `verifiedAt` del cambio de estado — `UpdateVerificationCommand` no
+  expone ese campo, y derivarlo habría sido inventar comportamiento
+  sobre una entidad "pure data holder"). `Audit` solo tiene
+  Create/Get/List/Search — sin Update/Delete, por diseño.
+- **Fase 4–5 (Infrastructure + Persistencia)**:
+  `PrismaVerificationRepository`/`PrismaTrustRepository`/
+  `PrismaAuditRepository` inyectando `PrismaService`, mappers
+  Domain↔Prisma, wireados vía `VERIFICATION_REPOSITORY`/
+  `TRUST_REPOSITORY`/`AUDIT_REPOSITORY` en sus `*.module.ts`
+  respectivos (los tres importan `IdentityPresentationModule`).
+  `prisma/schema.prisma` ganó `VerificationModel`/`TrustModel`/
+  `AuditModel` + enums `VerificationType`/`VerificationStatus`/
+  `TrustLevel`/`TrustStatus`/`AuditActionType`. **`TrustModel.identityId`
+  es `@unique`** — el invariante 1:1 queda reforzado también a nivel
+  de base de datos (defensa en profundidad, no solo en el Use Case).
+  Migración real `20260711221331_add_verification_trust_audit`
+  generada y aplicada contra el Postgres temporal en Docker.
+  `prisma/seed.ts` ganó 1 Verification + 1 Trust + 1 Audit sintéticos.
+- **Fase 6 (Tests)**: mismos 3 niveles que Prompts 59–61 para los tres
+  módulos — unit (Application, con repos fake en memoria;
+  `InMemoryTrustRepository.findByIdentityId` replica el contrato
+  singular), unit (mappers, round-trip, sin DB), integration (contra
+  Postgres real; el test de Trust verifica explícitamente
+  `findByIdentityId` devolviendo un único registro, no un array).
+  Resultado: `npm test` 87 suites/314 tests (+52 sobre Prompt 61),
+  `npm run test:integration` 9 suites/52 tests (+17), `npm run
+  test:e2e` 1/1 — todos pasando.
+- **Fase 7 (Auditoría)**: verificado por grep que ningún archivo de
+  `domain/`/`application/`/`presentation/` de `verification`/`trust`/
+  `audit` importa `@prisma/client`; sin dependencias nuevas en
+  `package.json`/`package-lock.json`; `npm run lint` limpio, solo
+  formateo automático de Prettier. **Hallazgo documentado, no
+  corregido**: los `README.md` de `application/` de estos 3 módulos
+  (y también de Identity/Profile/Contact/Address, desde etapas
+  anteriores) siguen describiendo el skeleton original
+  ("Not implemented yet") — desactualizados desde que cada Application
+  se implementó, pero corregirlos solo en estos 3 módulos habría sido
+  inconsistente con el resto del código ya commiteado; se deja como
+  deuda documental conocida, no se toca en esta etapa para no generar
+  un refactor cosmético parcial.
+- Verificaciones finales — todas pasando:
+  ```
+  npm run build            ✅
+  npm run lint              ✅ 0 errores, 0 warnings
+  npm test                   ✅ 87 suites, 314/314
+  npm run test:e2e          ✅ 1/1
+  npm run test:integration  ✅ 9 suites, 52/52
+  flutter analyze            ✅ No issues found!
+  flutter test                ✅ 748/748 (sin cambios — ningún archivo Flutter tocado)
+  flutter build windows      ✅ Build exitoso (mobile.exe)
+  ```
+- Todo este trabajo (Fase 2–7 del Prompt 62) quedó **consolidado en un
+  único commit** durante la Fase 1 del Prompt 63 — ver la sección de
+  cierre "Prompt 63" más abajo para el hash exacto y el detalle del
+  commit.
+- Contenedor Docker temporal `appservicios-pg-temp` (puerto `55432`):
+  se detuvo al cerrar las verificaciones del Prompt 62 (Fase 1 del
+  Prompt 63), y se volvió a levantar únicamente cuando Sprint 3 Etapa 6
+  (Category, Service, Marketplace & Search) requirió pruebas de
+  integración contra Postgres — ver la sección de cierre "Prompt 63"
+  para su estado final.

@@ -1,17 +1,61 @@
+import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
+import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
+import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
+import { Trust } from '../../domain/entities/trust.entity';
 import { TrustRepository } from '../../domain/interfaces/trust-repository.interface';
-import { TrustDto } from '../dto/trust.dto';
+import { TrustId } from '../../domain/value-objects/trust-id.value-object';
+import { TrustScore } from '../../domain/value-objects/trust-score.value-object';
+import { TrustStatus } from '../../domain/value-objects/trust-status.value-object';
 import { CreateTrustProfileCommand } from '../commands/create-trust-profile.command';
+import { TrustDto } from '../dto/trust.dto';
+import { TrustMapper } from '../mappers/trust.mapper';
+import { TrustValidator } from '../validators/trust.validator';
 
 /**
- * Use case skeleton. Dependencies are wired correctly; the orchestration
- * logic itself is intentionally not implemented in this phase.
+ * Creates a new Trust record for an existing Identity, always in
+ * `Active` status. Depends on `IdentityRepository` (not just its own)
+ * to verify the referenced Identity actually exists before creating a
+ * record for it — same rule already applied to `Authentication`/
+ * `Credential`/`Profile`/`Contact`/`Address`/`Verification`. Also
+ * enforces the real domain invariant carried by
+ * `TrustRepository.findByIdentityId` returning `Trust | null` (not an
+ * array, unlike every other module): **at most one Trust record per
+ * Identity** — throws `BusinessRuleException` if one already exists.
  */
 export class CreateTrustProfileUseCase {
-  constructor(private readonly trustRepository: TrustRepository) {}
+  constructor(
+    private readonly trustRepository: TrustRepository,
+    private readonly identityRepository: IdentityRepository,
+  ) {}
 
-  execute(command: CreateTrustProfileCommand): Promise<TrustDto> {
-    void this.trustRepository;
-    void command;
-    throw new Error('Not implemented yet');
+  async execute(command: CreateTrustProfileCommand): Promise<TrustDto> {
+    TrustValidator.validateCreate(command);
+
+    const identityId = IdentityId.fromString(command.identityId);
+    const identity = await this.identityRepository.findById(identityId);
+    if (!identity) {
+      throw new NotFoundException(`Identity ${command.identityId} not found`);
+    }
+
+    const existing = await this.trustRepository.findByIdentityId(identityId);
+    if (existing) {
+      throw new BusinessRuleException(
+        `Identity ${command.identityId} already has a Trust record`,
+      );
+    }
+
+    const now = new Date();
+    const trust = new Trust(TrustId.create(), {
+      identityId,
+      score: TrustScore.of(command.score),
+      level: command.level,
+      status: TrustStatus.Active,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await this.trustRepository.save(trust);
+    return TrustMapper.toDto(trust);
   }
 }
