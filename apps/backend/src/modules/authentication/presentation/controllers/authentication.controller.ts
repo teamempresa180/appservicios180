@@ -7,24 +7,28 @@ import {
   Post,
   Put,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { AuthenticationRoutes } from '../routes/authentication.routes';
 import { AuthenticationSwagger } from '../swagger/authentication.swagger';
 import { CreateAuthenticationUseCase } from '../../application/use_cases/create-authentication.use-case';
 import { UpdateAuthenticationUseCase } from '../../application/use_cases/update-authentication.use-case';
 import { DeleteAuthenticationUseCase } from '../../application/use_cases/delete-authentication.use-case';
 import { GetAuthenticationUseCase } from '../../application/use_cases/get-authentication.use-case';
-import { CreateAuthenticationDto } from '../../application/dto/create-authentication.dto';
-import { UpdateAuthenticationDto } from '../../application/dto/update-authentication.dto';
-import { CreateAuthenticationCommand } from '../../application/commands/create-authentication.command';
-import { UpdateAuthenticationCommand } from '../../application/commands/update-authentication.command';
 import { DeleteAuthenticationCommand } from '../../application/commands/delete-authentication.command';
 import { GetAuthenticationQuery } from '../../application/queries/get-authentication.query';
+import { CreateAuthenticationRequestDto } from '../dto/create-authentication.request.dto';
+import { UpdateAuthenticationRequestDto } from '../dto/update-authentication.request.dto';
+import { AuthenticationResponseDto } from '../dto/authentication.response.dto';
+import { AuthenticationHttpMapper } from '../dto/authentication-http.mapper';
 
 /**
- * REST controller for Authentication. Only exposes routes and delegates to
- * the corresponding Use Case — no business logic lives here. Use Cases are
- * not implemented yet, so every call currently rejects with "Not implemented yet".
+ * REST controller for Authentication. Only exposes routes, maps HTTP
+ * DTOs to Application commands/queries via `AuthenticationHttpMapper`,
+ * and delegates to the corresponding Use Case — no business logic
+ * lives here. Domain exceptions are translated to HTTP responses by
+ * the global `DomainExceptionFilter`, registered in `main.ts` — this
+ * controller never catches them itself.
  */
 @ApiTags('Authentication')
 @Controller(AuthenticationRoutes.base)
@@ -38,37 +42,90 @@ export class AuthenticationController {
 
   @Post()
   @ApiOperation(AuthenticationSwagger.create)
-  @ApiResponse({ status: 201, description: 'Authentication method created.' })
-  create(@Body() dto: CreateAuthenticationDto) {
-    return this.createAuthenticationUseCase.execute(
-      new CreateAuthenticationCommand(dto.identityId, dto.methodType),
+  @ApiResponse({
+    status: 201,
+    description: 'Authentication method created.',
+    type: AuthenticationResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Identity not found.',
+    type: ErrorResponseDto,
+  })
+  async create(
+    @Body() dto: CreateAuthenticationRequestDto,
+  ): Promise<AuthenticationResponseDto> {
+    const authentication = await this.createAuthenticationUseCase.execute(
+      AuthenticationHttpMapper.toCreateCommand(dto),
     );
+    return AuthenticationHttpMapper.toResponse(authentication);
   }
 
   @Put(AuthenticationRoutes.byId)
   @ApiOperation(AuthenticationSwagger.update)
-  @ApiResponse({ status: 200, description: 'Authentication method updated.' })
-  update(@Param('id') id: string, @Body() dto: UpdateAuthenticationDto) {
-    return this.updateAuthenticationUseCase.execute(
-      new UpdateAuthenticationCommand(id, dto.status),
+  @ApiParam({ name: 'id', description: 'Authentication method id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Authentication method updated.',
+    type: AuthenticationResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Authentication method not found.',
+    type: ErrorResponseDto,
+  })
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateAuthenticationRequestDto,
+  ): Promise<AuthenticationResponseDto> {
+    const authentication = await this.updateAuthenticationUseCase.execute(
+      AuthenticationHttpMapper.toUpdateCommand(id, dto),
     );
+    return AuthenticationHttpMapper.toResponse(authentication);
   }
 
   @Delete(AuthenticationRoutes.byId)
   @ApiOperation(AuthenticationSwagger.delete)
+  @ApiParam({ name: 'id', description: 'Authentication method id' })
   @ApiResponse({ status: 200, description: 'Authentication method deleted.' })
-  remove(@Param('id') id: string) {
-    return this.deleteAuthenticationUseCase.execute(
+  @ApiResponse({
+    status: 404,
+    description: 'Authentication method not found.',
+    type: ErrorResponseDto,
+  })
+  async remove(@Param('id') id: string): Promise<void> {
+    await this.deleteAuthenticationUseCase.execute(
       new DeleteAuthenticationCommand(id),
     );
   }
 
   @Get(AuthenticationRoutes.byId)
   @ApiOperation(AuthenticationSwagger.get)
-  @ApiResponse({ status: 200, description: 'Authentication method found.' })
-  findOne(@Param('id') id: string) {
-    return this.getAuthenticationUseCase.execute(
+  @ApiParam({ name: 'id', description: 'Authentication method id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Authentication method found.',
+    type: AuthenticationResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Authentication method not found.',
+    type: ErrorResponseDto,
+  })
+  async findOne(@Param('id') id: string): Promise<AuthenticationResponseDto> {
+    const authentication = await this.getAuthenticationUseCase.execute(
       new GetAuthenticationQuery(id),
     );
+    return AuthenticationHttpMapper.toResponse(authentication);
   }
 }

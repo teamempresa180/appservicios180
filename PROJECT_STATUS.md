@@ -3039,3 +3039,135 @@ Sprint 4 (HTTP Layer / Presentation real) comienza en el Prompt 68.
   detuvo al cierre de esa sesión, y se volvió a levantar únicamente
   para las verificaciones de `test:integration` de la Fase 1 del
   Prompt 68 — sintético/desechable, sin datos reales.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 68 — Sprint 4 Etapa 1, HTTP Layer: Identity & Access — consolidado)
+
+**El Prompt 68 fue aprobado por el usuario y consolidado en el Prompt
+69** (Fase 1 — ver la sección de cierre "Prompt 69" más abajo para el
+hash y el detalle del commit).
+
+**Fase 0 (Reconstrucción del contexto)**: repositorio oficial confirmado;
+último commit al iniciar = Prompt 67 (`fe28a04` tras consolidación en la
+Fase 1); working tree contenía únicamente el trabajo pendiente del Prompt
+67; Docker detenido; `PROJECT_STATUS.md`/`SPRINT3_PREPARATION.md`
+revisados. Sin cambios de código en esta fase.
+
+- **Fase 1 (Consolidación Prompt 67)**: `npm run build`/`lint`/`test`/
+  `test:integration`/`test:e2e` + `flutter analyze`/`test`/`build windows`
+  — todos en verde (ver sección de cierre "Prompt 67" arriba para el
+  detalle completo). Documentación actualizada y **un único commit**
+  creado para el trabajo de Fase 2–7 del Prompt 67 (hash `fe28a04`),
+  excluyendo `Logo oficial grupo.svg` y archivos temporales/IDE/cache.
+  Docker detenido al finalizar.
+- **Fase 2 (Auditoría capa HTTP)**: se auditaron los tres módulos de
+  Identity & Access (`Identity`, `Authentication`, `Credentials`).
+  Hallazgo principal: los Controllers, rutas y decorators Swagger ya
+  existían como *skeleton* (de Sprint 3), pero delegaban a los Use Cases
+  con DTOs de Application reutilizados directamente como contrato HTTP
+  — sin DTO HTTP propio, sin mapper, sin manejo de fechas ISO. No existe
+  `class-validator`/`class-transformer` instalado en el proyecto (ver
+  `apps/backend/src/common/pipes/README.md`); **decisión arquitectónica**:
+  no agregar estas dependencias nuevas — la validación real sigue
+  ocurriendo en los Validators de Application (p.ej.
+  `IdentityValidator.validateCreate`), ya invocados por los Use Cases y
+  ya mapeados a HTTP 400 vía `DomainExceptionFilter`; los DTO HTTP nuevos
+  usan únicamente `@ApiProperty`/`@ApiPropertyOptional` para documentar
+  el contrato Swagger. Los filtros globales (`AllExceptionsFilter`,
+  `DomainExceptionFilter`) ya cubrían el mapeo `DomainException → HTTP
+  Status` sin necesidad de código nuevo. Ningún Controller del repositorio
+  expone List/Search por HTTP (aunque los Use Cases existen y están
+  cableados en el `*.module.ts`) — se mantuvo ese mismo criterio.
+- **Fase 3 (Controllers)**: `IdentityController`, `AuthenticationController`
+  y `CredentialController` reescritos por completo — Create/Update/
+  Delete/Get, todos `async`, usando exclusivamente Use Cases de
+  Application + DTO HTTP + Dependency Injection. Sin acceso directo a
+  Prisma ni a Repositories, sin lógica de negocio en el Controller
+  (verificado en Fase 8). `remove()` construye `DeleteIdentityCommand`/
+  equivalentes como instancia real, no objeto plano. Delete se mantiene
+  en HTTP 200 (no 204), consistente con la convención preexistente en
+  todo el repositorio.
+- **Fase 4 (DTO HTTP)**: para cada módulo, `presentation/dto/` nuevo con
+  `create-<x>.request.dto.ts`, `update-<x>.request.dto.ts`,
+  `<x>.response.dto.ts` y `<x>-http.mapper.ts`, totalmente separados de
+  los DTO de Application (`application/dto/*.dto.ts`, que explícitamente
+  declaran no incluir validación). El mapper HTTP convierte
+  `birthDate` (string ISO) → `Date` sin validar el formato — el
+  `Invalid Date` resultante de un string malformado sigue siendo
+  `instanceof Date`, por lo que `IdentityValidator.validateCreate` lo
+  detecta igual (`Number.isNaN(date.getTime())`) y lanza
+  `ValidationException` → 400, sin duplicar lógica de validación. Los
+  Response DTO convierten `Date` → ISO string vía `.toISOString()`.
+- **Fase 5 (Swagger)**: documentación completa en los tres Controllers —
+  `@ApiOperation`, `@ApiParam`, `@ApiResponse` (éxito + errores 400/404/
+  422 según aplique) en cada endpoint, con tipos explícitos (`type:` del
+  Response DTO correspondiente o `ErrorResponseDto`). Se creó un DTO
+  Swagger compartido `apps/backend/src/common/swagger/error-response.dto.ts`
+  (`ErrorResponseDto`) que documenta la forma real de `ErrorResponse`
+  (`statusCode`/`error`/`message`/`timestamp`/`path`), reutilizado por
+  los tres Controllers para mantener una convención consistente en toda
+  la API.
+- **Fase 6 (Exception Mapping)**: sin código nuevo — se confirmó que
+  `DomainExceptionFilter` (`NotFoundException`→404, `ValidationException`
+  →400, `BusinessRuleException`→422) y `AllExceptionsFilter` (catch-all,
+  `HttpException`→su propio status, resto→500), ya registrados
+  globalmente en `main.ts`, cubren completamente el mapeo requerido.
+- **Fase 7 (Tests)**: por módulo, tests unitarios de Controller
+  (`*.controller.spec.ts`, mockeando los Use Cases con `jest.fn()` y
+  verificando construcción exacta de Commands + mapeo de respuesta) y
+  del mapper HTTP (`*-http.mapper.spec.ts`); además tests de integración
+  HTTP reales (`apps/backend/test/{identity,authentication,credential}.e2e-spec.ts`)
+  con `supertest` sobre un `INestApplication` real, `Repository`
+  sobreescrito por fakes en memoria (`InMemoryIdentityRepository`, etc.),
+  incluyendo casos 400/404 vía los filtros globales reales. Resultado:
+  `npm test` 132 suites/605 tests (+22 suites/+22 tests sobre Prompt 67),
+  `npm run test:e2e` 4 suites/17 tests (+3/+16 sobre Prompt 67 — antes
+  solo `app.e2e-spec.ts`).
+- **Fase 8 (Auditoría)**: verificado por grep que ningún Controller de
+  `identity`/`authentication`/`credentials` importa `@prisma/client` ni
+  ningún `*Repository` (las únicas referencias a `Repository` en
+  `presentation/` están en los `*.module.ts`, que es DI legítimo — Use
+  Cases dependen solo de la interfaz `XRepository`, nunca de
+  `PrismaXRepository` directamente); sin lógica condicional/de negocio
+  en los Controllers; rutas consistentes entre los tres módulos
+  (`@Post()`/`@Put(Roles.byId)`/`@Delete(Roles.byId)`/`@Get(Roles.byId)`,
+  mismo patrón `XRoutes.base`/`XRoutes.byId`); sin `@HttpCode` custom
+  (200 por defecto en PUT/DELETE/GET, 201 en POST, consistente con el
+  resto del repositorio); DTO HTTP no duplicados entre módulos; sin
+  dependencias nuevas en `package.json`/`package-lock.json`. Sin
+  hallazgos que requirieran corrección adicional.
+- Verificaciones finales — todas pasando:
+  ```
+  npm run build            ✅
+  npm run lint              ✅ 0 errores, 0 warnings
+  npm test                   ✅ 132 suites, 605/605
+  npm run test:e2e          ✅ 4 suites, 17/17
+  npm run test:integration  ✅ 22 suites, 144/144
+  flutter analyze            ✅ No issues found!
+  flutter test                ✅ 748/748 (sin cambios — ningún archivo Flutter tocado)
+  flutter build windows      ✅ Build exitoso (mobile.exe)
+  ```
+- `git status` al cierre de esta sesión — **trabajo de Fase 2–7 del
+  Prompt 68 presente en el working tree, sin commitear**, además del
+  logo histórico:
+  ```
+  On branch main
+  Modified: apps/backend/src/modules/authentication/presentation/controllers/authentication.controller.ts,
+  apps/backend/src/modules/authentication/presentation/swagger/authentication.swagger.ts,
+  apps/backend/src/modules/credentials/presentation/controllers/credential.controller.ts,
+  apps/backend/src/modules/credentials/presentation/swagger/credential.swagger.ts,
+  apps/backend/src/modules/identity/presentation/controllers/identity.controller.ts,
+  apps/backend/src/modules/identity/presentation/swagger/identity.swagger.ts
+  Untracked: apps/backend/src/common/swagger/,
+  apps/backend/src/modules/{authentication,credentials,identity}/presentation/controllers/*.spec.ts,
+  apps/backend/src/modules/{authentication,credentials,identity}/presentation/dto/,
+  apps/backend/test/{identity,authentication,credential}.e2e-spec.ts,
+  Logo oficial grupo.svg (histórico, sin trackear)
+  ```
+- Todo este trabajo (Fase 2–8 del Prompt 68) quedó **consolidado en un
+  único commit** durante la Fase 1 del Prompt 69 — ver la sección de
+  cierre "Prompt 69" más abajo para el hash y el detalle del commit.
+- **Contenedor Docker temporal `appservicios-pg-temp` (puerto `55432`)**:
+  se reutilizó (ya estaba definido de prompts anteriores) únicamente
+  para correr `npm run test:integration` en la Fase 1 y de nuevo en la
+  Fase 9 de este prompt, y de nuevo durante la Fase 1 del Prompt 69 —
+  sintético/desechable, sin datos reales.
