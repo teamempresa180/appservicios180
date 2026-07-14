@@ -3,5 +3,6 @@
  */
 export const ContactRoutes = {
   base: 'contacts',
+  search: 'search',
   byId: ':id',
 } as const;

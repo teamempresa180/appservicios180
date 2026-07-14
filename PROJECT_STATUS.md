@@ -3171,3 +3171,115 @@ revisados. Sin cambios de código en esta fase.
   para correr `npm run test:integration` en la Fase 1 y de nuevo en la
   Fase 9 de este prompt, y de nuevo durante la Fase 1 del Prompt 69 —
   sintético/desechable, sin datos reales.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 69 — Sprint 4 Etapa 2, HTTP Layer: Profiles & Contact — consolidado)
+
+**El Prompt 69 fue aprobado por el usuario y consolidado en el Prompt
+70** (Fase 1 — ver la sección de cierre "Prompt 70" más abajo para el
+hash y el detalle del commit).
+
+**Fase 0 (Reconstrucción del contexto)**: repositorio oficial
+confirmado; último commit al iniciar = Prompt 67 (`fe28a04`); working
+tree contenía únicamente el trabajo pendiente del Prompt 68; Docker
+detenido (daemon no corriendo); `PROJECT_STATUS.md` revisado. Sin
+cambios de código en esta fase.
+
+- **Fase 1 (Consolidación Prompt 68)**: `npm run build`/`lint`/`test`
+  (132 suites/605 tests)/`test:e2e` (4 suites/17 tests)/
+  `test:integration` (22 suites/144 tests) + `flutter analyze`/`test`
+  (748/748)/`build windows` — todos en verde. Documentación
+  actualizada y **un único commit** creado para el trabajo de Fase
+  2–8 del Prompt 68 (hash `b01d41b`), excluyendo
+  `Logo oficial grupo.svg` y temporales/IDE/cache. Docker detenido al
+  finalizar.
+- **Fase 2 (Auditoría capa HTTP)**: se auditaron los tres módulos de
+  Profiles & Contact (`Profile`, `Contact`, `Address`). A diferencia
+  de Identity/Authentication/Credentials (Prompt 68), estos tres
+  módulos **ya tenían `List<X>UseCase`/`Search<X>UseCase` cableados
+  en su `*.module.ts`** (Sprint 3, Etapas 3–4) pero sin exponer por
+  HTTP — ninguna restricción arquitectónica documentada lo impedía,
+  así que este prompt los expone. Los tres siguen exactamente el
+  mismo patrón que Identity: `Get<X>UseCase` lanza `NotFoundException`
+  (no nullable); `List<X>UseCase` retorna `PaginatedResult<XDto>`
+  (`core/application/paginated-result.ts`, reutilizado tal cual, no
+  duplicado); `Search<X>UseCase` retorna `XDto[]`; los Validators
+  (`ProfileValidator`/`ContactValidator`/`AddressValidator`) ya
+  cubren toda la validación estructural necesaria — sin lógica de
+  negocio adicional documentada en ningún módulo. Un caso especial
+  detectado: `UpdateAddressCommand` **no acepta**
+  `city`/`state`/`country`/`postalCode` (solo `alias`/`fullAddress`/
+  `status`) — el `UpdateAddressRequestDto` HTTP refleja exactamente
+  eso, sin inventar campos que el Application layer no soporta.
+- **Fase 3 (Controllers)**: `ProfileController`, `ContactController`
+  y `AddressController` reescritos completos — Create/Update/Delete/
+  Get **más List/Search** (nuevo en este prompt), usando exclusivamente
+  Use Cases de Application + DTO HTTP + DI. Sin acceso directo a
+  Prisma ni a Repositories, sin lógica de negocio. Para evitar que
+  Nest resuelva `GET /<recurso>/search` como `findOne({id:'search'})`,
+  los métodos `list()`/`search()` se declaran **antes** que
+  `findOne(:id)` en cada controller — orden de registro de rutas
+  explícito y documentado en el docblock de cada clase.
+- **Fase 4 (DTO HTTP)**: para cada módulo, `presentation/dto/` nuevo
+  con `create-<x>.request.dto.ts`, `update-<x>.request.dto.ts`,
+  `<x>.response.dto.ts`, `<x>-list.response.dto.ts` (nuevo — envoltorio
+  de paginación para `GET /<recurso>`) y `<x>-http.mapper.ts`,
+  totalmente separados de los DTOs de Application. `<X>ListResponseDto`
+  redeclara la forma de `PaginatedResult<T>` solo para documentación
+  Swagger — la Application layer nunca es referenciada directamente
+  desde la capa HTTP.
+- **Fase 5 (Swagger)**: `@ApiOperation`/`@ApiParam`/`@ApiResponse`
+  completos en los tres Controllers, más `@ApiQuery` nuevo para
+  `page`/`pageSize` (list) y `term` (search) — mismo estilo que el
+  Prompt 68, reutilizando `ErrorResponseDto` compartido para los
+  casos 400/404.
+- **Fase 4 tests (Controller/Mapper/HTTP integration)**: por módulo,
+  tests unitarios de Controller (incluye casos `list()`/`search()`) y
+  del mapper HTTP (incluye `toListResponse()`), siguiendo exactamente
+  el patrón del Prompt 68; más tests de integración HTTP reales
+  (`apps/backend/test/{profile,contact,address}.e2e-spec.ts`) con
+  `supertest`, sembrando una Identity real en
+  `InMemoryIdentityRepository` (mismo patrón que
+  `credential.e2e-spec.ts`), y cubriendo `GET /<recurso>` (paginado) y
+  `GET /<recurso>/search`. Resultado: `npm test` 138 suites/636 tests
+  (+6 suites/+31 tests sobre Prompt 68), `npm run test:e2e` 7
+  suites/39 tests (+3 suites/+22 tests sobre Prompt 68).
+- **Fase 5 (Auditoría)**: verificado por grep que ningún Controller de
+  `profiles`/`contact`/`address` importa `@prisma/client` ni ningún
+  `*Repository`; rutas y verbos HTTP consistentes entre los tres
+  módulos y con el patrón de Identity (`@Post()`/`@Put(byId)`/
+  `@Delete(byId)`/`@Get()` list/`@Get(search)`/`@Get(byId)`); sin
+  `@HttpCode` custom (200/201 por defecto, igual que el resto del
+  repositorio); DTO HTTP no duplicados entre módulos; sin
+  dependencias nuevas en `package.json`. No se identificó ninguna
+  mejora arquitectónica adicional que documentar.
+- Verificaciones finales — todas pasando:
+  ```
+  npm run build            ✅
+  npm run lint              ✅ 0 errores, 0 warnings
+  npm test                   ✅ 138 suites, 636/636
+  npm run test:e2e          ✅ 7 suites, 39/39
+  npm run test:integration  ✅ 22 suites, 144/144
+  flutter analyze            ✅ No issues found!
+  flutter test                ✅ 748/748 (sin cambios — ningún archivo Flutter tocado)
+  flutter build windows      ✅ Build exitoso (mobile.exe)
+  ```
+- `git status` al cierre de esta sesión — **trabajo de Fase 2–5 del
+  Prompt 69 presente en el working tree, sin commitear**, además del
+  logo histórico:
+  ```
+  On branch main
+  Modified: apps/backend/src/modules/{address,contact,profiles}/presentation/controllers/*.controller.ts,
+  apps/backend/src/modules/{address,contact,profiles}/presentation/routes/*.routes.ts,
+  apps/backend/src/modules/{address,contact,profiles}/presentation/swagger/*.swagger.ts
+  Untracked: apps/backend/src/modules/{address,contact,profiles}/presentation/controllers/*.spec.ts,
+  apps/backend/src/modules/{address,contact,profiles}/presentation/dto/,
+  apps/backend/test/{profile,contact,address}.e2e-spec.ts,
+  Logo oficial grupo.svg (histórico, sin trackear)
+  ```
+- Todo este trabajo (Fase 2–5 del Prompt 69) quedó **consolidado en un
+  único commit** durante la Fase 1 del Prompt 70 — ver la sección de
+  cierre "Prompt 70" más abajo para el hash y el detalle del commit.
+- **Contenedor Docker temporal `appservicios-pg-temp`**: se reutilizó
+  únicamente para correr `npm run test:integration` en la Fase 1 y de
+  nuevo en la Fase 6 de este prompt, y de nuevo durante la Fase 1 del
+  Prompt 70 — sintético/desechable, sin datos reales.
