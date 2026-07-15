@@ -3283,3 +3283,117 @@ cambios de código en esta fase.
   únicamente para correr `npm run test:integration` en la Fase 1 y de
   nuevo en la Fase 6 de este prompt, y de nuevo durante la Fase 1 del
   Prompt 70 — sintético/desechable, sin datos reales.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 70 — Sprint 4 Etapa 3, HTTP Layer: Verification, Trust & Audit — consolidado)
+
+**El Prompt 70 fue aprobado por el usuario y consolidado en el Prompt
+71** (Fase 1 — ver la sección de cierre "Prompt 71" más abajo para el
+hash y el detalle del commit).
+
+**Fase 0 (Reconstrucción del contexto)**: repositorio oficial
+confirmado; último commit al iniciar = Prompt 68 (`b01d41b`); working
+tree contenía únicamente el trabajo pendiente del Prompt 69; Docker
+detenido (todos los contenedores en `Exited`); `PROJECT_STATUS.md`
+revisado. Sin cambios de código en esta fase.
+
+- **Fase 1 (Consolidación Prompt 69)**: `npm run build`/`lint`/`test`
+  (138 suites/636 tests)/`test:e2e` (7 suites/39 tests)/
+  `test:integration` (22 suites/144 tests) + `flutter analyze`/`test`
+  (748/748)/`build windows` — todos en verde. Documentación
+  actualizada y **un único commit** creado para el trabajo de Fase
+  2–5 del Prompt 69 (hash `89284bc`), excluyendo
+  `Logo oficial grupo.svg` y temporales/IDE/cache. Docker detenido al
+  finalizar.
+- **Fase 2 (Auditoría — regla nueva Domain→Application→Infrastructure→
+  Presentation)**: se auditaron los tres módulos de Verification,
+  Trust & Audit verificando primero que las cuatro capas existieran
+  completas antes de tocar código. Resultado: las cuatro capas existen
+  para los tres módulos (Domain, Application con Use Cases/Validators/
+  Commands/Queries/DTOs, Infrastructure con `PrismaXRepository` real,
+  Presentation como skeleton). Pero **el conjunto real de Use Cases
+  difiere entre los tres módulos** — se documentó exactamente qué
+  existe en Application antes de implementar cualquier Controller, sin
+  inventar comportamiento:
+  - **Verification**: Create/Update/Get/List/Search. **No existe
+    `DeleteVerificationUseCase`** — no se expone endpoint Delete.
+  - **Trust**: Create/Update/Get/List/Search. **No existe
+    `DeleteTrustProfileUseCase`** — no se expone endpoint Delete.
+    Además, `CreateTrustProfileUseCase` enforce una invariante de
+    dominio real: **como máximo un Trust por Identity** (el repositorio
+    define `findByIdentityId` como `Trust | null`, no un array, a
+    diferencia de todos los demás módulos) — lanza
+    `BusinessRuleException` → HTTP 422 si ya existe uno.
+  - **Audit**: Create/Get/List/Search. **No existen
+    `UpdateAuditRecordUseCase` ni `DeleteAuditRecordUseCase`** —
+    documentado explícitamente en el propio código como
+    "immutable by design"; no se expone ningún endpoint Update/Delete.
+  No se inventó ningún caso de uso, comando ni endpoint que no
+  existiera ya en Application.
+- **Fase 3 (Controllers)**: `VerificationController`,
+  `TrustController` y `AuditController` reescritos completos —
+  **únicamente** los endpoints respaldados por un Use Case real
+  (ver Fase 2). Usan exclusivamente Use Cases de Application + DTO
+  HTTP + DI. Sin acceso directo a Prisma ni a Repositories, sin lógica
+  de negocio. `list`/`search` declarados antes de `findOne(:id)` en
+  los tres controllers para evitar colisión de rutas en Nest.
+- **Fase 4 (DTO HTTP)**: para cada módulo, `presentation/dto/` nuevo
+  con Request/Response/List DTOs y `<x>-http.mapper.ts`, totalmente
+  separados de los DTOs de Application, sin duplicar validaciones —
+  incluyendo el caso de `VerificationResponseDto.verifiedAt`
+  (`Date | null` → `string | null`, manejado explícitamente en el
+  mapper) y `AuditRecordResponseDto`/`CreateAuditRecordRequestDto`
+  sin ningún campo de actualización (no existe Update Command).
+- **Fase 5 (Swagger)**: `@ApiOperation`/`@ApiParam`/`@ApiResponse`/
+  `@ApiQuery` completos en los tres Controllers, mismo estilo que
+  Prompts 68–69, documentando explícitamente en los docblocks de
+  Swagger y del Controller por qué no existe Delete (Verification/
+  Trust) ni Update/Delete (Audit), y el 422 de la invariante de Trust.
+- **Fase 6 (Tests)**: Controller + Mapper unit tests (incluyendo
+  list/search, y en Verification el caso `verifiedAt: null` vs.
+  `Date`) y HTTP integration tests
+  (`verification/trust/audit.e2e-spec.ts`) sembrando una Identity real,
+  incluyendo el caso 422 de "Identity ya tiene un Trust profile".
+  Resultado: `npm test` 144 suites/662 tests (+6 suites/+26 tests sobre
+  Prompt 69), `npm run test:e2e` 10 suites/58 tests (+3 suites/+19
+  sobre Prompt 69).
+- **Fase 7 (Auditoría)**: verificado por grep que ningún Controller de
+  `verification`/`trust`/`audit` importa `@prisma/client` ni ningún
+  `*Repository`; rutas y verbos HTTP consistentes con el patrón de
+  Identity/Profile, reflejando exactamente el conjunto de endpoints
+  real de cada módulo (sin Delete en Verification/Trust, sin Update/
+  Delete en Audit); sin `@HttpCode` custom; DTO HTTP no duplicados;
+  sin dependencias nuevas en `package.json`. No se identificó ninguna
+  mejora arquitectónica adicional que documentar.
+- Verificaciones finales — todas pasando:
+  ```
+  npm run build            ✅
+  npm run lint              ✅ 0 errores, 0 warnings
+  npm test                   ✅ 144 suites, 662/662
+  npm run test:e2e          ✅ 10 suites, 58/58
+  npm run test:integration  ✅ 22 suites, 144/144
+  flutter analyze            ✅ No issues found!
+  flutter test                ✅ 748/748 (sin cambios — ningún archivo Flutter tocado)
+  flutter build windows      ✅ Build exitoso (mobile.exe)
+  ```
+- `git status` al cierre de esta sesión — **trabajo de Fase 2–7 del
+  Prompt 70 presente en el working tree, sin commitear**, además del
+  logo histórico:
+  ```
+  On branch main
+  Modified: apps/backend/src/modules/{audit,trust,verification}/presentation/controllers/*.controller.ts,
+  apps/backend/src/modules/{audit,trust,verification}/presentation/routes/*.routes.ts,
+  apps/backend/src/modules/{audit,trust,verification}/presentation/swagger/*.swagger.ts
+  Untracked: apps/backend/src/modules/{audit,trust,verification}/presentation/controllers/*.spec.ts,
+  apps/backend/src/modules/{audit,trust,verification}/presentation/dto/,
+  apps/backend/test/{verification,trust,audit}.e2e-spec.ts,
+  Logo oficial grupo.svg (histórico, sin trackear)
+  ```
+- Todo este trabajo (Fase 2–7 del Prompt 70) quedó **consolidado en un
+  único commit** durante la Fase 1 del Prompt 71 — ver la sección de
+  cierre "Prompt 71" más abajo para el hash y el detalle del commit.
+- **Contenedor Docker temporal `appservicios-pg-temp`**: se reutilizó
+  únicamente para correr `npm run test:integration` en la Fase 1 y de
+  nuevo en la Fase 8 de este prompt, y de nuevo durante la Fase 1 del
+  Prompt 71 (requirió reiniciar Docker Desktop, que no estaba
+  corriendo al inicio de esa sesión) — sintético/desechable, sin datos
+  reales.

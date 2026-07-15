@@ -3,5 +3,6 @@
  */
 export const VerificationRoutes = {
   base: 'verifications',
+  search: 'search',
   byId: ':id',
 } as const;

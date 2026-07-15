@@ -1,20 +1,45 @@
-import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
+import {
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { VerificationRoutes } from '../routes/verification.routes';
 import { VerificationSwagger } from '../swagger/verification.swagger';
 import { CreateVerificationUseCase } from '../../application/use_cases/create-verification.use-case';
 import { UpdateVerificationUseCase } from '../../application/use_cases/update-verification.use-case';
 import { GetVerificationUseCase } from '../../application/use_cases/get-verification.use-case';
-import { CreateVerificationDto } from '../../application/dto/create-verification.dto';
-import { UpdateVerificationDto } from '../../application/dto/update-verification.dto';
-import { CreateVerificationCommand } from '../../application/commands/create-verification.command';
-import { UpdateVerificationCommand } from '../../application/commands/update-verification.command';
+import { ListVerificationUseCase } from '../../application/use_cases/list-verification.use-case';
+import { SearchVerificationUseCase } from '../../application/use_cases/search-verification.use-case';
 import { GetVerificationQuery } from '../../application/queries/get-verification.query';
+import { ListVerificationQuery } from '../../application/queries/list-verification.query';
+import { SearchVerificationQuery } from '../../application/queries/search-verification.query';
+import { CreateVerificationRequestDto } from '../dto/create-verification.request.dto';
+import { UpdateVerificationRequestDto } from '../dto/update-verification.request.dto';
+import { VerificationResponseDto } from '../dto/verification.response.dto';
+import { VerificationListResponseDto } from '../dto/verification-list.response.dto';
+import { VerificationHttpMapper } from '../dto/verification-http.mapper';
 
 /**
- * REST controller for Verification. Only exposes routes and delegates to
- * the corresponding Use Case — no business logic lives here. Use Cases are
- * not implemented yet, so every call currently rejects with "Not implemented yet".
+ * REST controller for Verification. Only exposes routes, maps HTTP
+ * DTOs to Application commands/queries via `VerificationHttpMapper`,
+ * and delegates to the corresponding Use Case — no business logic
+ * lives here. Domain exceptions thrown by Use Cases
+ * (`NotFoundException`, `ValidationException`) are translated to HTTP
+ * responses by the global `DomainExceptionFilter`
+ * (`common/filters/`), registered in `main.ts` — this controller
+ * never catches them itself.
+ *
+ * No Delete endpoint: there is no `DeleteVerificationUseCase` in the
+ * Application layer — per Prompt 70's rule, endpoints are only
+ * exposed for Use Cases that actually exist.
+ *
+ * `list`/`search` are declared before the dynamic `findOne(:id)` route
+ * so `GET /verifications/search` resolves to `search()` rather than
+ * being matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Verification')
 @Controller(VerificationRoutes.base)
@@ -23,30 +48,121 @@ export class VerificationController {
     private readonly createVerificationUseCase: CreateVerificationUseCase,
     private readonly updateVerificationUseCase: UpdateVerificationUseCase,
     private readonly getVerificationUseCase: GetVerificationUseCase,
+    private readonly listVerificationUseCase: ListVerificationUseCase,
+    private readonly searchVerificationUseCase: SearchVerificationUseCase,
   ) {}
 
   @Post()
   @ApiOperation(VerificationSwagger.create)
-  @ApiResponse({ status: 201, description: 'Verification created.' })
-  create(@Body() dto: CreateVerificationDto) {
-    return this.createVerificationUseCase.execute(
-      new CreateVerificationCommand(dto.identityId, dto.type),
+  @ApiResponse({
+    status: 201,
+    description: 'Verification created.',
+    type: VerificationResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Identity not found.',
+    type: ErrorResponseDto,
+  })
+  async create(
+    @Body() dto: CreateVerificationRequestDto,
+  ): Promise<VerificationResponseDto> {
+    const verification = await this.createVerificationUseCase.execute(
+      VerificationHttpMapper.toCreateCommand(dto),
     );
+    return VerificationHttpMapper.toResponse(verification);
   }
 
   @Put(VerificationRoutes.byId)
   @ApiOperation(VerificationSwagger.update)
-  @ApiResponse({ status: 200, description: 'Verification updated.' })
-  update(@Param('id') id: string, @Body() dto: UpdateVerificationDto) {
-    return this.updateVerificationUseCase.execute(
-      new UpdateVerificationCommand(id, dto.status),
+  @ApiParam({ name: 'id', description: 'Verification id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification updated.',
+    type: VerificationResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Verification not found.',
+    type: ErrorResponseDto,
+  })
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateVerificationRequestDto,
+  ): Promise<VerificationResponseDto> {
+    const verification = await this.updateVerificationUseCase.execute(
+      VerificationHttpMapper.toUpdateCommand(id, dto),
+    );
+    return VerificationHttpMapper.toResponse(verification);
+  }
+
+  @Get()
+  @ApiOperation(VerificationSwagger.list)
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'pageSize', required: false, example: 20 })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated list of Verifications.',
+    type: VerificationListResponseDto,
+  })
+  async list(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ): Promise<VerificationListResponseDto> {
+    const query = new ListVerificationQuery(
+      page !== undefined ? Number(page) : undefined,
+      pageSize !== undefined ? Number(pageSize) : undefined,
+    );
+    const result = await this.listVerificationUseCase.execute(query);
+    return VerificationHttpMapper.toListResponse(result);
+  }
+
+  @Get(VerificationRoutes.search)
+  @ApiOperation(VerificationSwagger.search)
+  @ApiQuery({ name: 'term', required: true, example: 'DOCUMENT' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verifications matching the search term.',
+    type: [VerificationResponseDto],
+  })
+  async search(
+    @Query('term') term: string,
+  ): Promise<VerificationResponseDto[]> {
+    const verifications = await this.searchVerificationUseCase.execute(
+      new SearchVerificationQuery(term),
+    );
+    return verifications.map((verification) =>
+      VerificationHttpMapper.toResponse(verification),
     );
   }
 
   @Get(VerificationRoutes.byId)
   @ApiOperation(VerificationSwagger.get)
-  @ApiResponse({ status: 200, description: 'Verification found.' })
-  findOne(@Param('id') id: string) {
-    return this.getVerificationUseCase.execute(new GetVerificationQuery(id));
+  @ApiParam({ name: 'id', description: 'Verification id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification found.',
+    type: VerificationResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Verification not found.',
+    type: ErrorResponseDto,
+  })
+  async findOne(@Param('id') id: string): Promise<VerificationResponseDto> {
+    const verification = await this.getVerificationUseCase.execute(
+      new GetVerificationQuery(id),
+    );
+    return VerificationHttpMapper.toResponse(verification);
   }
 }

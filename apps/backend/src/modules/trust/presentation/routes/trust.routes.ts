@@ -3,5 +3,6 @@
  */
 export const TrustRoutes = {
   base: 'trust-profiles',
+  search: 'search',
   byId: ':id',
 } as const;

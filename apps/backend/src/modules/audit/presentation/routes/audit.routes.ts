@@ -3,5 +3,6 @@
  */
 export const AuditRoutes = {
   base: 'audit-records',
+  search: 'search',
   byId: ':id',
 } as const;
