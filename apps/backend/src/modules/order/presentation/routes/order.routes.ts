@@ -3,6 +3,7 @@
  */
 export const OrderRoutes = {
   base: 'orders',
+  search: 'search',
   byId: ':id',
   cancel: ':id/cancel',
 } as const;

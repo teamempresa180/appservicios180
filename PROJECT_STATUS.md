@@ -3510,3 +3510,109 @@ revisado. Sin cambios de código en esta fase.
   únicamente para correr `npm run test:integration` en la Fase 1 y de
   nuevo en la Fase 8 de este prompt, y de nuevo durante la Fase 1 del
   Prompt 72 — sintético/desechable, sin datos reales.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 72 — Sprint 4 Etapa 5, HTTP Layer: Fulfillment — consolidado)
+
+**El Prompt 72 fue aprobado por el usuario y consolidado en el Prompt 73.**
+
+**Fase 0 (Reconstrucción del contexto)**: repositorio oficial
+confirmado; último commit al iniciar = Prompt 70 (`3f2c785`); working
+tree contenía únicamente el trabajo pendiente del Prompt 71; Docker
+detenido (todos los contenedores en `Exited`); `PROJECT_STATUS.md`
+revisado. Sin cambios de código en esta fase.
+
+- **Fase 1 (Consolidación Prompt 71)**: `npm run build`/`lint`/`test`
+  (154 suites/712 tests)/`test:e2e` (15 suites/96 tests)/
+  `test:integration` (22 suites/144 tests) + `flutter analyze`/`test`
+  (748/748)/`build windows` — todos en verde. Documentación
+  actualizada y **un único commit** creado para el trabajo de Fase
+  2–7 del Prompt 71 (hash `666fbdd`), excluyendo
+  `Logo oficial grupo.svg` y temporales/IDE/cache. Docker detenido al
+  finalizar.
+- **Fase 2 (Auditoría — capas + relaciones)**: se auditaron los dos
+  módulos de Fulfillment (`Order`, `Quote`). Las cuatro capas existen
+  completas para ambos, con `PrismaXRepository` real y skeleton de
+  Controllers ya presente desde Sprint 3. Hallazgos del conjunto real
+  de Use Cases (sin asumir nada, todo verificado en el código):
+  - **Order**: Create/Update/Cancel/Get/List/Search. **No existe
+    `DeleteOrderUseCase`** — `cancel` (`PUT /orders/:id/cancel`) es la
+    única transición de estado soportada.
+  - **Quote**: Create/Update/Accept/Reject/Get/List/Search. **No
+    existe `DeleteQuoteUseCase`** — `accept`/`reject` son las únicas
+    transiciones soportadas.
+  - **Hallazgo importante**: a diferencia de todos los módulos
+    tratados desde el Prompt 68, `GetOrderUseCase`/`GetQuoteUseCase`
+    retornan `OrderDto | null`/`QuoteDto | null` en vez de lanzar
+    `NotFoundException` — mismo patrón documentado en memoria como
+    propio de los módulos de Sprint 3 posteriores (Order/Quote/
+    Payment/etc.). Los Controllers traducen ese `null` lanzando el
+    mismo `NotFoundException` compartido que el resto de módulos ya
+    usa internamente, para que `DomainExceptionFilter` lo mapee a 404
+    exactamente igual que en todos los demás — esto no es lógica de
+    negocio, es traducir una señal de "no encontrado" ya existente en
+    Application al mismo tipo de excepción de dominio compartido.
+  - `UpdateOrderCommand`/`UpdateQuoteCommand` no aceptan `status` —
+    los `UpdateOrderRequestDto`/`UpdateQuoteRequestDto` HTTP reflejan
+    exactamente ese contrato (mismo criterio que `UpdateAddressRequestDto`
+    en el Prompt 69).
+- **Relaciones detectadas**: `Order` depende de `Identity`, `Provider`
+  y `Service` (tres `findById` secuenciales en `CreateOrderUseCase` —
+  sin N+1); `Quote` depende de `Order` y `Provider` (dos `findById`
+  secuenciales en `CreateQuoteUseCase` — sin N+1). Ningún endpoint
+  List/Search itera relaciones fila por fila. No se optimizó nada
+  preventivamente — no había ningún problema real que corregir.
+- **Fase 3 (Controllers)**: `OrderController` y `QuoteController`
+  reescritos completos — Create/Update/Get/List/Search + `cancel`
+  (Order) / `accept`+`reject` (Quote), todos respaldados por Use Cases
+  reales. Solo Use Cases de Application + DTO HTTP + DI, sin Prisma/
+  Repository/lógica de negocio (salvo la traducción null→
+  `NotFoundException` descrita arriba). `list`/`search` declarados
+  antes de `findOne(:id)` en ambos controllers.
+- **Fase 4 (DTO HTTP)**: para cada módulo, `presentation/dto/` nuevo
+  con Request/Response/List DTOs y `<x>-http.mapper.ts`, separados de
+  Application. `Order` maneja `scheduledDate` ISO string ↔ `Date` en
+  el mapper sin duplicar la validación de `OrderValidator`.
+- **Fase 5 (Swagger)**: `@ApiOperation`/`@ApiParam`/`@ApiResponse`/
+  `@ApiQuery` completos en ambos Controllers, mismo estilo que
+  Prompts 68–71, documentando explícitamente por qué no existe Delete
+  en ninguno de los dos módulos.
+- **Fase 6 (Tests)**: Controller + Mapper unit tests (incluyendo el
+  caso `findOne()` → `NotFoundException` cuando el Use Case retorna
+  `null`) y HTTP integration tests (`order.e2e-spec.ts`/
+  `quote.e2e-spec.ts`), sembrando Identity/Provider/Service (Order) y
+  Order/Provider (Quote) reales. Ambos specs necesitaron sobreescribir
+  también `IDENTITY_REPOSITORY`/`PROFILE_REPOSITORY`/
+  `CATEGORY_REPOSITORY`/`SERVICE_REPOSITORY` (no solo los repositorios
+  directamente relevantes) porque `ProviderPresentationModule`/
+  `ServicePresentationModule` (importados transitivamente) dependen de
+  ellos — mismo ajuste ya aplicado en los specs de Marketplace del
+  Prompt 71. Resultado: `npm test` 158 suites/735 tests (+4 suites/+23
+  tests sobre Prompt 71), `npm run test:e2e` 17 suites/111 tests (+2
+  suites/+15 sobre Prompt 71).
+- **Fase 7 (Auditoría)**: verificado por grep que ningún Controller de
+  `order`/`quote` importa `@prisma/client` ni ningún `*Repository`;
+  rutas y verbos HTTP consistentes con el patrón de Identity
+  (`@Post()`/`@Put(byId)`/`@Put(subrecurso)`/`@Get()` list/
+  `@Get(search)`/`@Get(byId)`); sin `@HttpCode` custom; DTO HTTP no
+  duplicados; relaciones documentadas en los docblocks de cada
+  Controller; sin dependencias nuevas en `package.json`. No se
+  identificó ninguna mejora arquitectónica adicional que documentar.
+- Verificaciones finales — todas pasando:
+  ```
+  npm run build            ✅
+  npm run lint              ✅ 0 errores, 0 warnings
+  npm test                   ✅ 158 suites, 735/735
+  npm run test:e2e          ✅ 17 suites, 111/111
+  npm run test:integration  ✅ 22 suites, 144/144
+  flutter analyze            ✅ No issues found!
+  flutter test                ✅ 748/748 (sin cambios — ningún archivo Flutter tocado)
+  flutter build windows      ✅ Build exitoso (mobile.exe)
+  ```
+- El trabajo de Fase 2–7 del Prompt 72 quedó **consolidado en un único
+  commit** durante la Fase 1 del Prompt 73 (hash `<pendiente de Fase 1
+  del Prompt 73>`), excluyendo `Logo oficial grupo.svg` y
+  temporales/IDE/cache.
+- **Contenedor Docker temporal `appservicios-pg-temp`**: se reutilizó
+  únicamente para correr `npm run test:integration` en la Fase 1 y de
+  nuevo en la Fase 8 de este prompt — sintético/desechable, sin datos
+  reales. Detenido al cierre de esta sesión.
