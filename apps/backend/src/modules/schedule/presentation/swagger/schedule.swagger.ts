@@ -1,6 +1,10 @@
 /**
- * Centralized Swagger metadata (summary/description only) for the Schedule
- * controller. No business rules are documented here.
+ * Centralized Swagger metadata (`@ApiOperation` summary/description)
+ * for the Schedule controller. No business rules are documented here
+ * — only what the endpoint does at the HTTP level. Response schemas
+ * and status codes are attached directly on each controller method
+ * via `@ApiResponse`/`@ApiBody`, following the convention established
+ * in Sprint 4, Etapa 1 (Identity/Authentication/Credentials).
  */
 export const ScheduleSwagger = {
   create: {
@@ -18,5 +22,13 @@ export const ScheduleSwagger = {
   get: {
     summary: 'Get a Schedule block',
     description: 'Fetches a single Schedule block by id.',
+  },
+  list: {
+    summary: 'List Schedule blocks',
+    description: 'Lists Schedule blocks page by page.',
+  },
+  search: {
+    summary: 'Search Schedule blocks',
+    description: 'Free-text search over type/status.',
   },
 } as const;

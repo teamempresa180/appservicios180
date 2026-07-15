@@ -3,5 +3,6 @@
  */
 export const AvailabilityRoutes = {
   base: 'availabilities',
+  search: 'search',
   byId: ':id',
 } as const;

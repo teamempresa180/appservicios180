@@ -6,25 +6,48 @@ import {
   Param,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { CategoryRoutes } from '../routes/category.routes';
 import { CategorySwagger } from '../swagger/category.swagger';
 import { CreateCategoryUseCase } from '../../application/use_cases/create-category.use-case';
 import { UpdateCategoryUseCase } from '../../application/use_cases/update-category.use-case';
 import { DeleteCategoryUseCase } from '../../application/use_cases/delete-category.use-case';
 import { GetCategoryUseCase } from '../../application/use_cases/get-category.use-case';
-import { CreateCategoryDto } from '../../application/dto/create-category.dto';
-import { UpdateCategoryDto } from '../../application/dto/update-category.dto';
-import { CreateCategoryCommand } from '../../application/commands/create-category.command';
-import { UpdateCategoryCommand } from '../../application/commands/update-category.command';
+import { ListCategoryUseCase } from '../../application/use_cases/list-category.use-case';
+import { SearchCategoryUseCase } from '../../application/use_cases/search-category.use-case';
 import { DeleteCategoryCommand } from '../../application/commands/delete-category.command';
 import { GetCategoryQuery } from '../../application/queries/get-category.query';
+import { ListCategoryQuery } from '../../application/queries/list-category.query';
+import { SearchCategoryQuery } from '../../application/queries/search-category.query';
+import { CreateCategoryRequestDto } from '../dto/create-category.request.dto';
+import { UpdateCategoryRequestDto } from '../dto/update-category.request.dto';
+import { CategoryResponseDto } from '../dto/category.response.dto';
+import { CategoryListResponseDto } from '../dto/category-list.response.dto';
+import { CategoryHttpMapper } from '../dto/category-http.mapper';
 
 /**
- * REST controller for Category. Only exposes routes and delegates to the
- * corresponding Use Case — no business logic lives here. Use Cases are not
- * implemented yet, so every call currently rejects with "Not implemented yet".
+ * REST controller for Category. Only exposes routes, maps HTTP DTOs
+ * to Application commands/queries via `CategoryHttpMapper`, and
+ * delegates to the corresponding Use Case — no business logic lives
+ * here. Domain exceptions thrown by Use Cases (`NotFoundException`,
+ * `ValidationException`) are translated to HTTP responses by the
+ * global `DomainExceptionFilter` (`common/filters/`), registered in
+ * `main.ts` — this controller never catches them itself. `Category`
+ * is a standalone catalog entity — no cross-module dependency, no
+ * relation to verify.
+ *
+ * `list`/`search` are declared before the dynamic `findOne(:id)` route
+ * so `GET /categories/search` resolves to `search()` rather than
+ * being matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Category')
 @Controller(CategoryRoutes.base)
@@ -34,43 +57,127 @@ export class CategoryController {
     private readonly updateCategoryUseCase: UpdateCategoryUseCase,
     private readonly deleteCategoryUseCase: DeleteCategoryUseCase,
     private readonly getCategoryUseCase: GetCategoryUseCase,
+    private readonly listCategoryUseCase: ListCategoryUseCase,
+    private readonly searchCategoryUseCase: SearchCategoryUseCase,
   ) {}
 
   @Post()
   @ApiOperation(CategorySwagger.create)
-  @ApiResponse({ status: 201, description: 'Category created.' })
-  create(@Body() dto: CreateCategoryDto) {
-    return this.createCategoryUseCase.execute(
-      new CreateCategoryCommand(
-        dto.name,
-        dto.description,
-        dto.icon,
-        dto.color,
-        dto.type,
-      ),
+  @ApiResponse({
+    status: 201,
+    description: 'Category created.',
+    type: CategoryResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error.',
+    type: ErrorResponseDto,
+  })
+  async create(
+    @Body() dto: CreateCategoryRequestDto,
+  ): Promise<CategoryResponseDto> {
+    const category = await this.createCategoryUseCase.execute(
+      CategoryHttpMapper.toCreateCommand(dto),
     );
+    return CategoryHttpMapper.toResponse(category);
   }
 
   @Put(CategoryRoutes.byId)
   @ApiOperation(CategorySwagger.update)
-  @ApiResponse({ status: 200, description: 'Category updated.' })
-  update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
-    return this.updateCategoryUseCase.execute(
-      new UpdateCategoryCommand(id, dto.name, dto.description, dto.status),
+  @ApiParam({ name: 'id', description: 'Category id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Category updated.',
+    type: CategoryResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Category not found.',
+    type: ErrorResponseDto,
+  })
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateCategoryRequestDto,
+  ): Promise<CategoryResponseDto> {
+    const category = await this.updateCategoryUseCase.execute(
+      CategoryHttpMapper.toUpdateCommand(id, dto),
     );
+    return CategoryHttpMapper.toResponse(category);
   }
 
   @Delete(CategoryRoutes.byId)
   @ApiOperation(CategorySwagger.delete)
+  @ApiParam({ name: 'id', description: 'Category id' })
   @ApiResponse({ status: 200, description: 'Category deleted.' })
-  remove(@Param('id') id: string) {
-    return this.deleteCategoryUseCase.execute(new DeleteCategoryCommand(id));
+  @ApiResponse({
+    status: 404,
+    description: 'Category not found.',
+    type: ErrorResponseDto,
+  })
+  async remove(@Param('id') id: string): Promise<void> {
+    await this.deleteCategoryUseCase.execute(new DeleteCategoryCommand(id));
+  }
+
+  @Get()
+  @ApiOperation(CategorySwagger.list)
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'pageSize', required: false, example: 20 })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated list of Categories.',
+    type: CategoryListResponseDto,
+  })
+  async list(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ): Promise<CategoryListResponseDto> {
+    const query = new ListCategoryQuery(
+      page !== undefined ? Number(page) : undefined,
+      pageSize !== undefined ? Number(pageSize) : undefined,
+    );
+    const result = await this.listCategoryUseCase.execute(query);
+    return CategoryHttpMapper.toListResponse(result);
+  }
+
+  @Get(CategoryRoutes.search)
+  @ApiOperation(CategorySwagger.search)
+  @ApiQuery({ name: 'term', required: true, example: 'Plumbing' })
+  @ApiResponse({
+    status: 200,
+    description: 'Categories matching the search term.',
+    type: [CategoryResponseDto],
+  })
+  async search(@Query('term') term: string): Promise<CategoryResponseDto[]> {
+    const categories = await this.searchCategoryUseCase.execute(
+      new SearchCategoryQuery(term),
+    );
+    return categories.map((category) =>
+      CategoryHttpMapper.toResponse(category),
+    );
   }
 
   @Get(CategoryRoutes.byId)
   @ApiOperation(CategorySwagger.get)
-  @ApiResponse({ status: 200, description: 'Category found.' })
-  findOne(@Param('id') id: string) {
-    return this.getCategoryUseCase.execute(new GetCategoryQuery(id));
+  @ApiParam({ name: 'id', description: 'Category id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Category found.',
+    type: CategoryResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Category not found.',
+    type: ErrorResponseDto,
+  })
+  async findOne(@Param('id') id: string): Promise<CategoryResponseDto> {
+    const category = await this.getCategoryUseCase.execute(
+      new GetCategoryQuery(id),
+    );
+    return CategoryHttpMapper.toResponse(category);
   }
 }

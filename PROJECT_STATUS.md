@@ -3397,3 +3397,116 @@ revisado. Sin cambios de código en esta fase.
   Prompt 71 (requirió reiniciar Docker Desktop, que no estaba
   corriendo al inicio de esa sesión) — sintético/desechable, sin datos
   reales.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 71 — Sprint 4 Etapa 4, HTTP Layer: Marketplace — consolidado)
+
+**El Prompt 71 fue aprobado por el usuario y consolidado en el Prompt
+72** (Fase 1 — ver la sección de cierre "Prompt 72" más abajo para el
+hash y el detalle del commit).
+
+**Fase 0 (Reconstrucción del contexto)**: repositorio oficial
+confirmado; último commit al iniciar = Prompt 69 (`89284bc`); working
+tree contenía únicamente el trabajo pendiente del Prompt 70; Docker
+Desktop no estaba corriendo (se reinició en la Fase 1); `PROJECT_STATUS.md`
+revisado. Sin cambios de código en esta fase.
+
+- **Fase 1 (Consolidación Prompt 70)**: `npm run build`/`lint`/`test`
+  (144 suites/662 tests)/`test:e2e` (10 suites/58 tests)/
+  `test:integration` (22 suites/144 tests) + `flutter analyze`/`test`
+  (748/748)/`build windows` — todos en verde. Documentación
+  actualizada y **un único commit** creado para el trabajo de Fase
+  2–7 del Prompt 70 (hash `3f2c785`), excluyendo
+  `Logo oficial grupo.svg` y temporales/IDE/cache. Docker detenido al
+  finalizar.
+- **Fase 2 (Auditoría — capas + relaciones)**: se auditaron los cinco
+  módulos de Marketplace (`Category`, `Service`, `Provider`,
+  `Availability`, `Schedule`) verificando primero que las cuatro capas
+  (Domain/Application/Infrastructure/Presentation) existieran
+  completas — las cinco las tienen, con `PrismaXRepository` real y
+  skeleton de Controllers ya presente desde Sprint 3. A diferencia del
+  Prompt 70, **los cinco módulos tienen el conjunto completo de Use
+  Cases** (Create/Update/Delete/Get/List/Search) — sin asimetrías que
+  documentar en el HTTP surface. Relaciones Prisma verificadas
+  (`schema.prisma`): `Service.categoryId → Category`,
+  `Service.providerId → Provider`, `Provider.identityId → Identity`,
+  `Provider.providerProfileId → Profile`, `Availability.providerId →
+  Provider`, `Schedule.providerId → Provider`. Cada `Create<X>UseCase`
+  que referencia otro módulo resuelve la relación con **una única
+  llamada `findById` por dependencia** (nunca un bucle) — sin riesgo
+  de N+1; no se encontró ningún endpoint List/Search que itere
+  relaciones fila por fila. No se optimizó nada preventivamente: no
+  había ningún problema real que corregir. Hallazgo puntual:
+  `UpdateProviderCommand` no acepta `yearsOfExperience` (solo
+  biography/experience/status) — el `UpdateProviderRequestDto` HTTP
+  refleja exactamente ese contrato, sin inventar un campo que
+  Application no soporta (mismo criterio que `UpdateAddressRequestDto`
+  en el Prompt 69).
+- **Fase 3 (Controllers)**: `CategoryController`, `ServiceController`,
+  `ProviderController`, `AvailabilityController` y
+  `ScheduleController` reescritos completos — Create/Update/Delete/
+  Get/List/Search, todos respaldados por Use Cases reales. Solo Use
+  Cases de Application + DTO HTTP + DI, sin Prisma/Repository/lógica
+  de negocio. `list`/`search` declarados antes de `findOne(:id)` en
+  los cinco controllers para evitar colisión de rutas en Nest.
+- **Fase 4 (DTO HTTP)**: para cada módulo, `presentation/dto/` nuevo
+  con Request/Response/List DTOs y `<x>-http.mapper.ts`, separados de
+  Application. `Availability`/`Schedule` manejan fechas ISO string ↔
+  `Date` en el mapper, sin duplicar la validación que ya hacen
+  `AvailabilityValidator`/`ScheduleValidator`.
+- **Fase 5 (Swagger)**: `@ApiOperation`/`@ApiParam`/`@ApiResponse`/
+  `@ApiQuery` completos en los cinco Controllers, mismo estilo que
+  Prompts 68–70, incluyendo los 404 de relación (`Category`/`Provider`
+  no encontrados) y el 422 de la invariante "un Provider por Identity"
+  (heredada del mismo patrón que `Trust`).
+- **Fase 6 (Tests)**: Controller + Mapper unit tests (incluyendo list/
+  search) y HTTP integration tests
+  (`category/service/provider/availability/schedule.e2e-spec.ts`)
+  para los cinco módulos. Los específs de `service`/`availability`/
+  `schedule` necesitaron sobreescribir también `IDENTITY_REPOSITORY`/
+  `PROFILE_REPOSITORY` (no solo `PROVIDER_REPOSITORY`/
+  `CATEGORY_REPOSITORY`) porque `ProviderPresentationModule` importa
+  transitivamente `IdentityPresentationModule`/
+  `ProfilesPresentationModule`, cuyos `PrismaXRepository` reales
+  necesitarían un `PrismaService` vivo — se corrigió durante esta
+  misma fase antes de dar por cerrados los tests. Resultado: `npm test`
+  154 suites/712 tests (+10 suites/+50 tests sobre Prompt 70),
+  `npm run test:e2e` 15 suites/96 tests (+5 suites/+38 sobre Prompt 70).
+- **Fase 7 (Auditoría)**: verificado por grep que ningún Controller de
+  `category`/`service`/`provider`/`availability`/`schedule` importa
+  `@prisma/client` ni ningún `*Repository`; rutas y verbos HTTP
+  idénticos entre los cinco módulos y consistentes con el patrón de
+  Identity; sin `@HttpCode` custom; DTO HTTP no duplicados; relaciones
+  documentadas en los docblocks de cada Controller; sin dependencias
+  nuevas en `package.json`. No se identificó ninguna mejora
+  arquitectónica adicional que documentar.
+- Verificaciones finales — todas pasando:
+  ```
+  npm run build            ✅
+  npm run lint              ✅ 0 errores, 0 warnings
+  npm test                   ✅ 154 suites, 712/712
+  npm run test:e2e          ✅ 15 suites, 96/96
+  npm run test:integration  ✅ 22 suites, 144/144
+  flutter analyze            ✅ No issues found!
+  flutter test                ✅ 748/748 (sin cambios — ningún archivo Flutter tocado)
+  flutter build windows      ✅ Build exitoso (mobile.exe)
+  ```
+- `git status` al cierre de esta sesión — **trabajo de Fase 2–7 del
+  Prompt 71 presente en el working tree, sin commitear**, además del
+  logo histórico:
+  ```
+  On branch main
+  Modified: apps/backend/src/modules/{category,service,provider,availability,schedule}/presentation/controllers/*.controller.ts,
+  apps/backend/src/modules/{category,service,provider,availability,schedule}/presentation/routes/*.routes.ts,
+  apps/backend/src/modules/{category,service,provider,availability,schedule}/presentation/swagger/*.swagger.ts
+  Untracked: apps/backend/src/modules/{category,service,provider,availability,schedule}/presentation/controllers/*.spec.ts,
+  apps/backend/src/modules/{category,service,provider,availability,schedule}/presentation/dto/,
+  apps/backend/test/{category,service,provider,availability,schedule}.e2e-spec.ts,
+  Logo oficial grupo.svg (histórico, sin trackear)
+  ```
+- Todo este trabajo (Fase 2–7 del Prompt 71) quedó **consolidado en un
+  único commit** durante la Fase 1 del Prompt 72 — ver la sección de
+  cierre "Prompt 72" más abajo para el hash y el detalle del commit.
+- **Contenedor Docker temporal `appservicios-pg-temp`**: se reutilizó
+  únicamente para correr `npm run test:integration` en la Fase 1 y de
+  nuevo en la Fase 8 de este prompt, y de nuevo durante la Fase 1 del
+  Prompt 72 — sintético/desechable, sin datos reales.

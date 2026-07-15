@@ -3,5 +3,6 @@
  */
 export const ScheduleRoutes = {
   base: 'schedules',
+  search: 'search',
   byId: ':id',
 } as const;

@@ -3,5 +3,6 @@
  */
 export const CategoryRoutes = {
   base: 'categories',
+  search: 'search',
   byId: ':id',
 } as const;

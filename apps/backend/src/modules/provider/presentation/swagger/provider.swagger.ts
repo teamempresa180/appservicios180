@@ -1,11 +1,16 @@
 /**
- * Centralized Swagger metadata (summary/description only) for the Provider
- * controller. No business rules are documented here.
+ * Centralized Swagger metadata (`@ApiOperation` summary/description)
+ * for the Provider controller. No business rules are documented here
+ * — only what the endpoint does at the HTTP level. Response schemas
+ * and status codes are attached directly on each controller method
+ * via `@ApiResponse`/`@ApiBody`, following the convention established
+ * in Sprint 4, Etapa 1 (Identity/Authentication/Credentials).
  */
 export const ProviderSwagger = {
   create: {
     summary: 'Create a Provider',
-    description: 'Registers a new Provider.',
+    description:
+      'Registers a new Provider for an Identity. An Identity may have at most one Provider record.',
   },
   update: {
     summary: 'Update a Provider',
@@ -18,5 +23,13 @@ export const ProviderSwagger = {
   get: {
     summary: 'Get a Provider',
     description: 'Fetches a single Provider by id.',
+  },
+  list: {
+    summary: 'List Providers',
+    description: 'Lists Providers page by page.',
+  },
+  search: {
+    summary: 'Search Providers',
+    description: 'Free-text search over type/biography.',
   },
 } as const;

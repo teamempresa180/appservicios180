@@ -3,5 +3,6 @@
  */
 export const ServiceRoutes = {
   base: 'services',
+  search: 'search',
   byId: ':id',
 } as const;
