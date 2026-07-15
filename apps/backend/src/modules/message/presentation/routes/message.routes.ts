@@ -3,5 +3,6 @@
  */
 export const MessageRoutes = {
   base: 'messages',
+  search: 'search',
   byId: ':id',
 } as const;

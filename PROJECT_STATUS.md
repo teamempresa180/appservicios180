@@ -3609,10 +3609,143 @@ revisado. Sin cambios de código en esta fase.
   flutter build windows      ✅ Build exitoso (mobile.exe)
   ```
 - El trabajo de Fase 2–7 del Prompt 72 quedó **consolidado en un único
-  commit** durante la Fase 1 del Prompt 73 (hash `<pendiente de Fase 1
-  del Prompt 73>`), excluyendo `Logo oficial grupo.svg` y
-  temporales/IDE/cache.
+  commit** durante la Fase 1 del Prompt 73 (hash `dafc20f`), excluyendo
+  `Logo oficial grupo.svg` y temporales/IDE/cache.
 - **Contenedor Docker temporal `appservicios-pg-temp`**: se reutilizó
   únicamente para correr `npm run test:integration` en la Fase 1 y de
   nuevo en la Fase 8 de este prompt — sintético/desechable, sin datos
   reales. Detenido al cierre de esta sesión.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 73 — Sprint 4 Etapa 6, HTTP Layer: Payment, Review, Communication — cierre definitivo de la API REST — consolidado)
+
+**El Prompt 73 fue aprobado por el usuario y consolidado en el Prompt 74.**
+
+**Fase 0 (Reconstrucción del contexto)**: repositorio oficial
+confirmado; último commit al iniciar = Prompt 71 (`666fbdd`); working
+tree contenía únicamente el trabajo pendiente del Prompt 72
+(Order/Quote) + `PROJECT_STATUS.md`; Docker detenido
+(`appservicios-pg-temp` en `Exited`). Sin cambios de código en esta
+fase.
+
+- **Fase 1 (Consolidación Prompt 72)**: `npm run build`/`lint`/`test`
+  (158 suites/735 tests)/`test:e2e` (17 suites/111 tests)/
+  `test:integration` (22 suites/144 tests) + `flutter analyze`/`test`
+  (748/748)/`build windows` — todos en verde. Documentación
+  actualizada (título del Prompt 72 cambiado a "— consolidado" con
+  nota de aprobación) y **un único commit** creado para el trabajo de
+  Fase 2–7 del Prompt 72 (hash `dafc20f`), excluyendo
+  `Logo oficial grupo.svg` y temporales/IDE/cache. Docker detenido al
+  finalizar.
+
+- **Fase 2 (Auditoría — capas + relaciones, los 6 módulos
+  restantes)**: a diferencia de Order/Quote (Prompt 72), los 6 módulos
+  de este prompt (`Payment`, `Review`, `Chat`, `Message`,
+  `Notification`, `Attachment`) **ya tenían un `presentation/` no
+  vacío** desde Sprint 3 — Controllers/Modules/Routes/Swagger
+  existían, pero como *skeleton* incompleto: usaban los DTOs de
+  `application/dto/` directamente en el `Body`/retorno HTTP (sin
+  separación), no invocaban `List<X>UseCase`/`Search<X>UseCase`
+  (registrados como providers en cada `*.module.ts` pero nunca
+  inyectados en el Controller), Swagger sólo tenía
+  `summary`/`description` (sin `@ApiParam`/`@ApiResponse` tipado/
+  `@ApiQuery`), y ningún Controller traducía el patrón `null` de
+  `Get<X>UseCase` a 404. Hallazgos por módulo, verificados leyendo el
+  código real (nada asumido):
+  - **Payment**: Create/Update(sólo `status`)/Cancel/Get/List/Search.
+    **No existe `DeletePaymentUseCase`**. `GetPaymentUseCase` retorna
+    `PaymentDto | null`. Depende de Quote/Order/Identity/Provider
+    (`CreatePaymentUseCase` verifica los 4).
+  - **Review**: Create/Update(sólo `title`/`comment`)/Delete/Get/List/
+    Search. **No existe endpoint publish/hide/archive** pese a que
+    `ReviewStatus` tiene esos miembros — no hay Use Case para ello.
+    `GetReviewUseCase` retorna `ReviewDto | null`. Depende de Order/
+    Provider/Identity.
+  - **Chat**: Create/Close/Get/List/Search. **No existen
+    Update/DeleteChatUseCase** — `close` es la única transición.
+    `GetChatUseCase` retorna `ChatDto | null`. Depende de Order/
+    Identity/Provider.
+  - **Message**: Send/Delete/Get/List/Search. **No existe
+    Update/markAsRead/markAsDeliveredUseCase** pese a que
+    `MessageStatus` tiene `Delivered`/`Read` y `MessageDto.readAt`
+    existe — no hay Use Case para ello. `GetMessageUseCase` retorna
+    `MessageDto | null`. Depende de Chat/Identity.
+  - **Notification**: Create/MarkAsRead/Delete/Get/List/Search. **No
+    existe UpdateNotificationUseCase** ni endpoint de archivo pese a
+    `NotificationStatus.Archived`. `GetNotificationUseCase` retorna
+    `NotificationDto | null`. Depende únicamente de Identity.
+  - **Attachment**: Create/Delete/Get/List/Search. **No existe Update
+    ni transición de estado** pese a `AttachmentStatus` tener
+    `Available`/`Failed`/`Removed` — no hay Use Case para ello.
+    `GetAttachmentUseCase` retorna `AttachmentDto | null`. Depende
+    únicamente de Message. `AttachmentDto` no tiene `updatedAt`
+    (coincide con el modelo Prisma).
+  - **Relaciones (cadena de dependencia transitiva)**: Identity/Order/
+    Provider/Quote (ya construidos) → Chat → Message → Attachment, y
+    de forma independiente → Payment, Review, Notification. Ningún
+    Use Case itera relaciones fila por fila (todas son `findById`
+    secuenciales, sin N+1).
+
+- **Fase 3–5 (Controllers + DTO HTTP + Swagger, los 6 módulos)**: para
+  cada módulo se creó `presentation/dto/` completo (`create-<x>.
+  request.dto.ts`, `update-<x>.request.dto.ts` sólo cuando existe
+  `Update<X>Command`, `<x>.response.dto.ts`, `<x>-list.response.dto.
+  ts`, `<x>-http.mapper.ts`) totalmente separado de
+  `application/dto/`; se añadió `list`/`search` a routes/Swagger/
+  Controller en los 6 módulos; se reescribió cada Controller para usar
+  únicamente los HTTP DTOs + mapper (nunca los DTOs de Application) y
+  para traducir el `null` de cada `Get<X>UseCase` al `NotFoundException`
+  compartido, igual que Order/Quote. Ningún endpoint inventado: sin
+  Update donde no existe `Update<X>Command` (Chat/Message/Notification/
+  Attachment), sin Delete donde no existe (Payment/Chat), sin
+  transiciones de estado no respaldadas por un Use Case real (no hay
+  publish/hide/archive en Review, no hay markAsRead/markAsDelivered en
+  Message, no hay archive en Notification, no hay ninguna transición en
+  Attachment).
+
+- **Fase 6 (Tests)**: Controller + Mapper unit tests (incluyendo el
+  caso `findOne()` → `NotFoundException` cuando el Use Case retorna
+  `null`, en los 6 módulos) y un HTTP integration test nuevo por módulo
+  (`payment.e2e-spec.ts`, `review.e2e-spec.ts`, `chat.e2e-spec.ts`,
+  `message.e2e-spec.ts`, `notification.e2e-spec.ts`,
+  `attachment.e2e-spec.ts`), sembrando en cada uno las entidades reales
+  de sus dependencias transitivas (p. ej. `payment.e2e-spec.ts` siembra
+  Quote/Order/Identity/Provider y sobreescribe también
+  `PROFILE_REPOSITORY`/`CATEGORY_REPOSITORY`/`SERVICE_REPOSITORY` por
+  la cadena Order→Service y Provider→Profile). Resultado: `npm test`
+  170 suites/796 tests (+12 suites/+61 tests sobre Prompt 72), `npm run
+  test:e2e` 23 suites/150 tests (+6 suites/+39 sobre Prompt 72).
+
+- **Fase 7 (Auditoría arquitectónica)**: verificado por grep que
+  ningún Controller de los 6 módulos importa `@prisma/client` ni
+  ningún `*Repository`, y que ningún Controller importa un DTO de
+  `application/dto/` directamente (sólo los `*.spec.ts`, que sí
+  necesitan construir `XDto` para mockear los Use Cases — esperado);
+  rutas y verbos HTTP consistentes con el patrón de Order/Quote
+  (`@Post()`/`@Put(byId)`/`@Put(subrecurso)` si aplica/`@Delete(byId)`
+  si aplica/`@Get()` list/`@Get(search)`/`@Get(byId)`, `search`
+  siempre declarado antes de `findOne(:id)`); sin `@HttpCode` custom
+  (Delete se mantiene en 200, nunca 204, igual que en todos los
+  módulos anteriores); DTO HTTP no duplicados; sin dependencias nuevas
+  en `package.json` (`git diff --stat package.json` vacío). No se
+  identificó ninguna mejora arquitectónica adicional que documentar —
+  no se hizo ningún cambio cosmético.
+
+- Verificaciones finales — todas pasando:
+  ```
+  npm run build            ✅
+  npm run lint               ✅ 0 errores (fix automático de formato únicamente)
+  npm test                   ✅ 170 suites, 796/796
+  npm run test:e2e          ✅ 23 suites, 150/150
+  npm run test:integration  ✅ 22 suites, 144/144
+  flutter analyze             ✅ No issues found!
+  flutter test                 ✅ 748/748 (sin cambios — ningún archivo Flutter tocado)
+  flutter build windows       ✅ Build exitoso (mobile.exe, confirmado al inicio de esta sesión)
+  ```
+
+- El trabajo de Fase 2–7 del Prompt 73 quedó **consolidado en un único
+  commit** durante la Fase 1 del Prompt 74 (hash `<pendiente>`),
+  excluyendo `Logo oficial grupo.svg` y temporales/IDE/cache.
+- **Contenedor Docker temporal `appservicios-pg-temp`**: se reutilizó
+  únicamente para correr `npm run test:integration` en la Fase 1 y de
+  nuevo en la re-verificación de este prompt — sintético/desechable,
+  sin datos reales. Detenido al cierre de esta sesión.

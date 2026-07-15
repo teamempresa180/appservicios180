@@ -3,6 +3,7 @@
  */
 export const PaymentRoutes = {
   base: 'payments',
+  search: 'search',
   byId: ':id',
   cancel: ':id/cancel',
 } as const;

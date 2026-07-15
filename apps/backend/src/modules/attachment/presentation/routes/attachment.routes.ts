@@ -3,5 +3,6 @@
  */
 export const AttachmentRoutes = {
   base: 'attachments',
+  search: 'search',
   byId: ':id',
 } as const;

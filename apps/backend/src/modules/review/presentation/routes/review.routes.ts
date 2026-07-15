@@ -3,5 +3,6 @@
  */
 export const ReviewRoutes = {
   base: 'reviews',
+  search: 'search',
   byId: ':id',
 } as const;
