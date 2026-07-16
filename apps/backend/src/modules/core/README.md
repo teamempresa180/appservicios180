@@ -19,8 +19,8 @@ Contiene únicamente:
   ahí).
 - `DomainException` — excepción base abstracta. Extendida hoy por
   `NotFoundException`/`ValidationException`/`BusinessRuleException` (ver abajo,
-  Sprint 3 Etapa 1) — la jerarquía oficial que todo módulo usará una vez que sus
-  Use Cases dejen de lanzar el placeholder `Error('Not implemented yet')`.
+  Sprint 3 Etapa 1) — la jerarquía oficial que todos los módulos usan desde sus
+  Use Cases reales, respaldados por persistencia Prisma.
 - `generateId()` — utilidad pura para generar identificadores únicos (UUID v4),
   sin dependencias externas, sin persistencia ni I/O. **22/22 módulos** la usan
   dentro de su `<X>Id.create()`.

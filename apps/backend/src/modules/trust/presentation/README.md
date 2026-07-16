@@ -1,9 +1,7 @@
 # Trust — Presentation Layer
 
 Estructura REST del módulo `Trust`. Sin lógica de negocio: cada endpoint
-solo invoca el Use Case correspondiente de Application. Como los Use Cases
-aún no están implementados, toda petición responde con el error
-`"Not implemented yet"`.
+solo invoca el Use Case correspondiente de Application, ya implementado con persistencia real (Prisma).
 
 ## Endpoints
 

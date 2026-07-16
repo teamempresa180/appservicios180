@@ -18,8 +18,7 @@ tipadas.
 
 ## Use Cases
 
-Con `VerificationRepository` inyectado por constructor; `execute()` lanza
-explícitamente `Error("Not implemented yet")`:
+Con `VerificationRepository` inyectado por constructor, con lógica real de persistencia:
 
 - `CreateVerificationUseCase`
 - `UpdateVerificationUseCase`

@@ -18,8 +18,7 @@ esqueletos con las dependencias correctamente tipadas.
 
 ## Use Cases
 
-Con `CategoryRepository` inyectado por constructor; `execute()` lanza
-explícitamente `Error("Not implemented yet")`:
+Con `CategoryRepository` inyectado por constructor, con lógica real de persistencia:
 
 - `CreateCategoryUseCase`
 - `UpdateCategoryUseCase`

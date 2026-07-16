@@ -18,8 +18,7 @@ esqueletos con las dependencias correctamente tipadas.
 
 ## Use Cases
 
-Con `OrderRepository` inyectado por constructor; `execute()` lanza
-explícitamente `Error("Not implemented yet")`:
+Con `OrderRepository` inyectado por constructor, con lógica real de persistencia:
 
 - `CreateOrderUseCase`
 - `UpdateOrderUseCase`

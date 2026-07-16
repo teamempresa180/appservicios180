@@ -19,8 +19,7 @@ tipadas.
 
 ## Use Cases
 
-Con `NotificationRepository` inyectado por constructor; `execute()` lanza
-explícitamente `Error("Not implemented yet")`:
+Con `NotificationRepository` inyectado por constructor, con lógica real de persistencia:
 
 - `CreateNotificationUseCase`
 - `MarkNotificationAsReadUseCase`

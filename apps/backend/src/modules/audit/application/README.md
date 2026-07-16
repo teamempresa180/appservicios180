@@ -17,8 +17,7 @@ esqueletos con las dependencias correctamente tipadas.
 
 ## Use Cases
 
-Con `AuditRepository` inyectado por constructor; `execute()` lanza
-explícitamente `Error("Not implemented yet")`:
+Con `AuditRepository` inyectado por constructor, con lógica real de persistencia:
 
 - `CreateAuditRecordUseCase`
 - `GetAuditUseCase`

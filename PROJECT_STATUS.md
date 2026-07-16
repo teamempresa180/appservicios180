@@ -4310,3 +4310,158 @@ ninguna capa nueva.
   correspondientes de cada feature. Ningún archivo de `apps/backend`
   fue modificado en esta sesión — Prompt 76 fue exclusivamente
   Flutter.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 77 — Release Candidate: Auditoría Integral y Hardening — consolidado)
+
+**El Prompt 77 fue aprobado por el usuario y consolidado en el Prompt 78.**
+
+**El Prompt 76 fue aprobado por el usuario y consolidado en el Prompt 77**
+(commit `d0d302a`, Fase 1 de esta sesión, excluyendo `Logo oficial
+grupo.svg`). Este prompt no agrega funcionalidades: es una auditoría
+integral de todo el proyecto (backend + Flutter) buscando deuda
+técnica, violaciones de arquitectura, riesgos de seguridad, problemas
+de rendimiento y consistencia de UX, corrigiendo únicamente lo que era
+seguro corregir sin cambiar contratos HTTP, reglas de negocio ni
+comportamiento observable.
+
+### Resumen de auditoría
+
+Se auditó el proyecto completo mediante dos agentes de exploración en
+paralelo (backend y Flutter), cada uno cubriendo: código muerto/
+marcadores de deuda (`TODO`/`FIXME`/`HACK`/"not implemented"), código
+comentado, imports/clases/widgets/repositorios sin uso, duplicación de
+lógica/validación/mapeo/constantes, violaciones de Clean Architecture
+por capa, seguridad (JWT/refresh/hashing/guards/headers), rendimiento
+(`setState`, `const`, disposal de controllers/listeners, llamadas HTTP
+redundantes), cobertura de estados UX (loading/error/retry/success) y
+valores hardcodeados de layout, más dependencias sin usar en ambos
+`package.json`/`pubspec.yaml`.
+
+### Hallazgos
+
+**Backend — Zero violaciones de Clean Architecture.** `domain/` nunca
+importa Prisma ni decoradores de Nest; `application/` nunca importa
+`@prisma/client` directamente; `presentation/` nunca bypasea un Use
+Case para llamar un repositorio. Sin `TODO`/`FIXME`/`console.log`/
+imports muertos (confirmado también por `tsc --noEmit` y `eslint`
+limpios). JWT, refresh rotation/revocation, y bcrypt (cost 12) están
+correctamente implementados y sin secretos hardcodeados.
+
+- **🔴 Hallazgo crítico — sin corregir, requiere decisión del usuario**:
+  **21 de los 22 controllers del backend no tienen ningún guard de
+  autorización** (`@UseGuards(JwtAuthGuard)`/`RolesGuard`). Solo
+  `GET /authentications/me` está protegido. Cada endpoint CRUD —
+  incluyendo `credentials`, `payment`, `identity` — es público sin
+  token. Esto **no se corrigió en este prompt** porque agregar guards
+  a 21 controllers es, por definición, un cambio de contrato HTTP
+  (peticiones antes aceptadas sin token pasarían a rechazarse con 401)
+  y el prompt prohíbe explícitamente "modificar contratos HTTP" y
+  "romper compatibilidad". Es el ítem de mayor prioridad para un
+  próximo prompt dedicado, con alcance y aprobación explícitos del
+  usuario (decidir qué endpoints requieren qué rol, y coordinar con el
+  cliente Flutter — que ya envía el Bearer token en cada request vía
+  `AuthInterceptor` una vez logueado, así que el impacto en el flujo
+  real de la app sería mínimo, pero sigue siendo un cambio de contrato
+  que no correspondía asumir unilateralmente aquí).
+- Sin CORS ni cabeceras de seguridad (helmet) configuradas en
+  `main.ts` — reportado, no corregido (agregar `helmet` violaría "no
+  instalar dependencias innecesarias"; habilitar CORS es una decisión
+  de producto sobre qué orígenes permitir, no una corrección mecánica).
+- Duplicación estructural real pero no corregida (introducir una
+  abstracción nueva para esto sería el tipo de "refactor cosmético"
+  que el prompt prohíbe): validación repetida por módulo en 21
+  `*.validator.ts` sin helper compartido; cálculo de paginación
+  (`skip: (page-1)*pageSize`) repetido idéntico en los 22
+  `prisma-*.repository.ts`; boilerplate `toDomain`/`toPersistence`
+  repetido en los 22 `*-prisma.mapper.ts` sin clase base.
+- **Corregido**: 38 archivos de documentación (37 `README.md` de
+  módulo + `src/main.ts` + `not-found.exception.ts` + `core/README.md`)
+  afirmaban que "los Use Cases aún no están implementados / responden
+  con `Error('Not implemented yet')`" — texto residual de las
+  primeras sesiones del proyecto (Sprint 1), ya falso desde hace más
+  de 15 prompts. Reescrito para reflejar el estado real (Use Cases
+  reales, respaldados por Prisma). Solo texto — cero cambio de
+  comportamiento.
+- `reflect-metadata` en `package.json` no tiene imports directos en
+  `src/` pero es una dependencia implícita de tiempo de ejecución de
+  los decoradores de Nest — reportado, no es deuda real, no se tocó.
+
+**Flutter — Excepcionalmente limpio**, resultado directo del rigor ya
+aplicado en los Prompts 75-76: cero `TODO`/`FIXME`/código comentado;
+los 25 `Mock*Repository` siguen todos referenciados (por su
+`Http*Repository` hermano como fallback documentado, o por tests) —
+ninguno está muerto; cero violaciones de capas (ninguna página importa
+`Dio`/`ApiClient` directo, ningún repositorio importa Flutter,
+`core/network`/`core/session` nunca importan `go_router` ni widgets);
+cero `ListView` sin `.builder` para colecciones no acotadas; el único
+`AnimationController` de la app (`app_shell_page.dart`) se libera
+correctamente; las 22 páginas HTTP-backed cargan datos una sola vez
+desde `initState` (sin llamadas redundantes) y renderizan los 3
+estados (loading/error+retry/success) de forma consistente, todas con
+`actionLabel: 'Reintentar'`; sin `SizedBox` con píxeles hardcodeados
+fuera de `core/ui/tokens/`.
+
+- **Corregido**: `provider: ^6.1.2` y `cupertino_icons: ^1.0.8` en
+  `pubspec.yaml` — cero imports en todo `lib/`. `provider` se agregó
+  en el Prompt 75 previendo usarlo para los ViewModels, pero terminó
+  implementándose con `ChangeNotifier` + `addListener` manual en su
+  lugar (ver los 22 `*_view_model.dart`); nunca se usó el paquete en
+  sí. Eliminados de `pubspec.yaml`, `flutter pub get` regeneró
+  `pubspec.lock` (3 paquetes transitivos menos: `provider`, `nested`,
+  `cupertino_icons`).
+- Reportado, no corregido (introducir una clase base sería la misma
+  categoría de "refactor cosmético" que en el backend): los 22
+  `*ViewModel` repiten el mismo boilerplate de 3 estados +
+  `ChangeNotifier` sin una clase base compartida; `http_exceptions.dart`
+  define 8 subclases de una línea cada una (patrón de jerarquía de
+  excepciones estándar, no duplicación real).
+- Nota menor: `payment_actions.dart` usa `'Intentar nuevamente'` para
+  el botón de reintentar un pago fallido — distinto del
+  `'Reintentar'` que usan los 22 estados de error de página. Son
+  conceptos distintos (una acción de dominio vs. el retry de carga de
+  datos), no una inconsistencia real; solo se documenta para que quede
+  registrado.
+
+### Cambios realizados
+
+- **Backend**: 38 archivos de documentación con texto residual
+  "Not implemented yet" corregidos (`src/main.ts`,
+  `not-found.exception.ts`, `core/README.md`, y 16 + 21 `README.md`
+  de `application/`/`presentation/` de cada módulo). Cero cambios de
+  código ejecutable.
+- **Flutter**: `pubspec.yaml`/`pubspec.lock` — eliminadas 2
+  dependencias sin uso (`provider`, `cupertino_icons`) y sus 1
+  transitiva (`nested`).
+- Nada más se modificó — todo lo demás que se encontró (guards de
+  autorización, CORS/helmet, duplicación estructural en validators/
+  mappers/ViewModels) se documenta como hallazgo pendiente, no como
+  cambio aplicado, por requerir una decisión de alcance/arquitectura
+  o violar una restricción explícita del prompt.
+
+### Verificaciones finales — todo en verde
+
+```
+npm run build              ✅
+npm run lint                ✅ 0 errores
+npm test                    ✅ 181 suites, 868/868
+npm run test:e2e            ✅ 23 suites, 160/160
+npm run test:integration    ✅ 23 suites, 147/147
+flutter analyze             ✅ No issues found! (32 infos
+                                prefer_initializing_formals,
+                                inevitables, sin cambios)
+flutter test                 ✅ 750/750
+flutter build windows        ✅ Build exitoso (mobile.exe)
+```
+
+### Estado de Docker
+
+Contenedor temporal `appservicios-pg-temp` reiniciado únicamente para
+`test:integration` (Fase 1 y Fase 8 de esta sesión) y detenido al
+cierre — sintético/desechable, sin datos reales.
+
+### Estado de git
+
+Commit `d0d302a` consolidó el Prompt 76 (Fase 1 de esta sesión). Todo
+el trabajo nuevo del Prompt 77 permanece **sin commitear**, pendiente
+de aprobación: 38 archivos de documentación del backend, `pubspec.yaml`
++ `pubspec.lock` de Flutter, y este archivo (`PROJECT_STATUS.md`).

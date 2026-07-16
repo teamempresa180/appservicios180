@@ -18,8 +18,7 @@ esqueletos con las dependencias correctamente tipadas.
 
 ## Use Cases
 
-Con `ProviderRepository` inyectado por constructor; `execute()` lanza
-explícitamente `Error("Not implemented yet")`:
+Con `ProviderRepository` inyectado por constructor, con lógica real de persistencia:
 
 - `CreateProviderUseCase`
 - `UpdateProviderUseCase`

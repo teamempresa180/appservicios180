@@ -18,8 +18,7 @@ tipadas.
 
 ## Use Cases
 
-Con `AttachmentRepository` inyectado por constructor; `execute()` lanza
-explícitamente `Error("Not implemented yet")`:
+Con `AttachmentRepository` inyectado por constructor, con lógica real de persistencia:
 
 - `CreateAttachmentUseCase`
 - `DeleteAttachmentUseCase`

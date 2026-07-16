@@ -17,8 +17,7 @@ esqueletos con las dependencias correctamente tipadas.
 
 ## Use Cases
 
-Con `TrustRepository` inyectado por constructor; `execute()` lanza
-explícitamente `Error("Not implemented yet")`:
+Con `TrustRepository` inyectado por constructor, con lógica real de persistencia:
 
 - `CreateTrustProfileUseCase`
 - `UpdateTrustProfileUseCase`

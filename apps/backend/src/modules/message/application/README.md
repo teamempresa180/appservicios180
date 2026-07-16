@@ -17,8 +17,7 @@ esqueletos con las dependencias correctamente tipadas.
 
 ## Use Cases
 
-Con `MessageRepository` inyectado por constructor; `execute()` lanza
-explícitamente `Error("Not implemented yet")`:
+Con `MessageRepository` inyectado por constructor, con lógica real de persistencia:
 
 - `SendMessageUseCase`
 - `DeleteMessageUseCase`

@@ -18,8 +18,7 @@ esqueletos con las dependencias correctamente tipadas.
 
 ## Use Cases
 
-Con `ReviewRepository` inyectado por constructor; `execute()` lanza
-explícitamente `Error("Not implemented yet")`:
+Con `ReviewRepository` inyectado por constructor, con lógica real de persistencia:
 
 - `CreateReviewUseCase`
 - `UpdateReviewUseCase`

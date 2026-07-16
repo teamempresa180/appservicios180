@@ -19,8 +19,7 @@ tipadas.
 
 ## Use Cases
 
-Con `AvailabilityRepository` inyectado por constructor; `execute()` lanza
-explícitamente `Error("Not implemented yet")`:
+Con `AvailabilityRepository` inyectado por constructor, con lógica real de persistencia:
 
 - `CreateAvailabilityUseCase`
 - `UpdateAvailabilityUseCase`

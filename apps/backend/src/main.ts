@@ -19,7 +19,7 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder()
     .setTitle('AppServicios API')
     .setDescription(
-      'Presentation layer skeleton. Endpoints delegate to Application Use Cases, which are not implemented yet.',
+      'REST API for AppServicios. Controllers delegate to Application Use Cases, which are backed by real Prisma/PostgreSQL persistence.',
     )
     .setVersion('0.0.1')
     .addBearerAuth({

@@ -31,10 +31,6 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
-
   # Deep equality helpers used by domain Value Objects (core module).
   collection: ^1.19.1
 
@@ -50,9 +46,6 @@ dependencies:
   # Service locator for core/di — resolves ApiClient/SessionManager/
   # repositories without a global widget tree dependency.
   get_it: ^8.0.2
-
-  # ChangeNotifier-based state for view models (Loading/Success/Error).
-  provider: ^6.1.2
 
 dev_dependencies:
   flutter_test:

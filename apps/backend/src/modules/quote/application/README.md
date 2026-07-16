@@ -19,8 +19,7 @@ esqueletos con las dependencias correctamente tipadas.
 
 ## Use Cases
 
-Con `QuoteRepository` inyectado por constructor; `execute()` lanza
-explícitamente `Error("Not implemented yet")`:
+Con `QuoteRepository` inyectado por constructor, con lógica real de persistencia:
 
 - `CreateQuoteUseCase`
 - `UpdateQuoteUseCase`
