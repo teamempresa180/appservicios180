@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/orders/presentation/pages/orders_page.dart';
+import 'package:mobile/features/orders/repositories/mock_orders_repository.dart';
 import 'package:mobile/features/reviews/presentation/pages/reviews_page.dart';
 
 /// Confirms the minimal, explicitly-authorized wiring that lets Orders
@@ -13,7 +14,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
-        home: const Scaffold(body: OrdersPage()),
+        home: Scaffold(body: OrdersPage(repository: MockOrdersRepository())),
       ),
     );
     await tester.pumpAndSettle();

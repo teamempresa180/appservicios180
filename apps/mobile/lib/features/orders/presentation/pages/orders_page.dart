@@ -1,57 +1,70 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/widgets/app_page_body.dart';
-import '../../mock/mock_orders_data.dart';
-import '../../models/order_display.dart';
-import '../../repositories/mock_orders_repository.dart';
+import '../../../../core/di/service_locator.dart';
+import '../../../../core/ui/icons/app_icons.dart';
+import '../../../../core/ui/widgets/app_empty_state.dart';
+import '../../repositories/orders_repository.dart';
+import '../view_models/orders_view_model.dart';
 import '../widgets/order_empty_state.dart';
 import '../widgets/order_loading.dart';
 import '../widgets/order_status_tabs.dart';
 import '../widgets/orders_header.dart';
 import '../widgets/orders_list.dart';
-
-/// The three purely-visual states this screen can render. Selecting a
-/// tab in `OrderStatusTabs` does not change this — see the feature
-/// README.
-enum OrdersViewState { loading, empty, list }
+import '../../../../core/ui/widgets/app_page_body.dart';
 
 /// Orders screen. Does NOT build its own `Scaffold` — it is meant to
 /// live inside the App Shell later, the same way Home, Marketplace,
-/// Categories and Search already do. Completely independent of every
-/// other feature: its own repository, its own mock data.
-///
-/// [state] only picks which of the three visual states renders — there
-/// is no real async fetch, no state management, just a fixed switch for
-/// previewing each state (same approach as `SearchPage.state`).
-class OrdersPage extends StatelessWidget {
-  const OrdersPage({super.key, this.state = OrdersViewState.list});
+/// Categories and Search already do. Loads from the real backend via
+/// [OrdersViewModel] (resolved from the service locator — see
+/// `core/di/service_locator.dart`).
+class OrdersPage extends StatefulWidget {
+  const OrdersPage({super.key, OrdersRepository? repository})
+    : _repository = repository;
 
-  final OrdersViewState state;
+  /// Overridable for tests only — production call sites always resolve
+  /// the real repository from the service locator.
+  final OrdersRepository? _repository;
 
-  List<OrderDisplay> _buildOrders() {
-    final repository = MockOrdersRepository();
+  @override
+  State<OrdersPage> createState() => _OrdersPageState();
+}
 
-    return [
-      for (final order in repository.getOrders())
-        OrderDisplay(
-          order: order,
-          service: repository.getServiceFor(order),
-          provider: repository.getProviderFor(order),
-          profile: repository.getProfileFor(order),
-          category: repository.getCategoryFor(order),
-          quote: repository.getQuoteFor(order),
-          estimatedArrival: mockOrderEstimatedArrival[order.id]!,
-        ),
-    ];
+class _OrdersPageState extends State<OrdersPage> {
+  late final OrdersViewModel _viewModel = OrdersViewModel(
+    widget._repository ?? locator<OrdersRepository>(),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel.load();
+    _viewModel.addListener(_onViewModelChanged);
+  }
+
+  void _onViewModelChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _viewModel.removeListener(_onViewModelChanged);
+    _viewModel.dispose();
+    super.dispose();
   }
 
   Widget _buildBody() {
-    switch (state) {
-      case OrdersViewState.loading:
+    switch (_viewModel.status) {
+      case OrdersLoadStatus.loading:
         return const OrderLoading();
-      case OrdersViewState.empty:
-        return const OrderEmptyState();
-      case OrdersViewState.list:
-        return OrdersList(orders: _buildOrders());
+      case OrdersLoadStatus.error:
+        return AppEmptyState(
+          icon: AppIcons.error,
+          title: 'No se pudieron cargar las órdenes',
+          description: _viewModel.errorMessage,
+          actionLabel: 'Reintentar',
+          onActionPressed: _viewModel.retry,
+        );
+      case OrdersLoadStatus.success:
+        return _viewModel.orders.isEmpty
+            ? const OrderEmptyState()
+            : OrdersList(orders: _viewModel.orders);
     }
   }
 

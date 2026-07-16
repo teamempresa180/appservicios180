@@ -7,17 +7,17 @@ import '../../../provider/entities/provider.dart';
 
 /// Contract for reading the domain entities the Chat screen needs.
 /// Returns only real domain entities — no `Map`, no `dynamic`, no JSON.
-/// Implemented today by `MockChatRepository`; a future
-/// `ApiChatRepository` or `FirebaseChatRepository` would implement this
-/// same interface (see the feature README).
+/// Implemented today by `HttpChatRepository` (real backend) and
+/// `MockChatRepository` (kept for tests/offline fallback, see the
+/// feature README).
 ///
 /// There is no id-based lookup yet — this feature shows a single fixed
 /// conversation (see the feature README for why).
 abstract class ChatRepository {
-  Chat getChat();
-  Provider getProvider();
-  Profile getProfile();
-  Order getOrder();
-  List<Message> getMessages();
-  List<Attachment> getAttachments();
+  Future<Chat> getChat();
+  Future<Provider> getProvider();
+  Future<Profile> getProfile();
+  Future<Order> getOrder();
+  Future<List<Message>> getMessages();
+  Future<List<Attachment>> getAttachments();
 }

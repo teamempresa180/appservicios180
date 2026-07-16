@@ -32,15 +32,17 @@ features/<nombre>/
 La página se registra en el router como cualquier otra ruta — la
 navegación nunca necesita conocer la estructura interna de la feature.
 
-## Por qué aún no existen Guards reales
+## Guard de autenticación (Sprint 5)
 
-`guards/app_route_guard.dart` define únicamente el punto de extensión:
-`AppRouteGuard.redirect()` siempre retorna `null`, permitiendo la
-navegación sin restricciones. Todavía no existe autenticación ni gestión de
-permisos en la aplicación (eso llegará junto con la integración real del
-backend), así que implementar un guard funcional ahora solo simularía una
-regla de negocio inexistente. Cuando exista, la lógica se agrega
-exclusivamente dentro de ese método, sin tocar `AppRouter`.
+`guards/app_route_guard.dart` ahora consulta `SessionManager` (el
+`ChangeNotifier` real de sesión, ver `core/session/`): usuarios no
+autenticados son redirigidos a Login al intentar acceder a cualquier ruta
+protegida, y usuarios autenticados son redirigidos a Home si navegan a
+Login/Register/SelectRole. Splash queda siempre exento — hace su propio
+chequeo de sesión (`SessionManager.restore()`) y decide su propio destino
+inicial. `AppRouter.router` se suscribe a `SessionManager` vía
+`refreshListenable` para que un logout o una expiración de sesión en
+segundo plano vuelva a evaluar el redirect inmediatamente.
 
 ## Por qué las pantallas son placeholders
 

@@ -1,57 +1,73 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/animations/slide_in.dart';
+import '../../../../core/di/service_locator.dart';
+import '../../../../core/ui/icons/app_icons.dart';
+import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
-import '../../mock/mock_categories_data.dart';
-import '../../models/category_display.dart';
-import '../../repositories/mock_category_repository.dart';
+import '../../repositories/category_repository.dart';
+import '../view_models/categories_view_model.dart';
 import '../widgets/categories_grid.dart';
 import '../widgets/categories_header.dart';
 
-/// Categories screen: every category, in a responsive grid. Does NOT
+/// Categories screen: every category, in a responsive grid, loaded from
+/// the real backend via [CategoriesViewModel] (resolved from the
+/// service locator — see `core/di/service_locator.dart`). Does NOT
 /// build its own `Scaffold` — it is meant to be inserted into the App
 /// Shell later (see the feature README), the same way Home and
 /// Marketplace already are. Completely independent of the Marketplace
-/// feature: its own repository, its own mock data.
-///
-/// [isLoading] and [forceEmpty] only toggle which of the three visual
-/// states renders (normal/loading/empty) — there is no real async
-/// fetch, no state management, just a boolean switch for previewing
-/// each state (see the feature README).
-class CategoriesPage extends StatelessWidget {
-  const CategoriesPage({
-    super.key,
-    this.isLoading = false,
-    this.forceEmpty = false,
-  });
+/// feature: its own repository, its own view model.
+class CategoriesPage extends StatefulWidget {
+  const CategoriesPage({super.key, CategoryRepository? repository})
+    : _repository = repository;
 
-  final bool isLoading;
-  final bool forceEmpty;
+  /// Overridable for tests only — production call sites always resolve
+  /// the real repository from the service locator.
+  final CategoryRepository? _repository;
 
-  /// Composes the display list from the repository — same
-  /// `_build*()` naming/placement convention every other data-driven
-  /// feature's page uses (see the feature README).
-  List<CategoryDisplay> _buildCategories() {
-    if (forceEmpty) return const <CategoryDisplay>[];
+  @override
+  State<CategoriesPage> createState() => _CategoriesPageState();
+}
 
-    return [
-      for (final category in MockCategoryRepository().getAll())
-        CategoryDisplay(
-          category: category,
-          servicesCount: mockCategoryServicesCount[category.id.value] ?? 0,
-        ),
-    ];
+class _CategoriesPageState extends State<CategoriesPage> {
+  late final CategoriesViewModel _viewModel = CategoriesViewModel(
+    widget._repository ?? locator<CategoryRepository>(),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel.load();
+    _viewModel.addListener(_onViewModelChanged);
+  }
+
+  void _onViewModelChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _viewModel.removeListener(_onViewModelChanged);
+    _viewModel.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final categories = _buildCategories();
-
     return AppPageBody(
       header: const CategoriesHeader(),
-      body: isLoading
-          ? const AppLoading(message: 'Cargando categorías...')
-          : SlideIn(child: CategoriesGrid(categories: categories)),
+      body: switch (_viewModel.status) {
+        CategoriesLoadStatus.loading => const AppLoading(
+          message: 'Cargando categorías...',
+        ),
+        CategoriesLoadStatus.error => AppEmptyState(
+          icon: AppIcons.error,
+          title: 'No se pudieron cargar las categorías',
+          description: _viewModel.errorMessage,
+          actionLabel: 'Reintentar',
+          onActionPressed: _viewModel.retry,
+        ),
+        CategoriesLoadStatus.success => CategoriesGrid(
+          categories: _viewModel.categories,
+        ),
+      },
     );
   }
 }

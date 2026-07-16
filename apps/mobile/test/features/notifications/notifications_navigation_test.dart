@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/chat/presentation/pages/chat_page.dart';
+import 'package:mobile/features/chat/repositories/mock_chat_repository.dart';
 import 'package:mobile/features/notifications/presentation/pages/notifications_page.dart';
 
 /// Confirms the minimal, explicitly-authorized wiring that lets Chat
@@ -15,7 +16,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
-        home: const Scaffold(body: ChatPage()),
+        home: Scaffold(body: ChatPage(repository: MockChatRepository())),
       ),
     );
     await tester.pumpAndSettle();

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'core/di/service_locator.dart';
 import 'core/navigation/router/app_router.dart';
 import 'core/ui/theme/app_theme.dart';
 
 void main() {
+  setupServiceLocator();
   runApp(const AppServiciosApp());
 }
 

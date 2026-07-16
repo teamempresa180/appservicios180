@@ -41,6 +41,19 @@ dependencies:
   # Declarative routing used by core/navigation.
   go_router: ^14.6.2
 
+  # HTTP client for core/network (Sprint 5 — Flutter/backend integration).
+  dio: ^5.7.0
+
+  # Encrypted at-rest storage for the access/refresh token pair.
+  flutter_secure_storage: ^9.2.2
+
+  # Service locator for core/di — resolves ApiClient/SessionManager/
+  # repositories without a global widget tree dependency.
+  get_it: ^8.0.2
+
+  # ChangeNotifier-based state for view models (Loading/Success/Error).
+  provider: ^6.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

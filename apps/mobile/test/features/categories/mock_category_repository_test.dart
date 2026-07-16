@@ -7,8 +7,8 @@ void main() {
   group('MockCategoryRepository', () {
     final repository = MockCategoryRepository();
 
-    test('getAll returns real Category entities, not maps', () {
-      final categories = repository.getAll();
+    test('getAll returns real Category entities, not maps', () async {
+      final categories = await repository.getAll();
 
       expect(categories, isA<List<Category>>());
       expect(categories, everyElement(isA<Category>()));
@@ -17,8 +17,8 @@ void main() {
       expect(categories.map((c) => c.name), contains('Climatización'));
     });
 
-    test('is independent from the Marketplace mock data', () {
-      final categories = repository.getAll();
+    test('is independent from the Marketplace mock data', () async {
+      final categories = await repository.getAll();
       expect(
         categories.every((c) => c.id.value.startsWith('categories-')),
         isTrue,

@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/attachment/entities/attachment.dart';
+import 'package:mobile/chat/entities/chat.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
@@ -11,12 +15,52 @@ import 'package:mobile/features/chat/presentation/widgets/message_bubble.dart';
 import 'package:mobile/features/chat/presentation/widgets/message_input.dart';
 import 'package:mobile/features/chat/presentation/widgets/provider_header.dart';
 import 'package:mobile/features/chat/presentation/widgets/typing_indicator.dart';
+import 'package:mobile/features/chat/repositories/chat_repository.dart';
+import 'package:mobile/features/chat/repositories/mock_chat_repository.dart';
+import 'package:mobile/message/entities/message.dart';
+import 'package:mobile/order/entities/order.dart';
+import 'package:mobile/profiles/entities/profile.dart';
+import 'package:mobile/provider/entities/provider.dart';
+
+/// Wraps [MockChatRepository] (already `Future`-returning) so tests
+/// can force it to never resolve (loading state) or return no
+/// messages (empty state), without touching the real mock data.
+class _FakeChatRepository implements ChatRepository {
+  _FakeChatRepository({this.neverResolves = false, this.forceEmpty = false});
+
+  final bool neverResolves;
+  final bool forceEmpty;
+  final _delegate = MockChatRepository();
+
+  @override
+  Future<Chat> getChat() {
+    if (neverResolves) return Completer<Chat>().future;
+    return _delegate.getChat();
+  }
+
+  @override
+  Future<Provider> getProvider() => _delegate.getProvider();
+
+  @override
+  Future<Profile> getProfile() => _delegate.getProfile();
+
+  @override
+  Future<Order> getOrder() => _delegate.getOrder();
+
+  @override
+  Future<List<Message>> getMessages() =>
+      forceEmpty ? Future.value(const []) : _delegate.getMessages();
+
+  @override
+  Future<List<Attachment>> getAttachments() =>
+      forceEmpty ? Future.value(const []) : _delegate.getAttachments();
+}
 
 void main() {
-  Widget buildApp({ChatViewState state = ChatViewState.conversation}) {
+  Widget buildApp({ChatRepository? repository}) {
     return MaterialApp(
       theme: AppTheme.light,
-      home: Scaffold(body: ChatPage(state: state)),
+      home: Scaffold(body: ChatPage(repository: repository ?? _FakeChatRepository())),
     );
   }
 
@@ -94,7 +138,9 @@ void main() {
   testWidgets('loading state shows AppLoading instead of the conversation', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: ChatViewState.loading));
+    await tester.pumpWidget(
+      buildApp(repository: _FakeChatRepository(neverResolves: true)),
+    );
     // The indeterminate CircularProgressIndicator never settles, so
     // pumpAndSettle can't be used — but the message's FadeIn does need
     // a couple of pumps to resolve, or its delayed Future leaves a
@@ -109,7 +155,9 @@ void main() {
   testWidgets('empty state shows AppEmptyState instead of the conversation', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: ChatViewState.empty));
+    await tester.pumpWidget(
+      buildApp(repository: _FakeChatRepository(forceEmpty: true)),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(AppEmptyState), findsOneWidget);

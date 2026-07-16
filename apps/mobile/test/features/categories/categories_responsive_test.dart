@@ -1,8 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/category/entities/category.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
+import 'package:mobile/features/categories/mock/mock_categories_data.dart';
 import 'package:mobile/features/categories/presentation/pages/categories_page.dart';
+import 'package:mobile/features/categories/repositories/category_repository.dart';
+
+class _FakeCategoryRepository implements CategoryRepository {
+  _FakeCategoryRepository(this._result);
+
+  final Future<List<Category>> Function() _result;
+
+  @override
+  Future<List<Category>> getAll() => _result();
+}
 
 void main() {
   const widths = [320.0, 360.0, 390.0, 412.0, 768.0, 1024.0, 1440.0];
@@ -26,7 +40,13 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
-          home: const Scaffold(body: CategoriesPage()),
+          home: Scaffold(
+            body: CategoriesPage(
+              repository: _FakeCategoryRepository(
+                () async => List.unmodifiable(mockCategories),
+              ),
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -41,7 +61,11 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
-          home: const Scaffold(body: CategoriesPage(forceEmpty: true)),
+          home: Scaffold(
+            body: CategoriesPage(
+              repository: _FakeCategoryRepository(() async => const []),
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -57,16 +81,23 @@ void main() {
       // time out waiting for it to stop. A couple of fixed `pump`s are
       // enough to lay out the frame and surface any overflow.
       await setSurfaceSize(tester, width);
+      final completer = Completer<List<Category>>();
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
-          home: const Scaffold(body: CategoriesPage(isLoading: true)),
+          home: Scaffold(
+            body: CategoriesPage(
+              repository: _FakeCategoryRepository(() => completer.future),
+            ),
+          ),
         ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(tester.takeException(), isNull);
+      completer.complete(const []);
+      await tester.pumpAndSettle();
     });
   }
 }

@@ -3,17 +3,74 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:mobile/core/navigation/routes/app_routes.dart';
+import 'package:mobile/core/session/auth_repository.dart';
+import 'package:mobile/core/session/auth_tokens.dart';
+import 'package:mobile/core/session/session_manager.dart';
+import 'package:mobile/core/storage/secure_token_storage.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/login/presentation/pages/login_page.dart';
 
+/// In-memory stand-in for [SecureTokenStorage] — avoids touching the
+/// real `flutter_secure_storage` platform channel in widget tests.
+class _FakeSecureTokenStorage implements SecureTokenStorage {
+  String? _accessToken;
+  String? _refreshToken;
+
+  @override
+  Future<void> save({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    _accessToken = accessToken;
+    _refreshToken = refreshToken;
+  }
+
+  @override
+  Future<String?> readAccessToken() async => _accessToken;
+
+  @override
+  Future<String?> readRefreshToken() async => _refreshToken;
+
+  @override
+  Future<void> clear() async {
+    _accessToken = null;
+    _refreshToken = null;
+  }
+}
+
+class _FakeAuthRepository implements AuthRepository {
+  @override
+  Future<AuthTokens> login({
+    required String documentNumber,
+    required String password,
+  }) async =>
+      const AuthTokens(accessToken: 'access', refreshToken: 'refresh', role: 'CUSTOMER');
+
+  @override
+  Future<AuthTokens> refresh(String refreshToken) async =>
+      const AuthTokens(accessToken: 'access', refreshToken: 'refresh', role: 'CUSTOMER');
+
+  @override
+  Future<void> logout(String refreshToken) async {}
+
+  @override
+  Future<CurrentUser> me() async =>
+      const CurrentUser(id: 'user-1', role: 'CUSTOMER');
+}
+
 void main() {
   Widget buildApp() {
+    final sessionManager = SessionManager(
+      authRepository: _FakeAuthRepository(),
+      tokenStorage: _FakeSecureTokenStorage(),
+    );
     final router = GoRouter(
       initialLocation: AppRoutes.login,
       routes: [
         GoRoute(
           path: AppRoutes.login,
-          builder: (context, state) => const LoginPage(),
+          builder: (context, state) =>
+              LoginPage(sessionManager: sessionManager),
         ),
         GoRoute(
           path: AppRoutes.register,

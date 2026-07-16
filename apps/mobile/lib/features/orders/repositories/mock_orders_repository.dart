@@ -11,20 +11,25 @@ import 'orders_repository.dart';
 /// no persistence, no network — see the feature README.
 class MockOrdersRepository implements OrdersRepository {
   @override
-  List<Order> getOrders() => List.unmodifiable(mockOrders);
+  Future<List<Order>> getOrders() => Future.value(List.unmodifiable(mockOrders));
 
   @override
-  Service getServiceFor(Order order) => mockOrderServices[order.id]!;
+  Future<Service> getServiceFor(Order order) =>
+      Future.value(mockOrderServices[order.id]!);
 
   @override
-  Provider getProviderFor(Order order) => mockOrderProviders[order.id]!;
+  Future<Provider> getProviderFor(Order order) =>
+      Future.value(mockOrderProviders[order.id]!);
 
   @override
-  Profile getProfileFor(Order order) => mockOrderProfiles[order.id]!;
+  Future<Profile> getProfileFor(Order order) =>
+      Future.value(mockOrderProfiles[order.id]!);
 
   @override
-  Category getCategoryFor(Order order) => mockOrderCategories[order.id]!;
+  Future<Category> getCategoryFor(Order order) =>
+      Future.value(mockOrderCategories[order.id]!);
 
   @override
-  Quote getQuoteFor(Order order) => mockOrderQuotes[order.id]!;
+  Future<Quote> getQuoteFor(Order order) =>
+      Future.value(mockOrderQuotes[order.id]!);
 }

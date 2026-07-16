@@ -1,10 +1,28 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/category/entities/category.dart';
+import 'package:mobile/core/network/http_exceptions.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
+import 'package:mobile/features/categories/mock/mock_categories_data.dart';
 import 'package:mobile/features/categories/presentation/pages/categories_page.dart';
 import 'package:mobile/features/categories/presentation/widgets/categories_empty_state.dart';
 import 'package:mobile/features/categories/presentation/widgets/categories_grid.dart';
+import 'package:mobile/features/categories/repositories/category_repository.dart';
+
+/// Test double standing in for the real HTTP-backed repository — lets
+/// each test control exactly what `getAll()` returns/throws and when,
+/// without touching the global service locator.
+class _FakeCategoryRepository implements CategoryRepository {
+  _FakeCategoryRepository(this._result);
+
+  final Future<List<Category>> Function() _result;
+
+  @override
+  Future<List<Category>> getAll() => _result();
+}
 
 void main() {
   Widget buildApp(Widget child) {
@@ -17,7 +35,15 @@ void main() {
   testWidgets('normal state shows the header and all 12 categories', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(const CategoriesPage()));
+    await tester.pumpWidget(
+      buildApp(
+        CategoriesPage(
+          repository: _FakeCategoryRepository(
+            () async => List.unmodifiable(mockCategories),
+          ),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Todas las categorías'), findsOneWidget);
@@ -43,15 +69,27 @@ void main() {
   testWidgets('loading state shows AppLoading instead of the grid', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(const CategoriesPage(isLoading: true)));
+    final completer = Completer<List<Category>>();
+    await tester.pumpWidget(
+      buildApp(
+        CategoriesPage(repository: _FakeCategoryRepository(() => completer.future)),
+      ),
+    );
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('Cargando categorías...'), findsOneWidget);
     expect(find.byType(CategoriesGrid), findsNothing);
+
+    completer.complete(const []);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('empty state shows CategoriesEmptyState', (tester) async {
-    await tester.pumpWidget(buildApp(const CategoriesPage(forceEmpty: true)));
+    await tester.pumpWidget(
+      buildApp(
+        CategoriesPage(repository: _FakeCategoryRepository(() async => const [])),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(CategoriesEmptyState), findsOneWidget);
@@ -59,8 +97,32 @@ void main() {
     expect(find.text('Plomería'), findsNothing);
   });
 
+  testWidgets('error state shows a retry action', (tester) async {
+    await tester.pumpWidget(
+      buildApp(
+        CategoriesPage(
+          repository: _FakeCategoryRepository(
+            () async => throw const NetworkHttpException('sin conexión'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudieron cargar las categorías'), findsOneWidget);
+    expect(find.text('Reintentar'), findsOneWidget);
+  });
+
   testWidgets('does not build its own Scaffold', (tester) async {
-    await tester.pumpWidget(buildApp(const CategoriesPage()));
+    await tester.pumpWidget(
+      buildApp(
+        CategoriesPage(
+          repository: _FakeCategoryRepository(
+            () async => List.unmodifiable(mockCategories),
+          ),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(Scaffold), findsOneWidget);

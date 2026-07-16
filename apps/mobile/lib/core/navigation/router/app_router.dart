@@ -1,4 +1,6 @@
 import 'package:go_router/go_router.dart';
+import '../../di/service_locator.dart';
+import '../../session/session_manager.dart';
 import '../../../features/app_shell/presentation/pages/app_shell_page.dart';
 import '../../../features/login/presentation/pages/login_page.dart';
 import '../../../features/onboarding/presentation/pages/onboarding_page.dart';
@@ -11,10 +13,15 @@ import '../routes/app_routes.dart';
 /// Single source of truth for app navigation. Only structural routes exist
 /// today — business routes will be added here as their features are built.
 abstract final class AppRouter {
-  static const AppRouteGuard _guard = AppRouteGuard();
+  static final AppRouteGuard _guard = AppRouteGuard(locator<SessionManager>());
 
   static final GoRouter router = GoRouter(
     initialLocation: AppRoutes.splash,
+    // Re-evaluates `redirect` on every login/logout/session-expiry
+    // (`SessionManager` is the app's single `ChangeNotifier` for
+    // auth state) — without this, a background token expiry wouldn't
+    // kick the user to Login until their next manual navigation.
+    refreshListenable: locator<SessionManager>(),
     redirect: (context, state) => _guard.redirect(state.matchedLocation),
     routes: [
       GoRoute(

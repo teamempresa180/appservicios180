@@ -3953,10 +3953,200 @@ en verde antes de tocar código.
   ```
   On branch main
 - El trabajo de Fase 2–9 del Prompt 74 quedó **consolidado en un único
-  commit** durante la Fase 1 del Prompt 75 (hash `<pendiente>`),
+  commit** durante la Fase 1 del Prompt 75 (hash `0bbe0d5`),
   excluyendo `Logo oficial grupo.svg` y temporales/IDE/cache.
 - **Contenedor Docker temporal `appservicios-pg-temp`**: se usó para
   aplicar la migración `20260715211831_add_authentication_credentials`
   y para correr `npm run test:integration` en la Fase 0 y en la
   re-verificación de la Fase 10 — sintético/desechable, sin datos
   reales. Detenido al cierre de esta sesión.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 75 — Sprint 5 · Integración completa Flutter ↔ Backend — consolidado)
+
+**El Prompt 75 fue aprobado por el usuario y consolidado en el Prompt 76.**
+
+**Prompt 75 fue ejecutado bajo un alcance explícitamente acordado con el
+usuario**, distinto del patrón literal de los prompts anteriores. La
+Fase 2 (auditoría) reveló que, a diferencia de cada prompt de backend
+anterior (que siempre partía de un Domain/Application/Infrastructure ya
+construido), el lado Flutter no tenía **ninguna** infraestructura
+HTTP/DI/sesión/estado previa: cero `Dio`, cero service locator, cero
+`SessionManager`, cero `ChangeNotifier`. Intentar los 20 módulos
+completos (HTTP + estado + navegación) con el mismo rigor que un
+prompt de backend habría sido una apuesta arquitectónica
+desproporcionada de un solo intento. Se preguntó explícitamente al
+usuario entre tres opciones — se eligió **"Infra completa + 2-3
+módulos piloto"**: construir la infraestructura compartida completa y
+correctamente, aplicar el patrón completo (HTTP + estado + navegación)
+a 2-3 módulos representativos con rigor total, y documentar el resto
+como trabajo mecánico repetible para un futuro Prompt 76. Esta sección
+documenta el resultado de esa decisión.
+
+- **Fase 2 (Auditoría)**: confirmó que `lib/authentication/` es un
+  módulo de dominio de métodos 2FA (no una sesión de login), que no
+  existía ningún `MockAuthenticationRepository` con ese nombre exacto,
+  y que cada uno de los ~20 features usa su propio par
+  `XRepository`/`MockXRepository` síncrono sin `Future`, sin DTOs de
+  red, sin manejo de error HTTP.
+
+- **Fase 3 (Infraestructura HTTP, `lib/core/network/`)**: `ApiClient`
+  (envoltorio de `Dio`) con 4 interceptores en orden
+  Auth → Retry → Refresh → Logging; `HttpException` (con subclases
+  400/401/403/404/422/5xx/red/cancelación, mismas categorías que
+  `ErrorResponseDto` del backend) y `ErrorMapper.fromDioException`;
+  `TokenProvider`/`TokenProviderHolder` para romper el ciclo de
+  construcción `ApiClient` ↔ `SessionManager`; `RetryInterceptor` (2
+  reintentos, backoff 300ms×intento); `RefreshInterceptor` (401 →
+  refresh → reintento único, deduplicado vía `Future<bool>?`
+  compartido). Nuevo: `mappers/enum_json.dart` (`enumFromJson`, un
+  único helper `SCREAMING_SNAKE_CASE` → `camelCase` reutilizado por
+  todos los mappers HTTP, en vez de repetir la conversión por enum) y
+  `mappers/domain_http_mappers.dart` (mappers JSON→entidad para
+  Order/Service/Provider/Profile/Quote/Chat/Message/Attachment,
+  compartidos entre los pilotos Orders y Chat).
+
+- **Fase 4 (Autenticación real, `lib/core/session/`)**:
+  `SecureTokenStorage` (envuelve `flutter_secure_storage`),
+  `AuthRepository`/`HttpAuthRepository` (login/refresh/logout/me
+  contra `/authentications/*`), `SessionManager` (único
+  `ChangeNotifier` + `TokenProvider` de la app: `restore()`,
+  `login()`, `logout()`, `onTokensRefreshed()`, `onSessionExpired()`,
+  con `isRestoring`/`isAuthenticated`/`currentRole` observables).
+  `LoginPage` (`features/login/`) ahora llama a
+  `SessionManager.login()` real en vez de un `Future.delayed`
+  simulado, y muestra el mensaje de error del backend vía
+  `AppSnackBar` (reutilizando el widget ya existente del Sprint 2, sin
+  crear ninguno nuevo) ante credenciales inválidas. Limitación
+  documentada: `LoginCredentials.email` se pasa tal cual como
+  `documentNumber` del backend — el campo del formulario sigue
+  rotulado y validado como correo (no se tocó ningún texto ni diseño
+  en este prompt); reconciliar esa etiqueta es trabajo de un futuro
+  prompt de UI, no de este.
+
+- **Fase 5/6 (DI + 3 módulos piloto)**: `core/di/service_locator.dart`
+  (`get_it`) resuelve, en orden, `TokenProviderHolder` → `ApiClient` →
+  `SecureTokenStorage` → `AuthRepository` → `SessionManager`
+  (adjuntado de vuelta al holder) → los tres repositorios piloto.
+  `main()` llama a `setupServiceLocator()` antes de `runApp`.
+  Los tres pilotos elegidos — **Category, Orders, Chat** — cubren tres
+  formas distintas del problema:
+  - **Category** (el más simple): `getAll()` de una sola colección
+    paginada (`GET /categories` → `{items,total,page,pageSize}`).
+  - **Orders**: una colección más 5 *lookups* de relación por id
+    (`getServiceFor`, `getProviderFor`, `getProfileFor`,
+    `getCategoryFor`, `getQuoteFor`) — la mayoría resueltos con
+    `GET /{recurso}/:id` directo siguiendo el id que ya trae `Order`,
+    excepto `getQuoteFor`, que no tiene equivalente en el backend
+    (no existe `GET /quotes?orderId=`) y por ahora lista todas las
+    quotes y filtra en el cliente — **limitación documentada
+    explícitamente en el código**, candidata a un filtro real de
+    backend en el Prompt 76.
+  - **Chat**: la interfaz ya modelaba "una sola conversación fija, sin
+    lookup por id" (ver el README de la feature); `HttpChatRepository`
+    refleja la misma limitación del lado del backend (no existe un
+    endpoint "chat del usuario actual") tomando el primer item de
+    `GET /chats`. `getMessages()`/`getAttachments()` tienen la misma
+    limitación que `getQuoteFor` — filtran client-side por falta de
+    `GET /messages?chatId=`/`GET /attachments?messageId=` — documentado
+    igual, mismo candidato a Prompt 76.
+  Las tres interfaces (`CategoryRepository`, `OrdersRepository`,
+  `ChatRepository`) pasaron de síncronas a `Future`-returning — el
+  único cambio arquitectónico permitido explícitamente por el prompt
+  ("actualización de firma para I/O asíncrono", no un rediseño). Los
+  tres `MockXRepository` se actualizaron para seguir compilando bajo
+  la nueva firma (ya no están registrados en el locator, pero se
+  conservan para tests). Ningún otro de los ~17 módulos restantes fue
+  tocado — sus repositorios siguen síncronos y en Mock, exactamente
+  como estaban.
+
+- **Fase 7 (Estados Loading/Success/Error/Retry)**: cada uno de los 3
+  pilotos ganó un `ChangeNotifier` propio
+  (`CategoriesViewModel`/`OrdersViewModel`/`ChatViewModel`) con un
+  enum de 3 estados y `retry()`. Las 3 páginas
+  (`CategoriesPage`/`OrdersPage`/`ChatPage`) pasaron de
+  `StatelessWidget` con banderas visuales fijas (`isLoading`,
+  `forceEmpty`, `state`) a `StatefulWidget` que cargan datos reales al
+  montarse. El estado de error reutiliza `AppEmptyState` (ya existente
+  desde el Sprint 2) con `actionLabel: 'Reintentar'` — ningún widget
+  nuevo de Core UI. El estado vacío (colección real de longitud 0)
+  sigue distinguiéndose del estado de error (falla de red): las listas
+  (`CategoriesGrid`, etc.) ya manejaban `isEmpty` internamente y eso
+  no cambió. Las tres páginas aceptan un repositorio opcional
+  inyectable por constructor (`CategoriesPage({repository})`, etc.)
+  — únicamente para tests, con un comentario explícito de que los
+  call sites de producción siempre resuelven desde el locator.
+
+- **Fase 8 (Navegación)**: `AppRouteGuard` pasó de un stub que siempre
+  retornaba `null` a consultar `SessionManager.isAuthenticated`: rutas
+  no públicas redirigen a Login si no hay sesión; Login/Register/
+  SelectRole redirigen a Home si ya hay sesión; Splash queda siempre
+  exento (hace su propio chequeo) y el guard tampoco actúa mientras
+  `isRestoring` es `true`. `AppRouter.router` ahora se suscribe a
+  `SessionManager` vía `refreshListenable` para reevaluar el redirect
+  ante un logout o expiración en segundo plano. `SplashPage` pasó de
+  un `Future.delayed` fijo a llamar
+  `SessionManager.restore()` real y navegar a Home u Onboarding según
+  el resultado.
+
+- **Fase 9 (QA)**: sin mocks/repos/imports muertos en el código
+  tocado — los 3 `MockXRepository` se conservan intencionalmente
+  (documentado el porqué). Sin duplicación: los mappers HTTP
+  compartidos (Order/Provider/Profile/etc.) viven en un solo archivo
+  reutilizado por Orders y Chat en vez de repetirse. Corregidos 2
+  problemas reales encontrados durante la verificación: (1) los tests
+  de `orders`/`chat` que construían las páginas con banderas visuales
+  ahora inexistentes (`isLoading`, `forceEmpty`, `state`) se
+  reescribieron para inyectar repositorios falsos controlables
+  (`Completer` para el estado de carga); (2) dos tests de navegación
+  (`chat_navigation_test.dart`, `orders_navigation_test.dart`) llegan
+  a `ChatPage`/`OrdersPage` por navegación interna (no las construyen
+  directamente), así que necesitaron registrar un Mock repository en
+  el locator global vía `setUp`/`tearDown` en vez de inyección directa.
+
+- **Fase 10 (Verificación final)** — todas pasando:
+  ```
+  npm run build              ✅
+  npm run lint                ✅ 0 errores
+  npm test                    ✅ 181 suites, 868/868
+  npm run test:e2e            ✅ 23 suites, 160/160
+  npm run test:integration    ✅ 23 suites, 147/147
+  flutter analyze             ✅ No issues found! (solo 7 infos
+                                  prefer_initializing_formals,
+                                  inevitables cuando el parámetro
+                                  público del constructor se llama
+                                  distinto al campo privado)
+  flutter test                 ✅ 749/749
+  ```
+  Contenedor Docker temporal `appservicios-pg-temp` reutilizado
+  (existía detenido de una sesión anterior, se reinició para esta
+  verificación) — sintético/desechable, sin datos reales.
+
+- **Alcance explícitamente diferido a un futuro Prompt 76** (por
+  decisión del usuario, no por omisión): los ~17 módulos restantes
+  (Identity, Contact, Address, Provider, Availability, Schedule,
+  Payment, Review, Verification, Trust, Audit, Message, Notification,
+  Attachment, Search, Marketplace/Service, Profile) siguen resolviendo
+  su `MockXRepository` síncrono sin cambios. El trabajo de Prompt 76
+  es mecánico y repetible siguiendo exactamente el mismo patrón ya
+  validado en los 3 pilotos: (1) pasar la interfaz de síncrona a
+  `Future`; (2) escribir el `HttpXRepository` + mapper JSON siguiendo
+  el `ResponseDto` del backend; (3) envolver la página en un
+  `ChangeNotifier` de 3 estados con retry; (4) registrar en el
+  locator. También queda para ese prompt (o uno posterior): agregar
+  filtros de query reales al backend (`GET /quotes?orderId=`,
+  `GET /messages?chatId=`, `GET /attachments?messageId=`,
+  `GET /profiles?identityId=`) para reemplazar los filtrados
+  client-side documentados en `HttpOrdersRepository.getQuoteFor` y
+  `HttpChatRepository`.
+
+- `git status` al cierre de esta sesión — **todo el trabajo de Prompt
+  75 presente en el working tree, sin commitear**, pendiente de
+  aprobación exactamente igual que en todos los prompts anteriores:
+  archivos nuevos bajo `lib/core/{di,network,session,storage}/`,
+  `lib/features/{categories,orders,chat}/.../view_models/`,
+  `lib/features/{categories,orders,chat}/repositories/http_*.dart`;
+  modificados `main.dart`, las 3 páginas piloto y sus repositorios,
+  `core/navigation/{guards,router}/*`, `login_page.dart`,
+  `splash_page.dart`, `pubspec.yaml`/`pubspec.lock`, y los tests
+  correspondientes. Ningún archivo de `apps/backend` fue modificado en
+  esta sesión — Prompt 75 fue exclusivamente Flutter.

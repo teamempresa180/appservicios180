@@ -11,20 +11,22 @@ import 'chat_repository.dart';
 /// no sockets, no Firebase, no HTTP — see the feature README.
 class MockChatRepository implements ChatRepository {
   @override
-  Chat getChat() => mockChat;
+  Future<Chat> getChat() => Future.value(mockChat);
 
   @override
-  Provider getProvider() => mockChatProvider;
+  Future<Provider> getProvider() => Future.value(mockChatProvider);
 
   @override
-  Profile getProfile() => mockChatProfile;
+  Future<Profile> getProfile() => Future.value(mockChatProfile);
 
   @override
-  Order getOrder() => mockChatOrder;
+  Future<Order> getOrder() => Future.value(mockChatOrder);
 
   @override
-  List<Message> getMessages() => List.unmodifiable(mockChatMessages);
+  Future<List<Message>> getMessages() =>
+      Future.value(List.unmodifiable(mockChatMessages));
 
   @override
-  List<Attachment> getAttachments() => List.unmodifiable(mockChatAttachments);
+  Future<List<Attachment>> getAttachments() =>
+      Future.value(List.unmodifiable(mockChatAttachments));
 }
