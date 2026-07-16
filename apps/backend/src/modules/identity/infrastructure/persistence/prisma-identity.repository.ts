@@ -22,6 +22,13 @@ export class PrismaIdentityRepository implements IdentityRepository {
     return row ? IdentityPrismaMapper.toDomain(row) : null;
   }
 
+  async findByDocumentNumber(documentNumber: string): Promise<Identity | null> {
+    const row = await this.prisma.identityModel.findFirst({
+      where: { documentNumber },
+    });
+    return row ? IdentityPrismaMapper.toDomain(row) : null;
+  }
+
   async save(identity: Identity): Promise<void> {
     const data = IdentityPrismaMapper.toPersistence(identity);
     await this.prisma.identityModel.upsert({

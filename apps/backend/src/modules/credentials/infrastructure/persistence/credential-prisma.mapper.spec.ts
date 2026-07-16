@@ -12,6 +12,7 @@ describe('CredentialPrismaMapper', () => {
     identityId: 'identity-1',
     type: 'PASSWORD',
     status: 'ACTIVE',
+    passwordHash: 'hashed-value',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-02'),
   };
@@ -23,6 +24,16 @@ describe('CredentialPrismaMapper', () => {
     expect(credential.identityId.value).toBe('identity-1');
     expect(credential.type).toBe(CredentialType.Password);
     expect(credential.status).toBe(CredentialStatus.Active);
+    expect(credential.passwordHash).toBe('hashed-value');
+  });
+
+  it('maps a null passwordHash through unchanged', () => {
+    const credential = CredentialPrismaMapper.toDomain({
+      ...row,
+      passwordHash: null,
+    });
+
+    expect(credential.passwordHash).toBeNull();
   });
 
   it('maps a domain entity back to the Prisma row shape', () => {
@@ -32,6 +43,7 @@ describe('CredentialPrismaMapper', () => {
       status: CredentialStatus.Active,
       createdAt: new Date('2024-01-01'),
       updatedAt: new Date('2024-01-02'),
+      passwordHash: 'hashed-value',
     });
 
     expect(CredentialPrismaMapper.toPersistence(credential)).toEqual(row);

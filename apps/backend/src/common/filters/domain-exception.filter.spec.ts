@@ -1,6 +1,8 @@
 import { ArgumentsHost, HttpStatus } from '@nestjs/common';
 import { BusinessRuleException } from '../../modules/core/domain/exceptions/business-rule.exception';
+import { ForbiddenException } from '../../modules/core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../modules/core/domain/exceptions/not-found.exception';
+import { UnauthorizedException } from '../../modules/core/domain/exceptions/unauthorized.exception';
 import { ValidationException } from '../../modules/core/domain/exceptions/validation.exception';
 import { DomainExceptionFilter } from './domain-exception.filter';
 
@@ -47,5 +49,17 @@ describe('DomainExceptionFilter', () => {
       host,
     );
     expect(status).toHaveBeenCalledWith(HttpStatus.UNPROCESSABLE_ENTITY);
+  });
+
+  it('maps UnauthorizedException to 401', () => {
+    const { host, status } = createHost();
+    filter.catch(new UnauthorizedException('Invalid credentials'), host);
+    expect(status).toHaveBeenCalledWith(HttpStatus.UNAUTHORIZED);
+  });
+
+  it('maps ForbiddenException to 403', () => {
+    const { host, status } = createHost();
+    filter.catch(new ForbiddenException('Insufficient role'), host);
+    expect(status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
   });
 });

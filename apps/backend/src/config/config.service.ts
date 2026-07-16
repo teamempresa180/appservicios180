@@ -30,4 +30,28 @@ export class ConfigService {
   get databaseUrl(): string {
     return this.env.DATABASE_URL;
   }
+
+  get jwtAccessSecret(): string {
+    return this.env.JWT_ACCESS_SECRET;
+  }
+
+  get jwtAccessExpiresIn(): string {
+    return this.env.JWT_ACCESS_EXPIRES_IN;
+  }
+
+  get jwtRefreshSecret(): string {
+    return this.env.JWT_REFRESH_SECRET;
+  }
+
+  get jwtRefreshExpiresIn(): string {
+    return this.env.JWT_REFRESH_EXPIRES_IN;
+  }
+
+  get jwtIssuer(): string {
+    return this.env.JWT_ISSUER;
+  }
+
+  get jwtAudience(): string {
+    return this.env.JWT_AUDIENCE;
+  }
 }

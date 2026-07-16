@@ -7,7 +7,9 @@ import {
 import { Request, Response } from 'express';
 import { BusinessRuleException } from '../../modules/core/domain/exceptions/business-rule.exception';
 import { DomainException } from '../../modules/core/domain/exceptions/domain.exception';
+import { ForbiddenException } from '../../modules/core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../modules/core/domain/exceptions/not-found.exception';
+import { UnauthorizedException } from '../../modules/core/domain/exceptions/unauthorized.exception';
 import { ValidationException } from '../../modules/core/domain/exceptions/validation.exception';
 import { AppLogger } from '../logger/app-logger.service';
 import { buildErrorResponse } from './error-response';
@@ -53,6 +55,12 @@ export class DomainExceptionFilter implements ExceptionFilter {
     }
     if (exception instanceof BusinessRuleException) {
       return HttpStatus.UNPROCESSABLE_ENTITY;
+    }
+    if (exception instanceof UnauthorizedException) {
+      return HttpStatus.UNAUTHORIZED;
+    }
+    if (exception instanceof ForbiddenException) {
+      return HttpStatus.FORBIDDEN;
     }
     return HttpStatus.BAD_REQUEST;
   }

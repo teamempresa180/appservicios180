@@ -485,6 +485,7 @@ model IdentityModel {
   chatsAsClient   ChatModel[]
   messagesSent    MessageModel[]
   notifications   NotificationModel[]
+  refreshTokens   RefreshTokenModel[]
 
   @@map("identities")
 }
@@ -504,17 +505,33 @@ model AuthenticationModel {
 }
 
 model CredentialModel {
-  id         String           @id
-  identityId String           @map("identity_id")
-  type       CredentialType
-  status     CredentialStatus
-  createdAt  DateTime         @map("created_at")
-  updatedAt  DateTime         @map("updated_at")
+  id           String           @id
+  identityId   String           @map("identity_id")
+  type         CredentialType
+  status       CredentialStatus
+  passwordHash String?          @map("password_hash")
+  createdAt    DateTime         @map("created_at")
+  updatedAt    DateTime         @map("updated_at")
 
   identity IdentityModel @relation(fields: [identityId], references: [id])
 
   @@index([identityId])
   @@map("credentials")
+}
+
+model RefreshTokenModel {
+  id         String    @id
+  identityId String    @map("identity_id")
+  tokenHash  String    @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @map("created_at")
+
+  identity IdentityModel @relation(fields: [identityId], references: [id])
+
+  @@index([identityId])
+  @@index([tokenHash])
+  @@map("refresh_tokens")
 }
 
 model ProfileModel {

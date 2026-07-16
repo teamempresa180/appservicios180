@@ -16,6 +16,14 @@ export class InMemoryIdentityRepository implements IdentityRepository {
     return Promise.resolve(this.rows.get(id.value) ?? null);
   }
 
+  findByDocumentNumber(documentNumber: string): Promise<Identity | null> {
+    return Promise.resolve(
+      [...this.rows.values()].find(
+        (identity) => identity.documentNumber === documentNumber,
+      ) ?? null,
+    );
+  }
+
   save(identity: Identity): Promise<void> {
     this.rows.set(identity.id.value, identity);
     return Promise.resolve();

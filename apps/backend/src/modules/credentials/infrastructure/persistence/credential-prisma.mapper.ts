@@ -19,6 +19,7 @@ export class CredentialPrismaMapper {
       status: row.status as unknown as CredentialStatus,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      passwordHash: row.passwordHash,
     });
   }
 
@@ -30,6 +31,7 @@ export class CredentialPrismaMapper {
       status: credential.status,
       createdAt: credential.createdAt,
       updatedAt: credential.updatedAt,
+      passwordHash: credential.passwordHash,
     };
   }
 }

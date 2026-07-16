@@ -30,6 +30,7 @@ export class UpdateCredentialUseCase {
       status: command.status ?? existing.status,
       createdAt: existing.createdAt,
       updatedAt: new Date(),
+      passwordHash: existing.passwordHash,
     });
 
     await this.credentialRepository.save(updated);

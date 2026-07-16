@@ -23,4 +23,23 @@ export const AuthenticationSwagger = {
     summary: 'Get an Authentication method',
     description: 'Fetches a single Authentication method by id.',
   },
+  login: {
+    summary: 'Log in',
+    description:
+      'Authenticates a documentNumber/password pair and issues a new access/refresh token pair.',
+  },
+  refresh: {
+    summary: 'Refresh the access token',
+    description:
+      'Exchanges a valid, not-yet-used refresh token for a new access/refresh pair (rotation).',
+  },
+  logout: {
+    summary: 'Log out',
+    description: 'Revokes a refresh token, ending that session.',
+  },
+  me: {
+    summary: 'Get the current user',
+    description:
+      'Returns the id/role of the Identity behind the presented access token.',
+  },
 } as const;

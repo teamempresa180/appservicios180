@@ -18,6 +18,18 @@ describe('CredentialHttpMapper', () => {
     expect(command.type).toBe(CredentialType.RecoveryCode);
   });
 
+  it('toCreateCommand() carries the password through for a Password credential', () => {
+    const dto: CreateCredentialRequestDto = {
+      identityId: 'identity-1',
+      type: CredentialType.Password,
+      password: 'Str0ngPassw0rd!',
+    };
+
+    const command = CredentialHttpMapper.toCreateCommand(dto);
+
+    expect(command.password).toBe('Str0ngPassw0rd!');
+  });
+
   it('toUpdateCommand() carries the id and optional status through', () => {
     const dto: UpdateCredentialRequestDto = {
       status: CredentialStatus.Expired,

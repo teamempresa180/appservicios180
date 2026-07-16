@@ -14,7 +14,7 @@ export class CredentialHttpMapper {
   static toCreateCommand(
     dto: CreateCredentialRequestDto,
   ): CreateCredentialCommand {
-    return new CreateCredentialCommand(dto.identityId, dto.type);
+    return new CreateCredentialCommand(dto.identityId, dto.type, dto.password);
   }
 
   static toUpdateCommand(

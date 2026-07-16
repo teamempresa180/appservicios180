@@ -7,6 +7,7 @@ import { IdentityStatus } from '../../../identity/domain/value-objects/identity-
 import { InMemoryIdentityRepository } from '../../../identity/application/use_cases/test-support/in-memory-identity.repository';
 import { CredentialStatus } from '../../domain/value-objects/credential-status.value-object';
 import { CredentialType } from '../../domain/value-objects/credential-type.value-object';
+import { PasswordHasher } from '../ports/password-hasher.port';
 import { CreateCredentialCommand } from '../commands/create-credential.command';
 import { DeleteCredentialCommand } from '../commands/delete-credential.command';
 import { UpdateCredentialCommand } from '../commands/update-credential.command';
@@ -21,14 +22,27 @@ import { DeleteCredentialUseCase } from './delete-credential.use-case';
 import { ListCredentialUseCase } from './list-credential.use-case';
 import { SearchCredentialUseCase } from './search-credential.use-case';
 
+/** Deterministic fake — no real hashing needed for these tests. */
+class FakePasswordHasher implements PasswordHasher {
+  hash(plainPassword: string): Promise<string> {
+    return Promise.resolve(`hashed:${plainPassword}`);
+  }
+
+  verify(plainPassword: string, passwordHash: string): Promise<boolean> {
+    return Promise.resolve(passwordHash === `hashed:${plainPassword}`);
+  }
+}
+
 describe('Credential use cases', () => {
   let repository: InMemoryCredentialRepository;
   let identityRepository: InMemoryIdentityRepository;
+  let passwordHasher: PasswordHasher;
   let identityId: string;
 
   beforeEach(async () => {
     repository = new InMemoryCredentialRepository();
     identityRepository = new InMemoryIdentityRepository();
+    passwordHasher = new FakePasswordHasher();
 
     const now = new Date();
     const identity = new Identity(IdentityId.create(), {
@@ -49,25 +63,55 @@ describe('Credential use cases', () => {
       const useCase = new CreateCredentialUseCase(
         repository,
         identityRepository,
+        passwordHasher,
       );
       const dto = await useCase.execute(
-        new CreateCredentialCommand(identityId, CredentialType.Password),
+        new CreateCredentialCommand(
+          identityId,
+          CredentialType.Password,
+          'Str0ngPassw0rd!',
+        ),
       );
 
       expect(dto.identityId).toBe(identityId);
       expect(dto.status).toBe(CredentialStatus.Active);
     });
 
+    it('hashes the password instead of storing it as-is', async () => {
+      const useCase = new CreateCredentialUseCase(
+        repository,
+        identityRepository,
+        passwordHasher,
+      );
+      const dto = await useCase.execute(
+        new CreateCredentialCommand(
+          identityId,
+          CredentialType.Password,
+          'Str0ngPassw0rd!',
+        ),
+      );
+
+      const stored = await repository.findById(
+        (
+          await repository.findByIdentityId(IdentityId.fromString(identityId))
+        )[0].id,
+      );
+      expect(stored?.passwordHash).toBe('hashed:Str0ngPassw0rd!');
+      expect(dto).not.toHaveProperty('passwordHash');
+    });
+
     it('throws NotFoundException when the Identity does not exist', async () => {
       const useCase = new CreateCredentialUseCase(
         repository,
         identityRepository,
+        passwordHasher,
       );
       await expect(
         useCase.execute(
           new CreateCredentialCommand(
             'unknown-identity',
             CredentialType.Password,
+            'Str0ngPassw0rd!',
           ),
         ),
       ).rejects.toThrow(NotFoundException);
@@ -77,12 +121,43 @@ describe('Credential use cases', () => {
       const useCase = new CreateCredentialUseCase(
         repository,
         identityRepository,
+        passwordHasher,
       );
       await expect(
         useCase.execute(
           new CreateCredentialCommand(
             identityId,
             'NOT_A_TYPE' as CredentialType,
+          ),
+        ),
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it('rejects a Password credential without a password', async () => {
+      const useCase = new CreateCredentialUseCase(
+        repository,
+        identityRepository,
+        passwordHasher,
+      );
+      await expect(
+        useCase.execute(
+          new CreateCredentialCommand(identityId, CredentialType.Password),
+        ),
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it('rejects a non-Password credential that includes a password', async () => {
+      const useCase = new CreateCredentialUseCase(
+        repository,
+        identityRepository,
+        passwordHasher,
+      );
+      await expect(
+        useCase.execute(
+          new CreateCredentialCommand(
+            identityId,
+            CredentialType.RecoveryCode,
+            'should-not-be-here',
           ),
         ),
       ).rejects.toThrow(ValidationException);
@@ -104,8 +179,13 @@ describe('Credential use cases', () => {
       const created = await new CreateCredentialUseCase(
         repository,
         identityRepository,
+        passwordHasher,
       ).execute(
-        new CreateCredentialCommand(identityId, CredentialType.Password),
+        new CreateCredentialCommand(
+          identityId,
+          CredentialType.Password,
+          'Str0ngPassw0rd!',
+        ),
       );
 
       const updated = await new UpdateCredentialUseCase(repository).execute(
@@ -114,6 +194,31 @@ describe('Credential use cases', () => {
 
       expect(updated.status).toBe(CredentialStatus.Expired);
     });
+
+    it('preserves the passwordHash across a status update', async () => {
+      const created = await new CreateCredentialUseCase(
+        repository,
+        identityRepository,
+        passwordHasher,
+      ).execute(
+        new CreateCredentialCommand(
+          identityId,
+          CredentialType.Password,
+          'Str0ngPassw0rd!',
+        ),
+      );
+
+      await new UpdateCredentialUseCase(repository).execute(
+        new UpdateCredentialCommand(created.id, CredentialStatus.Expired),
+      );
+
+      const stored = await repository.findById(
+        (
+          await repository.findByIdentityId(IdentityId.fromString(identityId))
+        )[0].id,
+      );
+      expect(stored?.passwordHash).toBe('hashed:Str0ngPassw0rd!');
+    });
   });
 
   describe('DeleteCredentialUseCase', () => {
@@ -121,8 +226,13 @@ describe('Credential use cases', () => {
       const created = await new CreateCredentialUseCase(
         repository,
         identityRepository,
+        passwordHasher,
       ).execute(
-        new CreateCredentialCommand(identityId, CredentialType.Password),
+        new CreateCredentialCommand(
+          identityId,
+          CredentialType.Password,
+          'Str0ngPassw0rd!',
+        ),
       );
 
       await new DeleteCredentialUseCase(repository).execute(
@@ -142,9 +252,14 @@ describe('Credential use cases', () => {
       const createUseCase = new CreateCredentialUseCase(
         repository,
         identityRepository,
+        passwordHasher,
       );
       await createUseCase.execute(
-        new CreateCredentialCommand(identityId, CredentialType.Password),
+        new CreateCredentialCommand(
+          identityId,
+          CredentialType.Password,
+          'Str0ngPassw0rd!',
+        ),
       );
       await createUseCase.execute(
         new CreateCredentialCommand(identityId, CredentialType.RecoveryCode),
@@ -161,7 +276,11 @@ describe('Credential use cases', () => {
 
   describe('SearchCredentialUseCase', () => {
     it('finds Credentials by type', async () => {
-      await new CreateCredentialUseCase(repository, identityRepository).execute(
+      await new CreateCredentialUseCase(
+        repository,
+        identityRepository,
+        passwordHasher,
+      ).execute(
         new CreateCredentialCommand(identityId, CredentialType.SecurityKey),
       );
 

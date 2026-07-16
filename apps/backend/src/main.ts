@@ -22,6 +22,13 @@ async function bootstrap() {
       'Presentation layer skeleton. Endpoints delegate to Application Use Cases, which are not implemented yet.',
     )
     .setVersion('0.0.1')
+    .addBearerAuth({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      description:
+        'Access token issued by POST /authentications/login or POST /authentications/refresh.',
+    })
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, swaggerDocument);

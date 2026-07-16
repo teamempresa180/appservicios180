@@ -3743,9 +3743,220 @@ fase.
   ```
 
 - El trabajo de Fase 2–7 del Prompt 73 quedó **consolidado en un único
-  commit** durante la Fase 1 del Prompt 74 (hash `<pendiente>`),
+  commit** durante la Fase 1 del Prompt 74 (hash `8d298f6`),
   excluyendo `Logo oficial grupo.svg` y temporales/IDE/cache.
 - **Contenedor Docker temporal `appservicios-pg-temp`**: se reutilizó
   únicamente para correr `npm run test:integration` en la Fase 1 y de
   nuevo en la re-verificación de este prompt — sintético/desechable,
   sin datos reales. Detenido al cierre de esta sesión.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 74 — Sprint 4 Etapa 7, Autenticación y Autorización Real — consolidado)
+
+**El Prompt 74 fue aprobado por el usuario y consolidado en el Prompt 75.**
+
+**Fase 0 (Reconstrucción del contexto)**: repositorio oficial
+confirmado; último commit al iniciar = Prompt 72 (`dafc20f`); working
+tree contenía únicamente el trabajo pendiente del Prompt 73
+(Payment/Review/Communication) + `PROJECT_STATUS.md`; Docker
+detenido. `npm run build`/`lint`/`test` (170 suites/796 tests)/
+`test:e2e` (23 suites/150 tests) + `test:integration` (22 suites/144
+tests) + `flutter analyze`/`test` (748/748)/`build windows` — todos
+en verde antes de tocar código.
+
+- **Fase 1 (Consolidación Prompt 73)**: documentación actualizada
+  (título del Prompt 73 cambiado a "— consolidado" con nota de
+  aprobación) y **un único commit** creado para el trabajo de Fase
+  2–7 del Prompt 73 (hash `8d298f6`), excluyendo `Logo oficial
+  grupo.svg` y temporales/IDE/cache.
+
+- **Fase 2 (Auditoría de seguridad)**: se auditó completamente
+  Identity/Authentication/Credentials/Config/Common/Main/AppModule/
+  Prisma antes de escribir código (ver detalle completo en el
+  entregable de esta sesión). Hallazgos clave, todo verificado
+  leyendo el código real:
+  - **Cero autenticación real existente**: `Identity`/`Authentication`/
+    `Credential` eran puros holders de datos — sin campo de password,
+    sin hash, sin JWT, sin sesión. `AuthenticationController`/
+    `CredentialController` eran CRUD genérico sin `/login`.
+  - **Cero infraestructura de seguridad**: no existía ningún `Guard`,
+    `Strategy` de Passport, ni middleware de auth en todo el backend —
+    el único `Interceptor` existente era `LoggingInterceptor` (solo
+    logging, sin relación con auth).
+  - **Cero dependencias de JWT/hashing**: ni `@nestjs/jwt`, ni
+    `@nestjs/passport`, ni `bcrypt`/`bcryptjs`/`argon2` estaban
+    instaladas. `env.validation.ts` sólo validaba `NODE_ENV`/`PORT`/
+    `DATABASE_URL` — documentado explícitamente como "JWT añadido
+    cuando el módulo que lo necesite se implemente".
+  - **Cero concepto de "rol" en el dominio**: `Identity` no tiene
+    campo `role`; nada distingue customer/provider/admin a nivel de
+    autenticación. Decisión arquitectónica (consultada con el
+    usuario): el rol se **deriva** en tiempo de login/refresh
+    verificando si existe un `Provider` ligado a la `Identity`
+    (`Role.Provider` si existe, `Role.Customer` si no) — cero
+    migraciones de schema para roles; `Role.Admin` queda reservado
+    para cuando el dominio defina cuentas administrativas reales.
+  - **Identificador de login**: se usa `Identity.documentNumber`
+    (decisión consultada) — ya existe en el dominio, sin campo nuevo.
+  - `DomainExceptionFilter` no tenía mapeo para 401/403 — sólo
+    `NotFoundException`(404)/`ValidationException`(400)/
+    `BusinessRuleException`(422).
+
+- **Fase 3 (JWT)**: implementado `TokenService`
+  (`authentication/application/ports/token.port.ts`) +
+  `JwtTokenService` (Infrastructure, sobre `@nestjs/jwt`). Access y
+  refresh tokens firmados con **secretos separados**
+  (`JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET`) — un secreto filtrado no
+  permite forjar el otro tipo de token. `issuer`/`audience`
+  configurables vía `ConfigService` (`JWT_ISSUER`/`JWT_AUDIENCE`).
+  **Sin valores hardcodeados**: en producción, `JWT_ACCESS_SECRET`/
+  `JWT_REFRESH_SECRET` son obligatorios (`validateEnv` lanza error al
+  boot si faltan); fuera de producción, si no se proveen se genera un
+  secreto efímero vía `crypto.randomBytes(32)` en cada arranque (los
+  tokens dejan de validar tras un reinicio — aceptable fuera de
+  producción, nunca un literal en el repo). Cada token incluye un
+  `jti` aleatorio (`crypto.randomUUID()`) para garantizar que dos
+  tokens firmados con los mismos claims en el mismo segundo nunca
+  sean bit-a-bit idénticos (necesario para que la rotación de refresh
+  tokens funcione). Refresh tokens: persistidos como
+  `RefreshTokenModel` (migración `20260715211831_add_authentication_credentials`,
+  nueva tabla `refresh_tokens`) — se guarda el **hash SHA-256** del
+  token (determinístico, permite lookup exacto), nunca el token en
+  texto plano; `expiresAt`/`revokedAt` habilitan expiración y
+  revocación. **Rotación**: cada `POST /authentications/refresh`
+  revoca el token presentado y emite un par nuevo — un refresh token
+  sólo se puede usar una vez. **Logout**: revoca un refresh token
+  específico (una sesión, no "cerrar sesión en todos lados" — no
+  solicitado en este prompt); idempotente (token desconocido o ya
+  revocado no lanza error, ya que el objetivo del caller — "ya no
+  estoy autenticado con este token" — ya es verdad de cualquier
+  forma). **Múltiples sesiones**: cada login/refresh crea una fila
+  `RefreshToken` independiente por `identityId` — la arquitectura ya
+  soporta sesiones concurrentes sin cambios adicionales.
+
+- **Fase 4 (Passwords)**: `PasswordHasher`
+  (`credentials/application/ports/password-hasher.port.ts`) +
+  `BcryptPasswordHasher` (Infrastructure, sobre `bcryptjs` — **no**
+  `bcrypt` nativo: `bcryptjs` es una implementación pura en JS, cero
+  paso de compilación nativa, se instala idéntico en cualquier
+  plataforma/CI). `Credential.passwordHash` (nuevo campo opcional,
+  `string | null`, default `null` — no rompe ningún call site
+  existente) añadido a la entidad + `CredentialModel.password_hash`
+  (misma migración). `CreateCredentialCommand`/`CredentialValidator`
+  exigen `password` (mínimo 8 caracteres) cuando `type === PASSWORD` y
+  lo prohíben para cualquier otro tipo; `CreateCredentialUseCase` lo
+  hashea antes de persistir — **el texto plano nunca se guarda**.
+  `ChangePasswordUseCase` (nuevo, sólo en Application — sin endpoint
+  HTTP, ver Fase 7) exige la contraseña actual correcta antes de
+  aceptar la nueva. **Bug real detectado y corregido durante la
+  implementación**: `UpdateCredentialUseCase` reconstruía la entidad
+  sin pasar `passwordHash`, lo que habría borrado silenciosamente el
+  hash en cualquier actualización de `status` — corregido para
+  propagar `existing.passwordHash`.
+
+- **Fase 5 (Authorization)**: nuevo `src/common/auth/` (mismo patrón
+  que `common/filters`/`common/interceptors`): `Role` enum
+  (`CUSTOMER`/`PROVIDER`/`ADMIN`), `JwtStrategy` (Passport, valida
+  Bearer contra `JWT_ACCESS_SECRET`/issuer/audience), `JwtAuthGuard`
+  (envuelve `AuthGuard('jwt')`, traduce el fallo de Passport al
+  `UnauthorizedException` compartido para que
+  `DomainExceptionFilter` produzca el mismo cuerpo de error que el
+  resto de la API), `RolesGuard` + decorador `@Roles(...)` (lee
+  metadata vía `Reflector`; sin metadata, permite cualquier usuario
+  autenticado — restricción por rol es opt-in por endpoint) +
+  `@CurrentUser()` (extrae `req.user`). `JwtStrategy` se registra una
+  sola vez en `AuthenticationPresentationModule`, pero Passport
+  registra estrategias en un registro global por nombre — `JwtAuthGuard`
+  funciona desde cualquier módulo futuro sin volver a registrarla.
+  Swagger: `main.ts` añade `.addBearerAuth()` al `DocumentBuilder`;
+  `GET /authentications/me` usa `@ApiBearerAuth()`.
+
+- **Fase 6 (Refresh Tokens)**: ver Fase 3 — generación/persistencia/
+  rotación/invalidación/logout/expiración/múltiples sesiones ya
+  cubiertos ahí, todo en `authentication/domain/entities/refresh-token.entity.ts`
+  + `refresh-token-repository.interface.ts` +
+  `prisma-refresh-token.repository.ts`.
+
+- **Fase 7 (Controllers)**: se tocó **únicamente**
+  `AuthenticationController` (verificado por `git status` — ningún
+  otro controller del repositorio fue modificado). Se agregaron
+  exactamente 4 endpoints, todos declarados antes del `findOne(:id)`
+  dinámico (mismo patrón que `search` desde el Prompt 71, para que
+  `GET /authentications/me` no sea interpretado como
+  `findOne({ id: 'me' })`):
+  - `POST /authentications/login` (público) → `LoginUseCase`.
+  - `POST /authentications/refresh` (público) → `RefreshUseCase`.
+  - `POST /authentications/logout` (público) → `LogoutUseCase`.
+  - `GET /authentications/me` (`@UseGuards(JwtAuthGuard)`) →
+    devuelve `{ id, role }` del `AuthenticatedUser` actual.
+  Los tres primeros usan `@HttpCode(200)` (login/refresh/logout no
+  "crean un recurso", 200 es más correcto que el 201 por defecto de
+  `@Post()`). No se agregó ningún endpoint de cambio de password ni
+  de "logout en todas las sesiones" — no solicitados en este prompt.
+
+- **Fase 8 (Tests)**: cobertura completa de los 9 escenarios pedidos.
+  Unit: `login.use-case.spec.ts` (login válido/inválido, password
+  incorrecto, Identity inactiva, sin método de auth activo, sin
+  credencial activa, derivación de rol con/sin Provider),
+  `refresh.use-case.spec.ts` (rotación válida, firma inválida, token
+  revocado, token expirado, hash desconocido),
+  `logout.use-case.spec.ts` (revoca, idempotente para desconocido/ya
+  revocado), `change-password.use-case.spec.ts`,
+  `bcrypt-password-hasher.spec.ts`, `jwt-token.service.spec.ts`,
+  `jwt-auth.guard.spec.ts`, `roles.guard.spec.ts` (acceso autorizado /
+  rol incorrecto → 403 / sin metadata → permite), `jwt.strategy.spec.ts`,
+  más las specs de mapper/controller/validator actualizadas.
+  Integration: `prisma-refresh-token.repository.integration.spec.ts`
+  (nuevo). E2E (`authentication.e2e-spec.ts`, reescrito): login válido,
+  login con documentNumber desconocido (401), password incorrecto
+  (401), `GET /me` sin token (401), `GET /me` con token malformado
+  (401), `GET /me` con token válido (200), refresh + rotación +
+  reutilización del token viejo rechazada (401), refresh con token
+  malformado (401), logout revoca, logout idempotente. "Token
+  expirado" y "acceso con rol incorrecto" se cubrieron a nivel unit
+  (`refresh.use-case.spec.ts` con `expiresAt` en el pasado;
+  `roles.guard.spec.ts` con rol no coincidente) en vez de e2e, porque
+  ningún endpoint real del repositorio usa `@Roles(...)` todavía (no
+  se inventó uno sólo para el test). Resultado: `npm test` 180
+  suites/866 tests (+10 suites/+70 tests sobre Prompt 73), `npm run
+  test:e2e` 23 suites/160 tests (+10 sobre Prompt 73), `npm run
+  test:integration` 23 suites/147 tests (+1 suite/+3 tests).
+
+- **Fase 9 (Auditoría)**: sin secretos hardcodeados (`grep` sobre
+  todos los archivos nuevos de auth — ninguna coincidencia); sin
+  `@prisma/client` fuera de `infrastructure/` en los módulos tocados;
+  sin lógica de negocio en `AuthenticationController` (delega
+  íntegramente a los Use Cases); únicamente 6 dependencias nuevas,
+  todas usadas (`@nestjs/jwt`, `@nestjs/passport`, `passport`,
+  `passport-jwt`, `bcryptjs` + sus `@types/*`); `git status` confirma
+  que sólo se tocó el controller de Authentication (ningún otro
+  módulo). Sin duplicación real de lógica de negocio — la
+  verificación de password vive únicamente en `PasswordHasher`,
+  invocada tanto por `LoginUseCase` como por `ChangePasswordUseCase`,
+  no reimplementada en ninguno de los dos. No se identificó ningún
+  problema de seguridad adicional que corregir.
+
+- Verificaciones finales — todas pasando:
+  ```
+  npm run build            ✅
+  npm run lint               ✅ 0 errores
+  npm test                   ✅ 180 suites, 866/866
+  npm run test:e2e          ✅ 23 suites, 160/160
+  npm run test:integration  ✅ 23 suites, 147/147
+  flutter analyze             ✅ No issues found!
+  flutter test                 ✅ 748/748 (sin cambios — ningún archivo Flutter tocado)
+  flutter build windows       ✅ Build exitoso (mobile.exe)
+  ```
+
+- `git status` al cierre de esta sesión — **trabajo de Fase 2–9 del
+  Prompt 74 presente en el working tree, sin commitear**, además del
+  logo histórico:
+  ```
+  On branch main
+- El trabajo de Fase 2–9 del Prompt 74 quedó **consolidado en un único
+  commit** durante la Fase 1 del Prompt 75 (hash `<pendiente>`),
+  excluyendo `Logo oficial grupo.svg` y temporales/IDE/cache.
+- **Contenedor Docker temporal `appservicios-pg-temp`**: se usó para
+  aplicar la migración `20260715211831_add_authentication_credentials`
+  y para correr `npm run test:integration` en la Fase 0 y en la
+  re-verificación de la Fase 10 — sintético/desechable, sin datos
+  reales. Detenido al cierre de esta sesión.

@@ -47,12 +47,17 @@ describe('CredentialController', () => {
     const dto: CreateCredentialRequestDto = {
       identityId: 'identity-1',
       type: CredentialType.Password,
+      password: 'Str0ngPassw0rd!',
     };
 
     const response = await controller.create(dto);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
-      new CreateCredentialCommand('identity-1', CredentialType.Password),
+      new CreateCredentialCommand(
+        'identity-1',
+        CredentialType.Password,
+        'Str0ngPassw0rd!',
+      ),
     );
     expect(response.id).toBe('id-1');
     expect(response.createdAt).toBe('2026-01-01T00:00:00.000Z');

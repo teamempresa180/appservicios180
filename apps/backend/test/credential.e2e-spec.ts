@@ -66,7 +66,7 @@ describe('CredentialController (e2e)', () => {
   it('POST /credentials creates a Credential and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/credentials')
-      .send({ identityId, type: 'PASSWORD' })
+      .send({ identityId, type: 'PASSWORD', password: 'Str0ngPassw0rd!' })
       .expect(201);
 
     const body = response.body as CredentialResponseDto;
@@ -77,7 +77,11 @@ describe('CredentialController (e2e)', () => {
   it('POST /credentials returns 404 when the Identity does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/credentials')
-      .send({ identityId: 'unknown-identity', type: 'PASSWORD' })
+      .send({
+        identityId: 'unknown-identity',
+        type: 'PASSWORD',
+        password: 'Str0ngPassw0rd!',
+      })
       .expect(404);
 
     expect((response.body as ErrorResponseDto).error).toBe('NotFoundException');
@@ -92,7 +96,7 @@ describe('CredentialController (e2e)', () => {
   it('PUT /credentials/:id updates the status', async () => {
     const created = await request(app.getHttpServer())
       .post('/credentials')
-      .send({ identityId, type: 'PASSWORD' });
+      .send({ identityId, type: 'PASSWORD', password: 'Str0ngPassw0rd!' });
     const createdId = (created.body as CredentialResponseDto).id;
 
     const response = await request(app.getHttpServer())
@@ -106,7 +110,7 @@ describe('CredentialController (e2e)', () => {
   it('DELETE /credentials/:id deletes an existing Credential', async () => {
     const created = await request(app.getHttpServer())
       .post('/credentials')
-      .send({ identityId, type: 'PASSWORD' });
+      .send({ identityId, type: 'PASSWORD', password: 'Str0ngPassw0rd!' });
     const createdId = (created.body as CredentialResponseDto).id;
 
     await request(app.getHttpServer())

@@ -14,6 +14,12 @@ export const IDENTITY_REPOSITORY = Symbol('IdentityRepository');
 
 export interface IdentityRepository {
   findById(id: IdentityId): Promise<Identity | null>;
+  /**
+   * Exact match against `documentNumber` — the login identifier
+   * (Sprint 4, Etapa 7). Distinct from `search`, which is a free-text,
+   * multi-result match.
+   */
+  findByDocumentNumber(documentNumber: string): Promise<Identity | null>;
   save(identity: Identity): Promise<void>;
   delete(id: IdentityId): Promise<void>;
   list(page: number, pageSize: number): Promise<PaginatedResult<Identity>>;

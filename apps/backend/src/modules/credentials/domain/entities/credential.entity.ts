@@ -10,12 +10,21 @@ export interface CredentialProps {
   status: CredentialStatus;
   createdAt: Date;
   updatedAt: Date;
+  /**
+   * Hashed password material — only ever set (and only ever
+   * meaningful) when `type === CredentialType.Password`. Never the
+   * plaintext password. Optional so every existing call site that
+   * predates password support keeps working unchanged; defaults to
+   * `null`.
+   */
+  passwordHash?: string | null;
 }
 
 /**
  * Represents that a credential record of a given type exists for an Identity.
- * Pure data holder — never stores the actual secret, hash, or key material;
- * no persistence, no business rules.
+ * Pure data holder — never stores the actual secret, hash, or key material
+ * in plaintext; no persistence, no business rules (hashing/verification
+ * lives in the Application/Infrastructure layers, see `PasswordHasher`).
  */
 export class Credential extends Entity<CredentialId> {
   public readonly identityId: IdentityId;
@@ -23,6 +32,7 @@ export class Credential extends Entity<CredentialId> {
   public readonly status: CredentialStatus;
   public readonly createdAt: Date;
   public readonly updatedAt: Date;
+  public readonly passwordHash: string | null;
 
   constructor(id: CredentialId, props: CredentialProps) {
     super(id);
@@ -31,5 +41,6 @@ export class Credential extends Entity<CredentialId> {
     this.status = props.status;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+    this.passwordHash = props.passwordHash ?? null;
   }
 }
