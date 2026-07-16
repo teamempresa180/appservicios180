@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  UseGuards,
   Delete,
   Get,
   Param,
@@ -9,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -16,6 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { AvailabilityRoutes } from '../routes/availability.routes';
 import { AvailabilitySwagger } from '../swagger/availability.swagger';
 import { CreateAvailabilityUseCase } from '../../application/use_cases/create-availability.use-case';
@@ -50,6 +53,8 @@ import { AvailabilityHttpMapper } from '../dto/availability-http.mapper';
  * being matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Availability')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(AvailabilityRoutes.base)
 export class AvailabilityController {
   constructor(

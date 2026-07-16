@@ -1,5 +1,15 @@
-import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
 import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -7,6 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ChatRoutes } from '../routes/chat.routes';
 import { ChatSwagger } from '../swagger/chat.swagger';
@@ -49,6 +60,8 @@ import { ChatHttpMapper } from '../dto/chat-http.mapper';
  * matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Chat')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(ChatRoutes.base)
 export class ChatController {
   constructor(

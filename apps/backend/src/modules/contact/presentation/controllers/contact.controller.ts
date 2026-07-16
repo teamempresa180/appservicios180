@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  UseGuards,
   Delete,
   Get,
   Param,
@@ -9,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -16,6 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { ContactRoutes } from '../routes/contact.routes';
 import { ContactSwagger } from '../swagger/contact.swagger';
 import { CreateContactUseCase } from '../../application/use_cases/create-contact.use-case';
@@ -48,6 +51,8 @@ import { ContactHttpMapper } from '../dto/contact-http.mapper';
  * matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Contact')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(ContactRoutes.base)
 export class ContactController {
   constructor(

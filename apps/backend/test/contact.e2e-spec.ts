@@ -1,8 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { ContactPresentationModule } from '../src/modules/contact/presentation/contact.module';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { CONTACT_REPOSITORY } from '../src/modules/contact/domain/interfaces/contact-repository.interface';
 import { InMemoryContactRepository } from '../src/modules/contact/application/use_cases/test-support/in-memory-contact.repository';
 import { IDENTITY_REPOSITORY } from '../src/modules/identity/domain/interfaces/identity-repository.interface';
@@ -28,6 +33,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
 describe('ContactController (e2e)', () => {
   let app: INestApplication<App>;
   let identityId: string;
+  let authHeader: string;
 
   beforeEach(async () => {
     const identityRepository = new InMemoryIdentityRepository();
@@ -45,7 +51,12 @@ describe('ContactController (e2e)', () => {
     identityId = identity.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [ContactPresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        ContactPresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(CONTACT_REPOSITORY)
       .useValue(new InMemoryContactRepository())
@@ -59,6 +70,8 @@ describe('ContactController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -68,6 +81,7 @@ describe('ContactController (e2e)', () => {
   it('POST /contacts creates a Contact and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/contacts')
+      .set('Authorization', authHeader)
       .send({
         identityId,
         type: ContactType.Email,
@@ -84,6 +98,7 @@ describe('ContactController (e2e)', () => {
   it('POST /contacts returns 404 when the Identity does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/contacts')
+      .set('Authorization', authHeader)
       .send({
         identityId: 'unknown-identity',
         type: ContactType.Email,
@@ -95,19 +110,26 @@ describe('ContactController (e2e)', () => {
   });
 
   it('GET /contacts/:id returns 404 for an unknown id', async () => {
-    await request(app.getHttpServer()).get('/contacts/unknown-id').expect(404);
+    await request(app.getHttpServer())
+      .get('/contacts/unknown-id')
+      .set('Authorization', authHeader)
+      .expect(404);
   });
 
   it('PUT /contacts/:id updates the value', async () => {
-    const created = await request(app.getHttpServer()).post('/contacts').send({
-      identityId,
-      type: ContactType.Email,
-      value: 'original@example.com',
-    });
+    const created = await request(app.getHttpServer())
+      .post('/contacts')
+      .set('Authorization', authHeader)
+      .send({
+        identityId,
+        type: ContactType.Email,
+        value: 'original@example.com',
+      });
     const createdId = (created.body as ContactResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/contacts/${createdId}`)
+      .set('Authorization', authHeader)
       .send({ value: 'updated@example.com' })
       .expect(200);
 
@@ -117,30 +139,39 @@ describe('ContactController (e2e)', () => {
   });
 
   it('DELETE /contacts/:id deletes an existing Contact', async () => {
-    const created = await request(app.getHttpServer()).post('/contacts').send({
-      identityId,
-      type: ContactType.Email,
-      value: 'to-delete@example.com',
-    });
+    const created = await request(app.getHttpServer())
+      .post('/contacts')
+      .set('Authorization', authHeader)
+      .send({
+        identityId,
+        type: ContactType.Email,
+        value: 'to-delete@example.com',
+      });
     const createdId = (created.body as ContactResponseDto).id;
 
     await request(app.getHttpServer())
       .delete(`/contacts/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(200);
     await request(app.getHttpServer())
       .get(`/contacts/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
   it('GET /contacts lists Contacts page by page', async () => {
-    await request(app.getHttpServer()).post('/contacts').send({
-      identityId,
-      type: ContactType.Email,
-      value: 'jane.doe@example.com',
-    });
+    await request(app.getHttpServer())
+      .post('/contacts')
+      .set('Authorization', authHeader)
+      .send({
+        identityId,
+        type: ContactType.Email,
+        value: 'jane.doe@example.com',
+      });
 
     const response = await request(app.getHttpServer())
       .get('/contacts')
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as ContactListResponseDto;
@@ -150,14 +181,18 @@ describe('ContactController (e2e)', () => {
   });
 
   it('GET /contacts/search searches by value', async () => {
-    await request(app.getHttpServer()).post('/contacts').send({
-      identityId,
-      type: ContactType.Email,
-      value: 'jane.doe@example.com',
-    });
+    await request(app.getHttpServer())
+      .post('/contacts')
+      .set('Authorization', authHeader)
+      .send({
+        identityId,
+        type: ContactType.Email,
+        value: 'jane.doe@example.com',
+      });
 
     const response = await request(app.getHttpServer())
       .get('/contacts/search')
+      .set('Authorization', authHeader)
       .query({ term: 'jane.doe' })
       .expect(200);
 

@@ -8,6 +8,15 @@ abstract final class ApiConfig {
     defaultValue: 'http://localhost:3000',
   );
 
+  /// When `true` (the current default), every repository resolves to its
+  /// offline `Mock...` implementation instead of `Http...` — used while
+  /// the UI is being redesigned, so it doesn't depend on a running
+  /// backend. Reconnect with `--dart-define=USE_MOCK_BACKEND=false`.
+  static const bool useMockBackend = bool.fromEnvironment(
+    'USE_MOCK_BACKEND',
+    defaultValue: true,
+  );
+
   static const Duration connectTimeout = Duration(seconds: 10);
   static const Duration receiveTimeout = Duration(seconds: 15);
   static const Duration sendTimeout = Duration(seconds: 15);

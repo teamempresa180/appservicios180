@@ -1,8 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { ServicePresentationModule } from '../src/modules/service/presentation/service.module';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { SERVICE_REPOSITORY } from '../src/modules/service/domain/interfaces/service-repository.interface';
 import { InMemoryServiceRepository } from '../src/modules/service/application/use_cases/test-support/in-memory-service.repository';
 import { CATEGORY_REPOSITORY } from '../src/modules/category/domain/interfaces/category-repository.interface';
@@ -47,6 +52,7 @@ describe('ServiceController (e2e)', () => {
   let app: INestApplication<App>;
   let categoryId: string;
   let providerId: string;
+  let authHeader: string;
 
   beforeEach(async () => {
     const now = new Date();
@@ -81,7 +87,12 @@ describe('ServiceController (e2e)', () => {
     providerId = provider.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [ServicePresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        ServicePresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(SERVICE_REPOSITORY)
       .useValue(new InMemoryServiceRepository())
@@ -101,6 +112,8 @@ describe('ServiceController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'test-identity', role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -123,6 +136,7 @@ describe('ServiceController (e2e)', () => {
   it('POST /services creates a Service and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/services')
+      .set('Authorization', authHeader)
       .send(createServiceBody())
       .expect(201);
 
@@ -135,6 +149,7 @@ describe('ServiceController (e2e)', () => {
   it('POST /services returns 404 when the Category does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/services')
+      .set('Authorization', authHeader)
       .send(createServiceBody({ categoryId: 'unknown-category' }))
       .expect(404);
 
@@ -144,6 +159,7 @@ describe('ServiceController (e2e)', () => {
   it('POST /services returns 404 when the Provider does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/services')
+      .set('Authorization', authHeader)
       .send(createServiceBody({ providerId: 'unknown-provider' }))
       .expect(404);
 
@@ -151,17 +167,22 @@ describe('ServiceController (e2e)', () => {
   });
 
   it('GET /services/:id returns 404 for an unknown id', async () => {
-    await request(app.getHttpServer()).get('/services/unknown-id').expect(404);
+    await request(app.getHttpServer())
+      .get('/services/unknown-id')
+      .set('Authorization', authHeader)
+      .expect(404);
   });
 
   it('PUT /services/:id updates the basePrice', async () => {
     const created = await request(app.getHttpServer())
       .post('/services')
+      .set('Authorization', authHeader)
       .send(createServiceBody());
     const createdId = (created.body as ServiceResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/services/${createdId}`)
+      .set('Authorization', authHeader)
       .send({ basePrice: 55.0 })
       .expect(200);
 
@@ -171,24 +192,29 @@ describe('ServiceController (e2e)', () => {
   it('DELETE /services/:id deletes an existing Service', async () => {
     const created = await request(app.getHttpServer())
       .post('/services')
+      .set('Authorization', authHeader)
       .send(createServiceBody());
     const createdId = (created.body as ServiceResponseDto).id;
 
     await request(app.getHttpServer())
       .delete(`/services/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(200);
     await request(app.getHttpServer())
       .get(`/services/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
   it('GET /services lists Services page by page', async () => {
     await request(app.getHttpServer())
       .post('/services')
+      .set('Authorization', authHeader)
       .send(createServiceBody());
 
     const response = await request(app.getHttpServer())
       .get('/services')
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as ServiceListResponseDto;
@@ -200,10 +226,12 @@ describe('ServiceController (e2e)', () => {
   it('GET /services/search searches by name', async () => {
     await request(app.getHttpServer())
       .post('/services')
+      .set('Authorization', authHeader)
       .send(createServiceBody());
 
     const response = await request(app.getHttpServer())
       .get('/services/search')
+      .set('Authorization', authHeader)
       .query({ term: 'Pipe repair' })
       .expect(200);
 

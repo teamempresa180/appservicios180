@@ -1,5 +1,14 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -7,6 +16,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { AuditRoutes } from '../routes/audit.routes';
 import { AuditSwagger } from '../swagger/audit.swagger';
 import { CreateAuditRecordUseCase } from '../../application/use_cases/create-audit-record.use-case';
@@ -40,6 +50,8 @@ import { AuditHttpMapper } from '../dto/audit-http.mapper';
  * being matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Audit')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(AuditRoutes.base)
 export class AuditController {
   constructor(

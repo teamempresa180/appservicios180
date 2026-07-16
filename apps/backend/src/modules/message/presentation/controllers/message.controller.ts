@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  UseGuards,
   Delete,
   Get,
   Param,
@@ -8,6 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -15,6 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { MessageRoutes } from '../routes/message.routes';
 import { MessageSwagger } from '../swagger/message.swagger';
@@ -57,6 +60,8 @@ import { MessageHttpMapper } from '../dto/message-http.mapper';
  * matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Message')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(MessageRoutes.base)
 export class MessageController {
   constructor(

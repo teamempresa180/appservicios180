@@ -2,6 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { PassportModule } from '@nestjs/passport';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { ReviewPresentationModule } from '../src/modules/review/presentation/review.module';
 import { REVIEW_REPOSITORY } from '../src/modules/review/domain/interfaces/review-repository.interface';
 import { InMemoryReviewRepository } from '../src/modules/review/application/use_cases/test-support/in-memory-review.repository';
@@ -51,6 +56,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
  */
 describe('ReviewController (e2e)', () => {
   let app: INestApplication<App>;
+  let authHeader: string;
   let orderId: string;
   let providerId: string;
   let identityId: string;
@@ -103,7 +109,12 @@ describe('ReviewController (e2e)', () => {
     orderId = order.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [ReviewPresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        ReviewPresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(REVIEW_REPOSITORY)
       .useValue(new InMemoryReviewRepository())
@@ -127,6 +138,8 @@ describe('ReviewController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -148,6 +161,7 @@ describe('ReviewController (e2e)', () => {
   it('POST /reviews creates a Review and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/reviews')
+      .set('Authorization', authHeader)
       .send(createReviewBody())
       .expect(201);
 
@@ -159,6 +173,7 @@ describe('ReviewController (e2e)', () => {
   it('POST /reviews returns 404 when the Order does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/reviews')
+      .set('Authorization', authHeader)
       .send(createReviewBody({ orderId: 'unknown-order' }))
       .expect(404);
 
@@ -166,17 +181,22 @@ describe('ReviewController (e2e)', () => {
   });
 
   it('GET /reviews/:id returns 404 for an unknown id', async () => {
-    await request(app.getHttpServer()).get('/reviews/unknown-id').expect(404);
+    await request(app.getHttpServer())
+      .get('/reviews/unknown-id')
+      .set('Authorization', authHeader)
+      .expect(404);
   });
 
   it('PUT /reviews/:id updates the title', async () => {
     const created = await request(app.getHttpServer())
       .post('/reviews')
+      .set('Authorization', authHeader)
       .send(createReviewBody());
     const createdId = (created.body as ReviewResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/reviews/${createdId}`)
+      .set('Authorization', authHeader)
       .send({ title: 'Updated title' })
       .expect(200);
 
@@ -186,23 +206,30 @@ describe('ReviewController (e2e)', () => {
   it('DELETE /reviews/:id deletes an existing Review', async () => {
     const created = await request(app.getHttpServer())
       .post('/reviews')
+      .set('Authorization', authHeader)
       .send(createReviewBody());
     const createdId = (created.body as ReviewResponseDto).id;
 
     await request(app.getHttpServer())
       .delete(`/reviews/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(200);
 
-    await request(app.getHttpServer()).get(`/reviews/${createdId}`).expect(404);
+    await request(app.getHttpServer())
+      .get(`/reviews/${createdId}`)
+      .set('Authorization', authHeader)
+      .expect(404);
   });
 
   it('GET /reviews lists Reviews page by page', async () => {
     await request(app.getHttpServer())
       .post('/reviews')
+      .set('Authorization', authHeader)
       .send(createReviewBody());
 
     const response = await request(app.getHttpServer())
       .get('/reviews')
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as ReviewListResponseDto;
@@ -214,10 +241,12 @@ describe('ReviewController (e2e)', () => {
   it('GET /reviews/search searches by title/comment', async () => {
     await request(app.getHttpServer())
       .post('/reviews')
+      .set('Authorization', authHeader)
       .send(createReviewBody());
 
     const response = await request(app.getHttpServer())
       .get('/reviews/search')
+      .set('Authorization', authHeader)
       .query({ term: 'great' })
       .expect(200);
 

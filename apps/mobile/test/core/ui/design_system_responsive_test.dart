@@ -125,12 +125,13 @@ void main() {
       tester,
     ) async {
       await setSurfaceSize(tester, width);
+      // Unlike Proveedor content, Cliente content (map + static floating
+      // panel) is not meant to scroll — it fills the bounded Scaffold
+      // body directly.
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
-          home: const Scaffold(
-            body: SingleChildScrollView(child: ClientHomeContent()),
-          ),
+          home: const Scaffold(body: ClientHomeContent()),
         ),
       );
       await tester.pumpAndSettle();

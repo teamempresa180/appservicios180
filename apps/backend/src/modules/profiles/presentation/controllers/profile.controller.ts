@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  UseGuards,
   Delete,
   Get,
   Param,
@@ -9,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -16,6 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { ProfileRoutes } from '../routes/profile.routes';
 import { ProfileSwagger } from '../swagger/profile.swagger';
 import { CreateProfileUseCase } from '../../application/use_cases/create-profile.use-case';
@@ -48,6 +51,8 @@ import { ProfileHttpMapper } from '../dto/profile-http.mapper';
  * matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Profiles')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(ProfileRoutes.base)
 export class ProfileController {
   constructor(

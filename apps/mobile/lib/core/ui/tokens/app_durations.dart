@@ -1,8 +1,8 @@
 /// Reusable animation duration scale for the whole application.
 abstract final class AppDurations {
-  static const Duration fast = Duration(milliseconds: 150);
-  static const Duration medium = Duration(milliseconds: 250);
-  static const Duration slow = Duration(milliseconds: 350);
+  static const Duration fast = Duration(milliseconds: 180);
+  static const Duration medium = Duration(milliseconds: 320);
+  static const Duration slow = Duration(milliseconds: 450);
 
   /// Per-item delay step for staggered list entrances (see
   /// `FadeIn.delay`) — e.g. item N fades in at `staggerStep * N`.

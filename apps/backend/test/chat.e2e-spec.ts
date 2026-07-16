@@ -1,8 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { ChatPresentationModule } from '../src/modules/chat/presentation/chat.module';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { CHAT_REPOSITORY } from '../src/modules/chat/domain/interfaces/chat-repository.interface';
 import { InMemoryChatRepository } from '../src/modules/chat/application/use_cases/test-support/in-memory-chat.repository';
 import { ORDER_REPOSITORY } from '../src/modules/order/domain/interfaces/order-repository.interface';
@@ -55,6 +60,7 @@ describe('ChatController (e2e)', () => {
   let orderId: string;
   let identityId: string;
   let providerId: string;
+  let authHeader: string;
 
   beforeEach(async () => {
     const now = new Date();
@@ -104,7 +110,12 @@ describe('ChatController (e2e)', () => {
     orderId = order.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [ChatPresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        ChatPresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(CHAT_REPOSITORY)
       .useValue(new InMemoryChatRepository())
@@ -128,6 +139,8 @@ describe('ChatController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -147,6 +160,7 @@ describe('ChatController (e2e)', () => {
   it('POST /chats creates a Chat and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/chats')
+      .set('Authorization', authHeader)
       .send(createChatBody())
       .expect(201);
 
@@ -158,6 +172,7 @@ describe('ChatController (e2e)', () => {
   it('POST /chats returns 404 when the Order does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/chats')
+      .set('Authorization', authHeader)
       .send(createChatBody({ orderId: 'unknown-order' }))
       .expect(404);
 
@@ -165,27 +180,36 @@ describe('ChatController (e2e)', () => {
   });
 
   it('GET /chats/:id returns 404 for an unknown id', async () => {
-    await request(app.getHttpServer()).get('/chats/unknown-id').expect(404);
+    await request(app.getHttpServer())
+      .get('/chats/unknown-id')
+      .set('Authorization', authHeader)
+      .expect(404);
   });
 
   it('PUT /chats/:id/close closes an existing Chat', async () => {
     const created = await request(app.getHttpServer())
       .post('/chats')
+      .set('Authorization', authHeader)
       .send(createChatBody());
     const createdId = (created.body as ChatResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/chats/${createdId}/close`)
+      .set('Authorization', authHeader)
       .expect(200);
 
     expect((response.body as ChatResponseDto).status).toBe('CLOSED');
   });
 
   it('GET /chats lists Chats page by page', async () => {
-    await request(app.getHttpServer()).post('/chats').send(createChatBody());
+    await request(app.getHttpServer())
+      .post('/chats')
+      .set('Authorization', authHeader)
+      .send(createChatBody());
 
     const response = await request(app.getHttpServer())
       .get('/chats')
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as ChatListResponseDto;
@@ -195,10 +219,14 @@ describe('ChatController (e2e)', () => {
   });
 
   it('GET /chats/search searches by type', async () => {
-    await request(app.getHttpServer()).post('/chats').send(createChatBody());
+    await request(app.getHttpServer())
+      .post('/chats')
+      .set('Authorization', authHeader)
+      .send(createChatBody());
 
     const response = await request(app.getHttpServer())
       .get('/chats/search')
+      .set('Authorization', authHeader)
       .query({ term: 'ORDER_RELATED' })
       .expect(200);
 

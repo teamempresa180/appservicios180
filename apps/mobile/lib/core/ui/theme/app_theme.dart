@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'app_brand_palette.dart';
 import 'app_typography.dart';
 import '../tokens/app_elevation.dart';
@@ -15,19 +16,19 @@ abstract final class AppTheme {
   static ThemeData get light {
     final colorScheme = ColorScheme.light(
       primary: AppBrandPalette.primary500,
-      onPrimary: AppBrandPalette.secondary900,
+      onPrimary: AppBrandPalette.ink,
       primaryContainer: AppBrandPalette.primary100,
       onPrimaryContainer: AppBrandPalette.primary900,
       secondary: AppBrandPalette.secondary500,
-      onSecondary: AppBrandPalette.secondary900,
+      onSecondary: AppBrandPalette.ink,
       secondaryContainer: AppBrandPalette.secondary100,
-      onSecondaryContainer: AppBrandPalette.secondary900,
+      onSecondaryContainer: AppBrandPalette.ink,
       tertiary: AppBrandPalette.accent500,
-      onTertiary: AppBrandPalette.secondary900,
+      onTertiary: AppBrandPalette.ink,
       tertiaryContainer: AppBrandPalette.accent100,
       onTertiaryContainer: AppBrandPalette.accent900,
-      surface: AppBrandPalette.surface200,
-      onSurface: AppBrandPalette.secondary900,
+      surface: AppBrandPalette.background50,
+      onSurface: AppBrandPalette.ink,
       error: AppBrandPalette.error500,
       onError: AppBrandPalette.background50,
       errorContainer: AppBrandPalette.error100,
@@ -39,7 +40,7 @@ abstract final class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      fontFamily: 'Roboto',
+      fontFamily: GoogleFonts.inter().fontFamily,
       scaffoldBackgroundColor: AppBrandPalette.background50,
       colorScheme: colorScheme,
       dividerColor: AppBrandPalette.secondary200,
@@ -102,52 +103,73 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
       ),
       cardTheme: CardThemeData(
-        color: AppBrandPalette.surface200,
+        color: AppBrandPalette.background50,
         elevation: AppElevation.level0,
+        margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.radius12),
-          side: const BorderSide(color: AppBrandPalette.secondary200),
+          borderRadius: BorderRadius.circular(AppRadius.radius20),
+          side: BorderSide(
+            color: AppBrandPalette.secondary200.withValues(alpha: 0.6),
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppBrandPalette.surface200,
+        fillColor: AppBrandPalette.surface300,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.space16,
           vertical: AppSpacing.space16,
         ),
         hintStyle: const TextStyle(color: AppBrandPalette.secondary600),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.radius8),
-          borderSide: const BorderSide(color: AppBrandPalette.secondary200),
+          borderRadius: BorderRadius.circular(AppRadius.radius16),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.radius8),
-          borderSide: const BorderSide(color: AppBrandPalette.secondary200),
+          borderRadius: BorderRadius.circular(AppRadius.radius16),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.radius8),
+          borderRadius: BorderRadius.circular(AppRadius.radius16),
           borderSide: const BorderSide(
             color: AppBrandPalette.primary500,
             width: 2,
           ),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.radius8),
+          borderRadius: BorderRadius.circular(AppRadius.radius16),
           borderSide: const BorderSide(color: AppBrandPalette.error500),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.radius8),
+          borderRadius: BorderRadius.circular(AppRadius.radius16),
           borderSide: const BorderSide(
             color: AppBrandPalette.error500,
             width: 2,
           ),
         ),
         disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.radius8),
-          borderSide: BorderSide(
-            color: AppBrandPalette.secondary200.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(AppRadius.radius16),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppBrandPalette.primary500,
+          foregroundColor: AppBrandPalette.ink,
+          disabledBackgroundColor: AppBrandPalette.secondary200,
+          disabledForegroundColor: AppBrandPalette.secondary500,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.space16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.radius16),
           ),
+          textStyle: AppTypography.labelLarge,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppBrandPalette.primary700,
+          textStyle: AppTypography.labelLarge,
         ),
       ),
     );

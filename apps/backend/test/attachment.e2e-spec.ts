@@ -1,8 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AttachmentPresentationModule } from '../src/modules/attachment/presentation/attachment.module';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { ATTACHMENT_REPOSITORY } from '../src/modules/attachment/domain/interfaces/attachment-repository.interface';
 import { InMemoryAttachmentRepository } from '../src/modules/attachment/application/use_cases/test-support/in-memory-attachment.repository';
 import { MESSAGE_REPOSITORY } from '../src/modules/message/domain/interfaces/message-repository.interface';
@@ -49,6 +54,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
 describe('AttachmentController (e2e)', () => {
   let app: INestApplication<App>;
   let messageId: string;
+  let authHeader: string;
 
   beforeEach(async () => {
     const now = new Date();
@@ -67,7 +73,12 @@ describe('AttachmentController (e2e)', () => {
     messageId = message.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AttachmentPresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        AttachmentPresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(ATTACHMENT_REPOSITORY)
       .useValue(new InMemoryAttachmentRepository())
@@ -95,6 +106,8 @@ describe('AttachmentController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'test-identity', role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -115,6 +128,7 @@ describe('AttachmentController (e2e)', () => {
   it('POST /attachments creates an Attachment and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/attachments')
+      .set('Authorization', authHeader)
       .send(createAttachmentBody())
       .expect(201);
 
@@ -126,6 +140,7 @@ describe('AttachmentController (e2e)', () => {
   it('POST /attachments returns 404 when the Message does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/attachments')
+      .set('Authorization', authHeader)
       .send(createAttachmentBody({ messageId: 'unknown-message' }))
       .expect(404);
 
@@ -135,31 +150,37 @@ describe('AttachmentController (e2e)', () => {
   it('GET /attachments/:id returns 404 for an unknown id', async () => {
     await request(app.getHttpServer())
       .get('/attachments/unknown-id')
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
   it('DELETE /attachments/:id deletes an existing Attachment', async () => {
     const created = await request(app.getHttpServer())
       .post('/attachments')
+      .set('Authorization', authHeader)
       .send(createAttachmentBody());
     const createdId = (created.body as AttachmentResponseDto).id;
 
     await request(app.getHttpServer())
       .delete(`/attachments/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(200);
 
     await request(app.getHttpServer())
       .get(`/attachments/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
   it('GET /attachments lists Attachments page by page', async () => {
     await request(app.getHttpServer())
       .post('/attachments')
+      .set('Authorization', authHeader)
       .send(createAttachmentBody());
 
     const response = await request(app.getHttpServer())
       .get('/attachments')
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as AttachmentListResponseDto;
@@ -171,10 +192,12 @@ describe('AttachmentController (e2e)', () => {
   it('GET /attachments/search searches by file name', async () => {
     await request(app.getHttpServer())
       .post('/attachments')
+      .set('Authorization', authHeader)
       .send(createAttachmentBody());
 
     const response = await request(app.getHttpServer())
       .get('/attachments/search')
+      .set('Authorization', authHeader)
       .query({ term: 'photo' })
       .expect(200);
 

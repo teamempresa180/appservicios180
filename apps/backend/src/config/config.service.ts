@@ -54,4 +54,15 @@ export class ConfigService {
   get jwtAudience(): string {
     return this.env.JWT_AUDIENCE;
   }
+
+  /**
+   * `'*'` (reflect any origin) or a comma-separated allow-list. Parsed
+   * here rather than exposing the raw string so `main.ts` never
+   * touches `.split(',')` itself.
+   */
+  get corsOrigin(): string | string[] {
+    return this.env.CORS_ORIGIN === '*'
+      ? '*'
+      : this.env.CORS_ORIGIN.split(',').map((origin) => origin.trim());
+  }
 }

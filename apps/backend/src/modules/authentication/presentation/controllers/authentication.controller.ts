@@ -55,9 +55,13 @@ import { AuthSessionHttpMapper } from '../dto/auth-session-http.mapper';
  * before the dynamic `findOne(:id)` route so `GET /authentications/me`
  * resolves to `me()` rather than being matched as
  * `findOne({ id: 'me' })` — same reasoning as `search` in every other
- * module since Prompt 71. `me` is the only endpoint here guarded by
- * `JwtAuthGuard`; `login`/`refresh`/`logout` are intentionally public
- * (a caller without a token is exactly who needs them).
+ * module since Prompt 71. `login`/`refresh`/`logout` are intentionally
+ * public (a caller without a token is exactly who needs them); `me`
+ * and the CRUD endpoints for 2FA-method records
+ * (`create`/`update`/`delete`/`findOne`) all require `JwtAuthGuard`
+ * (Prompt 78, Security Hardening) — managing an Identity's
+ * authentication methods is not part of the public login/registration
+ * flow.
  */
 @ApiTags('Authentication')
 @Controller(AuthenticationRoutes.base)
@@ -73,6 +77,8 @@ export class AuthenticationController {
   ) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation(AuthenticationSwagger.create)
   @ApiResponse({
     status: 201,
@@ -99,6 +105,8 @@ export class AuthenticationController {
   }
 
   @Put(AuthenticationRoutes.byId)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation(AuthenticationSwagger.update)
   @ApiParam({ name: 'id', description: 'Authentication method id' })
   @ApiResponse({
@@ -127,6 +135,8 @@ export class AuthenticationController {
   }
 
   @Delete(AuthenticationRoutes.byId)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation(AuthenticationSwagger.delete)
   @ApiParam({ name: 'id', description: 'Authentication method id' })
   @ApiResponse({ status: 200, description: 'Authentication method deleted.' })
@@ -212,6 +222,8 @@ export class AuthenticationController {
   }
 
   @Get(AuthenticationRoutes.byId)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation(AuthenticationSwagger.get)
   @ApiParam({ name: 'id', description: 'Authentication method id' })
   @ApiResponse({

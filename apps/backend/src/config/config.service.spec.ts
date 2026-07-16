@@ -51,4 +51,25 @@ describe('ConfigService', () => {
     expect(config.jwtIssuer).toBe('issuer');
     expect(config.jwtAudience).toBe('audience');
   });
+
+  it('exposes corsOrigin as "*" by default', () => {
+    process.env.NODE_ENV = 'test';
+
+    const config = new ConfigService();
+
+    expect(config.corsOrigin).toBe('*');
+  });
+
+  it('parses a comma-separated CORS_ORIGIN into a trimmed array', () => {
+    process.env.NODE_ENV = 'test';
+    process.env.CORS_ORIGIN =
+      'https://app.example.com, https://admin.example.com';
+
+    const config = new ConfigService();
+
+    expect(config.corsOrigin).toEqual([
+      'https://app.example.com',
+      'https://admin.example.com',
+    ]);
+  });
 });

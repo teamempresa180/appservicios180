@@ -1,5 +1,15 @@
-import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
 import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -7,6 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { VerificationRoutes } from '../routes/verification.routes';
 import { VerificationSwagger } from '../swagger/verification.swagger';
 import { CreateVerificationUseCase } from '../../application/use_cases/create-verification.use-case';
@@ -42,6 +53,8 @@ import { VerificationHttpMapper } from '../dto/verification-http.mapper';
  * being matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Verification')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(VerificationRoutes.base)
 export class VerificationController {
   constructor(

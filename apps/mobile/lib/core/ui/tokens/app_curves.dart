@@ -7,9 +7,10 @@ import 'package:flutter/animation.dart';
 /// three widgets already used — this is a naming pass, not a visual
 /// change.
 abstract final class AppCurves {
-  /// Standard entrance/exit easing — symmetric deceleration. Used by
-  /// `FadeIn` and `SlideIn`.
-  static const Curve standard = Curves.easeOut;
+  /// Standard entrance/exit easing — a softer, more gradual deceleration
+  /// than `Curves.easeOut` (Apple-style redesign: fewer abrupt stops).
+  /// Used by `FadeIn` and `SlideIn`.
+  static const Curve standard = Curves.easeOutCubic;
 
   /// Playful overshoot easing for emphasis entrances (e.g. a card
   /// popping into place). Used by `ScaleIn`.

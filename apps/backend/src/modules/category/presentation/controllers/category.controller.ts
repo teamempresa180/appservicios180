@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  UseGuards,
   Delete,
   Get,
   Param,
@@ -9,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -16,6 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { CategoryRoutes } from '../routes/category.routes';
 import { CategorySwagger } from '../swagger/category.swagger';
 import { CreateCategoryUseCase } from '../../application/use_cases/create-category.use-case';
@@ -50,6 +53,8 @@ import { CategoryHttpMapper } from '../dto/category-http.mapper';
  * being matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Category')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(CategoryRoutes.base)
 export class CategoryController {
   constructor(

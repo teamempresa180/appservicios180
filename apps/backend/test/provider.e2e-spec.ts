@@ -2,6 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { PassportModule } from '@nestjs/passport';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { ProviderPresentationModule } from '../src/modules/provider/presentation/provider.module';
 import { PROVIDER_REPOSITORY } from '../src/modules/provider/domain/interfaces/provider-repository.interface';
 import { InMemoryProviderRepository } from '../src/modules/provider/application/use_cases/test-support/in-memory-provider.repository';
@@ -35,6 +40,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
  */
 describe('ProviderController (e2e)', () => {
   let app: INestApplication<App>;
+  let authHeader: string;
   let identityId: string;
   let profileId: string;
 
@@ -68,7 +74,12 @@ describe('ProviderController (e2e)', () => {
     profileId = profile.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [ProviderPresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        ProviderPresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(PROVIDER_REPOSITORY)
       .useValue(new InMemoryProviderRepository())
@@ -84,6 +95,8 @@ describe('ProviderController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -105,6 +118,7 @@ describe('ProviderController (e2e)', () => {
   it('POST /providers creates a Provider and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/providers')
+      .set('Authorization', authHeader)
       .send(createProviderBody())
       .expect(201);
 
@@ -116,6 +130,7 @@ describe('ProviderController (e2e)', () => {
   it('POST /providers returns 404 when the Identity does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/providers')
+      .set('Authorization', authHeader)
       .send(createProviderBody({ identityId: 'unknown-identity' }))
       .expect(404);
 
@@ -125,10 +140,12 @@ describe('ProviderController (e2e)', () => {
   it('POST /providers returns 422 when the Identity already has a Provider record', async () => {
     await request(app.getHttpServer())
       .post('/providers')
+      .set('Authorization', authHeader)
       .send(createProviderBody());
 
     const response = await request(app.getHttpServer())
       .post('/providers')
+      .set('Authorization', authHeader)
       .send(createProviderBody())
       .expect(422);
 
@@ -138,17 +155,22 @@ describe('ProviderController (e2e)', () => {
   });
 
   it('GET /providers/:id returns 404 for an unknown id', async () => {
-    await request(app.getHttpServer()).get('/providers/unknown-id').expect(404);
+    await request(app.getHttpServer())
+      .get('/providers/unknown-id')
+      .set('Authorization', authHeader)
+      .expect(404);
   });
 
   it('PUT /providers/:id updates the biography', async () => {
     const created = await request(app.getHttpServer())
       .post('/providers')
+      .set('Authorization', authHeader)
       .send(createProviderBody());
     const createdId = (created.body as ProviderResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/providers/${createdId}`)
+      .set('Authorization', authHeader)
       .send({ biography: 'Updated bio.' })
       .expect(200);
 
@@ -160,24 +182,29 @@ describe('ProviderController (e2e)', () => {
   it('DELETE /providers/:id deletes an existing Provider', async () => {
     const created = await request(app.getHttpServer())
       .post('/providers')
+      .set('Authorization', authHeader)
       .send(createProviderBody());
     const createdId = (created.body as ProviderResponseDto).id;
 
     await request(app.getHttpServer())
       .delete(`/providers/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(200);
     await request(app.getHttpServer())
       .get(`/providers/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
   it('GET /providers lists Providers page by page', async () => {
     await request(app.getHttpServer())
       .post('/providers')
+      .set('Authorization', authHeader)
       .send(createProviderBody());
 
     const response = await request(app.getHttpServer())
       .get('/providers')
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as ProviderListResponseDto;
@@ -189,10 +216,12 @@ describe('ProviderController (e2e)', () => {
   it('GET /providers/search searches by biography', async () => {
     await request(app.getHttpServer())
       .post('/providers')
+      .set('Authorization', authHeader)
       .send(createProviderBody());
 
     const response = await request(app.getHttpServer())
       .get('/providers/search')
+      .set('Authorization', authHeader)
       .query({ term: 'plumber' })
       .expect(200);
 

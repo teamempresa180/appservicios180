@@ -116,8 +116,16 @@ describe('AuthenticationController (e2e)', () => {
     return nestApp;
   }
 
+  let authHeader: string;
+
   beforeEach(async () => {
     app = await buildApp();
+
+    const login = await request(app.getHttpServer())
+      .post('/authentications/login')
+      .send({ documentNumber, password })
+      .expect(200);
+    authHeader = `Bearer ${(login.body as AuthTokensResponseDto).accessToken}`;
   });
 
   afterEach(async () => {
@@ -127,6 +135,7 @@ describe('AuthenticationController (e2e)', () => {
   it('POST /authentications creates an Authentication method and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/authentications')
+      .set('Authorization', authHeader)
       .send({ identityId, methodType: 'PASSWORD' })
       .expect(201);
 
@@ -138,6 +147,7 @@ describe('AuthenticationController (e2e)', () => {
   it('POST /authentications returns 404 when the Identity does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/authentications')
+      .set('Authorization', authHeader)
       .send({ identityId: 'unknown-identity', methodType: 'PASSWORD' })
       .expect(404);
 
@@ -147,17 +157,20 @@ describe('AuthenticationController (e2e)', () => {
   it('GET /authentications/:id returns 404 for an unknown id', async () => {
     await request(app.getHttpServer())
       .get('/authentications/unknown-id')
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
   it('PUT /authentications/:id updates the status', async () => {
     const created = await request(app.getHttpServer())
       .post('/authentications')
+      .set('Authorization', authHeader)
       .send({ identityId, methodType: 'PASSWORD' });
     const createdId = (created.body as AuthenticationResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/authentications/${createdId}`)
+      .set('Authorization', authHeader)
       .send({ status: 'LOCKED' })
       .expect(200);
 
@@ -167,15 +180,18 @@ describe('AuthenticationController (e2e)', () => {
   it('DELETE /authentications/:id deletes an existing Authentication method', async () => {
     const created = await request(app.getHttpServer())
       .post('/authentications')
+      .set('Authorization', authHeader)
       .send({ identityId, methodType: 'PASSWORD' });
     const createdId = (created.body as AuthenticationResponseDto).id;
 
     await request(app.getHttpServer())
       .delete(`/authentications/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(200);
 
     await request(app.getHttpServer())
       .get(`/authentications/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(404);
   });
 

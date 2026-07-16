@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  UseGuards,
   Delete,
   Get,
   Param,
@@ -9,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -16,6 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { NotificationRoutes } from '../routes/notification.routes';
 import { NotificationSwagger } from '../swagger/notification.swagger';
@@ -60,6 +63,8 @@ import { NotificationHttpMapper } from '../dto/notification-http.mapper';
  * being matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Notification')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(NotificationRoutes.base)
 export class NotificationController {
   constructor(

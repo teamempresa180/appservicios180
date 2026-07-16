@@ -4465,3 +4465,158 @@ Commit `d0d302a` consolidó el Prompt 76 (Fase 1 de esta sesión). Todo
 el trabajo nuevo del Prompt 77 permanece **sin commitear**, pendiente
 de aprobación: 38 archivos de documentación del backend, `pubspec.yaml`
 + `pubspec.lock` de Flutter, y este archivo (`PROJECT_STATUS.md`).
+
+## Estado del repositorio al cierre de esta sesión (Prompt 78 — Sprint 4 · Etapa Final, Security Hardening — consolidado)
+
+**El Prompt 77 fue aprobado por el usuario y consolidado en el Prompt 78**
+(commit `06f1dd9`, Fase 1 de esta sesión, excluyendo `Logo oficial
+grupo.svg`). Este prompt aplica la seguridad ya construida (JWT,
+Guards, RolesGuard) — sin agregar funcionalidades, sin tocar el
+dominio, sin cambiar contratos REST más allá de exigir autenticación
+donde corresponde.
+
+### Resumen de auditoría (Fase 2)
+
+Se recorrieron los 22 controllers del backend. El criterio: un
+endpoint es público solo si es parte del flujo de entrada sin sesión
+(login/refresh/logout, o el paso de registro — crear Identity y fijar
+su credencial de password); todo lo demás requiere sesión. No se
+inventó ninguna regla de negocio nueva para decidir esto — es
+exactamente la distinción "¿puede llamarse este endpoint sin haber
+iniciado sesión todavía?".
+
+### Endpoints públicos (sin guard)
+
+- `POST /authentications/login`
+- `POST /authentications/refresh`
+- `POST /authentications/logout`
+- `POST /identities` — paso de registro: una Identity nueva no tiene
+  credencial ni token todavía.
+- `POST /credentials` — mismo paso de registro: fija la credencial de
+  password inicial, antes de que exista ningún token.
+- `GET /docs` (Swagger UI) — no es un controller de dominio, sin
+  cambios.
+
+### Endpoints protegidos (`@UseGuards(JwtAuthGuard)`)
+
+- `GET /authentications/me` (ya estaba protegido desde el Prompt 74).
+- `POST/PUT/DELETE/GET(:id) /authentications` — CRUD de métodos 2FA,
+  no forma parte del flujo público de login/registro.
+- `PUT/DELETE/GET(:id) /identities` y `PUT/DELETE/GET(:id) /credentials`
+  — todo excepto el `create` de cada uno.
+- **Los 19 controllers restantes, completos** (todos sus endpoints):
+  Address, Attachment, Audit, Availability, Category, Chat, Contact,
+  Message, Notification, Order, Payment, Profile, Provider, Quote,
+  Review, Schedule, Service, Trust, Verification.
+
+### Endpoints con `RolesGuard`
+
+**Ninguno.** Se mantuvo exactamente la estrategia aprobada: el rol se
+sigue derivando de la existencia de un registro `Provider` (no hay
+tabla `Roles`, ni enum nuevo, ni columna `role` en `Identity` — nada
+de eso se tocó). `RolesGuard`/`@Roles(...)` ya existen desde el
+Prompt 74 pero no se aplicaron a ningún endpoint en este prompt: no
+existe ninguna regla de negocio ya definida en el dominio que diga
+"este endpoint es solo para Provider" o "solo para Customer" — inventar
+esa restricción ahora sería crear una regla de negocio nueva, que este
+prompt prohíbe explícitamente. Aplicar `RolesGuard` selectivamente
+queda como decisión de producto para un prompt futuro, una vez que
+exista esa regla.
+
+### Decisiones y hallazgos (Fases 3-8)
+
+- **Fase 3 (Guards)**: aplicados sin duplicar decorators — verificado
+  que ningún controller terminó con `@UseGuards(JwtAuthGuard)`
+  repetido a nivel de clase y de método simultáneamente. Los 19
+  controllers completamente protegidos lo llevan a nivel de clase; los
+  3 con endpoints mixtos (Identity/Credentials/Authentication) lo
+  llevan a nivel de método, solo en los que corresponde.
+- **Fase 5 (Hardening HTTP, `main.ts`)**: agregado sin dependencias
+  nuevas —
+  - **CORS configurable**: `app.enableCors({ origin: config.corsOrigin })`,
+    nueva variable `CORS_ORIGIN` (`ConfigService.corsOrigin`), por
+    defecto `'*'` — preserva exactamente el comportamiento anterior
+    (la app nunca tuvo política CORS, cualquier origen ya funcionaba);
+    configurable a una lista separada por comas en producción.
+  - **Cabeceras de seguridad**: middleware propio (sin `helmet`, que
+    requeriría instalar una dependencia nueva) fijando
+    `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+    `Referrer-Policy: no-referrer`.
+  - **Request ID**: middleware propio fijando `X-Request-Id` (reusa el
+    header del caller si ya trae uno, o genera uno con
+    `crypto.randomUUID()` — ya usado en `jwt-token.service.ts`).
+  - **Helmet / Compression**: NO agregados — ambos requieren instalar
+    una dependencia npm nueva, prohibido explícitamente por este
+    prompt. Documentado aquí en vez de aplicado.
+  - **Trust Proxy**: NO aplicado — no existe una topología de despliegue
+    conocida (¿hay un reverse proxy delante? ¿cuál?) para justificar
+    `app.set('trust proxy', ...)`; habilitarlo sin esa información
+    sería una suposición, no una corrección.
+- **Fase 6 (JWT)**: auditado de nuevo — expiraciones (`900s`/`7d`),
+  rotación de refresh, logout, revocación, secrets (nunca hardcodeados,
+  obligatorios en producción), sin problemas reales encontrados. Único
+  hallazgo menor: el `clockTolerance` de `passport-jwt` no está
+  configurado (por lo tanto `0`) — aceptable para un despliegue de un
+  solo servidor sin desfase de reloj entre nodos; no se cambió, porque
+  fijar un valor sería una decisión de producto sin problema real que
+  la motive.
+- **Fase 7 (Logs)**: auditado — `LoggingInterceptor` solo registra
+  método/ruta/duración, nunca el body. `DomainExceptionFilter`/
+  `AllExceptionsFilter` solo registran `exception.name`/`.message`/
+  `.stack`, nunca headers ni body. Ninguna fuga de password/hash/
+  tokens/secrets encontrada. Nada que corregir.
+- **Fase 8 (Excepciones)**: `DomainExceptionFilter.statusFor()` es el
+  único lugar que mapea excepción→código HTTP (404/400/422/401/403),
+  sin duplicación en ningún controller; `AllExceptionsFilter` cubre el
+  500 residual. Sin `409` explícito — el único escenario de "conflicto"
+  del dominio (`Provider` duplicado por `Identity`) ya usa `422`
+  (`BusinessRuleException`), una elección de modelado ya existente, no
+  tocada.
+- **Impacto en tests existentes**: los 22 nuevos `@UseGuards` rompieron
+  145 de los 160 tests e2e (todos los que llamaban un endpoint ahora
+  protegido sin token). Corregido agregando un helper compartido
+  (`test/support/sign-test-token.ts`) que firma un access token de
+  prueba con el mismo `ConfigService` que usa la app bajo prueba (no
+  uno nuevo — un `ConfigService` recién instanciado generaría su propio
+  secreto efímero distinto, y el token no validaría), y aplicándolo a
+  cada spec e2e afectado. Los endpoints de registro (`POST /identities`,
+  `POST /credentials`) se dejaron deliberadamente sin token en sus
+  tests, igual que antes.
+
+### Verificaciones finales — todo en verde
+
+```
+npm run build              ✅
+npm run lint                ✅ 0 errores
+npm test                    ✅ 181 suites, 871/871
+npm run test:e2e            ✅ 23 suites, 160/160
+npm run test:integration    ✅ 23 suites, 147/147
+flutter analyze             ✅ No issues found! (32 infos
+                                prefer_initializing_formals,
+                                inevitables, sin cambios)
+flutter test                 ✅ 750/750
+flutter build windows        ✅ Build exitoso (mobile.exe)
+```
+
+Flutter no requirió ningún cambio: `AuthInterceptor` ya adjunta el
+Bearer token en cada request desde el Prompt 75, y `AppRouteGuard` ya
+exige sesión iniciada para llegar a cualquier pantalla que dispare esas
+llamadas — los nuevos guards del backend no afectan un flujo que el
+cliente ya cumplía.
+
+### Estado de Docker
+
+Contenedor temporal `appservicios-pg-temp` reiniciado únicamente para
+`test:integration` (Fase 1 y Fase 9 de esta sesión) y detenido al
+cierre — sintético/desechable, sin datos reales.
+
+### Estado de git
+
+Commit `06f1dd9` consolidó el Prompt 77 (Fase 1 de esta sesión). Todo
+el trabajo nuevo del Prompt 78 permanece **sin commitear**, pendiente
+de aprobación: guards en los 22 controllers, `main.ts` (CORS/headers/
+request-id), `env.validation.ts`/`config.service.ts` (+ sus specs, la
+variable `CORS_ORIGIN`), `test/support/sign-test-token.ts` (nuevo), 22
+archivos `*.e2e-spec.ts` actualizados, y este archivo
+(`PROJECT_STATUS.md`). Ningún archivo de `apps/mobile` fue modificado
+en esta sesión.

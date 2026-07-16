@@ -1,7 +1,17 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Local-only secrets (Maps API key, etc.) — see android/secrets.properties,
+// gitignored, never committed.
+val secretsPropertiesFile = rootProject.file("secrets.properties")
+val secretsProperties = Properties()
+if (secretsPropertiesFile.exists()) {
+    secretsPropertiesFile.inputStream().use { secretsProperties.load(it) }
 }
 
 android {
@@ -23,6 +33,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        manifestPlaceholders["mapsApiKey"] =
+            secretsProperties.getProperty("mapsApiKey", "")
     }
 
     buildTypes {

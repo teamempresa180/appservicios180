@@ -1,8 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { MessagePresentationModule } from '../src/modules/message/presentation/message.module';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { MESSAGE_REPOSITORY } from '../src/modules/message/domain/interfaces/message-repository.interface';
 import { InMemoryMessageRepository } from '../src/modules/message/application/use_cases/test-support/in-memory-message.repository';
 import { CHAT_REPOSITORY } from '../src/modules/chat/domain/interfaces/chat-repository.interface';
@@ -51,6 +56,7 @@ describe('MessageController (e2e)', () => {
   let app: INestApplication<App>;
   let chatId: string;
   let identityId: string;
+  let authHeader: string;
 
   beforeEach(async () => {
     const now = new Date();
@@ -82,7 +88,12 @@ describe('MessageController (e2e)', () => {
     chatId = chat.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [MessagePresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        MessagePresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(MESSAGE_REPOSITORY)
       .useValue(new InMemoryMessageRepository())
@@ -108,6 +119,8 @@ describe('MessageController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -127,6 +140,7 @@ describe('MessageController (e2e)', () => {
   it('POST /messages sends a Message and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/messages')
+      .set('Authorization', authHeader)
       .send(sendMessageBody())
       .expect(201);
 
@@ -139,6 +153,7 @@ describe('MessageController (e2e)', () => {
   it('POST /messages returns 404 when the Chat does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/messages')
+      .set('Authorization', authHeader)
       .send(sendMessageBody({ chatId: 'unknown-chat' }))
       .expect(404);
 
@@ -146,31 +161,39 @@ describe('MessageController (e2e)', () => {
   });
 
   it('GET /messages/:id returns 404 for an unknown id', async () => {
-    await request(app.getHttpServer()).get('/messages/unknown-id').expect(404);
+    await request(app.getHttpServer())
+      .get('/messages/unknown-id')
+      .set('Authorization', authHeader)
+      .expect(404);
   });
 
   it('DELETE /messages/:id deletes an existing Message', async () => {
     const created = await request(app.getHttpServer())
       .post('/messages')
+      .set('Authorization', authHeader)
       .send(sendMessageBody());
     const createdId = (created.body as MessageResponseDto).id;
 
     await request(app.getHttpServer())
       .delete(`/messages/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(200);
 
     await request(app.getHttpServer())
       .get(`/messages/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
   it('GET /messages lists Messages page by page', async () => {
     await request(app.getHttpServer())
       .post('/messages')
+      .set('Authorization', authHeader)
       .send(sendMessageBody());
 
     const response = await request(app.getHttpServer())
       .get('/messages')
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as MessageListResponseDto;
@@ -182,10 +205,12 @@ describe('MessageController (e2e)', () => {
   it('GET /messages/search searches by content', async () => {
     await request(app.getHttpServer())
       .post('/messages')
+      .set('Authorization', authHeader)
       .send(sendMessageBody());
 
     const response = await request(app.getHttpServer())
       .get('/messages/search')
+      .set('Authorization', authHeader)
       .query({ term: 'minutes' })
       .expect(200);
 

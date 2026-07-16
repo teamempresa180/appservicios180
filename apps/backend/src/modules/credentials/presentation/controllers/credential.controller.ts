@@ -6,9 +6,17 @@ import {
   Param,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { CredentialRoutes } from '../routes/credential.routes';
 import { CredentialSwagger } from '../swagger/credential.swagger';
 import { CreateCredentialUseCase } from '../../application/use_cases/create-credential.use-case';
@@ -29,6 +37,12 @@ import { CredentialHttpMapper } from '../dto/credential-http.mapper';
  * here. Domain exceptions are translated to HTTP responses by the
  * global `DomainExceptionFilter`, registered in `main.ts` — this
  * controller never catches them itself.
+ *
+ * `create` is intentionally the one public (unguarded) endpoint here
+ * (Prompt 78, Security Hardening) — setting the initial password
+ * credential is part of the same registration step as
+ * `POST /identities`, before any token exists.
+ * `update`/`delete`/`findOne` all require an existing session.
  */
 @ApiTags('Credentials')
 @Controller(CredentialRoutes.base)
@@ -67,6 +81,8 @@ export class CredentialController {
   }
 
   @Put(CredentialRoutes.byId)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation(CredentialSwagger.update)
   @ApiParam({ name: 'id', description: 'Credential id' })
   @ApiResponse({
@@ -95,6 +111,8 @@ export class CredentialController {
   }
 
   @Delete(CredentialRoutes.byId)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation(CredentialSwagger.delete)
   @ApiParam({ name: 'id', description: 'Credential id' })
   @ApiResponse({ status: 200, description: 'Credential deleted.' })
@@ -108,6 +126,8 @@ export class CredentialController {
   }
 
   @Get(CredentialRoutes.byId)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation(CredentialSwagger.get)
   @ApiParam({ name: 'id', description: 'Credential id' })
   @ApiResponse({

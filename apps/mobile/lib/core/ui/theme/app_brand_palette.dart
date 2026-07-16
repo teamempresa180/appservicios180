@@ -14,6 +14,13 @@ import 'package:flutter/material.dart';
 /// the codebase referenced it.
 abstract final class AppBrandPalette {
   // ---------------------------------------------------------------
+  // Ink — Apple's "label" near-black (`#1C1C1E`), used for primary text
+  // on white instead of the warmer `secondary900` — the maximum-
+  // contrast look approved for the Apple-inspired redesign.
+  // ---------------------------------------------------------------
+  static const Color ink = Color(0xFF1C1C1E);
+
+  // ---------------------------------------------------------------
   // Primary — "Oro 180°". Traced to the logo's gold radial gradients
   // (terminal stop `#F0BF00`) and the "GRUPO EMPRESARIAL" wordmark
   // color (`#8E690D`), which becomes 900 exactly.

@@ -2,6 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { PassportModule } from '@nestjs/passport';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { OrderPresentationModule } from '../src/modules/order/presentation/order.module';
 import { ORDER_REPOSITORY } from '../src/modules/order/domain/interfaces/order-repository.interface';
 import { InMemoryOrderRepository } from '../src/modules/order/application/use_cases/test-support/in-memory-order.repository';
@@ -51,6 +56,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
  */
 describe('OrderController (e2e)', () => {
   let app: INestApplication<App>;
+  let authHeader: string;
   let identityId: string;
   let providerId: string;
   let serviceId: string;
@@ -104,7 +110,12 @@ describe('OrderController (e2e)', () => {
     serviceId = service.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [OrderPresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        OrderPresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(ORDER_REPOSITORY)
       .useValue(new InMemoryOrderRepository())
@@ -126,6 +137,8 @@ describe('OrderController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -149,6 +162,7 @@ describe('OrderController (e2e)', () => {
   it('POST /orders creates an Order and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/orders')
+      .set('Authorization', authHeader)
       .send(createOrderBody())
       .expect(201);
 
@@ -160,6 +174,7 @@ describe('OrderController (e2e)', () => {
   it('POST /orders returns 404 when the Identity does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/orders')
+      .set('Authorization', authHeader)
       .send(createOrderBody({ identityId: 'unknown-identity' }))
       .expect(404);
 
@@ -167,17 +182,22 @@ describe('OrderController (e2e)', () => {
   });
 
   it('GET /orders/:id returns 404 for an unknown id', async () => {
-    await request(app.getHttpServer()).get('/orders/unknown-id').expect(404);
+    await request(app.getHttpServer())
+      .get('/orders/unknown-id')
+      .set('Authorization', authHeader)
+      .expect(404);
   });
 
   it('PUT /orders/:id updates the title', async () => {
     const created = await request(app.getHttpServer())
       .post('/orders')
+      .set('Authorization', authHeader)
       .send(createOrderBody());
     const createdId = (created.body as OrderResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/orders/${createdId}`)
+      .set('Authorization', authHeader)
       .send({ title: 'Updated Title' })
       .expect(200);
 
@@ -187,21 +207,27 @@ describe('OrderController (e2e)', () => {
   it('PUT /orders/:id/cancel cancels an existing Order', async () => {
     const created = await request(app.getHttpServer())
       .post('/orders')
+      .set('Authorization', authHeader)
       .send(createOrderBody());
     const createdId = (created.body as OrderResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/orders/${createdId}/cancel`)
+      .set('Authorization', authHeader)
       .expect(200);
 
     expect((response.body as OrderResponseDto).status).toBe('CANCELLED');
   });
 
   it('GET /orders lists Orders page by page', async () => {
-    await request(app.getHttpServer()).post('/orders').send(createOrderBody());
+    await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', authHeader)
+      .send(createOrderBody());
 
     const response = await request(app.getHttpServer())
       .get('/orders')
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as OrderListResponseDto;
@@ -211,10 +237,14 @@ describe('OrderController (e2e)', () => {
   });
 
   it('GET /orders/search searches by title', async () => {
-    await request(app.getHttpServer()).post('/orders').send(createOrderBody());
+    await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', authHeader)
+      .send(createOrderBody());
 
     const response = await request(app.getHttpServer())
       .get('/orders/search')
+      .set('Authorization', authHeader)
       .query({ term: 'faucet' })
       .expect(200);
 

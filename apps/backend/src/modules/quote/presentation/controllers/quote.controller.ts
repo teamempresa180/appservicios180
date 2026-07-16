@@ -1,5 +1,15 @@
-import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
 import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -7,6 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { QuoteRoutes } from '../routes/quote.routes';
 import { QuoteSwagger } from '../swagger/quote.swagger';
@@ -52,6 +63,8 @@ import { QuoteHttpMapper } from '../dto/quote-http.mapper';
  * matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Quote')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(QuoteRoutes.base)
 export class QuoteController {
   constructor(

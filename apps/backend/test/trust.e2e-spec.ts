@@ -1,8 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { TrustPresentationModule } from '../src/modules/trust/presentation/trust.module';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { TRUST_REPOSITORY } from '../src/modules/trust/domain/interfaces/trust-repository.interface';
 import { InMemoryTrustRepository } from '../src/modules/trust/application/use_cases/test-support/in-memory-trust.repository';
 import { IDENTITY_REPOSITORY } from '../src/modules/identity/domain/interfaces/identity-repository.interface';
@@ -31,6 +36,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
 describe('TrustController (e2e)', () => {
   let app: INestApplication<App>;
   let identityId: string;
+  let authHeader: string;
 
   beforeEach(async () => {
     const identityRepository = new InMemoryIdentityRepository();
@@ -48,7 +54,12 @@ describe('TrustController (e2e)', () => {
     identityId = identity.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [TrustPresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        TrustPresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(TRUST_REPOSITORY)
       .useValue(new InMemoryTrustRepository())
@@ -62,6 +73,8 @@ describe('TrustController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -71,6 +84,7 @@ describe('TrustController (e2e)', () => {
   it('POST /trust-profiles creates a Trust profile and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/trust-profiles')
+      .set('Authorization', authHeader)
       .send({ identityId, score: 75, level: TrustLevel.High })
       .expect(201);
 
@@ -82,6 +96,7 @@ describe('TrustController (e2e)', () => {
   it('POST /trust-profiles returns 404 when the Identity does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/trust-profiles')
+      .set('Authorization', authHeader)
       .send({
         identityId: 'unknown-identity',
         score: 75,
@@ -95,10 +110,12 @@ describe('TrustController (e2e)', () => {
   it('POST /trust-profiles returns 422 when the Identity already has a Trust profile', async () => {
     await request(app.getHttpServer())
       .post('/trust-profiles')
+      .set('Authorization', authHeader)
       .send({ identityId, score: 75, level: TrustLevel.High });
 
     const response = await request(app.getHttpServer())
       .post('/trust-profiles')
+      .set('Authorization', authHeader)
       .send({ identityId, score: 50, level: TrustLevel.Medium })
       .expect(422);
 
@@ -110,17 +127,20 @@ describe('TrustController (e2e)', () => {
   it('GET /trust-profiles/:id returns 404 for an unknown id', async () => {
     await request(app.getHttpServer())
       .get('/trust-profiles/unknown-id')
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
   it('PUT /trust-profiles/:id updates the score', async () => {
     const created = await request(app.getHttpServer())
       .post('/trust-profiles')
+      .set('Authorization', authHeader)
       .send({ identityId, score: 75, level: TrustLevel.High });
     const createdId = (created.body as TrustResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/trust-profiles/${createdId}`)
+      .set('Authorization', authHeader)
       .send({ score: 90 })
       .expect(200);
 
@@ -130,10 +150,12 @@ describe('TrustController (e2e)', () => {
   it('GET /trust-profiles lists Trust profiles page by page', async () => {
     await request(app.getHttpServer())
       .post('/trust-profiles')
+      .set('Authorization', authHeader)
       .send({ identityId, score: 75, level: TrustLevel.High });
 
     const response = await request(app.getHttpServer())
       .get('/trust-profiles')
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as TrustListResponseDto;
@@ -145,10 +167,12 @@ describe('TrustController (e2e)', () => {
   it('GET /trust-profiles/search searches by level', async () => {
     await request(app.getHttpServer())
       .post('/trust-profiles')
+      .set('Authorization', authHeader)
       .send({ identityId, score: 75, level: TrustLevel.High });
 
     const response = await request(app.getHttpServer())
       .get('/trust-profiles/search')
+      .set('Authorization', authHeader)
       .query({ term: 'HIGH' })
       .expect(200);
 

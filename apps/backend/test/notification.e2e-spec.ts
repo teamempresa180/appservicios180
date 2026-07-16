@@ -2,6 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { PassportModule } from '@nestjs/passport';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { NotificationPresentationModule } from '../src/modules/notification/presentation/notification.module';
 import { NOTIFICATION_REPOSITORY } from '../src/modules/notification/domain/interfaces/notification-repository.interface';
 import { InMemoryNotificationRepository } from '../src/modules/notification/application/use_cases/test-support/in-memory-notification.repository';
@@ -27,6 +32,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
  */
 describe('NotificationController (e2e)', () => {
   let app: INestApplication<App>;
+  let authHeader: string;
   let identityId: string;
 
   beforeEach(async () => {
@@ -46,7 +52,12 @@ describe('NotificationController (e2e)', () => {
     identityId = identity.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [NotificationPresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        NotificationPresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(NOTIFICATION_REPOSITORY)
       .useValue(new InMemoryNotificationRepository())
@@ -60,6 +71,8 @@ describe('NotificationController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -79,6 +92,7 @@ describe('NotificationController (e2e)', () => {
   it('POST /notifications creates a Notification and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/notifications')
+      .set('Authorization', authHeader)
       .send(createNotificationBody())
       .expect(201);
 
@@ -91,6 +105,7 @@ describe('NotificationController (e2e)', () => {
   it('POST /notifications returns 404 when the Identity does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/notifications')
+      .set('Authorization', authHeader)
       .send(createNotificationBody({ identityId: 'unknown-identity' }))
       .expect(404);
 
@@ -100,17 +115,20 @@ describe('NotificationController (e2e)', () => {
   it('GET /notifications/:id returns 404 for an unknown id', async () => {
     await request(app.getHttpServer())
       .get('/notifications/unknown-id')
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
   it('PUT /notifications/:id/read marks an existing Notification as read', async () => {
     const created = await request(app.getHttpServer())
       .post('/notifications')
+      .set('Authorization', authHeader)
       .send(createNotificationBody());
     const createdId = (created.body as NotificationResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/notifications/${createdId}/read`)
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as NotificationResponseDto;
@@ -121,25 +139,30 @@ describe('NotificationController (e2e)', () => {
   it('DELETE /notifications/:id deletes an existing Notification', async () => {
     const created = await request(app.getHttpServer())
       .post('/notifications')
+      .set('Authorization', authHeader)
       .send(createNotificationBody());
     const createdId = (created.body as NotificationResponseDto).id;
 
     await request(app.getHttpServer())
       .delete(`/notifications/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(200);
 
     await request(app.getHttpServer())
       .get(`/notifications/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
   it('GET /notifications lists Notifications page by page', async () => {
     await request(app.getHttpServer())
       .post('/notifications')
+      .set('Authorization', authHeader)
       .send(createNotificationBody());
 
     const response = await request(app.getHttpServer())
       .get('/notifications')
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as NotificationListResponseDto;
@@ -151,10 +174,12 @@ describe('NotificationController (e2e)', () => {
   it('GET /notifications/search searches by title/body', async () => {
     await request(app.getHttpServer())
       .post('/notifications')
+      .set('Authorization', authHeader)
       .send(createNotificationBody());
 
     const response = await request(app.getHttpServer())
       .get('/notifications/search')
+      .set('Authorization', authHeader)
       .query({ term: 'order' })
       .expect(200);
 

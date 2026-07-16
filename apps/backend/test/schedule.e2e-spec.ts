@@ -1,8 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { SchedulePresentationModule } from '../src/modules/schedule/presentation/schedule.module';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { SCHEDULE_REPOSITORY } from '../src/modules/schedule/domain/interfaces/schedule-repository.interface';
 import { InMemoryScheduleRepository } from '../src/modules/schedule/application/use_cases/test-support/in-memory-schedule.repository';
 import { PROVIDER_REPOSITORY } from '../src/modules/provider/domain/interfaces/provider-repository.interface';
@@ -40,6 +45,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
 describe('ScheduleController (e2e)', () => {
   let app: INestApplication<App>;
   let providerId: string;
+  let authHeader: string;
 
   beforeEach(async () => {
     const now = new Date();
@@ -59,7 +65,12 @@ describe('ScheduleController (e2e)', () => {
     providerId = provider.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [SchedulePresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        SchedulePresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(SCHEDULE_REPOSITORY)
       .useValue(new InMemoryScheduleRepository())
@@ -77,6 +88,8 @@ describe('ScheduleController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'test-identity', role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -96,6 +109,7 @@ describe('ScheduleController (e2e)', () => {
   it('POST /schedules creates a Schedule block and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/schedules')
+      .set('Authorization', authHeader)
       .send(createScheduleBody())
       .expect(201);
 
@@ -107,6 +121,7 @@ describe('ScheduleController (e2e)', () => {
   it('POST /schedules returns 404 when the Provider does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/schedules')
+      .set('Authorization', authHeader)
       .send(createScheduleBody({ providerId: 'unknown-provider' }))
       .expect(404);
 
@@ -114,17 +129,22 @@ describe('ScheduleController (e2e)', () => {
   });
 
   it('GET /schedules/:id returns 404 for an unknown id', async () => {
-    await request(app.getHttpServer()).get('/schedules/unknown-id').expect(404);
+    await request(app.getHttpServer())
+      .get('/schedules/unknown-id')
+      .set('Authorization', authHeader)
+      .expect(404);
   });
 
   it('PUT /schedules/:id updates the status', async () => {
     const created = await request(app.getHttpServer())
       .post('/schedules')
+      .set('Authorization', authHeader)
       .send(createScheduleBody());
     const createdId = (created.body as ScheduleResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/schedules/${createdId}`)
+      .set('Authorization', authHeader)
       .send({ status: 'CANCELLED' })
       .expect(200);
 
@@ -134,24 +154,29 @@ describe('ScheduleController (e2e)', () => {
   it('DELETE /schedules/:id deletes an existing Schedule block', async () => {
     const created = await request(app.getHttpServer())
       .post('/schedules')
+      .set('Authorization', authHeader)
       .send(createScheduleBody());
     const createdId = (created.body as ScheduleResponseDto).id;
 
     await request(app.getHttpServer())
       .delete(`/schedules/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(200);
     await request(app.getHttpServer())
       .get(`/schedules/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
   it('GET /schedules lists Schedule blocks page by page', async () => {
     await request(app.getHttpServer())
       .post('/schedules')
+      .set('Authorization', authHeader)
       .send(createScheduleBody());
 
     const response = await request(app.getHttpServer())
       .get('/schedules')
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as ScheduleListResponseDto;
@@ -163,10 +188,12 @@ describe('ScheduleController (e2e)', () => {
   it('GET /schedules/search searches by type', async () => {
     await request(app.getHttpServer())
       .post('/schedules')
+      .set('Authorization', authHeader)
       .send(createScheduleBody());
 
     const response = await request(app.getHttpServer())
       .get('/schedules/search')
+      .set('Authorization', authHeader)
       .query({ term: 'REGULAR' })
       .expect(200);
 

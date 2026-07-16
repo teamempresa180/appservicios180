@@ -19,10 +19,11 @@ describe('validateEnv', () => {
       JWT_REFRESH_EXPIRES_IN: '7d',
       JWT_ISSUER: 'servicios180-api',
       JWT_AUDIENCE: 'servicios180-clients',
+      CORS_ORIGIN: '*',
     });
   });
 
-  it('defaults NODE_ENV, PORT, DATABASE_URL and JWT settings when absent', () => {
+  it('defaults NODE_ENV, PORT, DATABASE_URL, JWT and CORS settings when absent', () => {
     const result = validateEnv({});
     expect(result.NODE_ENV).toBe('development');
     expect(result.PORT).toBe(3000);
@@ -33,6 +34,16 @@ describe('validateEnv', () => {
     expect(result.JWT_REFRESH_EXPIRES_IN).toBe('7d');
     expect(result.JWT_ISSUER).toBe('servicios180-api');
     expect(result.JWT_AUDIENCE).toBe('servicios180-clients');
+    expect(result.CORS_ORIGIN).toBe('*');
+  });
+
+  it('uses a provided CORS_ORIGIN instead of the default', () => {
+    const result = validateEnv({
+      CORS_ORIGIN: 'https://app.example.com,https://admin.example.com',
+    });
+    expect(result.CORS_ORIGIN).toBe(
+      'https://app.example.com,https://admin.example.com',
+    );
   });
 
   it('generates an ephemeral JWT_ACCESS_SECRET/JWT_REFRESH_SECRET outside production when absent', () => {

@@ -1,8 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AddressPresentationModule } from '../src/modules/address/presentation/address.module';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { ADDRESS_REPOSITORY } from '../src/modules/address/domain/interfaces/address-repository.interface';
 import { InMemoryAddressRepository } from '../src/modules/address/application/use_cases/test-support/in-memory-address.repository';
 import { IDENTITY_REPOSITORY } from '../src/modules/identity/domain/interfaces/identity-repository.interface';
@@ -28,6 +33,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
 describe('AddressController (e2e)', () => {
   let app: INestApplication<App>;
   let identityId: string;
+  let authHeader: string;
 
   beforeEach(async () => {
     const identityRepository = new InMemoryIdentityRepository();
@@ -45,7 +51,12 @@ describe('AddressController (e2e)', () => {
     identityId = identity.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AddressPresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        AddressPresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(ADDRESS_REPOSITORY)
       .useValue(new InMemoryAddressRepository())
@@ -59,6 +70,8 @@ describe('AddressController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -82,6 +95,7 @@ describe('AddressController (e2e)', () => {
   it('POST /addresses creates an Address and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/addresses')
+      .set('Authorization', authHeader)
       .send(createAddressBody())
       .expect(201);
 
@@ -94,6 +108,7 @@ describe('AddressController (e2e)', () => {
   it('POST /addresses returns 404 when the Identity does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/addresses')
+      .set('Authorization', authHeader)
       .send(createAddressBody({ identityId: 'unknown-identity' }))
       .expect(404);
 
@@ -101,17 +116,22 @@ describe('AddressController (e2e)', () => {
   });
 
   it('GET /addresses/:id returns 404 for an unknown id', async () => {
-    await request(app.getHttpServer()).get('/addresses/unknown-id').expect(404);
+    await request(app.getHttpServer())
+      .get('/addresses/unknown-id')
+      .set('Authorization', authHeader)
+      .expect(404);
   });
 
   it('PUT /addresses/:id updates the alias', async () => {
     const created = await request(app.getHttpServer())
       .post('/addresses')
+      .set('Authorization', authHeader)
       .send(createAddressBody());
     const createdId = (created.body as AddressResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/addresses/${createdId}`)
+      .set('Authorization', authHeader)
       .send({ alias: 'Updated Alias' })
       .expect(200);
 
@@ -121,24 +141,29 @@ describe('AddressController (e2e)', () => {
   it('DELETE /addresses/:id deletes an existing Address', async () => {
     const created = await request(app.getHttpServer())
       .post('/addresses')
+      .set('Authorization', authHeader)
       .send(createAddressBody());
     const createdId = (created.body as AddressResponseDto).id;
 
     await request(app.getHttpServer())
       .delete(`/addresses/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(200);
     await request(app.getHttpServer())
       .get(`/addresses/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
   it('GET /addresses lists Addresses page by page', async () => {
     await request(app.getHttpServer())
       .post('/addresses')
+      .set('Authorization', authHeader)
       .send(createAddressBody());
 
     const response = await request(app.getHttpServer())
       .get('/addresses')
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as AddressListResponseDto;
@@ -150,10 +175,12 @@ describe('AddressController (e2e)', () => {
   it('GET /addresses/search searches by city', async () => {
     await request(app.getHttpServer())
       .post('/addresses')
+      .set('Authorization', authHeader)
       .send(createAddressBody());
 
     const response = await request(app.getHttpServer())
       .get('/addresses/search')
+      .set('Authorization', authHeader)
       .query({ term: 'Bogotá' })
       .expect(200);
 

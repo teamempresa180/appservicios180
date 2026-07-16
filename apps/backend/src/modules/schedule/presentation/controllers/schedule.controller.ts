@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  UseGuards,
   Delete,
   Get,
   Param,
@@ -9,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -16,6 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { ScheduleRoutes } from '../routes/schedule.routes';
 import { ScheduleSwagger } from '../swagger/schedule.swagger';
 import { CreateScheduleUseCase } from '../../application/use_cases/create-schedule.use-case';
@@ -50,6 +53,8 @@ import { ScheduleHttpMapper } from '../dto/schedule-http.mapper';
  * matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Schedule')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(ScheduleRoutes.base)
 export class ScheduleController {
   constructor(

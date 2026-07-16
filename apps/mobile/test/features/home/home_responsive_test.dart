@@ -18,12 +18,13 @@ void main() {
 
   testWidgets('Cliente content has no overflow at 320px width', (tester) async {
     await setSurfaceSize(tester, const Size(320, 640));
+    // Unlike Proveedor content, Cliente content (map + static floating
+    // panel) is not meant to scroll — it fills the bounded Scaffold
+    // body directly, exactly like it's actually hosted in `HomePage`.
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
-        home: const Scaffold(
-          body: SingleChildScrollView(child: ClientHomeContent()),
-        ),
+        home: const Scaffold(body: ClientHomeContent()),
       ),
     );
     await tester.pumpAndSettle();

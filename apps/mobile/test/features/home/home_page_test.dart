@@ -18,8 +18,7 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Hola'), findsOneWidget);
-    expect(find.text('María'), findsOneWidget);
+    expect(find.text('Hola, María'), findsOneWidget);
     expect(find.text('¿Qué servicio necesitas hoy?'), findsOneWidget);
     expect(find.text('Categorías rápidas'), findsOneWidget);
     expect(find.text('Plomería'), findsOneWidget);
@@ -27,7 +26,6 @@ void main() {
     expect(find.text('Limpieza'), findsOneWidget);
     expect(find.text('Jardinería'), findsOneWidget);
     expect(find.text('Pintura'), findsOneWidget);
-    expect(find.text('Servicios recientes'), findsOneWidget);
 
     // Proveedor-only content must not be present.
     expect(find.text('Resumen rápido'), findsNothing);

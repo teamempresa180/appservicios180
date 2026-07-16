@@ -20,12 +20,18 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     const role = MockUserRole.current;
 
-    return AppPageBody(
-      header: const HomeHeader(role: role),
-      body: switch (role) {
-        UserRole.client => const ClientHomeContent(),
-        UserRole.provider => const ProviderHomeContent(),
-      },
-    );
+    // Cliente Home is a full-bleed map + floating panel (see
+    // `ClientHomeContent`) — it needs the bounded, non-scrolling space
+    // `AppShellPage`'s Scaffold body already provides, so it bypasses
+    // `AppPageBody`'s scrolling header+body wrapper (and `HomeHeader`,
+    // which `ClientHomeContent` replaces with its own floating greeting
+    // pill). Proveedor Home is unaffected.
+    return switch (role) {
+      UserRole.client => const ClientHomeContent(),
+      UserRole.provider => const AppPageBody(
+        header: HomeHeader(role: role),
+        body: ProviderHomeContent(),
+      ),
+    };
   }
 }

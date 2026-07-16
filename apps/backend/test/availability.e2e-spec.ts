@@ -1,8 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AvailabilityPresentationModule } from '../src/modules/availability/presentation/availability.module';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { AVAILABILITY_REPOSITORY } from '../src/modules/availability/domain/interfaces/availability-repository.interface';
 import { InMemoryAvailabilityRepository } from '../src/modules/availability/application/use_cases/test-support/in-memory-availability.repository';
 import { PROVIDER_REPOSITORY } from '../src/modules/provider/domain/interfaces/provider-repository.interface';
@@ -40,6 +45,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
 describe('AvailabilityController (e2e)', () => {
   let app: INestApplication<App>;
   let providerId: string;
+  let authHeader: string;
 
   beforeEach(async () => {
     const now = new Date();
@@ -59,7 +65,12 @@ describe('AvailabilityController (e2e)', () => {
     providerId = provider.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AvailabilityPresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        AvailabilityPresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(AVAILABILITY_REPOSITORY)
       .useValue(new InMemoryAvailabilityRepository())
@@ -77,6 +88,8 @@ describe('AvailabilityController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'test-identity', role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -96,6 +109,7 @@ describe('AvailabilityController (e2e)', () => {
   it('POST /availabilities creates an Availability and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/availabilities')
+      .set('Authorization', authHeader)
       .send(createAvailabilityBody())
       .expect(201);
 
@@ -107,6 +121,7 @@ describe('AvailabilityController (e2e)', () => {
   it('POST /availabilities returns 404 when the Provider does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/availabilities')
+      .set('Authorization', authHeader)
       .send(createAvailabilityBody({ providerId: 'unknown-provider' }))
       .expect(404);
 
@@ -116,6 +131,7 @@ describe('AvailabilityController (e2e)', () => {
   it('POST /availabilities returns 400 when availableFrom is after availableTo', async () => {
     const response = await request(app.getHttpServer())
       .post('/availabilities')
+      .set('Authorization', authHeader)
       .send(
         createAvailabilityBody({
           availableFrom: '2026-01-01T18:00:00.000Z',
@@ -132,17 +148,20 @@ describe('AvailabilityController (e2e)', () => {
   it('GET /availabilities/:id returns 404 for an unknown id', async () => {
     await request(app.getHttpServer())
       .get('/availabilities/unknown-id')
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
   it('PUT /availabilities/:id updates the status', async () => {
     const created = await request(app.getHttpServer())
       .post('/availabilities')
+      .set('Authorization', authHeader)
       .send(createAvailabilityBody());
     const createdId = (created.body as AvailabilityResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/availabilities/${createdId}`)
+      .set('Authorization', authHeader)
       .send({ status: 'INACTIVE' })
       .expect(200);
 
@@ -152,24 +171,29 @@ describe('AvailabilityController (e2e)', () => {
   it('DELETE /availabilities/:id deletes an existing Availability', async () => {
     const created = await request(app.getHttpServer())
       .post('/availabilities')
+      .set('Authorization', authHeader)
       .send(createAvailabilityBody());
     const createdId = (created.body as AvailabilityResponseDto).id;
 
     await request(app.getHttpServer())
       .delete(`/availabilities/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(200);
     await request(app.getHttpServer())
       .get(`/availabilities/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
   it('GET /availabilities lists Availabilities page by page', async () => {
     await request(app.getHttpServer())
       .post('/availabilities')
+      .set('Authorization', authHeader)
       .send(createAvailabilityBody());
 
     const response = await request(app.getHttpServer())
       .get('/availabilities')
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as AvailabilityListResponseDto;
@@ -181,10 +205,12 @@ describe('AvailabilityController (e2e)', () => {
   it('GET /availabilities/search searches by type', async () => {
     await request(app.getHttpServer())
       .post('/availabilities')
+      .set('Authorization', authHeader)
       .send(createAvailabilityBody());
 
     const response = await request(app.getHttpServer())
       .get('/availabilities/search')
+      .set('Authorization', authHeader)
       .query({ term: 'FULL_TIME' })
       .expect(200);
 

@@ -1,8 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { VerificationPresentationModule } from '../src/modules/verification/presentation/verification.module';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { VERIFICATION_REPOSITORY } from '../src/modules/verification/domain/interfaces/verification-repository.interface';
 import { InMemoryVerificationRepository } from '../src/modules/verification/application/use_cases/test-support/in-memory-verification.repository';
 import { IDENTITY_REPOSITORY } from '../src/modules/identity/domain/interfaces/identity-repository.interface';
@@ -29,6 +34,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
 describe('VerificationController (e2e)', () => {
   let app: INestApplication<App>;
   let identityId: string;
+  let authHeader: string;
 
   beforeEach(async () => {
     const identityRepository = new InMemoryIdentityRepository();
@@ -46,7 +52,12 @@ describe('VerificationController (e2e)', () => {
     identityId = identity.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [VerificationPresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        VerificationPresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(VERIFICATION_REPOSITORY)
       .useValue(new InMemoryVerificationRepository())
@@ -60,6 +71,8 @@ describe('VerificationController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -69,6 +82,7 @@ describe('VerificationController (e2e)', () => {
   it('POST /verifications creates a Verification and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/verifications')
+      .set('Authorization', authHeader)
       .send({ identityId, type: VerificationType.Document })
       .expect(201);
 
@@ -81,6 +95,7 @@ describe('VerificationController (e2e)', () => {
   it('POST /verifications returns 404 when the Identity does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/verifications')
+      .set('Authorization', authHeader)
       .send({ identityId: 'unknown-identity', type: VerificationType.Document })
       .expect(404);
 
@@ -90,17 +105,20 @@ describe('VerificationController (e2e)', () => {
   it('GET /verifications/:id returns 404 for an unknown id', async () => {
     await request(app.getHttpServer())
       .get('/verifications/unknown-id')
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
   it('PUT /verifications/:id updates the status', async () => {
     const created = await request(app.getHttpServer())
       .post('/verifications')
+      .set('Authorization', authHeader)
       .send({ identityId, type: VerificationType.Document });
     const createdId = (created.body as VerificationResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/verifications/${createdId}`)
+      .set('Authorization', authHeader)
       .send({ status: 'APPROVED' })
       .expect(200);
 
@@ -110,10 +128,12 @@ describe('VerificationController (e2e)', () => {
   it('GET /verifications lists Verifications page by page', async () => {
     await request(app.getHttpServer())
       .post('/verifications')
+      .set('Authorization', authHeader)
       .send({ identityId, type: VerificationType.Document });
 
     const response = await request(app.getHttpServer())
       .get('/verifications')
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as VerificationListResponseDto;
@@ -125,10 +145,12 @@ describe('VerificationController (e2e)', () => {
   it('GET /verifications/search searches by type', async () => {
     await request(app.getHttpServer())
       .post('/verifications')
+      .set('Authorization', authHeader)
       .send({ identityId, type: VerificationType.Document });
 
     const response = await request(app.getHttpServer())
       .get('/verifications/search')
+      .set('Authorization', authHeader)
       .query({ term: 'DOCUMENT' })
       .expect(200);
 

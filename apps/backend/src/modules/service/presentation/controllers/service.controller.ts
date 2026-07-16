@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  UseGuards,
   Delete,
   Get,
   Param,
@@ -9,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -16,6 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { ServiceRoutes } from '../routes/service.routes';
 import { ServiceSwagger } from '../swagger/service.swagger';
 import { CreateServiceUseCase } from '../../application/use_cases/create-service.use-case';
@@ -51,6 +54,8 @@ import { ServiceHttpMapper } from '../dto/service-http.mapper';
  * matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Service')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(ServiceRoutes.base)
 export class ServiceController {
   constructor(

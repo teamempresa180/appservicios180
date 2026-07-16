@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  UseGuards,
   Delete,
   Get,
   Param,
@@ -9,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -16,6 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { AddressRoutes } from '../routes/address.routes';
 import { AddressSwagger } from '../swagger/address.swagger';
 import { CreateAddressUseCase } from '../../application/use_cases/create-address.use-case';
@@ -48,6 +51,8 @@ import { AddressHttpMapper } from '../dto/address-http.mapper';
  * matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Address')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(AddressRoutes.base)
 export class AddressController {
   constructor(

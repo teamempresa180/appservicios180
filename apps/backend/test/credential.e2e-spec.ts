@@ -1,8 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { CredentialsPresentationModule } from '../src/modules/credentials/presentation/credential.module';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { CREDENTIAL_REPOSITORY } from '../src/modules/credentials/domain/interfaces/credential-repository.interface';
 import { InMemoryCredentialRepository } from '../src/modules/credentials/application/use_cases/test-support/in-memory-credential.repository';
 import { IDENTITY_REPOSITORY } from '../src/modules/identity/domain/interfaces/identity-repository.interface';
@@ -26,6 +31,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
 describe('CredentialController (e2e)', () => {
   let app: INestApplication<App>;
   let identityId: string;
+  let authHeader: string;
 
   beforeEach(async () => {
     const identityRepository = new InMemoryIdentityRepository();
@@ -43,7 +49,12 @@ describe('CredentialController (e2e)', () => {
     identityId = identity.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [CredentialsPresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        CredentialsPresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(CREDENTIAL_REPOSITORY)
       .useValue(new InMemoryCredentialRepository())
@@ -57,6 +68,8 @@ describe('CredentialController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -90,6 +103,7 @@ describe('CredentialController (e2e)', () => {
   it('GET /credentials/:id returns 404 for an unknown id', async () => {
     await request(app.getHttpServer())
       .get('/credentials/unknown-id')
+      .set('Authorization', authHeader)
       .expect(404);
   });
 
@@ -101,6 +115,7 @@ describe('CredentialController (e2e)', () => {
 
     const response = await request(app.getHttpServer())
       .put(`/credentials/${createdId}`)
+      .set('Authorization', authHeader)
       .send({ status: 'REVOKED' })
       .expect(200);
 
@@ -115,10 +130,12 @@ describe('CredentialController (e2e)', () => {
 
     await request(app.getHttpServer())
       .delete(`/credentials/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(200);
 
     await request(app.getHttpServer())
       .get(`/credentials/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(404);
   });
 });

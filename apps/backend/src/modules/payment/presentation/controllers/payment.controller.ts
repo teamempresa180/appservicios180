@@ -1,5 +1,15 @@
-import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
 import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -7,6 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { PaymentRoutes } from '../routes/payment.routes';
 import { PaymentSwagger } from '../swagger/payment.swagger';
@@ -52,6 +63,8 @@ import { PaymentHttpMapper } from '../dto/payment-http.mapper';
  * matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Payment')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(PaymentRoutes.base)
 export class PaymentController {
   constructor(

@@ -1,5 +1,15 @@
-import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
 import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -7,6 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { OrderRoutes } from '../routes/order.routes';
 import { OrderSwagger } from '../swagger/order.swagger';
@@ -54,6 +65,8 @@ import { OrderHttpMapper } from '../dto/order-http.mapper';
  * matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Order')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(OrderRoutes.base)
 export class OrderController {
   constructor(

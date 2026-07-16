@@ -18,6 +18,14 @@ export interface EnvironmentVariables {
   JWT_REFRESH_EXPIRES_IN: string;
   JWT_ISSUER: string;
   JWT_AUDIENCE: string;
+  /**
+   * Comma-separated list of allowed CORS origins, or `*` to reflect
+   * any origin (the default — matches the app's previous behavior of
+   * accepting requests from anywhere, since no CORS policy existed at
+   * all before Prompt 78). Set to a real comma-separated list in
+   * production to restrict it.
+   */
+  CORS_ORIGIN: string;
 }
 
 const ALLOWED_NODE_ENVS: ReadonlyArray<EnvironmentVariables['NODE_ENV']> = [
@@ -88,6 +96,7 @@ export function validateEnv(
     JWT_REFRESH_EXPIRES_IN: env.JWT_REFRESH_EXPIRES_IN ?? '7d',
     JWT_ISSUER: env.JWT_ISSUER ?? 'servicios180-api',
     JWT_AUDIENCE: env.JWT_AUDIENCE ?? 'servicios180-clients',
+    CORS_ORIGIN: env.CORS_ORIGIN ?? '*',
   };
 }
 

@@ -2,6 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { PassportModule } from '@nestjs/passport';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { PaymentPresentationModule } from '../src/modules/payment/presentation/payment.module';
 import { PAYMENT_REPOSITORY } from '../src/modules/payment/domain/interfaces/payment-repository.interface';
 import { InMemoryPaymentRepository } from '../src/modules/payment/application/use_cases/test-support/in-memory-payment.repository';
@@ -60,6 +65,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
  */
 describe('PaymentController (e2e)', () => {
   let app: INestApplication<App>;
+  let authHeader: string;
   let quoteId: string;
   let orderId: string;
   let identityId: string;
@@ -128,7 +134,12 @@ describe('PaymentController (e2e)', () => {
     quoteId = quote.id.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [PaymentPresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        PaymentPresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(PAYMENT_REPOSITORY)
       .useValue(new InMemoryPaymentRepository())
@@ -154,6 +165,8 @@ describe('PaymentController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -175,6 +188,7 @@ describe('PaymentController (e2e)', () => {
   it('POST /payments creates a Payment and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/payments')
+      .set('Authorization', authHeader)
       .send(createPaymentBody())
       .expect(201);
 
@@ -186,6 +200,7 @@ describe('PaymentController (e2e)', () => {
   it('POST /payments returns 404 when the Quote does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/payments')
+      .set('Authorization', authHeader)
       .send(createPaymentBody({ quoteId: 'unknown-quote' }))
       .expect(404);
 
@@ -193,17 +208,22 @@ describe('PaymentController (e2e)', () => {
   });
 
   it('GET /payments/:id returns 404 for an unknown id', async () => {
-    await request(app.getHttpServer()).get('/payments/unknown-id').expect(404);
+    await request(app.getHttpServer())
+      .get('/payments/unknown-id')
+      .set('Authorization', authHeader)
+      .expect(404);
   });
 
   it('PUT /payments/:id updates the status', async () => {
     const created = await request(app.getHttpServer())
       .post('/payments')
+      .set('Authorization', authHeader)
       .send(createPaymentBody());
     const createdId = (created.body as PaymentResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/payments/${createdId}`)
+      .set('Authorization', authHeader)
       .send({ status: 'COMPLETED' })
       .expect(200);
 
@@ -213,11 +233,13 @@ describe('PaymentController (e2e)', () => {
   it('PUT /payments/:id/cancel cancels an existing Payment', async () => {
     const created = await request(app.getHttpServer())
       .post('/payments')
+      .set('Authorization', authHeader)
       .send(createPaymentBody());
     const createdId = (created.body as PaymentResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/payments/${createdId}/cancel`)
+      .set('Authorization', authHeader)
       .expect(200);
 
     expect((response.body as PaymentResponseDto).status).toBe('CANCELLED');
@@ -226,10 +248,12 @@ describe('PaymentController (e2e)', () => {
   it('GET /payments lists Payments page by page', async () => {
     await request(app.getHttpServer())
       .post('/payments')
+      .set('Authorization', authHeader)
       .send(createPaymentBody());
 
     const response = await request(app.getHttpServer())
       .get('/payments')
+      .set('Authorization', authHeader)
       .expect(200);
 
     const body = response.body as PaymentListResponseDto;
@@ -241,10 +265,12 @@ describe('PaymentController (e2e)', () => {
   it('GET /payments/search searches by method', async () => {
     await request(app.getHttpServer())
       .post('/payments')
+      .set('Authorization', authHeader)
       .send(createPaymentBody());
 
     const response = await request(app.getHttpServer())
       .get('/payments/search')
+      .set('Authorization', authHeader)
       .query({ term: 'CARD' })
       .expect(200);
 

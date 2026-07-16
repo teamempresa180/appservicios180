@@ -1,11 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { IdentityPresentationModule } from '../src/modules/identity/presentation/identity.module';
 import { IDENTITY_REPOSITORY } from '../src/modules/identity/domain/interfaces/identity-repository.interface';
 import { InMemoryIdentityRepository } from '../src/modules/identity/application/use_cases/test-support/in-memory-identity.repository';
 import { IdentityResponseDto } from '../src/modules/identity/presentation/dto/identity.response.dto';
+import { ConfigModule } from '../src/config/config.module';
+import { ConfigService } from '../src/config/config.service';
+import { JwtStrategy } from '../src/common/auth/jwt.strategy';
+import { signTestAccessToken } from './support/sign-test-token';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 import { DomainExceptionFilter } from '../src/common/filters/domain-exception.filter';
 import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
@@ -19,10 +24,16 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
  */
 describe('IdentityController (e2e)', () => {
   let app: INestApplication<App>;
+  let authHeader: string;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [IdentityPresentationModule],
+      imports: [
+        ConfigModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        IdentityPresentationModule,
+      ],
+      providers: [JwtStrategy],
     })
       .overrideProvider(IDENTITY_REPOSITORY)
       .useValue(new InMemoryIdentityRepository())
@@ -34,6 +45,8 @@ describe('IdentityController (e2e)', () => {
       new DomainExceptionFilter(),
     );
     await app.init();
+
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'test-identity', role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -77,6 +90,7 @@ describe('IdentityController (e2e)', () => {
   it('GET /identities/:id returns 404 for an unknown id', async () => {
     const response = await request(app.getHttpServer())
       .get('/identities/unknown-id')
+      .set('Authorization', authHeader)
       .expect(404);
 
     const body = response.body as ErrorResponseDto;
@@ -97,6 +111,7 @@ describe('IdentityController (e2e)', () => {
 
     const response = await request(app.getHttpServer())
       .get(`/identities/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(200);
 
     expect((response.body as IdentityResponseDto).fullName).toBe('John Smith');
@@ -115,6 +130,7 @@ describe('IdentityController (e2e)', () => {
 
     const response = await request(app.getHttpServer())
       .put(`/identities/${createdId}`)
+      .set('Authorization', authHeader)
       .send({ fullName: 'Updated Name' })
       .expect(200);
 
@@ -136,10 +152,12 @@ describe('IdentityController (e2e)', () => {
 
     await request(app.getHttpServer())
       .delete(`/identities/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(200);
 
     await request(app.getHttpServer())
       .get(`/identities/${createdId}`)
+      .set('Authorization', authHeader)
       .expect(404);
   });
 });

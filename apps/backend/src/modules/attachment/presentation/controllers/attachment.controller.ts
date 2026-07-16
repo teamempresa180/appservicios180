@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  UseGuards,
   Delete,
   Get,
   Param,
@@ -8,6 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -15,6 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { AttachmentRoutes } from '../routes/attachment.routes';
 import { AttachmentSwagger } from '../swagger/attachment.swagger';
@@ -57,6 +60,8 @@ import { AttachmentHttpMapper } from '../dto/attachment-http.mapper';
  * matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Attachment')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(AttachmentRoutes.base)
 export class AttachmentController {
   constructor(

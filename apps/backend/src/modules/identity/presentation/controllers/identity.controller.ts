@@ -6,9 +6,17 @@ import {
   Param,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { IdentityRoutes } from '../routes/identity.routes';
 import { IdentitySwagger } from '../swagger/identity.swagger';
 import { CreateIdentityUseCase } from '../../application/use_cases/create-identity.use-case';
@@ -30,6 +38,12 @@ import { IdentityHttpMapper } from '../dto/identity-http.mapper';
  * `ValidationException`) are translated to HTTP responses by the
  * global `DomainExceptionFilter` (`common/filters/`), registered in
  * `main.ts` — this controller never catches them itself.
+ *
+ * `create` is intentionally the one public (unguarded) endpoint here
+ * (Prompt 78, Security Hardening) — it is the registration entry
+ * point: a brand-new Identity has no credential and no token yet, so
+ * requiring `JwtAuthGuard` on it would make sign-up impossible.
+ * `update`/`delete`/`findOne` all require an existing session.
  */
 @ApiTags('Identity')
 @Controller(IdentityRoutes.base)
@@ -63,6 +77,8 @@ export class IdentityController {
   }
 
   @Put(IdentityRoutes.byId)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation(IdentitySwagger.update)
   @ApiParam({ name: 'id', description: 'Identity id' })
   @ApiResponse({
@@ -91,6 +107,8 @@ export class IdentityController {
   }
 
   @Delete(IdentityRoutes.byId)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation(IdentitySwagger.delete)
   @ApiParam({ name: 'id', description: 'Identity id' })
   @ApiResponse({ status: 200, description: 'Identity deleted.' })
@@ -104,6 +122,8 @@ export class IdentityController {
   }
 
   @Get(IdentityRoutes.byId)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation(IdentitySwagger.get)
   @ApiParam({ name: 'id', description: 'Identity id' })
   @ApiResponse({

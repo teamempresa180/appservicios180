@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  UseGuards,
   Delete,
   Get,
   Param,
@@ -9,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -16,6 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { ProviderRoutes } from '../routes/provider.routes';
 import { ProviderSwagger } from '../swagger/provider.swagger';
 import { CreateProviderUseCase } from '../../application/use_cases/create-provider.use-case';
@@ -52,6 +55,8 @@ import { ProviderHttpMapper } from '../dto/provider-http.mapper';
  * matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Provider')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(ProviderRoutes.base)
 export class ProviderController {
   constructor(

@@ -1,8 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for any network call (backend HTTP + Google Maps tiles).
+         Debug/profile builds get this injected automatically by Flutter
+         tooling, but release builds do not — likely why every previous
+         release APK's HTTP calls failed regardless of backend/cleartext
+         fixes. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
-        android:label="mobile"
+        android:label="SERVICIOS 180°"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:networkSecurityConfig="@xml/network_security_config">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -30,6 +37,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Maps SDK for Android — key injected at build time from
+             android/secrets.properties (gitignored), see build.gradle.kts. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${mapsApiKey}" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

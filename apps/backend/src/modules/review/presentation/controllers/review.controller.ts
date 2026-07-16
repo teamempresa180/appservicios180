@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  UseGuards,
   Delete,
   Get,
   Param,
@@ -9,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -16,6 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
+import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ReviewRoutes } from '../routes/review.routes';
 import { ReviewSwagger } from '../swagger/review.swagger';
@@ -61,6 +64,8 @@ import { ReviewHttpMapper } from '../dto/review-http.mapper';
  * matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Review')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller(ReviewRoutes.base)
 export class ReviewController {
   constructor(
