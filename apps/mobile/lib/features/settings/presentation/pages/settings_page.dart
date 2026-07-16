@@ -1,35 +1,58 @@
 import 'package:flutter/material.dart';
+import '../../../../core/di/service_locator.dart';
 import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_empty_state.dart';
+import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
+import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../../address_management/presentation/pages/address_management_page.dart';
 import '../../../contact_management/presentation/pages/contact_management_page.dart';
 import '../../../security/presentation/pages/security_page.dart';
-import '../../mappers/settings_mapper.dart';
-import '../../models/settings_display.dart';
 import '../../models/settings_option.dart';
-import '../../repositories/mock_settings_repository.dart';
-import '../widgets/settings_empty_state.dart';
+import '../../repositories/settings_repository.dart';
+import '../view_models/settings_view_model.dart';
 import '../widgets/settings_header.dart';
-import '../widgets/settings_loading.dart';
 import '../widgets/settings_option_tile.dart';
-
-/// The three purely-visual states this screen can render — same
-/// fixed-`state` approach as every list/detail feature since `search`.
-enum SettingsViewState { loading, empty, information }
 
 /// Settings screen. Does NOT build its own `Scaffold` — it is meant to
 /// live within the existing navigation flow (opened from `Profile`).
-/// Completely independent: its own repository, its own mock data.
-class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key, this.state = SettingsViewState.information});
+/// Loads from the real backend via [SettingsViewModel] (resolved from
+/// the service locator — see `core/di/service_locator.dart`).
+class SettingsPage extends StatefulWidget {
+  const SettingsPage({super.key, SettingsRepository? repository})
+    : _repository = repository;
 
-  final SettingsViewState state;
+  /// Overridable for tests only — production call sites always resolve
+  /// the real repository from the service locator.
+  final SettingsRepository? _repository;
 
-  SettingsDisplay _buildData() {
-    return SettingsMapper.toDisplay(MockSettingsRepository());
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  late final SettingsViewModel _viewModel = SettingsViewModel(
+    widget._repository ?? locator<SettingsRepository>(),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel.load();
+    _viewModel.addListener(_onViewModelChanged);
+  }
+
+  void _onViewModelChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _viewModel.removeListener(_onViewModelChanged);
+    _viewModel.dispose();
+    super.dispose();
   }
 
   void _openAddresses(BuildContext context) {
@@ -81,13 +104,20 @@ class SettingsPage extends StatelessWidget {
     }
   }
 
-  Widget _buildBody(BuildContext context, SettingsDisplay data) {
-    switch (state) {
-      case SettingsViewState.loading:
-        return const SettingsLoading();
-      case SettingsViewState.empty:
-        return const SettingsEmptyState();
-      case SettingsViewState.information:
+  Widget _buildBody(BuildContext context) {
+    switch (_viewModel.status) {
+      case SettingsLoadStatus.loading:
+        return const AppLoading(message: 'Cargando configuración...');
+      case SettingsLoadStatus.error:
+        return AppEmptyState(
+          icon: AppIcons.error,
+          title: 'No se pudo cargar la configuración',
+          description: _viewModel.errorMessage,
+          actionLabel: 'Reintentar',
+          onActionPressed: _viewModel.retry,
+        );
+      case SettingsLoadStatus.success:
+        final data = _viewModel.data!;
         return Column(
           children: [
             for (final (index, option) in data.options.indexed) ...[
@@ -107,13 +137,14 @@ class SettingsPage extends StatelessWidget {
     }
   }
 
+  Widget _buildHeader() {
+    final data = _viewModel.data;
+    if (data == null) return const AppSectionTitle(title: 'Configuración');
+    return SettingsHeader(data: data);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final data = _buildData();
-
-    return AppPageBody(
-      header: SettingsHeader(data: data),
-      body: _buildBody(context, data),
-    );
+    return AppPageBody(header: _buildHeader(), body: _buildBody(context));
   }
 }

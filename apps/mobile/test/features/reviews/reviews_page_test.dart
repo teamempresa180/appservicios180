@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -9,12 +11,54 @@ import 'package:mobile/features/reviews/presentation/pages/reviews_page.dart';
 import 'package:mobile/features/reviews/presentation/widgets/review_card.dart';
 import 'package:mobile/features/reviews/presentation/widgets/review_filters.dart';
 import 'package:mobile/features/reviews/presentation/widgets/reviews_summary.dart';
+import 'package:mobile/features/reviews/repositories/mock_reviews_repository.dart';
+import 'package:mobile/features/reviews/repositories/reviews_repository.dart';
+import 'package:mobile/order/entities/order.dart';
+import 'package:mobile/profiles/entities/profile.dart';
+import 'package:mobile/provider/entities/provider.dart';
+import 'package:mobile/review/entities/review.dart';
+import 'package:mobile/service/entities/service.dart';
+
+/// Wraps [MockReviewsRepository] (already `Future`-returning) so tests
+/// can force it to never resolve (loading state) or return an empty
+/// list (empty state), without touching the real mock data.
+class _FakeReviewsRepository implements ReviewsRepository {
+  _FakeReviewsRepository({this.neverResolves = false, this.forceEmpty = false});
+
+  final bool neverResolves;
+  final bool forceEmpty;
+  final _delegate = MockReviewsRepository();
+
+  @override
+  Future<List<Review>> getReviews() {
+    if (neverResolves) return Completer<List<Review>>().future;
+    if (forceEmpty) return Future.value(const []);
+    return _delegate.getReviews();
+  }
+
+  @override
+  Future<Provider> getProviderFor(Review review) =>
+      _delegate.getProviderFor(review);
+
+  @override
+  Future<Profile> getProfileFor(Review review) =>
+      _delegate.getProfileFor(review);
+
+  @override
+  Future<Order> getOrderFor(Review review) => _delegate.getOrderFor(review);
+
+  @override
+  Future<Service> getServiceFor(Review review) =>
+      _delegate.getServiceFor(review);
+}
 
 void main() {
-  Widget buildApp({ReviewsViewState state = ReviewsViewState.list}) {
+  Widget buildApp({ReviewsRepository? repository}) {
     return MaterialApp(
       theme: AppTheme.light,
-      home: Scaffold(body: ReviewsPage(state: state)),
+      home: Scaffold(
+        body: ReviewsPage(repository: repository ?? _FakeReviewsRepository()),
+      ),
     );
   }
 
@@ -97,7 +141,9 @@ void main() {
   testWidgets('loading state shows AppLoading instead of the list', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: ReviewsViewState.loading));
+    await tester.pumpWidget(
+      buildApp(repository: _FakeReviewsRepository(neverResolves: true)),
+    );
     // The indeterminate CircularProgressIndicator never settles, so
     // pumpAndSettle can't be used — but the message's FadeIn does need
     // a couple of pumps to resolve, or its delayed Future leaves a
@@ -112,7 +158,9 @@ void main() {
   testWidgets('empty state shows AppEmptyState instead of the list', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: ReviewsViewState.empty));
+    await tester.pumpWidget(
+      buildApp(repository: _FakeReviewsRepository(forceEmpty: true)),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(AppEmptyState), findsOneWidget);

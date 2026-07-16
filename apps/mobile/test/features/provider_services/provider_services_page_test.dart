@@ -1,20 +1,69 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/category/entities/category.dart';
+import 'package:mobile/core/network/http_exceptions.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
 import 'package:mobile/features/provider_services/presentation/pages/provider_services_page.dart';
 import 'package:mobile/features/provider_services/presentation/widgets/service_card.dart';
 import 'package:mobile/features/provider_services/presentation/widgets/services_statistics.dart';
+import 'package:mobile/features/provider_services/repositories/mock_provider_services_repository.dart';
+import 'package:mobile/features/provider_services/repositories/provider_services_repository.dart';
+import 'package:mobile/profiles/entities/profile.dart';
+import 'package:mobile/provider/entities/provider.dart';
+import 'package:mobile/service/entities/service.dart';
+
+/// Wraps [MockProviderServicesRepository] (already `Future`-returning)
+/// so tests can force it to never resolve (loading state) or return an
+/// empty list (empty state), without touching the real mock data.
+class _FakeProviderServicesRepository implements ProviderServicesRepository {
+  _FakeProviderServicesRepository({
+    this.neverResolves = false,
+    this.forceEmpty = false,
+    this.forceError = false,
+  });
+
+  final bool neverResolves;
+  final bool forceEmpty;
+  final bool forceError;
+  final _delegate = MockProviderServicesRepository();
+
+  @override
+  Future<Provider> getProvider() async {
+    if (neverResolves) return Completer<Provider>().future;
+    if (forceError) {
+      throw const NetworkHttpException('sin conexión');
+    }
+    return _delegate.getProvider();
+  }
+
+  @override
+  Future<Profile> getProfile() => _delegate.getProfile();
+
+  @override
+  Future<List<Service>> getServices() {
+    if (forceEmpty) return Future.value(const []);
+    return _delegate.getServices();
+  }
+
+  @override
+  Future<Category> getCategoryFor(Service service) =>
+      _delegate.getCategoryFor(service);
+}
 
 void main() {
-  Widget buildApp({
-    ProviderServicesViewState state = ProviderServicesViewState.information,
-  }) {
+  Widget buildApp({ProviderServicesRepository? repository}) {
     return MaterialApp(
       theme: AppTheme.light,
-      home: Scaffold(body: ProviderServicesPage(state: state)),
+      home: Scaffold(
+        body: ProviderServicesPage(
+          repository: repository ?? _FakeProviderServicesRepository(),
+        ),
+      ),
     );
   }
 
@@ -79,7 +128,9 @@ void main() {
   testWidgets('loading state shows AppLoading instead of the list', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: ProviderServicesViewState.loading));
+    await tester.pumpWidget(
+      buildApp(repository: _FakeProviderServicesRepository(neverResolves: true)),
+    );
     // The indeterminate CircularProgressIndicator never settles, so
     // pumpAndSettle can't be used — but the message's FadeIn does need
     // a couple of pumps to resolve, or its delayed Future leaves a
@@ -94,11 +145,23 @@ void main() {
   testWidgets('empty state shows AppEmptyState instead of the list', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: ProviderServicesViewState.empty));
+    await tester.pumpWidget(
+      buildApp(repository: _FakeProviderServicesRepository(forceEmpty: true)),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(AppEmptyState), findsOneWidget);
     expect(find.byType(ServiceCard), findsNothing);
+  });
+
+  testWidgets('error state shows a retry action', (tester) async {
+    await tester.pumpWidget(
+      buildApp(repository: _FakeProviderServicesRepository(forceError: true)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudieron cargar los servicios'), findsOneWidget);
+    expect(find.text('Reintentar'), findsOneWidget);
   });
 
   testWidgets('does not build its own Scaffold', (tester) async {

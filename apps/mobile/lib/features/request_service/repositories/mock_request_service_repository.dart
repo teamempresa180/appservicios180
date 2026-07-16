@@ -11,20 +11,21 @@ import 'request_service_repository.dart';
 /// backend, no persistence, no network — see the feature README.
 class MockRequestServiceRepository implements RequestServiceRepository {
   @override
-  Service getService() => mockRequestServiceService;
+  Future<Service> getService() => Future.value(mockRequestServiceService);
 
   @override
-  Provider getProvider() => mockRequestServiceProvider;
+  Future<Provider> getProvider() => Future.value(mockRequestServiceProvider);
 
   @override
-  Profile getProfile() => mockRequestServiceProfile;
+  Future<Profile> getProfile() => Future.value(mockRequestServiceProfile);
 
   @override
-  Category getCategory() => mockRequestServiceCategory;
+  Future<Category> getCategory() => Future.value(mockRequestServiceCategory);
 
   @override
-  Availability getAvailability() => mockRequestServiceAvailability;
+  Future<Availability> getAvailability() =>
+      Future.value(mockRequestServiceAvailability);
 
   @override
-  Address getAddress() => mockRequestServiceAddress;
+  Future<Address> getAddress() => Future.value(mockRequestServiceAddress);
 }

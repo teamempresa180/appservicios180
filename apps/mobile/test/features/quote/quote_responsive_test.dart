@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/quote/presentation/pages/quote_page.dart';
+import 'package:mobile/features/quote/repositories/mock_quote_repository.dart';
 
 void main() {
   const widths = [320.0, 360.0, 390.0, 412.0, 768.0, 1024.0, 1440.0];
@@ -24,7 +25,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
-          home: const Scaffold(body: QuotePage()),
+          home: Scaffold(body: QuotePage(repository: MockQuoteRepository())),
         ),
       );
       await tester.pumpAndSettle();

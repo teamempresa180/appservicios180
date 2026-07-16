@@ -6,5 +6,5 @@ import '../../../service/entities/service.dart';
 /// `FirebaseSearchRepository` would implement this same interface (see
 /// the feature README).
 abstract class SearchRepository {
-  List<Service> getAll();
+  Future<List<Service>> getAll();
 }

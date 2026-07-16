@@ -7,6 +7,7 @@ import 'package:mobile/features/orders/presentation/pages/orders_page.dart';
 import 'package:mobile/features/orders/repositories/mock_orders_repository.dart';
 import 'package:mobile/features/orders/repositories/orders_repository.dart';
 import 'package:mobile/features/quote/presentation/pages/quote_page.dart';
+import 'package:mobile/features/quote/repositories/mock_quote_repository.dart';
 
 /// Confirms the minimal, explicitly-authorized wiring that lets Quote
 /// open Orders — see the feature README.
@@ -26,7 +27,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
-        home: const Scaffold(body: QuotePage()),
+        home: Scaffold(body: QuotePage(repository: MockQuoteRepository())),
       ),
     );
     await tester.pumpAndSettle();

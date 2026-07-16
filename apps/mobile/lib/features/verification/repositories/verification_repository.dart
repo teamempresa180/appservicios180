@@ -11,6 +11,6 @@ import '../../../profiles/entities/profile.dart';
 /// see the feature README and `VerificationDisplay`'s class doc for
 /// why the real `Verification` domain entity isn't used here yet.
 abstract class VerificationRepository {
-  Identity getIdentity();
-  Profile getProfile();
+  Future<Identity> getIdentity();
+  Future<Profile> getProfile();
 }

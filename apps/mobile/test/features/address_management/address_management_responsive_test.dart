@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/address_management/presentation/pages/address_management_page.dart';
+import 'package:mobile/features/address_management/repositories/mock_address_management_repository.dart';
 
 void main() {
   const widths = [320.0, 360.0, 390.0, 412.0, 768.0, 1024.0, 1440.0];
@@ -26,7 +27,11 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
-          home: const Scaffold(body: AddressManagementPage()),
+          home: Scaffold(
+            body: AddressManagementPage(
+              repository: MockAddressManagementRepository(),
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();

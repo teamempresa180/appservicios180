@@ -11,43 +11,43 @@ void main() {
   group('MockServiceDetailRepository', () {
     final repository = MockServiceDetailRepository();
 
-    test('getService returns a real Service entity, not a map', () {
-      final service = repository.getService();
+    test('getService returns a real Service entity, not a map', () async {
+      final service = await repository.getService();
       expect(service, isA<Service>());
       expect(service.name, isNotEmpty);
     });
 
-    test('getProvider returns a real Provider entity', () {
-      expect(repository.getProvider(), isA<Provider>());
+    test('getProvider returns a real Provider entity', () async {
+      expect(await repository.getProvider(), isA<Provider>());
     });
 
-    test('getProviderProfile returns a real Profile with a display name', () {
-      final profile = repository.getProviderProfile();
+    test('getProviderProfile returns a real Profile with a display name', () async {
+      final profile = await repository.getProviderProfile();
       expect(profile, isA<Profile>());
       expect(profile.displayName, isNotEmpty);
     });
 
-    test('getCategory returns a real Category entity', () {
-      expect(repository.getCategory(), isA<Category>());
+    test('getCategory returns a real Category entity', () async {
+      expect(await repository.getCategory(), isA<Category>());
     });
 
-    test('getReviews returns real Review entities, not maps', () {
-      final reviews = repository.getReviews();
+    test('getReviews returns real Review entities, not maps', () async {
+      final reviews = await repository.getReviews();
       expect(reviews, isNotEmpty);
       expect(reviews, everyElement(isA<Review>()));
     });
 
-    test('the Service references the same Provider and Category ids', () {
-      final service = repository.getService();
-      expect(service.providerId, equals(repository.getProvider().id));
-      expect(service.categoryId, equals(repository.getCategory().id));
+    test('the Service references the same Provider and Category ids', () async {
+      final service = await repository.getService();
+      final provider = await repository.getProvider();
+      final category = await repository.getCategory();
+      expect(service.providerId, equals(provider.id));
+      expect(service.categoryId, equals(category.id));
     });
 
-    test('is independent from Marketplace/Categories/Search mock data', () {
-      expect(
-        repository.getService().id.value.startsWith('service-detail-'),
-        isTrue,
-      );
+    test('is independent from Marketplace/Categories/Search mock data', () async {
+      final service = await repository.getService();
+      expect(service.id.value.startsWith('service-detail-'), isTrue);
     });
   });
 }

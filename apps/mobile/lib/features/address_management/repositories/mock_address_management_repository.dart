@@ -8,11 +8,13 @@ import 'address_management_repository.dart';
 /// No backend, no persistence, no network — see the feature README.
 class MockAddressManagementRepository implements AddressManagementRepository {
   @override
-  List<Address> getAddresses() => List.unmodifiable(mockAddresses);
+  Future<List<Address>> getAddresses() =>
+      Future.value(List.unmodifiable(mockAddresses));
 
   @override
-  Profile getProfile() => mockAddressesProfile;
+  Future<Profile> getProfile() => Future.value(mockAddressesProfile);
 
   @override
-  Contact getContactFor(Address address) => mockAddressesContact;
+  Future<Contact> getContactFor(Address address) =>
+      Future.value(mockAddressesContact);
 }

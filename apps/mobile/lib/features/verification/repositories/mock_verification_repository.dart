@@ -8,8 +8,8 @@ import 'verification_repository.dart';
 /// the feature README.
 class MockVerificationRepository implements VerificationRepository {
   @override
-  Identity getIdentity() => mockVerificationIdentity;
+  Future<Identity> getIdentity() => Future.value(mockVerificationIdentity);
 
   @override
-  Profile getProfile() => mockVerificationProfile;
+  Future<Profile> getProfile() => Future.value(mockVerificationProfile);
 }

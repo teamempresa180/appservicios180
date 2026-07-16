@@ -8,8 +8,8 @@ import 'schedule_repository.dart';
 /// feature README.
 class MockScheduleRepository implements ScheduleRepository {
   @override
-  Provider getProvider() => mockScheduleProvider;
+  Future<Provider> getProvider() => Future.value(mockScheduleProvider);
 
   @override
-  List<Schedule> getSchedules() => mockSchedules;
+  Future<List<Schedule>> getSchedules() => Future.value(mockSchedules);
 }

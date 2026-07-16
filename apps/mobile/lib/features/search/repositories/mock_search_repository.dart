@@ -6,5 +6,6 @@ import 'search_repository.dart';
 /// no persistence, no network, no real search — see the feature README.
 class MockSearchRepository implements SearchRepository {
   @override
-  List<Service> getAll() => List.unmodifiable(mockSearchServices);
+  Future<List<Service>> getAll() =>
+      Future.value(List.unmodifiable(mockSearchServices));
 }

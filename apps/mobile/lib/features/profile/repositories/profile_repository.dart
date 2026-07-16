@@ -12,8 +12,8 @@ import '../../../profiles/entities/profile.dart';
 /// There is no id-based lookup yet — this feature shows a single fixed
 /// account (see the feature README for why).
 abstract class ProfileRepository {
-  Profile getProfile();
-  Identity getIdentity();
-  List<Contact> getContacts();
-  Address getAddress();
+  Future<Profile> getProfile();
+  Future<Identity> getIdentity();
+  Future<List<Contact>> getContacts();
+  Future<Address> getAddress();
 }

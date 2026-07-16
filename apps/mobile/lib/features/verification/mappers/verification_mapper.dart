@@ -7,19 +7,22 @@ import '../repositories/verification_repository.dart';
 /// `VerificationDisplay`'s class doc) — the conversion this feature's
 /// page used to do inline in `_buildData()`. Depends on the
 /// repository *contract*, not `MockVerificationRepository` (see
-/// `PROJECT_STATUS.md`, Sprint 2, Etapa 6).
+/// `PROJECT_STATUS.md`, Sprint 2, Etapa 6). `Future`-returning since
+/// [VerificationRepository]'s methods are.
 abstract final class VerificationMapper {
-  static VerificationDisplay toDisplay({
+  static Future<VerificationDisplay> toDisplay({
     required VerificationRepository repository,
     required VerificationStatusDisplay verificationStatus,
     required List<String> completedSteps,
     required List<String> pendingSteps,
     required String? rejectedReason,
     required String estimatedReviewTime,
-  }) {
+  }) async {
+    final identity = await repository.getIdentity();
+    final profile = await repository.getProfile();
     return VerificationDisplay(
-      identity: repository.getIdentity(),
-      profile: repository.getProfile(),
+      identity: identity,
+      profile: profile,
       verificationStatus: verificationStatus,
       completedSteps: completedSteps,
       pendingSteps: pendingSteps,

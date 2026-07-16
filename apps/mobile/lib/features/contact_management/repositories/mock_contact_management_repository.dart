@@ -7,8 +7,9 @@ import 'contact_management_repository.dart';
 /// No backend, no persistence, no network — see the feature README.
 class MockContactManagementRepository implements ContactManagementRepository {
   @override
-  Profile getProfile() => mockContactsProfile;
+  Future<Profile> getProfile() => Future.value(mockContactsProfile);
 
   @override
-  List<Contact> getContacts() => List.unmodifiable(mockContacts);
+  Future<List<Contact>> getContacts() =>
+      Future.value(List.unmodifiable(mockContacts));
 }

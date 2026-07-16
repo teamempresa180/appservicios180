@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/security/presentation/pages/security_page.dart';
+import 'package:mobile/features/security/repositories/mock_security_repository.dart';
 
 void main() {
   const widths = [320.0, 360.0, 390.0, 412.0, 768.0, 1024.0, 1440.0];
@@ -24,7 +25,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
-          home: const Scaffold(body: SecurityPage()),
+          home: Scaffold(body: SecurityPage(repository: MockSecurityRepository())),
         ),
       );
       await tester.pumpAndSettle();

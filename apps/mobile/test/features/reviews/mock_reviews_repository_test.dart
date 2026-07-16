@@ -11,65 +11,62 @@ void main() {
   group('MockReviewsRepository', () {
     final repository = MockReviewsRepository();
 
-    test('getReviews returns real Review entities, not maps', () {
-      final reviews = repository.getReviews();
+    test('getReviews returns real Review entities, not maps', () async {
+      final reviews = await repository.getReviews();
       expect(reviews, isNotEmpty);
       expect(reviews, everyElement(isA<Review>()));
     });
 
-    test('returns reviews with four distinct ratings', () {
-      final ratings = repository
-          .getReviews()
-          .map((r) => r.rating.value)
-          .toSet();
+    test('returns reviews with four distinct ratings', () async {
+      final reviews = await repository.getReviews();
+      final ratings = reviews.map((r) => r.rating.value).toSet();
       expect(ratings, equals({5, 4, 3, 1}));
     });
 
-    test('getProviderFor returns a real Provider entity, not a map', () {
-      final review = repository.getReviews().first;
-      expect(repository.getProviderFor(review), isA<Provider>());
+    test('getProviderFor returns a real Provider entity, not a map', () async {
+      final review = (await repository.getReviews()).first;
+      expect(await repository.getProviderFor(review), isA<Provider>());
     });
 
-    test('getProfileFor returns a real Profile with a display name', () {
-      final review = repository.getReviews().first;
-      final profile = repository.getProfileFor(review);
+    test('getProfileFor returns a real Profile with a display name', () async {
+      final review = (await repository.getReviews()).first;
+      final profile = await repository.getProfileFor(review);
       expect(profile, isA<Profile>());
       expect(profile.displayName, isNotEmpty);
     });
 
-    test('getOrderFor returns a real Order entity, not a map', () {
-      final review = repository.getReviews().first;
-      expect(repository.getOrderFor(review), isA<Order>());
+    test('getOrderFor returns a real Order entity, not a map', () async {
+      final review = (await repository.getReviews()).first;
+      expect(await repository.getOrderFor(review), isA<Order>());
     });
 
-    test('getServiceFor returns a real Service entity, not a map', () {
-      final review = repository.getReviews().first;
-      expect(repository.getServiceFor(review), isA<Service>());
+    test('getServiceFor returns a real Service entity, not a map', () async {
+      final review = (await repository.getReviews()).first;
+      expect(await repository.getServiceFor(review), isA<Service>());
     });
 
-    test('every review order references the same provider returned', () {
-      for (final review in repository.getReviews()) {
+    test('every review order references the same provider returned', () async {
+      for (final review in await repository.getReviews()) {
         expect(
-          repository.getOrderFor(review).providerId,
-          equals(repository.getProviderFor(review).id),
+          (await repository.getOrderFor(review)).providerId,
+          equals((await repository.getProviderFor(review)).id),
         );
       }
     });
 
-    test('every review service references the order service id', () {
-      for (final review in repository.getReviews()) {
+    test('every review service references the order service id', () async {
+      for (final review in await repository.getReviews()) {
         expect(
-          repository.getServiceFor(review).id,
-          equals(repository.getOrderFor(review).serviceId),
+          (await repository.getServiceFor(review)).id,
+          equals((await repository.getOrderFor(review)).serviceId),
         );
       }
     });
 
-    test('is independent from every other feature mock data', () {
+    test('is independent from every other feature mock data', () async {
+      final reviews = await repository.getReviews();
       expect(
-        repository.getReviews().every(
-          (review) => review.id.value.startsWith('reviews-'),
-        ),
+        reviews.every((review) => review.id.value.startsWith('reviews-')),
         isTrue,
       );
     });

@@ -14,10 +14,10 @@ import '../../../service/entities/service.dart';
 /// There is no id-based lookup yet — this feature shows a single fixed
 /// quote (see the feature README for why).
 abstract class QuoteRepository {
-  Quote getQuote();
-  Service getService();
-  Provider getProvider();
-  Profile getProfile();
-  Category getCategory();
-  Address getAddress();
+  Future<Quote> getQuote();
+  Future<Service> getService();
+  Future<Provider> getProvider();
+  Future<Profile> getProfile();
+  Future<Category> getCategory();
+  Future<Address> getAddress();
 }

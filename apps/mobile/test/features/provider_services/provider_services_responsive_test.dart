@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/provider_services/presentation/pages/provider_services_page.dart';
+import 'package:mobile/features/provider_services/repositories/mock_provider_services_repository.dart';
 
 void main() {
   const widths = [320.0, 360.0, 390.0, 412.0, 768.0, 1024.0, 1440.0];
@@ -26,7 +27,11 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
-          home: const Scaffold(body: ProviderServicesPage()),
+          home: Scaffold(
+            body: ProviderServicesPage(
+              repository: MockProviderServicesRepository(),
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();

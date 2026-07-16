@@ -6,6 +6,6 @@ import '../../../category/models/category_id.dart';
 /// or `FirebaseCategoryRepository` would implement this same interface
 /// (see the feature README).
 abstract class CategoryRepository {
-  List<Category> getAll();
-  Category? getById(CategoryId id);
+  Future<List<Category>> getAll();
+  Future<Category?> getById(CategoryId id);
 }

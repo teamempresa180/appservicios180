@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../../../category/entities/category.dart';
+import '../../../../core/di/service_locator.dart';
 import '../../../../core/ui/animations/slide_in.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_empty_state.dart';
+import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
-import '../../models/provider_display.dart';
-import '../../models/service_display.dart';
-import '../../repositories/mock_category_repository.dart';
-import '../../repositories/mock_provider_repository.dart';
-import '../../repositories/mock_service_repository.dart';
+import '../../repositories/category_repository.dart';
+import '../../repositories/provider_repository.dart';
+import '../../repositories/service_repository.dart';
+import '../view_models/marketplace_view_model.dart';
 import '../widgets/categories_section.dart';
 import '../widgets/featured_services.dart';
 import '../widgets/marketplace_header.dart';
@@ -18,70 +20,93 @@ import '../widgets/search_bar.dart';
 /// destination) — it does NOT build its own `Scaffold`, it only returns
 /// content for the area the Shell already provides.
 ///
-/// All data comes from the Mock repositories in `../../repositories/` —
-/// no backend, no API, no Firebase. See the feature README for how this
-/// connects to real data later.
-class MarketplacePage extends StatelessWidget {
-  const MarketplacePage({super.key});
+/// Composes three independent repositories (Category/Service/Provider)
+/// into a single [MarketplaceViewModel] with one combined
+/// loading/success/error state — same reasoning as every other
+/// data-driven feature's single view model, just fed by three
+/// repositories instead of one (see the feature README). All three
+/// default to resolving from the service locator; each can be
+/// overridden independently for tests.
+class MarketplacePage extends StatefulWidget {
+  const MarketplacePage({
+    super.key,
+    CategoryRepository? categoryRepository,
+    ServiceRepository? serviceRepository,
+    ProviderRepository? providerRepository,
+  }) : _categoryRepository = categoryRepository,
+       _serviceRepository = serviceRepository,
+       _providerRepository = providerRepository;
 
-  static final _categoryRepository = MockCategoryRepository();
-  static final _serviceRepository = MockServiceRepository();
-  static final _providerRepository = MockProviderRepository();
+  /// Overridable for tests only — production call sites always resolve
+  /// the real repositories from the service locator.
+  final CategoryRepository? _categoryRepository;
+  final ServiceRepository? _serviceRepository;
+  final ProviderRepository? _providerRepository;
 
-  /// Composes each display list from its repository — same
-  /// `_build*()` naming/placement convention every other data-driven
-  /// feature's page uses (see the feature README). Three separate
-  /// `_build*()` methods (not one `_buildData()`) because this feature
-  /// composes three independent repositories, unlike every other
-  /// feature's single composed `*Display`.
-  List<Category> _buildCategories() => _categoryRepository.getAll();
+  @override
+  State<MarketplacePage> createState() => _MarketplacePageState();
+}
 
-  List<ServiceDisplay> _buildServices() {
-    return [
-      for (final service in _serviceRepository.getFeatured())
-        ServiceDisplay(
-          service: service,
-          providerName: _providerRepository
-              .profileOf(service.providerId)
-              .displayName,
-          categoryName:
-              _categoryRepository.getById(service.categoryId)?.name ?? '',
-          rating: _serviceRepository.ratingOf(service.id),
-        ),
-    ];
+class _MarketplacePageState extends State<MarketplacePage> {
+  late final MarketplaceViewModel _viewModel = MarketplaceViewModel(
+    categoryRepository:
+        widget._categoryRepository ?? locator<CategoryRepository>(),
+    serviceRepository:
+        widget._serviceRepository ?? locator<ServiceRepository>(),
+    providerRepository:
+        widget._providerRepository ?? locator<ProviderRepository>(),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel.load();
+    _viewModel.addListener(_onViewModelChanged);
   }
 
-  List<ProviderDisplay> _buildProviders() {
-    return [
-      for (final provider in _providerRepository.getRecommended())
-        ProviderDisplay(
-          provider: provider,
-          profile: _providerRepository.profileOf(provider.id),
-          rating: _providerRepository.ratingOf(provider.id),
-          servicesCount: _providerRepository.servicesCountOf(provider.id),
-        ),
-    ];
+  void _onViewModelChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _viewModel.removeListener(_onViewModelChanged);
+    _viewModel.dispose();
+    super.dispose();
+  }
+
+  Widget _buildBody() {
+    switch (_viewModel.status) {
+      case MarketplaceLoadStatus.loading:
+        return const AppLoading(message: 'Cargando marketplace...');
+      case MarketplaceLoadStatus.error:
+        return AppEmptyState(
+          icon: AppIcons.error,
+          title: 'No se pudo cargar el marketplace',
+          description: _viewModel.errorMessage,
+          actionLabel: 'Reintentar',
+          onActionPressed: _viewModel.retry,
+        );
+      case MarketplaceLoadStatus.success:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SlideIn(child: CategoriesSection(categories: _viewModel.categories)),
+            const SizedBox(height: AppSpacing.space16),
+            SlideIn(child: FeaturedServices(services: _viewModel.services)),
+            const SizedBox(height: AppSpacing.space16),
+            SlideIn(
+              child: RecommendedProviders(providers: _viewModel.providers),
+            ),
+          ],
+        );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final categories = _buildCategories();
-    final serviceDisplays = _buildServices();
-    final providerDisplays = _buildProviders();
-
     return AppPageBody(
       header: const MarketplaceHeader(),
       toolbar: const [MarketplaceSearchBar()],
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SlideIn(child: CategoriesSection(categories: categories)),
-          const SizedBox(height: AppSpacing.space16),
-          SlideIn(child: FeaturedServices(services: serviceDisplays)),
-          const SizedBox(height: AppSpacing.space16),
-          SlideIn(child: RecommendedProviders(providers: providerDisplays)),
-        ],
-      ),
+      body: _buildBody(),
     );
   }
 }

@@ -9,18 +9,18 @@ void main() {
   group('MockAvailabilityRepository', () {
     final repository = MockAvailabilityRepository();
 
-    test('getProvider returns a real Provider entity, not a map', () {
-      expect(repository.getProvider(), isA<Provider>());
+    test('getProvider returns a real Provider entity, not a map', () async {
+      expect(await repository.getProvider(), isA<Provider>());
     });
 
-    test('getAvailabilities returns real Availability entities, not maps', () {
-      final availabilities = repository.getAvailabilities();
+    test('getAvailabilities returns real Availability entities, not maps', () async {
+      final availabilities = await repository.getAvailabilities();
       expect(availabilities, isNotEmpty);
       expect(availabilities, everyElement(isA<Availability>()));
     });
 
-    test('returns exactly one Availability per day of the week', () {
-      final availabilities = repository.getAvailabilities();
+    test('returns exactly one Availability per day of the week', () async {
+      final availabilities = await repository.getAvailabilities();
       expect(availabilities.length, equals(7));
       final weekdays = availabilities
           .map((a) => a.availableFrom.weekday)
@@ -28,8 +28,8 @@ void main() {
       expect(weekdays, equals({1, 2, 3, 4, 5, 6, 7}));
     });
 
-    test('six days are active and Sunday is inactive', () {
-      final availabilities = repository.getAvailabilities();
+    test('six days are active and Sunday is inactive', () async {
+      final availabilities = await repository.getAvailabilities();
       final active = availabilities.where(
         (a) => a.status == AvailabilityStatus.active,
       );
@@ -40,19 +40,18 @@ void main() {
       expect(sunday.status, equals(AvailabilityStatus.inactive));
     });
 
-    test('every availability references the same provider returned', () {
-      final providerId = repository.getProvider().id;
+    test('every availability references the same provider returned', () async {
+      final providerId = (await repository.getProvider()).id;
+      final availabilities = await repository.getAvailabilities();
       expect(
-        repository.getAvailabilities().every((a) => a.providerId == providerId),
+        availabilities.every((a) => a.providerId == providerId),
         isTrue,
       );
     });
 
-    test('is independent from every other feature mock data', () {
-      expect(
-        repository.getProvider().id.value.startsWith('availability-'),
-        isTrue,
-      );
+    test('is independent from every other feature mock data', () async {
+      final provider = await repository.getProvider();
+      expect(provider.id.value.startsWith('availability-'), isTrue);
     });
   });
 }

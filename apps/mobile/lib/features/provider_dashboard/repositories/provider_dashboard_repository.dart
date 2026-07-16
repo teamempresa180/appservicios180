@@ -8,17 +8,17 @@ import '../../../review/entities/review.dart';
 /// Contract for reading the domain entities the Provider Dashboard
 /// screen needs. Returns only real domain entities — no `Map`, no
 /// `dynamic`, no JSON. Implemented today by
-/// `MockProviderDashboardRepository`; a future
-/// `ApiProviderDashboardRepository` would implement this same
-/// interface (see the feature README).
+/// `MockProviderDashboardRepository` (in-memory) and
+/// `HttpProviderDashboardRepository` (real backend, see the feature
+/// README).
 ///
 /// There is no id-based lookup yet — this feature shows a single fixed
 /// provider's dashboard (see the feature README for why).
 abstract class ProviderDashboardRepository {
-  Provider getProvider();
-  Profile getProfile();
-  List<Order> getOrders();
-  List<Quote> getQuotes();
-  List<Review> getReviews();
-  List<Payment> getPayments();
+  Future<Provider> getProvider();
+  Future<Profile> getProfile();
+  Future<List<Order>> getOrders();
+  Future<List<Quote>> getQuotes();
+  Future<List<Review>> getReviews();
+  Future<List<Payment>> getPayments();
 }

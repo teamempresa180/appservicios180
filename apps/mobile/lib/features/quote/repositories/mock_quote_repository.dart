@@ -11,20 +11,20 @@ import 'quote_repository.dart';
 /// no persistence, no network — see the feature README.
 class MockQuoteRepository implements QuoteRepository {
   @override
-  Quote getQuote() => mockQuote;
+  Future<Quote> getQuote() => Future.value(mockQuote);
 
   @override
-  Service getService() => mockQuoteService;
+  Future<Service> getService() => Future.value(mockQuoteService);
 
   @override
-  Provider getProvider() => mockQuoteProvider;
+  Future<Provider> getProvider() => Future.value(mockQuoteProvider);
 
   @override
-  Profile getProfile() => mockQuoteProfile;
+  Future<Profile> getProfile() => Future.value(mockQuoteProfile);
 
   @override
-  Category getCategory() => mockQuoteCategory;
+  Future<Category> getCategory() => Future.value(mockQuoteCategory);
 
   @override
-  Address getAddress() => mockQuoteAddress;
+  Future<Address> getAddress() => Future.value(mockQuoteAddress);
 }

@@ -10,17 +10,19 @@ import 'service_detail_repository.dart';
 /// backend, no persistence, no network — see the feature README.
 class MockServiceDetailRepository implements ServiceDetailRepository {
   @override
-  Service getService() => mockServiceDetailService;
+  Future<Service> getService() => Future.value(mockServiceDetailService);
 
   @override
-  Provider getProvider() => mockServiceDetailProvider;
+  Future<Provider> getProvider() => Future.value(mockServiceDetailProvider);
 
   @override
-  Profile getProviderProfile() => mockServiceDetailProfile;
+  Future<Profile> getProviderProfile() =>
+      Future.value(mockServiceDetailProfile);
 
   @override
-  Category getCategory() => mockServiceDetailCategory;
+  Future<Category> getCategory() => Future.value(mockServiceDetailCategory);
 
   @override
-  List<Review> getReviews() => List.unmodifiable(mockServiceDetailReviews);
+  Future<List<Review>> getReviews() =>
+      Future.value(List.unmodifiable(mockServiceDetailReviews));
 }

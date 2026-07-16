@@ -7,6 +7,8 @@ import 'package:mobile/features/chat/presentation/pages/chat_page.dart';
 import 'package:mobile/features/chat/repositories/chat_repository.dart';
 import 'package:mobile/features/chat/repositories/mock_chat_repository.dart';
 import 'package:mobile/features/payments/presentation/pages/payments_page.dart';
+import 'package:mobile/features/payments/repositories/mock_payments_repository.dart';
+import 'package:mobile/features/payments/repositories/payments_repository.dart';
 
 /// Confirms the minimal, explicitly-authorized wiring that lets
 /// Payments open Chat — see the feature README (and `payments`' README)
@@ -16,7 +18,10 @@ import 'package:mobile/features/payments/presentation/pages/payments_page.dart';
 /// directly by the test), so it always resolves its repository from
 /// the service locator — hence registering a mock here.
 void main() {
-  setUp(() => locator.registerSingleton<ChatRepository>(MockChatRepository()));
+  setUp(() {
+    locator.registerSingleton<ChatRepository>(MockChatRepository());
+    locator.registerSingleton<PaymentsRepository>(MockPaymentsRepository());
+  });
   tearDown(() => locator.reset());
 
   testWidgets('tapping "Ver recibo" in Payments opens Chat', (tester) async {

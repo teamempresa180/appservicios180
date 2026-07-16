@@ -11,20 +11,24 @@ import 'provider_dashboard_repository.dart';
 /// No backend, no persistence, no network — see the feature README.
 class MockProviderDashboardRepository implements ProviderDashboardRepository {
   @override
-  Provider getProvider() => mockDashboardProvider;
+  Future<Provider> getProvider() => Future.value(mockDashboardProvider);
 
   @override
-  Profile getProfile() => mockDashboardProfile;
+  Future<Profile> getProfile() => Future.value(mockDashboardProfile);
 
   @override
-  List<Order> getOrders() => List.unmodifiable(mockDashboardOrders);
+  Future<List<Order>> getOrders() =>
+      Future.value(List.unmodifiable(mockDashboardOrders));
 
   @override
-  List<Quote> getQuotes() => List.unmodifiable(mockDashboardQuotes);
+  Future<List<Quote>> getQuotes() =>
+      Future.value(List.unmodifiable(mockDashboardQuotes));
 
   @override
-  List<Review> getReviews() => List.unmodifiable(mockDashboardReviews);
+  Future<List<Review>> getReviews() =>
+      Future.value(List.unmodifiable(mockDashboardReviews));
 
   @override
-  List<Payment> getPayments() => List.unmodifiable(mockDashboardPayments);
+  Future<List<Payment>> getPayments() =>
+      Future.value(List.unmodifiable(mockDashboardPayments));
 }

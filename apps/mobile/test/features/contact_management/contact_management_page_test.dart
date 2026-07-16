@@ -1,20 +1,60 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/core/network/http_exceptions.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
 import 'package:mobile/features/contact_management/presentation/pages/contact_management_page.dart';
 import 'package:mobile/features/contact_management/presentation/widgets/contact_card.dart';
+import 'package:mobile/features/contact_management/presentation/widgets/contacts_empty_state.dart';
 import 'package:mobile/features/contact_management/presentation/widgets/contacts_statistics.dart';
+import 'package:mobile/features/contact_management/repositories/contact_management_repository.dart';
+import 'package:mobile/features/contact_management/repositories/mock_contact_management_repository.dart';
+import 'package:mobile/contact/entities/contact.dart';
+import 'package:mobile/profiles/entities/profile.dart';
+
+/// Wraps [MockContactManagementRepository] (already `Future`-returning)
+/// so tests can force it to never resolve (loading state), return no
+/// contacts (empty state) or throw (error state), without touching
+/// the real mock data.
+class _FakeContactManagementRepository implements ContactManagementRepository {
+  _FakeContactManagementRepository({
+    this.neverResolves = false,
+    this.forceEmpty = false,
+    this.throwsError = false,
+  });
+
+  final bool neverResolves;
+  final bool forceEmpty;
+  final bool throwsError;
+  final _delegate = MockContactManagementRepository();
+
+  @override
+  Future<Profile> getProfile() {
+    if (neverResolves) return Completer<Profile>().future;
+    if (throwsError) {
+      return Future.error(const NetworkHttpException('sin conexión'));
+    }
+    return _delegate.getProfile();
+  }
+
+  @override
+  Future<List<Contact>> getContacts() =>
+      forceEmpty ? Future.value(const []) : _delegate.getContacts();
+}
 
 void main() {
-  Widget buildApp({
-    ContactManagementViewState state = ContactManagementViewState.information,
-  }) {
+  Widget buildApp({ContactManagementRepository? repository}) {
     return MaterialApp(
       theme: AppTheme.light,
-      home: Scaffold(body: ContactManagementPage(state: state)),
+      home: Scaffold(
+        body: ContactManagementPage(
+          repository: repository ?? _FakeContactManagementRepository(),
+        ),
+      ),
     );
   }
 
@@ -70,7 +110,9 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      buildApp(state: ContactManagementViewState.loading),
+      buildApp(
+        repository: _FakeContactManagementRepository(neverResolves: true),
+      ),
     );
     // The indeterminate CircularProgressIndicator never settles, so
     // pumpAndSettle can't be used — but the message's FadeIn does need
@@ -83,14 +125,26 @@ void main() {
     expect(find.byType(ContactCard), findsNothing);
   });
 
-  testWidgets('empty state shows AppEmptyState instead of the list', (
+  testWidgets('empty state shows ContactsEmptyState instead of the list', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: ContactManagementViewState.empty));
+    await tester.pumpWidget(
+      buildApp(repository: _FakeContactManagementRepository(forceEmpty: true)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ContactsEmptyState), findsOneWidget);
+    expect(find.byType(ContactCard), findsNothing);
+  });
+
+  testWidgets('error state shows a retry action', (tester) async {
+    await tester.pumpWidget(
+      buildApp(repository: _FakeContactManagementRepository(throwsError: true)),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(AppEmptyState), findsOneWidget);
-    expect(find.byType(ContactCard), findsNothing);
+    expect(find.text('Reintentar'), findsOneWidget);
   });
 
   testWidgets('does not build its own Scaffold', (tester) async {

@@ -7,16 +7,16 @@ import '../../../provider/models/provider_id.dart';
 /// `FirebaseProviderRepository` would implement this same interface (see
 /// the feature README).
 abstract class ProviderRepository {
-  List<Provider> getRecommended();
+  Future<List<Provider>> getRecommended();
 
   /// The `Profile` that carries this provider's display name. `Provider`
   /// itself only stores a `ProfileId` reference (per the domain's "no
   /// embedded entities" rule) — never a name directly.
-  Profile profileOf(ProviderId id);
+  Future<Profile> profileOf(ProviderId id);
 
   /// Simulated rating for [id] — no `Review` aggregate is consulted yet.
-  double ratingOf(ProviderId id);
+  Future<double> ratingOf(ProviderId id);
 
   /// Simulated count for [id] — no real `Service` lookup is performed.
-  int servicesCountOf(ProviderId id);
+  Future<int> servicesCountOf(ProviderId id);
 }

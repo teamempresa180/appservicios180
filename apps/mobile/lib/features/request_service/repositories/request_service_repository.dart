@@ -14,10 +14,10 @@ import '../../../service/entities/service.dart';
 /// There is no id-based lookup yet — this feature shows a single fixed
 /// service/provider (see the feature README for why).
 abstract class RequestServiceRepository {
-  Service getService();
-  Provider getProvider();
-  Profile getProfile();
-  Category getCategory();
-  Availability getAvailability();
-  Address getAddress();
+  Future<Service> getService();
+  Future<Provider> getProvider();
+  Future<Profile> getProfile();
+  Future<Category> getCategory();
+  Future<Availability> getAvailability();
+  Future<Address> getAddress();
 }

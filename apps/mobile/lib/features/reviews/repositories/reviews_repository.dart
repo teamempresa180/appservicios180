@@ -14,9 +14,9 @@ import '../../../service/entities/service.dart';
 /// **list** of reviews (not a single fixed record) — but still no
 /// id-based lookup for a single review's own detail page.
 abstract class ReviewsRepository {
-  List<Review> getReviews();
-  Provider getProviderFor(Review review);
-  Profile getProfileFor(Review review);
-  Order getOrderFor(Review review);
-  Service getServiceFor(Review review);
+  Future<List<Review>> getReviews();
+  Future<Provider> getProviderFor(Review review);
+  Future<Profile> getProfileFor(Review review);
+  Future<Order> getOrderFor(Review review);
+  Future<Service> getServiceFor(Review review);
 }

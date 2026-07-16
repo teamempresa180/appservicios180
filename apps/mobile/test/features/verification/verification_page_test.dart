@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/core/network/http_exceptions.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
@@ -9,14 +12,44 @@ import 'package:mobile/features/verification/presentation/widgets/document_previ
 import 'package:mobile/features/verification/presentation/widgets/selfie_preview.dart';
 import 'package:mobile/features/verification/presentation/widgets/verification_status.dart';
 import 'package:mobile/features/verification/presentation/widgets/verification_step_card.dart';
+import 'package:mobile/features/verification/repositories/mock_verification_repository.dart';
+import 'package:mobile/features/verification/repositories/verification_repository.dart';
+import 'package:mobile/identity/entities/identity.dart';
+import 'package:mobile/profiles/entities/profile.dart';
+
+/// Wraps [MockVerificationRepository] (already `Future`-returning) so
+/// tests can force it to never resolve (loading state) or throw
+/// (error state), without touching the real mock data.
+class _FakeVerificationRepository implements VerificationRepository {
+  _FakeVerificationRepository({
+    this.neverResolves = false,
+    this.throwsError = false,
+  });
+
+  final bool neverResolves;
+  final bool throwsError;
+  final _delegate = MockVerificationRepository();
+
+  @override
+  Future<Identity> getIdentity() {
+    if (neverResolves) return Completer<Identity>().future;
+    if (throwsError) {
+      return Future.error(const NetworkHttpException('sin conexión'));
+    }
+    return _delegate.getIdentity();
+  }
+
+  @override
+  Future<Profile> getProfile() => _delegate.getProfile();
+}
 
 void main() {
-  Widget buildApp({
-    VerificationViewState state = VerificationViewState.information,
-  }) {
+  Widget buildApp({VerificationRepository? repository}) {
     return MaterialApp(
       theme: AppTheme.light,
-      home: Scaffold(body: VerificationPage(state: state)),
+      home: Scaffold(
+        body: VerificationPage(repository: repository ?? _FakeVerificationRepository()),
+      ),
     );
   }
 
@@ -87,7 +120,9 @@ void main() {
   testWidgets('loading state shows AppLoading instead of the information', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: VerificationViewState.loading));
+    await tester.pumpWidget(
+      buildApp(repository: _FakeVerificationRepository(neverResolves: true)),
+    );
     // The indeterminate CircularProgressIndicator never settles, so
     // pumpAndSettle can't be used — but the message's FadeIn does need
     // a couple of pumps to resolve, or its delayed Future leaves a
@@ -99,10 +134,10 @@ void main() {
     expect(find.byType(DocumentPreview), findsNothing);
   });
 
-  testWidgets('empty state shows AppEmptyState instead of the information', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildApp(state: VerificationViewState.empty));
+  testWidgets('error state shows a retry action', (tester) async {
+    await tester.pumpWidget(
+      buildApp(repository: _FakeVerificationRepository(throwsError: true)),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(AppEmptyState), findsOneWidget);

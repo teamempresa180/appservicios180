@@ -8,8 +8,8 @@ import 'trust_repository.dart';
 /// README.
 class MockTrustRepository implements TrustRepository {
   @override
-  Identity getIdentity() => mockTrustIdentity;
+  Future<Identity> getIdentity() => Future.value(mockTrustIdentity);
 
   @override
-  Trust getTrust() => mockTrust;
+  Future<Trust> getTrust() => Future.value(mockTrust);
 }

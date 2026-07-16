@@ -4,12 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/settings/presentation/pages/settings_page.dart';
 import 'package:mobile/features/settings/presentation/widgets/settings_option_tile.dart';
+import 'package:mobile/features/settings/repositories/mock_settings_repository.dart';
 
 void main() {
   Widget buildApp() {
     return MaterialApp(
       theme: AppTheme.light,
-      home: const Scaffold(body: SettingsPage()),
+      home: Scaffold(body: SettingsPage(repository: MockSettingsRepository())),
     );
   }
 

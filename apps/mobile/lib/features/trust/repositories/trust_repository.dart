@@ -7,6 +7,6 @@ import '../../../trust/entities/trust.dart';
 /// `ApiTrustRepository` would implement this same interface (see the
 /// feature README).
 abstract class TrustRepository {
-  Identity getIdentity();
-  Trust getTrust();
+  Future<Identity> getIdentity();
+  Future<Trust> getTrust();
 }

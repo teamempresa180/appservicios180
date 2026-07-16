@@ -10,14 +10,17 @@ import 'security_repository.dart';
 /// feature README.
 class MockSecurityRepository implements SecurityRepository {
   @override
-  Identity getIdentity() => mockSecurityIdentity;
+  Future<Identity> getIdentity() => Future.value(mockSecurityIdentity);
 
   @override
-  List<Authentication> getAuthMethods() => List.unmodifiable(mockAuthMethods);
+  Future<List<Authentication>> getAuthMethods() =>
+      Future.value(List.unmodifiable(mockAuthMethods));
 
   @override
-  List<Credential> getCredentials() => List.unmodifiable(mockCredentials);
+  Future<List<Credential>> getCredentials() =>
+      Future.value(List.unmodifiable(mockCredentials));
 
   @override
-  List<Audit> getAuditLog() => List.unmodifiable(mockAuditLog);
+  Future<List<Audit>> getAuditLog() =>
+      Future.value(List.unmodifiable(mockAuditLog));
 }

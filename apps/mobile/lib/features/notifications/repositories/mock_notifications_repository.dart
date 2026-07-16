@@ -11,21 +11,22 @@ import 'notifications_repository.dart';
 /// see the feature README.
 class MockNotificationsRepository implements NotificationsRepository {
   @override
-  List<Notification> getNotifications() => List.unmodifiable(mockNotifications);
+  Future<List<Notification>> getNotifications() =>
+      Future.value(List.unmodifiable(mockNotifications));
 
   @override
-  Order? getOrderFor(Notification notification) =>
-      mockNotificationOrders[notification.id];
+  Future<Order?> getOrderFor(Notification notification) =>
+      Future.value(mockNotificationOrders[notification.id]);
 
   @override
-  Payment? getPaymentFor(Notification notification) =>
-      mockNotificationPayments[notification.id];
+  Future<Payment?> getPaymentFor(Notification notification) =>
+      Future.value(mockNotificationPayments[notification.id]);
 
   @override
-  Quote? getQuoteFor(Notification notification) =>
-      mockNotificationQuotes[notification.id];
+  Future<Quote?> getQuoteFor(Notification notification) =>
+      Future.value(mockNotificationQuotes[notification.id]);
 
   @override
-  Chat? getChatFor(Notification notification) =>
-      mockNotificationChats[notification.id];
+  Future<Chat?> getChatFor(Notification notification) =>
+      Future.value(mockNotificationChats[notification.id]);
 }

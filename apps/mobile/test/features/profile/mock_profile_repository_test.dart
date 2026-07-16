@@ -10,38 +10,43 @@ void main() {
   group('MockProfileRepository', () {
     final repository = MockProfileRepository();
 
-    test('getProfile returns a real Profile with a display name', () {
-      final profile = repository.getProfile();
+    test('getProfile returns a real Profile with a display name', () async {
+      final profile = await repository.getProfile();
       expect(profile, isA<Profile>());
       expect(profile.displayName, isNotEmpty);
     });
 
-    test('getIdentity returns a real Identity entity, not a map', () {
-      expect(repository.getIdentity(), isA<Identity>());
+    test('getIdentity returns a real Identity entity, not a map', () async {
+      expect(await repository.getIdentity(), isA<Identity>());
     });
 
-    test('getContacts returns real Contact entities, not maps', () {
-      final contacts = repository.getContacts();
+    test('getContacts returns real Contact entities, not maps', () async {
+      final contacts = await repository.getContacts();
       expect(contacts, isNotEmpty);
       expect(contacts, everyElement(isA<Contact>()));
     });
 
-    test('getAddress returns a real Address entity, not a map', () {
-      expect(repository.getAddress(), isA<Address>());
+    test('getAddress returns a real Address entity, not a map', () async {
+      expect(await repository.getAddress(), isA<Address>());
     });
 
-    test('profile and contacts reference the same identity', () {
-      final identityId = repository.getIdentity().id;
-      expect(repository.getProfile().identityId, equals(identityId));
+    test('profile and contacts reference the same identity', () async {
+      final identityId = (await repository.getIdentity()).id;
+      expect((await repository.getProfile()).identityId, equals(identityId));
       expect(
-        repository.getContacts().every((c) => c.identityId == identityId),
+        (await repository.getContacts()).every(
+          (c) => c.identityId == identityId,
+        ),
         isTrue,
       );
-      expect(repository.getAddress().identityId, equals(identityId));
+      expect((await repository.getAddress()).identityId, equals(identityId));
     });
 
-    test('is independent from every other feature mock data', () {
-      expect(repository.getIdentity().id.value.startsWith('profile-'), isTrue);
+    test('is independent from every other feature mock data', () async {
+      expect(
+        (await repository.getIdentity()).id.value.startsWith('profile-'),
+        isTrue,
+      );
     });
   });
 }

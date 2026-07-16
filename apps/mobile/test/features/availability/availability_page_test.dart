@@ -1,20 +1,64 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/availability/entities/availability.dart';
+import 'package:mobile/core/network/http_exceptions.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
 import 'package:mobile/features/availability/presentation/pages/availability_page.dart';
 import 'package:mobile/features/availability/presentation/widgets/availability_statistics.dart';
 import 'package:mobile/features/availability/presentation/widgets/day_schedule_card.dart';
+import 'package:mobile/features/availability/repositories/availability_repository.dart';
+import 'package:mobile/features/availability/repositories/mock_availability_repository.dart';
+import 'package:mobile/provider/entities/provider.dart';
+
+/// Wraps [MockAvailabilityRepository] (already `Future`-returning) so
+/// tests can force it to never resolve (loading state) or return an
+/// empty list (empty state), without touching the real mock data.
+class _FakeAvailabilityRepository implements AvailabilityRepository {
+  _FakeAvailabilityRepository({
+    this.neverResolves = false,
+    this.forceEmpty = false,
+    this.forceError = false,
+  });
+
+  final bool neverResolves;
+  final bool forceEmpty;
+  final bool forceError;
+  final _delegate = MockAvailabilityRepository();
+
+  @override
+  Future<Provider> getProvider() {
+    if (neverResolves) return Completer<Provider>().future;
+    if (forceError) {
+      return Future.error(const NetworkHttpException('sin conexión'));
+    }
+    return _delegate.getProvider();
+  }
+
+  @override
+  Future<List<Availability>> getAvailabilities() {
+    if (neverResolves) return Completer<List<Availability>>().future;
+    if (forceEmpty) return Future.value(const []);
+    if (forceError) {
+      return Future.error(const NetworkHttpException('sin conexión'));
+    }
+    return _delegate.getAvailabilities();
+  }
+}
 
 void main() {
-  Widget buildApp({
-    AvailabilityViewState state = AvailabilityViewState.information,
-  }) {
+  Widget buildApp({AvailabilityRepository? repository}) {
     return MaterialApp(
       theme: AppTheme.light,
-      home: Scaffold(body: AvailabilityPage(state: state)),
+      home: Scaffold(
+        body: AvailabilityPage(
+          repository: repository ?? _FakeAvailabilityRepository(),
+        ),
+      ),
     );
   }
 
@@ -87,7 +131,11 @@ void main() {
   testWidgets('loading state shows AppLoading instead of the schedule', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: AvailabilityViewState.loading));
+    await tester.pumpWidget(
+      buildApp(
+        repository: _FakeAvailabilityRepository(neverResolves: true),
+      ),
+    );
     // The indeterminate CircularProgressIndicator never settles, so
     // pumpAndSettle can't be used — but the message's FadeIn does need
     // a couple of pumps to resolve, or its delayed Future leaves a
@@ -102,11 +150,23 @@ void main() {
   testWidgets('empty state shows AppEmptyState instead of the schedule', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: AvailabilityViewState.empty));
+    await tester.pumpWidget(
+      buildApp(repository: _FakeAvailabilityRepository(forceEmpty: true)),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(AppEmptyState), findsOneWidget);
     expect(find.byType(DayScheduleCard), findsNothing);
+  });
+
+  testWidgets('error state shows a retry action', (tester) async {
+    await tester.pumpWidget(
+      buildApp(repository: _FakeAvailabilityRepository(forceError: true)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudo cargar la disponibilidad'), findsOneWidget);
+    expect(find.text('Reintentar'), findsOneWidget);
   });
 
   testWidgets('does not build its own Scaffold', (tester) async {

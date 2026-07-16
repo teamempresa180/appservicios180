@@ -6,8 +6,8 @@ import '../../../service/models/service_id.dart';
 /// `FirebaseServiceRepository` would implement this same interface (see
 /// the feature README).
 abstract class ServiceRepository {
-  List<Service> getFeatured();
+  Future<List<Service>> getFeatured();
 
   /// Simulated rating for [id] — no `Review` aggregate is consulted yet.
-  double ratingOf(ServiceId id);
+  Future<double> ratingOf(ServiceId id);
 }

@@ -8,24 +8,30 @@ void main() {
   group('MockTrustRepository', () {
     final repository = MockTrustRepository();
 
-    test('getIdentity returns a real Identity entity, not a map', () {
-      expect(repository.getIdentity(), isA<Identity>());
+    test('getIdentity returns a real Identity entity, not a map', () async {
+      expect(await repository.getIdentity(), isA<Identity>());
     });
 
-    test('getTrust returns a real Trust entity, not a map', () {
-      expect(repository.getTrust(), isA<Trust>());
+    test('getTrust returns a real Trust entity, not a map', () async {
+      expect(await repository.getTrust(), isA<Trust>());
     });
 
-    test('trust references the same identity returned', () {
+    test('trust references the same identity returned', () async {
       expect(
-        repository.getTrust().identityId,
-        equals(repository.getIdentity().id),
+        (await repository.getTrust()).identityId,
+        equals((await repository.getIdentity()).id),
       );
     });
 
-    test('is independent from every other feature mock data', () {
-      expect(repository.getIdentity().id.value.startsWith('trust-'), isTrue);
-      expect(repository.getTrust().id.value.startsWith('trust-'), isTrue);
+    test('is independent from every other feature mock data', () async {
+      expect(
+        (await repository.getIdentity()).id.value.startsWith('trust-'),
+        isTrue,
+      );
+      expect(
+        (await repository.getTrust()).id.value.startsWith('trust-'),
+        isTrue,
+      );
     });
   });
 }

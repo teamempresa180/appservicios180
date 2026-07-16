@@ -1,57 +1,76 @@
 import 'package:flutter/material.dart';
+import '../../../../core/di/service_locator.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_empty_state.dart';
+import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
-import '../../mappers/verification_mapper.dart';
-import '../../mock/mock_verification_data.dart';
-import '../../models/verification_display.dart';
-import '../../repositories/mock_verification_repository.dart';
+import '../../../../core/ui/widgets/app_section_title.dart';
+import '../../repositories/verification_repository.dart';
+import '../view_models/verification_view_model.dart';
 import '../widgets/document_preview.dart';
 import '../widgets/selfie_preview.dart';
 import '../widgets/submit_verification_button.dart';
 import '../widgets/verification_actions.dart';
-import '../widgets/verification_empty_state.dart';
 import '../widgets/verification_header.dart';
-import '../widgets/verification_loading.dart';
 import '../widgets/verification_status.dart';
 import '../widgets/verification_steps.dart';
 
-/// The three purely-visual states this screen can render — same
-/// fixed-`state` approach as every list/detail feature since `search`.
-enum VerificationViewState { loading, empty, information }
-
 /// Verification screen. Does NOT build its own `Scaffold` — it is
 /// meant to live within the existing navigation flow (opened from
-/// `Provider Profile`). Completely independent: its own repository,
-/// its own mock data. No real authentication/backend involved — see
-/// the feature README.
-class VerificationPage extends StatelessWidget {
-  const VerificationPage({
-    super.key,
-    this.state = VerificationViewState.information,
-  });
+/// `Provider Profile`). Loads from the real backend via
+/// [VerificationViewModel] (resolved from the service locator — see
+/// `core/di/service_locator.dart`). No real authentication involved —
+/// see the feature README.
+class VerificationPage extends StatefulWidget {
+  const VerificationPage({super.key, VerificationRepository? repository})
+    : _repository = repository;
 
-  final VerificationViewState state;
+  /// Overridable for tests only — production call sites always resolve
+  /// the real repository from the service locator.
+  final VerificationRepository? _repository;
 
-  VerificationDisplay _buildData() {
-    return VerificationMapper.toDisplay(
-      repository: MockVerificationRepository(),
-      verificationStatus: mockVerificationStatus,
-      completedSteps: mockVerificationCompletedSteps,
-      pendingSteps: mockVerificationPendingSteps,
-      rejectedReason: mockVerificationRejectedReason,
-      estimatedReviewTime: mockVerificationEstimatedReviewTime,
-    );
+  @override
+  State<VerificationPage> createState() => _VerificationPageState();
+}
+
+class _VerificationPageState extends State<VerificationPage> {
+  late final VerificationViewModel _viewModel = VerificationViewModel(
+    widget._repository ?? locator<VerificationRepository>(),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel.load();
+    _viewModel.addListener(_onViewModelChanged);
   }
 
-  Widget _buildBody(VerificationDisplay data) {
-    switch (state) {
-      case VerificationViewState.loading:
-        return const VerificationLoading();
-      case VerificationViewState.empty:
-        return const VerificationEmptyState();
-      case VerificationViewState.information:
+  void _onViewModelChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _viewModel.removeListener(_onViewModelChanged);
+    _viewModel.dispose();
+    super.dispose();
+  }
+
+  Widget _buildBody() {
+    switch (_viewModel.status) {
+      case VerificationLoadStatus.loading:
+        return const AppLoading(message: 'Cargando verificación...');
+      case VerificationLoadStatus.error:
+        return AppEmptyState(
+          icon: AppIcons.error,
+          title: 'No se pudo cargar la verificación',
+          description: _viewModel.errorMessage,
+          actionLabel: 'Reintentar',
+          onActionPressed: _viewModel.retry,
+        );
+      case VerificationLoadStatus.success:
+        final data = _viewModel.data!;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -71,13 +90,16 @@ class VerificationPage extends StatelessWidget {
     }
   }
 
+  Widget _buildHeader() {
+    final data = _viewModel.data;
+    if (data == null) {
+      return const AppSectionTitle(title: 'Verificación de identidad');
+    }
+    return VerificationHeader(data: data);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final data = _buildData();
-
-    return AppPageBody(
-      header: VerificationHeader(data: data),
-      body: _buildBody(data),
-    );
+    return AppPageBody(header: _buildHeader(), body: _buildBody());
   }
 }

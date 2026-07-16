@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_chip.dart';
 import 'package:mobile/features/request_service/presentation/pages/request_service_page.dart';
+import 'package:mobile/features/request_service/repositories/mock_request_service_repository.dart';
 import 'package:mobile/features/request_service/presentation/widgets/address_summary.dart';
 import 'package:mobile/features/request_service/presentation/widgets/attachments_section.dart';
 import 'package:mobile/features/request_service/presentation/widgets/priority_selector.dart';
@@ -16,7 +17,9 @@ void main() {
   Widget buildApp() {
     return MaterialApp(
       theme: AppTheme.light,
-      home: const Scaffold(body: RequestServicePage()),
+      home: Scaffold(
+        body: RequestServicePage(repository: MockRequestServiceRepository()),
+      ),
     );
   }
 

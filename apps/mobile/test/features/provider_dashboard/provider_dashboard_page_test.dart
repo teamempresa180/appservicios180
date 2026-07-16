@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/core/network/http_exceptions.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
@@ -10,14 +13,81 @@ import 'package:mobile/features/provider_dashboard/presentation/widgets/earnings
 import 'package:mobile/features/provider_dashboard/presentation/widgets/pending_requests.dart';
 import 'package:mobile/features/provider_dashboard/presentation/widgets/provider_performance.dart';
 import 'package:mobile/features/provider_dashboard/presentation/widgets/recent_orders.dart';
+import 'package:mobile/features/provider_dashboard/repositories/mock_provider_dashboard_repository.dart';
+import 'package:mobile/features/provider_dashboard/repositories/provider_dashboard_repository.dart';
+import 'package:mobile/order/entities/order.dart';
+import 'package:mobile/payment/entities/payment.dart';
+import 'package:mobile/profiles/entities/profile.dart';
+import 'package:mobile/provider/entities/provider.dart';
+import 'package:mobile/quote/entities/quote.dart';
+import 'package:mobile/review/entities/review.dart';
+
+/// Wraps [MockProviderDashboardRepository] (already `Future`-returning)
+/// so tests can force it to never resolve (loading state), return an
+/// empty dashboard (all six calls empty), or throw (error state),
+/// without touching the real mock data.
+class _FakeProviderDashboardRepository implements ProviderDashboardRepository {
+  _FakeProviderDashboardRepository({
+    this.neverResolves = false,
+    this.forceError = false,
+  });
+
+  final bool neverResolves;
+  final bool forceError;
+  final _delegate = MockProviderDashboardRepository();
+
+  @override
+  Future<Provider> getProvider() {
+    if (neverResolves) return Completer<Provider>().future;
+    if (forceError) throw const NetworkHttpException('sin conexión');
+    return _delegate.getProvider();
+  }
+
+  @override
+  Future<Profile> getProfile() {
+    if (neverResolves) return Completer<Profile>().future;
+    if (forceError) throw const NetworkHttpException('sin conexión');
+    return _delegate.getProfile();
+  }
+
+  @override
+  Future<List<Order>> getOrders() {
+    if (neverResolves) return Completer<List<Order>>().future;
+    if (forceError) throw const NetworkHttpException('sin conexión');
+    return _delegate.getOrders();
+  }
+
+  @override
+  Future<List<Quote>> getQuotes() {
+    if (neverResolves) return Completer<List<Quote>>().future;
+    if (forceError) throw const NetworkHttpException('sin conexión');
+    return _delegate.getQuotes();
+  }
+
+  @override
+  Future<List<Review>> getReviews() {
+    if (neverResolves) return Completer<List<Review>>().future;
+    if (forceError) throw const NetworkHttpException('sin conexión');
+    return _delegate.getReviews();
+  }
+
+  @override
+  Future<List<Payment>> getPayments() {
+    if (neverResolves) return Completer<List<Payment>>().future;
+    if (forceError) throw const NetworkHttpException('sin conexión');
+    return _delegate.getPayments();
+  }
+}
 
 void main() {
-  Widget buildApp({
-    ProviderDashboardViewState state = ProviderDashboardViewState.information,
-  }) {
+  Widget buildApp({ProviderDashboardRepository? repository}) {
     return MaterialApp(
       theme: AppTheme.light,
-      home: Scaffold(body: ProviderDashboardPage(state: state)),
+      home: Scaffold(
+        body: ProviderDashboardPage(
+          repository: repository ?? _FakeProviderDashboardRepository(),
+        ),
+      ),
     );
   }
 
@@ -90,7 +160,9 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      buildApp(state: ProviderDashboardViewState.loading),
+      buildApp(
+        repository: _FakeProviderDashboardRepository(neverResolves: true),
+      ),
     );
     // The indeterminate CircularProgressIndicator never settles, so
     // pumpAndSettle can't be used — but the message's FadeIn does need
@@ -103,13 +175,17 @@ void main() {
     expect(find.byType(EarningsSummary), findsNothing);
   });
 
-  testWidgets('empty state shows AppEmptyState instead of the information', (
+  testWidgets('error state shows AppEmptyState with a retry action', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: ProviderDashboardViewState.empty));
+    await tester.pumpWidget(
+      buildApp(repository: _FakeProviderDashboardRepository(forceError: true)),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(AppEmptyState), findsOneWidget);
+    expect(find.text('No se pudo cargar el panel'), findsOneWidget);
+    expect(find.text('Reintentar'), findsOneWidget);
     expect(find.byType(EarningsSummary), findsNothing);
   });
 

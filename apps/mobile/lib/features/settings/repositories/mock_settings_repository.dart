@@ -7,8 +7,9 @@ import 'settings_repository.dart';
 /// backend, no persistence, no network — see the feature README.
 class MockSettingsRepository implements SettingsRepository {
   @override
-  Profile getProfile() => mockSettingsProfile;
+  Future<Profile> getProfile() => Future.value(mockSettingsProfile);
 
   @override
-  List<SettingsOptionId> getOptions() => List.unmodifiable(mockSettingsOptions);
+  Future<List<SettingsOptionId>> getOptions() =>
+      Future.value(List.unmodifiable(mockSettingsOptions));
 }

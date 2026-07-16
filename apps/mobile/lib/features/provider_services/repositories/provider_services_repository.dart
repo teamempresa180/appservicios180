@@ -6,15 +6,16 @@ import '../../../service/entities/service.dart';
 /// Contract for reading the domain entities the Provider Services
 /// screen needs. Returns only real domain entities — no `Map`, no
 /// `dynamic`, no JSON. Implemented today by
-/// `MockProviderServicesRepository`; a future
-/// `ApiProviderServicesRepository` would implement this same
-/// interface (see the feature README).
+/// `MockProviderServicesRepository` (kept for tests/offline fallback)
+/// and `HttpProviderServicesRepository` (real backend, see the feature
+/// README).
 ///
-/// There is no id-based lookup yet — this feature shows a single fixed
-/// provider's services (see the feature README for why).
+/// There is no id-based lookup yet for `getProvider`/`getProfile`/
+/// `getServices` — this feature shows a single fixed provider's
+/// services (see the feature README for why).
 abstract class ProviderServicesRepository {
-  Provider getProvider();
-  Profile getProfile();
-  List<Service> getServices();
-  Category getCategoryFor(Service service);
+  Future<Provider> getProvider();
+  Future<Profile> getProfile();
+  Future<List<Service>> getServices();
+  Future<Category> getCategoryFor(Service service);
 }

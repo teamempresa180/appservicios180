@@ -8,6 +8,6 @@ import '../../../profiles/entities/profile.dart';
 /// `ApiContactManagementRepository` would implement this same
 /// interface (see the feature README).
 abstract class ContactManagementRepository {
-  Profile getProfile();
-  List<Contact> getContacts();
+  Future<Profile> getProfile();
+  Future<List<Contact>> getContacts();
 }

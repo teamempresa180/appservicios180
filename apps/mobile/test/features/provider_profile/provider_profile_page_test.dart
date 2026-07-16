@@ -1,7 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/availability/entities/availability.dart';
+import 'package:mobile/category/entities/category.dart';
+import 'package:mobile/core/network/http_exceptions.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
+import 'package:mobile/core/ui/widgets/app_loading.dart';
 import 'package:mobile/features/provider_profile/presentation/pages/provider_profile_page.dart';
 import 'package:mobile/features/provider_profile/presentation/widgets/provider_availability.dart';
 import 'package:mobile/features/provider_profile/presentation/widgets/provider_information.dart';
@@ -9,12 +15,64 @@ import 'package:mobile/features/provider_profile/presentation/widgets/provider_r
 import 'package:mobile/features/provider_profile/presentation/widgets/provider_services.dart';
 import 'package:mobile/features/provider_profile/presentation/widgets/provider_specialties.dart';
 import 'package:mobile/features/provider_profile/presentation/widgets/provider_statistics.dart';
+import 'package:mobile/features/provider_profile/repositories/mock_provider_profile_repository.dart';
+import 'package:mobile/features/provider_profile/repositories/provider_profile_repository.dart';
+import 'package:mobile/profiles/entities/profile.dart';
+import 'package:mobile/provider/entities/provider.dart';
+import 'package:mobile/review/entities/review.dart';
+import 'package:mobile/service/entities/service.dart';
+
+/// Test double standing in for the real HTTP-backed repository — lets
+/// each test control exactly what each getter returns/throws and when,
+/// without touching the global service locator.
+class _FakeProviderProfileRepository implements ProviderProfileRepository {
+  _FakeProviderProfileRepository({
+    this.neverResolves = false,
+    this.forceError = false,
+  });
+
+  final bool neverResolves;
+  final bool forceError;
+  final _delegate = MockProviderProfileRepository();
+
+  @override
+  Future<Provider> getProvider() => _run(() => _delegate.getProvider());
+
+  @override
+  Future<Profile> getProfile() => _run(() => _delegate.getProfile());
+
+  @override
+  Future<Availability> getAvailability() =>
+      _run(() => _delegate.getAvailability());
+
+  @override
+  Future<List<Review>> getReviews() => _run(() => _delegate.getReviews());
+
+  @override
+  Future<List<Service>> getServices() => _run(() => _delegate.getServices());
+
+  @override
+  Future<List<Category>> getCategories() =>
+      _run(() => _delegate.getCategories());
+
+  Future<T> _run<T>(Future<T> Function() delegateCall) {
+    if (neverResolves) return Completer<T>().future;
+    if (forceError) {
+      return Future<T>.error(const NetworkHttpException('sin conexión'));
+    }
+    return delegateCall();
+  }
+}
 
 void main() {
-  Widget buildApp() {
+  Widget buildApp({ProviderProfileRepository? repository}) {
     return MaterialApp(
       theme: AppTheme.light,
-      home: const Scaffold(body: ProviderProfilePage()),
+      home: Scaffold(
+        body: ProviderProfilePage(
+          repository: repository ?? _FakeProviderProfileRepository(),
+        ),
+      ),
     );
   }
 
@@ -108,5 +166,33 @@ void main() {
 
     expect(find.byType(Scaffold), findsOneWidget);
     expect(find.byType(AppBar), findsNothing);
+  });
+
+  testWidgets('loading state shows AppLoading instead of the content', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildApp(
+        repository: _FakeProviderProfileRepository(neverResolves: true),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(AppLoading), findsOneWidget);
+    expect(find.byType(ProviderInformation), findsNothing);
+  });
+
+  testWidgets('error state shows a retry action', (tester) async {
+    await tester.pumpWidget(
+      buildApp(repository: _FakeProviderProfileRepository(forceError: true)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('No se pudo cargar el perfil del proveedor'),
+      findsOneWidget,
+    );
+    expect(find.text('Reintentar'), findsOneWidget);
   });
 }

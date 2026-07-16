@@ -11,20 +11,20 @@ import 'payments_repository.dart';
 /// backend, no persistence, no network — see the feature README.
 class MockPaymentsRepository implements PaymentsRepository {
   @override
-  Payment getPayment() => mockPayment;
+  Future<Payment> getPayment() => Future.value(mockPayment);
 
   @override
-  Order getOrder() => mockPaymentOrder;
+  Future<Order> getOrder() => Future.value(mockPaymentOrder);
 
   @override
-  Quote getQuote() => mockPaymentQuote;
+  Future<Quote> getQuote() => Future.value(mockPaymentQuote);
 
   @override
-  Service getService() => mockPaymentService;
+  Future<Service> getService() => Future.value(mockPaymentService);
 
   @override
-  Provider getProvider() => mockPaymentProvider;
+  Future<Provider> getProvider() => Future.value(mockPaymentProvider);
 
   @override
-  Profile getProfile() => mockPaymentProfile;
+  Future<Profile> getProfile() => Future.value(mockPaymentProfile);
 }

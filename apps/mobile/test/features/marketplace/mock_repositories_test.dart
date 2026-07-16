@@ -13,24 +13,24 @@ void main() {
   group('MockCategoryRepository', () {
     final repository = MockCategoryRepository();
 
-    test('getAll returns real Category entities, not maps', () {
-      final categories = repository.getAll();
+    test('getAll returns real Category entities, not maps', () async {
+      final categories = await repository.getAll();
 
       expect(categories, isNotEmpty);
       expect(categories, everyElement(isA<Category>()));
       expect(categories.map((c) => c.name), contains('Plomería'));
     });
 
-    test('getById resolves a known category', () {
-      final categories = repository.getAll();
-      final found = repository.getById(categories.first.id);
+    test('getById resolves a known category', () async {
+      final categories = await repository.getAll();
+      final found = await repository.getById(categories.first.id);
 
       expect(found, isNotNull);
       expect(found!.id, equals(categories.first.id));
     });
 
-    test('getById returns null for an unknown id', () {
-      final unknown = repository.getById(CategoryId.fromString('nope'));
+    test('getById returns null for an unknown id', () async {
+      final unknown = await repository.getById(CategoryId.fromString('nope'));
       expect(unknown, isNull);
     });
   });
@@ -38,16 +38,16 @@ void main() {
   group('MockServiceRepository', () {
     final repository = MockServiceRepository();
 
-    test('getFeatured returns real Service entities, not maps', () {
-      final services = repository.getFeatured();
+    test('getFeatured returns real Service entities, not maps', () async {
+      final services = await repository.getFeatured();
 
       expect(services, isNotEmpty);
       expect(services, everyElement(isA<Service>()));
     });
 
-    test('ratingOf returns a simulated rating for a known service', () {
-      final services = repository.getFeatured();
-      final rating = repository.ratingOf(services.first.id);
+    test('ratingOf returns a simulated rating for a known service', () async {
+      final services = await repository.getFeatured();
+      final rating = await repository.ratingOf(services.first.id);
 
       expect(rating, isA<double>());
       expect(rating, greaterThan(0));
@@ -57,25 +57,25 @@ void main() {
   group('MockProviderRepository', () {
     final repository = MockProviderRepository();
 
-    test('getRecommended returns real Provider entities, not maps', () {
-      final providers = repository.getRecommended();
+    test('getRecommended returns real Provider entities, not maps', () async {
+      final providers = await repository.getRecommended();
 
       expect(providers, isNotEmpty);
       expect(providers, everyElement(isA<Provider>()));
     });
 
-    test('profileOf resolves a real Profile with a display name', () {
-      final providers = repository.getRecommended();
-      final profile = repository.profileOf(providers.first.id);
+    test('profileOf resolves a real Profile with a display name', () async {
+      final providers = await repository.getRecommended();
+      final profile = await repository.profileOf(providers.first.id);
 
       expect(profile, isA<Profile>());
       expect(profile.displayName, isNotEmpty);
     });
 
-    test('ratingOf and servicesCountOf return simulated numbers', () {
-      final providers = repository.getRecommended();
-      final rating = repository.ratingOf(providers.first.id);
-      final count = repository.servicesCountOf(providers.first.id);
+    test('ratingOf and servicesCountOf return simulated numbers', () async {
+      final providers = await repository.getRecommended();
+      final rating = await repository.ratingOf(providers.first.id);
+      final count = await repository.servicesCountOf(providers.first.id);
 
       expect(rating, isA<double>());
       expect(count, isA<int>());

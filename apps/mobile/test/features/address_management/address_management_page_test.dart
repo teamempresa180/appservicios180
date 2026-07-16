@@ -1,21 +1,66 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/address/entities/address.dart';
+import 'package:mobile/contact/entities/contact.dart';
+import 'package:mobile/core/network/http_exceptions.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
 import 'package:mobile/features/address_management/presentation/pages/address_management_page.dart';
 import 'package:mobile/features/address_management/presentation/widgets/address_card.dart';
 import 'package:mobile/features/address_management/presentation/widgets/address_form_preview.dart';
+import 'package:mobile/features/address_management/presentation/widgets/addresses_empty_state.dart';
 import 'package:mobile/features/address_management/presentation/widgets/default_address_badge.dart';
+import 'package:mobile/features/address_management/repositories/address_management_repository.dart';
+import 'package:mobile/features/address_management/repositories/mock_address_management_repository.dart';
+import 'package:mobile/profiles/entities/profile.dart';
+
+/// Wraps [MockAddressManagementRepository] (already `Future`-returning)
+/// so tests can force it to never resolve (loading state), return no
+/// addresses (empty state) or throw (error state), without touching
+/// the real mock data.
+class _FakeAddressManagementRepository implements AddressManagementRepository {
+  _FakeAddressManagementRepository({
+    this.neverResolves = false,
+    this.forceEmpty = false,
+    this.throwsError = false,
+  });
+
+  final bool neverResolves;
+  final bool forceEmpty;
+  final bool throwsError;
+  final _delegate = MockAddressManagementRepository();
+
+  @override
+  Future<List<Address>> getAddresses() {
+    if (neverResolves) return Completer<List<Address>>().future;
+    if (forceEmpty) return Future.value(const []);
+    if (throwsError) {
+      return Future.error(const NetworkHttpException('sin conexión'));
+    }
+    return _delegate.getAddresses();
+  }
+
+  @override
+  Future<Profile> getProfile() => _delegate.getProfile();
+
+  @override
+  Future<Contact> getContactFor(Address address) =>
+      _delegate.getContactFor(address);
+}
 
 void main() {
-  Widget buildApp({
-    AddressManagementViewState state = AddressManagementViewState.information,
-  }) {
+  Widget buildApp({AddressManagementRepository? repository}) {
     return MaterialApp(
       theme: AppTheme.light,
-      home: Scaffold(body: AddressManagementPage(state: state)),
+      home: Scaffold(
+        body: AddressManagementPage(
+          repository: repository ?? _FakeAddressManagementRepository(),
+        ),
+      ),
     );
   }
 
@@ -75,7 +120,9 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      buildApp(state: AddressManagementViewState.loading),
+      buildApp(
+        repository: _FakeAddressManagementRepository(neverResolves: true),
+      ),
     );
     // The indeterminate CircularProgressIndicator never settles, so
     // pumpAndSettle can't be used — but the message's FadeIn does need
@@ -88,14 +135,26 @@ void main() {
     expect(find.byType(AddressCard), findsNothing);
   });
 
-  testWidgets('empty state shows AppEmptyState instead of the list', (
+  testWidgets('empty state shows AddressesEmptyState instead of the list', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: AddressManagementViewState.empty));
+    await tester.pumpWidget(
+      buildApp(repository: _FakeAddressManagementRepository(forceEmpty: true)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AddressesEmptyState), findsOneWidget);
+    expect(find.byType(AddressCard), findsNothing);
+  });
+
+  testWidgets('error state shows a retry action', (tester) async {
+    await tester.pumpWidget(
+      buildApp(repository: _FakeAddressManagementRepository(throwsError: true)),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(AppEmptyState), findsOneWidget);
-    expect(find.byType(AddressCard), findsNothing);
+    expect(find.text('Reintentar'), findsOneWidget);
   });
 
   testWidgets('does not build its own Scaffold', (tester) async {

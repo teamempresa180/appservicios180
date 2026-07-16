@@ -1,64 +1,80 @@
 import 'package:flutter/material.dart';
+import '../../../../core/di/service_locator.dart';
 import '../../../../core/ui/animations/scale_in.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_empty_state.dart';
+import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
-import '../../mock/mock_provider_services_data.dart';
-import '../../models/provider_service_display.dart';
-import '../../repositories/mock_provider_services_repository.dart';
+import '../../repositories/provider_services_repository.dart';
+import '../view_models/provider_services_view_model.dart';
 import '../widgets/add_service_button.dart';
 import '../widgets/services_empty_state.dart';
 import '../widgets/services_header.dart';
 import '../widgets/services_list.dart';
-import '../widgets/services_loading.dart';
 import '../widgets/services_statistics.dart';
-
-/// The three purely-visual states this screen can render — same
-/// fixed-`state` approach as every list/detail feature since `search`.
-enum ProviderServicesViewState { loading, empty, information }
 
 /// Provider Services screen. Does NOT build its own `Scaffold` — it is
 /// meant to live within the existing navigation flow (opened from
-/// `Provider Dashboard`). Completely independent: its own repository,
-/// its own mock data.
+/// `Provider Dashboard`). Loads from the real backend via
+/// [ProviderServicesViewModel] (resolved from the service locator —
+/// see `core/di/service_locator.dart`). Completely independent of
+/// every other feature: its own repository, its own view model.
 ///
-/// Shows a fixed list of services (no id-based lookup yet) — see the
-/// feature README.
-class ProviderServicesPage extends StatelessWidget {
+/// Shows a fixed provider's services (no id-based lookup yet) — see
+/// the feature README.
+class ProviderServicesPage extends StatefulWidget {
   const ProviderServicesPage({
     super.key,
-    this.state = ProviderServicesViewState.information,
-  });
+    ProviderServicesRepository? repository,
+  }) : _repository = repository;
 
-  final ProviderServicesViewState state;
+  /// Overridable for tests only — production call sites always resolve
+  /// the real repository from the service locator.
+  final ProviderServicesRepository? _repository;
 
-  List<ProviderServiceDisplay> _buildServices() {
-    final repository = MockProviderServicesRepository();
-    final provider = repository.getProvider();
-    final profile = repository.getProfile();
+  @override
+  State<ProviderServicesPage> createState() => _ProviderServicesPageState();
+}
 
-    return [
-      for (final service in repository.getServices())
-        ProviderServiceDisplay(
-          provider: provider,
-          profile: profile,
-          service: service,
-          category: repository.getCategoryFor(service),
-          viewsCount: mockServiceViewsCount[service.id]!,
-          requestsCount: mockServiceRequestsCount[service.id]!,
-          featured: mockServiceFeatured[service.id]!,
-          lastUpdatedLabel: mockServiceLastUpdatedLabel[service.id]!,
-        ),
-    ];
+class _ProviderServicesPageState extends State<ProviderServicesPage> {
+  late final ProviderServicesViewModel _viewModel = ProviderServicesViewModel(
+    widget._repository ?? locator<ProviderServicesRepository>(),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel.load();
+    _viewModel.addListener(_onViewModelChanged);
+  }
+
+  void _onViewModelChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _viewModel.removeListener(_onViewModelChanged);
+    _viewModel.dispose();
+    super.dispose();
   }
 
   Widget _buildBody() {
-    switch (state) {
-      case ProviderServicesViewState.loading:
-        return const ServicesLoading();
-      case ProviderServicesViewState.empty:
-        return const ServicesEmptyState();
-      case ProviderServicesViewState.information:
-        final services = _buildServices();
+    switch (_viewModel.status) {
+      case ProviderServicesLoadStatus.loading:
+        return const AppLoading(message: 'Cargando servicios...');
+      case ProviderServicesLoadStatus.error:
+        return AppEmptyState(
+          icon: AppIcons.error,
+          title: 'No se pudieron cargar los servicios',
+          description: _viewModel.errorMessage,
+          actionLabel: 'Reintentar',
+          onActionPressed: _viewModel.retry,
+        );
+      case ProviderServicesLoadStatus.success:
+        final services = _viewModel.services;
+        if (services.isEmpty) {
+          return const ServicesEmptyState();
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

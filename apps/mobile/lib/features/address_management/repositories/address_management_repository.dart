@@ -9,7 +9,7 @@ import '../../../profiles/entities/profile.dart';
 /// `ApiAddressManagementRepository` or `FirebaseAddressManagementRepository`
 /// would implement this same interface (see the feature README).
 abstract class AddressManagementRepository {
-  List<Address> getAddresses();
-  Profile getProfile();
-  Contact getContactFor(Address address);
+  Future<List<Address>> getAddresses();
+  Future<Profile> getProfile();
+  Future<Contact> getContactFor(Address address);
 }

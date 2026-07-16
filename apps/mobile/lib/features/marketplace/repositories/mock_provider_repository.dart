@@ -10,21 +10,25 @@ import 'provider_repository.dart';
 /// no persistence, no network — see the feature README.
 class MockProviderRepository implements ProviderRepository {
   @override
-  List<Provider> getRecommended() => List.unmodifiable(mockProviders);
+  Future<List<Provider>> getRecommended() =>
+      Future.value(List.unmodifiable(mockProviders));
 
   @override
-  Profile profileOf(ProviderId id) {
+  Future<Profile> profileOf(ProviderId id) {
     final provider = mockProviders.firstWhereOrNull((p) => p.id == id);
-    return mockProviderProfiles.firstWhere(
-      (profile) => profile.id == provider?.providerProfileId,
-      orElse: () => mockProviderProfiles.first,
+    return Future.value(
+      mockProviderProfiles.firstWhere(
+        (profile) => profile.id == provider?.providerProfileId,
+        orElse: () => mockProviderProfiles.first,
+      ),
     );
   }
 
   @override
-  double ratingOf(ProviderId id) => mockProviderRatings[id.value] ?? 4.5;
+  Future<double> ratingOf(ProviderId id) =>
+      Future.value(mockProviderRatings[id.value] ?? 4.5);
 
   @override
-  int servicesCountOf(ProviderId id) =>
-      mockProviderServicesCount[id.value] ?? 0;
+  Future<int> servicesCountOf(ProviderId id) =>
+      Future.value(mockProviderServicesCount[id.value] ?? 0);
 }

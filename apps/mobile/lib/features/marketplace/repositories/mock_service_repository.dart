@@ -7,8 +7,10 @@ import 'service_repository.dart';
 /// no persistence, no network — see the feature README.
 class MockServiceRepository implements ServiceRepository {
   @override
-  List<Service> getFeatured() => List.unmodifiable(mockServices);
+  Future<List<Service>> getFeatured() =>
+      Future.value(List.unmodifiable(mockServices));
 
   @override
-  double ratingOf(ServiceId id) => mockServiceRatings[id.value] ?? 4.5;
+  Future<double> ratingOf(ServiceId id) =>
+      Future.value(mockServiceRatings[id.value] ?? 4.5);
 }

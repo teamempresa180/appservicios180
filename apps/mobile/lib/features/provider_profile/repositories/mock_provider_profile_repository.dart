@@ -11,21 +11,24 @@ import 'provider_profile_repository.dart';
 /// backend, no persistence, no network — see the feature README.
 class MockProviderProfileRepository implements ProviderProfileRepository {
   @override
-  Provider getProvider() => mockProviderProfileProvider;
+  Future<Provider> getProvider() => Future.value(mockProviderProfileProvider);
 
   @override
-  Profile getProfile() => mockProviderProfileProfile;
+  Future<Profile> getProfile() => Future.value(mockProviderProfileProfile);
 
   @override
-  Availability getAvailability() => mockProviderProfileAvailability;
+  Future<Availability> getAvailability() =>
+      Future.value(mockProviderProfileAvailability);
 
   @override
-  List<Review> getReviews() => List.unmodifiable(mockProviderProfileReviews);
+  Future<List<Review>> getReviews() =>
+      Future.value(List.unmodifiable(mockProviderProfileReviews));
 
   @override
-  List<Service> getServices() => List.unmodifiable(mockProviderProfileServices);
+  Future<List<Service>> getServices() =>
+      Future.value(List.unmodifiable(mockProviderProfileServices));
 
   @override
-  List<Category> getCategories() =>
-      List.unmodifiable(mockProviderProfileCategories);
+  Future<List<Category>> getCategories() =>
+      Future.value(List.unmodifiable(mockProviderProfileCategories));
 }

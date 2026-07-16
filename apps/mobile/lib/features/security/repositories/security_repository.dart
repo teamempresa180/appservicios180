@@ -5,12 +5,12 @@ import '../../../identity/entities/identity.dart';
 
 /// Contract for reading the domain entities the Security screen needs.
 /// Returns only real domain entities — no `Map`, no `dynamic`, no
-/// JSON. Implemented today by `MockSecurityRepository`; a future
-/// `ApiSecurityRepository` would implement this same interface (see
-/// the feature README).
+/// JSON. Implemented today by `MockSecurityRepository` and
+/// `HttpSecurityRepository` (real backend — see the latter's class
+/// doc for a documented partial-migration limitation).
 abstract class SecurityRepository {
-  Identity getIdentity();
-  List<Authentication> getAuthMethods();
-  List<Credential> getCredentials();
-  List<Audit> getAuditLog();
+  Future<Identity> getIdentity();
+  Future<List<Authentication>> getAuthMethods();
+  Future<List<Credential>> getCredentials();
+  Future<List<Audit>> getAuditLog();
 }

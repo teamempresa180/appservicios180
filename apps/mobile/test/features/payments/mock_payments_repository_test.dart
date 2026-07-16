@@ -12,49 +12,64 @@ void main() {
   group('MockPaymentsRepository', () {
     final repository = MockPaymentsRepository();
 
-    test('getPayment returns a real Payment entity, not a map', () {
-      expect(repository.getPayment(), isA<Payment>());
+    test('getPayment returns a real Payment entity, not a map', () async {
+      expect(await repository.getPayment(), isA<Payment>());
     });
 
-    test('getOrder returns a real Order entity, not a map', () {
-      expect(repository.getOrder(), isA<Order>());
+    test('getOrder returns a real Order entity, not a map', () async {
+      expect(await repository.getOrder(), isA<Order>());
     });
 
-    test('getQuote returns a real Quote entity, not a map', () {
-      expect(repository.getQuote(), isA<Quote>());
+    test('getQuote returns a real Quote entity, not a map', () async {
+      expect(await repository.getQuote(), isA<Quote>());
     });
 
-    test('getService returns a real Service entity, not a map', () {
-      expect(repository.getService(), isA<Service>());
+    test('getService returns a real Service entity, not a map', () async {
+      expect(await repository.getService(), isA<Service>());
     });
 
-    test('getProvider returns a real Provider entity, not a map', () {
-      expect(repository.getProvider(), isA<Provider>());
+    test('getProvider returns a real Provider entity, not a map', () async {
+      expect(await repository.getProvider(), isA<Provider>());
     });
 
-    test('getProfile returns a real Profile with a display name', () {
-      final profile = repository.getProfile();
+    test('getProfile returns a real Profile with a display name', () async {
+      final profile = await repository.getProfile();
       expect(profile, isA<Profile>());
       expect(profile.displayName, isNotEmpty);
     });
 
-    test('payment references the same order and quote returned', () {
-      expect(repository.getPayment().orderId, equals(repository.getOrder().id));
-      expect(repository.getPayment().quoteId, equals(repository.getQuote().id));
+    test('payment references the same order and quote returned', () async {
+      expect(
+        (await repository.getPayment()).orderId,
+        equals((await repository.getOrder()).id),
+      );
+      expect(
+        (await repository.getPayment()).quoteId,
+        equals((await repository.getQuote()).id),
+      );
     });
 
-    test('quote references the same order returned', () {
-      expect(repository.getQuote().orderId, equals(repository.getOrder().id));
+    test('quote references the same order returned', () async {
+      expect(
+        (await repository.getQuote()).orderId,
+        equals((await repository.getOrder()).id),
+      );
     });
 
-    test('order and payment reference the same provider', () {
-      final providerId = repository.getProvider().id;
-      expect(repository.getOrder().providerId, equals(providerId));
-      expect(repository.getPayment().receiverProviderId, equals(providerId));
+    test('order and payment reference the same provider', () async {
+      final providerId = (await repository.getProvider()).id;
+      expect((await repository.getOrder()).providerId, equals(providerId));
+      expect(
+        (await repository.getPayment()).receiverProviderId,
+        equals(providerId),
+      );
     });
 
-    test('is independent from every other feature mock data', () {
-      expect(repository.getProvider().id.value.startsWith('payments-'), isTrue);
+    test('is independent from every other feature mock data', () async {
+      expect(
+        (await repository.getProvider()).id.value.startsWith('payments-'),
+        isTrue,
+      );
     });
   });
 }

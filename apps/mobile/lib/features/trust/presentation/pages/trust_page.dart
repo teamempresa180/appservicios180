@@ -1,45 +1,72 @@
 import 'package:flutter/material.dart';
+import '../../../../core/di/service_locator.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
+import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_empty_state.dart';
+import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
-import '../../mappers/trust_mapper.dart';
-import '../../mock/mock_trust_data.dart';
-import '../../models/trust_display.dart';
-import '../../repositories/mock_trust_repository.dart';
-import '../widgets/trust_empty_state.dart';
+import '../../../../core/ui/widgets/app_section_title.dart';
+import '../../repositories/trust_repository.dart';
+import '../view_models/trust_view_model.dart';
 import '../widgets/trust_factors.dart';
 import '../widgets/trust_header.dart';
-import '../widgets/trust_loading.dart';
 import '../widgets/trust_score_card.dart';
-
-/// The three purely-visual states this screen can render — same
-/// fixed-`state` approach as every list/detail feature since `search`.
-enum TrustViewState { loading, empty, information }
 
 /// Trust screen. Does NOT build its own `Scaffold` — it is meant to
 /// live within the existing navigation flow (opened from `Provider
-/// Profile`). Completely independent: its own repository, its own mock
-/// data. No real scoring/backend involved — see the feature README.
-class TrustPage extends StatelessWidget {
-  const TrustPage({super.key, this.state = TrustViewState.information});
+/// Profile`). Loads from the real backend via [TrustViewModel]
+/// (resolved from the service locator — see
+/// `core/di/service_locator.dart`). No real scoring involved — see
+/// the feature README.
+class TrustPage extends StatefulWidget {
+  const TrustPage({super.key, TrustRepository? repository})
+    : _repository = repository;
 
-  final TrustViewState state;
+  /// Overridable for tests only — production call sites always resolve
+  /// the real repository from the service locator.
+  final TrustRepository? _repository;
 
-  TrustDisplay _buildData() {
-    return TrustMapper.toDisplay(
-      repository: MockTrustRepository(),
-      factors: mockTrustFactors,
-    );
+  @override
+  State<TrustPage> createState() => _TrustPageState();
+}
+
+class _TrustPageState extends State<TrustPage> {
+  late final TrustViewModel _viewModel = TrustViewModel(
+    widget._repository ?? locator<TrustRepository>(),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel.load();
+    _viewModel.addListener(_onViewModelChanged);
   }
 
-  Widget _buildBody(TrustDisplay data) {
-    switch (state) {
-      case TrustViewState.loading:
-        return const TrustLoading();
-      case TrustViewState.empty:
-        return const TrustEmptyState();
-      case TrustViewState.information:
+  void _onViewModelChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _viewModel.removeListener(_onViewModelChanged);
+    _viewModel.dispose();
+    super.dispose();
+  }
+
+  Widget _buildBody() {
+    switch (_viewModel.status) {
+      case TrustLoadStatus.loading:
+        return const AppLoading(message: 'Cargando confianza...');
+      case TrustLoadStatus.error:
+        return AppEmptyState(
+          icon: AppIcons.error,
+          title: 'No se pudo cargar la confianza',
+          description: _viewModel.errorMessage,
+          actionLabel: 'Reintentar',
+          onActionPressed: _viewModel.retry,
+        );
+      case TrustLoadStatus.success:
+        final data = _viewModel.data!;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -51,13 +78,16 @@ class TrustPage extends StatelessWidget {
     }
   }
 
+  Widget _buildHeader() {
+    final data = _viewModel.data;
+    if (data == null) {
+      return const AppSectionTitle(title: 'Confianza y reputación');
+    }
+    return TrustHeader(data: data);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final data = _buildData();
-
-    return AppPageBody(
-      header: TrustHeader(data: data),
-      body: _buildBody(data),
-    );
+    return AppPageBody(header: _buildHeader(), body: _buildBody());
   }
 }

@@ -1,21 +1,71 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/core/network/http_exceptions.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
-import 'package:mobile/core/ui/widgets/app_loading.dart';
 import 'package:mobile/features/payments/presentation/pages/payments_page.dart';
 import 'package:mobile/features/payments/presentation/widgets/payment_breakdown.dart';
 import 'package:mobile/features/payments/presentation/widgets/payment_information.dart';
+import 'package:mobile/features/payments/presentation/widgets/payment_loading.dart';
 import 'package:mobile/features/payments/presentation/widgets/payment_method_card.dart';
 import 'package:mobile/features/payments/presentation/widgets/payment_status_badge.dart';
 import 'package:mobile/features/payments/presentation/widgets/payment_summary.dart';
+import 'package:mobile/features/payments/repositories/mock_payments_repository.dart';
+import 'package:mobile/features/payments/repositories/payments_repository.dart';
+import 'package:mobile/order/entities/order.dart';
+import 'package:mobile/payment/entities/payment.dart';
+import 'package:mobile/profiles/entities/profile.dart';
+import 'package:mobile/provider/entities/provider.dart';
+import 'package:mobile/quote/entities/quote.dart';
+import 'package:mobile/service/entities/service.dart';
+
+/// Wraps [MockPaymentsRepository] (already `Future`-returning) so tests
+/// can force it to never resolve (loading state) or throw (error
+/// state), without touching the real mock data.
+class _FakePaymentsRepository implements PaymentsRepository {
+  _FakePaymentsRepository({this.neverResolves = false, this.throwError = false});
+
+  final bool neverResolves;
+  final bool throwError;
+  final _delegate = MockPaymentsRepository();
+
+  Future<T> _guard<T>(Future<T> Function() call) {
+    if (neverResolves) return Completer<T>().future;
+    if (throwError) {
+      throw const NetworkHttpException('sin conexión');
+    }
+    return call();
+  }
+
+  @override
+  Future<Payment> getPayment() => _guard(() => _delegate.getPayment());
+
+  @override
+  Future<Order> getOrder() => _guard(() => _delegate.getOrder());
+
+  @override
+  Future<Quote> getQuote() => _guard(() => _delegate.getQuote());
+
+  @override
+  Future<Service> getService() => _guard(() => _delegate.getService());
+
+  @override
+  Future<Provider> getProvider() => _guard(() => _delegate.getProvider());
+
+  @override
+  Future<Profile> getProfile() => _guard(() => _delegate.getProfile());
+}
 
 void main() {
-  Widget buildApp({PaymentsViewState state = PaymentsViewState.information}) {
+  Widget buildApp({PaymentsRepository? repository}) {
     return MaterialApp(
       theme: AppTheme.light,
-      home: Scaffold(body: PaymentsPage(state: state)),
+      home: Scaffold(
+        body: PaymentsPage(repository: repository ?? _FakePaymentsRepository()),
+      ),
     );
   }
 
@@ -83,7 +133,9 @@ void main() {
   testWidgets('loading state shows AppLoading instead of the information', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: PaymentsViewState.loading));
+    await tester.pumpWidget(
+      buildApp(repository: _FakePaymentsRepository(neverResolves: true)),
+    );
     // The indeterminate CircularProgressIndicator never settles, so
     // pumpAndSettle can't be used — but the message's FadeIn does need
     // a couple of pumps to resolve, or its delayed Future leaves a
@@ -91,14 +143,16 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.byType(AppLoading), findsOneWidget);
+    expect(find.byType(PaymentLoading), findsOneWidget);
     expect(find.byType(PaymentInformation), findsNothing);
   });
 
-  testWidgets('empty state shows AppEmptyState instead of the information', (
+  testWidgets('error state shows AppEmptyState instead of the information', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: PaymentsViewState.empty));
+    await tester.pumpWidget(
+      buildApp(repository: _FakePaymentsRepository(throwError: true)),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(AppEmptyState), findsOneWidget);

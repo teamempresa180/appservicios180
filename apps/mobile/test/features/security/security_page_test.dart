@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/audit/entities/audit.dart';
+import 'package:mobile/authentication/entities/authentication.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
+import 'package:mobile/credentials/entities/credential.dart';
 import 'package:mobile/features/security/presentation/pages/security_page.dart';
 import 'package:mobile/features/security/presentation/widgets/audit_log_entry_card.dart';
 import 'package:mobile/features/security/presentation/widgets/audit_log_section.dart';
@@ -11,12 +16,39 @@ import 'package:mobile/features/security/presentation/widgets/auth_method_card.d
 import 'package:mobile/features/security/presentation/widgets/credential_card.dart';
 import 'package:mobile/features/security/presentation/widgets/credentials_section.dart';
 import 'package:mobile/features/security/presentation/widgets/security_statistics.dart';
+import 'package:mobile/features/security/repositories/mock_security_repository.dart';
+import 'package:mobile/features/security/repositories/security_repository.dart';
+import 'package:mobile/identity/entities/identity.dart';
+
+class _FakeSecurityRepository implements SecurityRepository {
+  _FakeSecurityRepository({this.neverResolves = false, this.forceEmpty = false});
+
+  final bool neverResolves;
+  final bool forceEmpty;
+  final _delegate = MockSecurityRepository();
+
+  @override
+  Future<Identity> getIdentity() {
+    if (neverResolves) return Completer<Identity>().future;
+    return _delegate.getIdentity();
+  }
+
+  @override
+  Future<List<Authentication>> getAuthMethods() =>
+      forceEmpty ? Future.value(const []) : _delegate.getAuthMethods();
+
+  @override
+  Future<List<Credential>> getCredentials() => _delegate.getCredentials();
+
+  @override
+  Future<List<Audit>> getAuditLog() => _delegate.getAuditLog();
+}
 
 void main() {
-  Widget buildApp({SecurityViewState state = SecurityViewState.information}) {
+  Widget buildApp({SecurityRepository? repository}) {
     return MaterialApp(
       theme: AppTheme.light,
-      home: Scaffold(body: SecurityPage(state: state)),
+      home: Scaffold(body: SecurityPage(repository: repository ?? _FakeSecurityRepository())),
     );
   }
 
@@ -138,7 +170,9 @@ void main() {
   testWidgets('loading state shows AppLoading instead of the list', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: SecurityViewState.loading));
+    await tester.pumpWidget(
+      buildApp(repository: _FakeSecurityRepository(neverResolves: true)),
+    );
     // The indeterminate CircularProgressIndicator never settles, so
     // pumpAndSettle can't be used — but the message's FadeIn does need
     // a couple of pumps to resolve, or its delayed Future leaves a
@@ -153,7 +187,9 @@ void main() {
   testWidgets('empty state shows AppEmptyState instead of the list', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: SecurityViewState.empty));
+    await tester.pumpWidget(
+      buildApp(repository: _FakeSecurityRepository(forceEmpty: true)),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(AppEmptyState), findsOneWidget);

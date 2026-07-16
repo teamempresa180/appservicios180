@@ -1,18 +1,81 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/category/entities/category.dart';
+import 'package:mobile/core/network/http_exceptions.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/service_detail/presentation/pages/service_detail_page.dart';
 import 'package:mobile/features/service_detail/presentation/widgets/provider_information.dart';
 import 'package:mobile/features/service_detail/presentation/widgets/rating_summary.dart';
 import 'package:mobile/features/service_detail/presentation/widgets/service_gallery.dart';
 import 'package:mobile/features/service_detail/presentation/widgets/service_information.dart';
+import 'package:mobile/features/service_detail/repositories/mock_service_detail_repository.dart';
+import 'package:mobile/features/service_detail/repositories/service_detail_repository.dart';
+import 'package:mobile/profiles/entities/profile.dart';
+import 'package:mobile/provider/entities/provider.dart';
+import 'package:mobile/review/entities/review.dart';
+import 'package:mobile/service/entities/service.dart';
+
+/// Test double standing in for the real HTTP-backed repository — lets
+/// each test control loading/error states, without touching the global
+/// service locator.
+class _FakeServiceDetailRepository implements ServiceDetailRepository {
+  _FakeServiceDetailRepository({
+    this.neverResolves = false,
+    this.forceError = false,
+  });
+
+  final bool neverResolves;
+  final bool forceError;
+  final _delegate = MockServiceDetailRepository();
+
+  @override
+  Future<Service> getService() {
+    if (neverResolves) return Completer<Service>().future;
+    if (forceError) throw const NetworkHttpException('sin conexión');
+    return _delegate.getService();
+  }
+
+  @override
+  Future<Provider> getProvider() {
+    if (neverResolves) return Completer<Provider>().future;
+    if (forceError) throw const NetworkHttpException('sin conexión');
+    return _delegate.getProvider();
+  }
+
+  @override
+  Future<Profile> getProviderProfile() {
+    if (neverResolves) return Completer<Profile>().future;
+    if (forceError) throw const NetworkHttpException('sin conexión');
+    return _delegate.getProviderProfile();
+  }
+
+  @override
+  Future<Category> getCategory() {
+    if (neverResolves) return Completer<Category>().future;
+    if (forceError) throw const NetworkHttpException('sin conexión');
+    return _delegate.getCategory();
+  }
+
+  @override
+  Future<List<Review>> getReviews() {
+    if (neverResolves) return Completer<List<Review>>().future;
+    if (forceError) throw const NetworkHttpException('sin conexión');
+    return _delegate.getReviews();
+  }
+}
 
 void main() {
-  Widget buildApp() {
+  Widget buildApp({ServiceDetailRepository? repository}) {
     return MaterialApp(
       theme: AppTheme.light,
-      home: const Scaffold(body: ServiceDetailPage()),
+      home: Scaffold(
+        body: ServiceDetailPage(
+          repository: repository ?? _FakeServiceDetailRepository(),
+        ),
+      ),
     );
   }
 
@@ -73,6 +136,29 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Solicitar servicio'), findsOneWidget);
+  });
+
+  testWidgets('loading state shows AppLoading instead of the content', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildApp(repository: _FakeServiceDetailRepository(neverResolves: true)),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Cargando servicio...'), findsOneWidget);
+    expect(find.byType(ServiceGallery), findsNothing);
+  });
+
+  testWidgets('error state shows a retry action', (tester) async {
+    await tester.pumpWidget(
+      buildApp(repository: _FakeServiceDetailRepository(forceError: true)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudo cargar el servicio'), findsOneWidget);
+    expect(find.text('Reintentar'), findsOneWidget);
   });
 
   testWidgets('does not build its own Scaffold', (tester) async {

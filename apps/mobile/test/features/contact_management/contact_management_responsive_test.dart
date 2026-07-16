@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/contact_management/presentation/pages/contact_management_page.dart';
+import 'package:mobile/features/contact_management/repositories/mock_contact_management_repository.dart';
 
 void main() {
   const widths = [320.0, 360.0, 390.0, 412.0, 768.0, 1024.0, 1440.0];
@@ -26,7 +27,11 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
-          home: const Scaffold(body: ContactManagementPage()),
+          home: Scaffold(
+            body: ContactManagementPage(
+              repository: MockContactManagementRepository(),
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();

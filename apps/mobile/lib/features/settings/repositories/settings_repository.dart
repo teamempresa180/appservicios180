@@ -7,6 +7,6 @@ import '../models/settings_option.dart';
 /// `ApiSettingsRepository` would implement this same interface (see
 /// the feature README).
 abstract class SettingsRepository {
-  Profile getProfile();
-  List<SettingsOptionId> getOptions();
+  Future<Profile> getProfile();
+  Future<List<SettingsOptionId>> getOptions();
 }

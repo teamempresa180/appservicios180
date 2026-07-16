@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -7,12 +9,43 @@ import 'package:mobile/core/ui/widgets/app_loading.dart';
 import 'package:mobile/features/schedule/presentation/pages/schedule_page.dart';
 import 'package:mobile/features/schedule/presentation/widgets/schedule_block_card.dart';
 import 'package:mobile/features/schedule/presentation/widgets/schedule_statistics.dart';
+import 'package:mobile/features/schedule/repositories/mock_schedule_repository.dart';
+import 'package:mobile/features/schedule/repositories/schedule_repository.dart';
+import 'package:mobile/provider/entities/provider.dart';
+import 'package:mobile/schedule/entities/schedule.dart';
+
+/// Wraps [MockScheduleRepository] (already `Future`-returning) so
+/// tests can force it to never resolve (loading state) or return an
+/// empty schedule list (empty state), without touching the real mock
+/// data.
+class _FakeScheduleRepository implements ScheduleRepository {
+  _FakeScheduleRepository({this.neverResolves = false, this.forceEmpty = false});
+
+  final bool neverResolves;
+  final bool forceEmpty;
+  final _delegate = MockScheduleRepository();
+
+  @override
+  Future<Provider> getProvider() {
+    if (neverResolves) return Completer<Provider>().future;
+    return _delegate.getProvider();
+  }
+
+  @override
+  Future<List<Schedule>> getSchedules() {
+    if (neverResolves) return Completer<List<Schedule>>().future;
+    if (forceEmpty) return Future.value(const []);
+    return _delegate.getSchedules();
+  }
+}
 
 void main() {
-  Widget buildApp({ScheduleViewState state = ScheduleViewState.information}) {
+  Widget buildApp({ScheduleRepository? repository}) {
     return MaterialApp(
       theme: AppTheme.light,
-      home: Scaffold(body: SchedulePage(state: state)),
+      home: Scaffold(
+        body: SchedulePage(repository: repository ?? _FakeScheduleRepository()),
+      ),
     );
   }
 
@@ -61,7 +94,9 @@ void main() {
   testWidgets('loading state shows AppLoading instead of the schedule', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: ScheduleViewState.loading));
+    await tester.pumpWidget(
+      buildApp(repository: _FakeScheduleRepository(neverResolves: true)),
+    );
     // The indeterminate CircularProgressIndicator never settles, so
     // pumpAndSettle can't be used — but the message's FadeIn does need
     // a couple of pumps to resolve, or its delayed Future leaves a
@@ -76,7 +111,9 @@ void main() {
   testWidgets('empty state shows AppEmptyState instead of the schedule', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp(state: ScheduleViewState.empty));
+    await tester.pumpWidget(
+      buildApp(repository: _FakeScheduleRepository(forceEmpty: true)),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(AppEmptyState), findsOneWidget);

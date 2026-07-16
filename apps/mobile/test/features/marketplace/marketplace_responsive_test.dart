@@ -3,6 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/marketplace/presentation/pages/marketplace_page.dart';
+import 'package:mobile/features/marketplace/repositories/mock_category_repository.dart';
+import 'package:mobile/features/marketplace/repositories/mock_provider_repository.dart';
+import 'package:mobile/features/marketplace/repositories/mock_service_repository.dart';
 
 void main() {
   const widths = [320.0, 360.0, 390.0, 412.0, 1024.0];
@@ -24,7 +27,13 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
-          home: const Scaffold(body: MarketplacePage()),
+          home: Scaffold(
+            body: MarketplacePage(
+              categoryRepository: MockCategoryRepository(),
+              serviceRepository: MockServiceRepository(),
+              providerRepository: MockProviderRepository(),
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();

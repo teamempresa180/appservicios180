@@ -4150,3 +4150,163 @@ documenta el resultado de esa decisión.
   `splash_page.dart`, `pubspec.yaml`/`pubspec.lock`, y los tests
   correspondientes. Ningún archivo de `apps/backend` fue modificado en
   esta sesión — Prompt 75 fue exclusivamente Flutter.
+
+## Estado del repositorio al cierre de esta sesión (Prompt 76 — Sprint 5 · Etapa 2, Migración completa Flutter → Backend — consolidado)
+
+**El Prompt 76 fue aprobado por el usuario y consolidado en el Prompt 77.**
+
+**El Prompt 75 fue aprobado por el usuario y consolidado en el Prompt 76**
+(commit `ed5ac97`, Fase 1 de esta sesión, excluyendo `Logo oficial
+grupo.svg`). Este prompt completa la migración iniciada en el Prompt
+75: los ~19 módulos restantes (más el módulo `security`, migrado
+parcialmente) pasan de `MockRepository` a `HttpRepository`, reutilizando
+exactamente la infraestructura del Prompt 75 — ningún patrón nuevo,
+ninguna capa nueva.
+
+- **Fase 2 (Auditoría)**: se auditaron los 22 repositorios restantes
+  (algunos features definen más de uno, p. ej. `marketplace` tiene 3).
+  Hallazgo central: **ningún endpoint del backend soporta filtrar listas
+  por relación** (`GET /quotes?orderId=`, `GET /profiles?identityId=`,
+  `GET /reviews?providerId=`, etc. no existen — solo `page`/`pageSize`/
+  `search?term=`), el mismo hueco ya documentado en el Prompt 75 para
+  `HttpOrdersRepository.getQuoteFor`/`HttpChatRepository`. Se aplicó el
+  mismo patrón interino en todos los módulos nuevos: listar sin filtro
+  y filtrar del lado del cliente, documentado en cada clase. Segundo
+  hallazgo, más serio: **`authentications` y `credentials` no tienen
+  NINGÚN endpoint de lista/búsqueda** (solo `GET /:id`), a diferencia de
+  todos los demás módulos — no hay forma de enumerar "los métodos de
+  autenticación/credenciales de la identidad actual" desde el cliente,
+  ni con filtrado interino. Esto no es un descuido: parece una frontera
+  de seguridad deliberada (enumerar credenciales en bloque es sensible).
+  Por eso `HttpSecurityRepository.getAuthMethods()`/`getCredentials()`
+  siguen delegando a `MockSecurityRepository` — única excepción de
+  migración parcial documentada de todo el prompt — mientras
+  `getIdentity()` (`GET /identities/:id`, directo) y `getAuditLog()`
+  (`GET /audit-records`, filtrado por `identityId`) sí son reales.
+  Tercer hallazgo: varios campos ya documentados como "simulados" en
+  Prompts anteriores (p. ej. `ProviderRepository.ratingOf`/
+  `servicesCountOf` y `ServiceRepository.ratingOf` en `marketplace`, sin
+  agregación de `Review` en el backend) se mantienen simulados y
+  documentados — no se inventó ningún endpoint de agregación nuevo.
+
+- **Fase 3 (Migración completa)** — los 19 módulos restantes migrados,
+  cada uno con: interfaz `Future`-returning, `HttpXRepository` (mapper
+  JSON compartido en `core/network/mappers/domain_http_mappers.dart`,
+  extendido en esta sesión con `AddressHttpMapper`, `ContactHttpMapper`,
+  `IdentityHttpMapper`, `ReviewHttpMapper`, `PaymentHttpMapper`,
+  `NotificationHttpMapper`, `AvailabilityHttpMapper`,
+  `ScheduleHttpMapper`, `TrustHttpMapper`, `AuditHttpMapper`, sumados a
+  los ya existentes de Order/Service/Provider/Profile/Quote/Chat/
+  Message/Attachment/Category), `MockXRepository` actualizado a la
+  nueva firma (conservado solo para tests), `XViewModel` (mismo patrón
+  de 3 estados + `retry()`), página convertida a `StatefulWidget` con
+  parámetro `repository` inyectable para tests:
+  - **Cluster identidad/cuenta**: Profile, ContactManagement,
+    AddressManagement, Trust, Verification (sin módulo `Verification`
+    propio en el backend — reutiliza solo Identity/Profile, tal como ya
+    documentaba su propia interfaz), Settings (`getOptions()` se
+    mantuvo síncrono-envuelto — es una lista estática de opciones de
+    menú, sin equivalente de dominio), y `Security` (parcial, ver Fase 2).
+  - **Ecosistema Provider**: Availability, Schedule, ProviderDashboard,
+    ProviderProfile, ProviderServices, ServiceDetail — todos con el
+    patrón "proveedor fijo único" (`_fetchProvider()`/`_fetchService()`
+    privado, mismo estilo que `HttpChatRepository`).
+  - **Marketplace + transacciones**: `marketplace` (3 repositorios
+    propios — `HttpMarketplaceCategoryRepository`,
+    `HttpMarketplaceProviderRepository`,
+    `HttpMarketplaceServiceRepository`, nombrados con el prefijo
+    `Marketplace` para no colisionar con la clase `HttpCategoryRepository`
+    ya existente en `features/categories`), Search, Quote, Payments,
+    Reviews, Notifications (los 4 métodos `getXFor` retornan `null` —
+    `Notification` no tiene FK real a Order/Payment/Quote/Chat, ni
+    siquiera para filtrar del lado del cliente, tal como ya documentaba
+    su propia interfaz), RequestService.
+  - Ningún archivo de `apps/backend` fue tocado.
+
+- **Fase 4 (Dependency Injection)**: `service_locator.dart` reescrito —
+  las 22 interfaces (3 del Prompt 75 + 19 de este prompt) resuelven
+  ahora vía `HttpXRepository`. Ningún `MockXRepository` queda
+  registrado en el locator; todos se conservan solo como implementación
+  de prueba en sus propios archivos.
+
+- **Fase 5 (ViewModels)**: confirmado — los 19 `ViewModel` nuevos siguen
+  el mismo enum de 3 estados (`loading`/`success`/`error`) y `retry()`
+  que `CategoriesViewModel`/`OrdersViewModel`/`ChatViewModel`. Ninguna
+  variante nueva de patrón de estado.
+
+- **Fase 6 (Navegación)**: sin cambios necesarios — `AppRouteGuard`,
+  `SplashPage` y el `refreshListenable` del Prompt 75 ya cubren
+  autenticación/restauración/redirección para toda la app, incluidos
+  los módulos recién migrados (no dependen del feature específico).
+
+- **Fase 7 (Limpieza)**: sin `MockRepository` huérfanos — todos siguen
+  usándose desde los tests. Sin imports muertos detectados por
+  `flutter analyze`. Único hallazgo real corregido: dos suites de test
+  (`search_page_test.dart`/`search_responsive_test.dart`,
+  `payments_navigation_test.dart`) quedaron con `SearchPage()`/
+  `PaymentsPage` sin repositorio inyectado tras la migración —
+  corregidas inyectando `MockSearchRepository`/registrando
+  `MockPaymentsRepository` en el locator, según si la página se
+  construye directo o se alcanza por navegación interna (mismo patrón
+  ya usado en `chat_navigation_test.dart`/`orders_navigation_test.dart`
+  desde el Prompt 75).
+
+- **Fase 8 (QA)**: serialización (todos los mappers usan
+  `enumFromJson` para el puente `SCREAMING_SNAKE_CASE`→`camelCase`,
+  cero excepciones), llamadas HTTP (todas via `ApiClient`, mismos 4
+  interceptores), paginación (todas las listas parsean
+  `{items,total,page,pageSize}`), errores (todos los `ViewModel`
+  atrapan `HttpException` y exponen `retry()`), navegación (sin
+  cambios, ver Fase 6), cancelación/memory leaks (todas las páginas
+  hacen `removeListener`+`dispose()` del `ViewModel` en `dispose()`,
+  mismo patrón que los 3 pilotos). Nada más que corregir.
+
+- **Fase 9 (Verificación final)** — todo en verde:
+  ```
+  npm run build              ✅
+  npm run lint                ✅ 0 errores
+  npm test                    ✅ 181 suites, 868/868
+  npm run test:e2e            ✅ 23 suites, 160/160
+  npm run test:integration    ✅ 23 suites, 147/147
+  flutter analyze             ✅ No issues found! (32 infos
+                                  prefer_initializing_formals,
+                                  inevitables — mismo patrón que ya
+                                  tenían Categories/Orders/Chat)
+  flutter test                 ✅ 750/750
+  flutter build windows        ✅ Build exitoso (mobile.exe)
+  ```
+  Contenedor Docker temporal `appservicios-pg-temp` reiniciado
+  únicamente para `test:integration` (Fase 0 y Fase 9) y detenido al
+  cierre — sintético/desechable, sin datos reales.
+
+- **Decisión de proceso**: dado el tamaño del trabajo (19 módulos, cada
+  uno con interfaz+HTTP+Mock+ViewModel+página+tests), la migración se
+  ejecutó en paralelo mediante 3 lotes de agentes en segundo plano
+  (identidad/cuenta; ecosistema Provider; marketplace/transacciones),
+  cada uno con instrucciones detalladas replicando exactamente el
+  patrón de Category/Orders/Chat y prohibición explícita de tocar
+  `service_locator.dart` (para evitar conflictos de edición
+  concurrente) o `apps/backend`. El módulo `security` se migró
+  directamente por su hallazgo de seguridad no delegable. Tras
+  completarse los 3 lotes, se corrió la verificación completa,
+  corrigiendo 2 fallas reales (Fase 7) y consolidando el `service_locator.dart` final.
+
+- **Diferido para un futuro prompt de backend** (no de Flutter): agregar
+  filtros de query reales (`GET /quotes?orderId=`, `GET /reviews?providerId=`,
+  `GET /profiles?identityId=`, etc.) para reemplazar el filtrado
+  client-side interino documentado en cada `HttpXRepository`; y
+  evaluar si `authentications`/`credentials` deben exponer un endpoint
+  de lista con scope de identidad (decisión de producto/seguridad, no
+  solo técnica).
+
+- `git status` al cierre de esta sesión — **todo el trabajo del Prompt
+  76 presente en el working tree, sin commitear**, pendiente de
+  aprobación exactamente igual que en todos los prompts anteriores:
+  151 archivos modificados + 43 archivos nuevos bajo
+  `lib/features/*/repositories/http_*.dart`,
+  `lib/features/*/presentation/view_models/*.dart`,
+  `lib/core/network/mappers/domain_http_mappers.dart` (extendido),
+  `lib/core/di/service_locator.dart` (reescrito), y los tests
+  correspondientes de cada feature. Ningún archivo de `apps/backend`
+  fue modificado en esta sesión — Prompt 76 fue exclusivamente
+  Flutter.

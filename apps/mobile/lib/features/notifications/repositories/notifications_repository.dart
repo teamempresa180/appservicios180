@@ -15,9 +15,9 @@ import '../../../quote/entities/quote.dart';
 /// this the same way a backend endpoint decides to enrich a
 /// notification payload.
 abstract class NotificationsRepository {
-  List<Notification> getNotifications();
-  Order? getOrderFor(Notification notification);
-  Payment? getPaymentFor(Notification notification);
-  Quote? getQuoteFor(Notification notification);
-  Chat? getChatFor(Notification notification);
+  Future<List<Notification>> getNotifications();
+  Future<Order?> getOrderFor(Notification notification);
+  Future<Payment?> getPaymentFor(Notification notification);
+  Future<Quote?> getQuoteFor(Notification notification);
+  Future<Chat?> getChatFor(Notification notification);
 }

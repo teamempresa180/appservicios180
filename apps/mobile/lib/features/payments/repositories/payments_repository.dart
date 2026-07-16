@@ -14,10 +14,10 @@ import '../../../service/entities/service.dart';
 /// There is no id-based lookup yet — this feature shows a single fixed
 /// payment (see the feature README for why).
 abstract class PaymentsRepository {
-  Payment getPayment();
-  Order getOrder();
-  Quote getQuote();
-  Service getService();
-  Provider getProvider();
-  Profile getProfile();
+  Future<Payment> getPayment();
+  Future<Order> getOrder();
+  Future<Quote> getQuote();
+  Future<Service> getService();
+  Future<Provider> getProvider();
+  Future<Profile> getProfile();
 }

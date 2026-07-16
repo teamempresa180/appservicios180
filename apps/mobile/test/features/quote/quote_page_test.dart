@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/quote/presentation/pages/quote_page.dart';
+import 'package:mobile/features/quote/repositories/mock_quote_repository.dart';
 import 'package:mobile/features/quote/presentation/widgets/address_resume.dart';
 import 'package:mobile/features/quote/presentation/widgets/estimated_time.dart';
 import 'package:mobile/features/quote/presentation/widgets/price_breakdown.dart';
@@ -15,7 +16,7 @@ void main() {
   Widget buildApp() {
     return MaterialApp(
       theme: AppTheme.light,
-      home: const Scaffold(body: QuotePage()),
+      home: Scaffold(body: QuotePage(repository: MockQuoteRepository())),
     );
   }
 

@@ -9,14 +9,15 @@ import 'profile_repository.dart';
 /// backend, no persistence, no network — see the feature README.
 class MockProfileRepository implements ProfileRepository {
   @override
-  Profile getProfile() => mockProfile;
+  Future<Profile> getProfile() => Future.value(mockProfile);
 
   @override
-  Identity getIdentity() => mockIdentity;
+  Future<Identity> getIdentity() => Future.value(mockIdentity);
 
   @override
-  List<Contact> getContacts() => List.unmodifiable(mockContacts);
+  Future<List<Contact>> getContacts() =>
+      Future.value(List.unmodifiable(mockContacts));
 
   @override
-  Address getAddress() => mockProfileAddress;
+  Future<Address> getAddress() => Future.value(mockProfileAddress);
 }

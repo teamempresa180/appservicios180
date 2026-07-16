@@ -7,9 +7,9 @@ import 'availability_repository.dart';
 /// backend, no persistence, no network — see the feature README.
 class MockAvailabilityRepository implements AvailabilityRepository {
   @override
-  Provider getProvider() => mockAvailabilityProvider;
+  Future<Provider> getProvider() => Future.value(mockAvailabilityProvider);
 
   @override
-  List<Availability> getAvailabilities() =>
-      List.unmodifiable(mockAvailabilities);
+  Future<List<Availability>> getAvailabilities() =>
+      Future.value(List.unmodifiable(mockAvailabilities));
 }

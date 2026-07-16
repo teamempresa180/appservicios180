@@ -9,9 +9,11 @@ import 'category_repository.dart';
 /// no persistence, no network — see the feature README.
 class MockCategoryRepository implements CategoryRepository {
   @override
-  List<Category> getAll() => List.unmodifiable(mockCategories);
+  Future<List<Category>> getAll() =>
+      Future.value(List.unmodifiable(mockCategories));
 
   @override
-  Category? getById(CategoryId id) =>
-      mockCategories.firstWhereOrNull((category) => category.id == id);
+  Future<Category?> getById(CategoryId id) => Future.value(
+    mockCategories.firstWhereOrNull((category) => category.id == id),
+  );
 }
