@@ -10,6 +10,7 @@ import { ProfileStatus } from '../../domain/value-objects/profile-status.value-o
 import { CreateProfileCommand } from '../commands/create-profile.command';
 import { DeleteProfileCommand } from '../commands/delete-profile.command';
 import { UpdateProfileCommand } from '../commands/update-profile.command';
+import { UpdateProfileAvatarCommand } from '../commands/update-profile-avatar.command';
 import { GetProfileQuery } from '../queries/get-profile.query';
 import { ListProfileQuery } from '../queries/list-profile.query';
 import { SearchProfileQuery } from '../queries/search-profile.query';
@@ -20,6 +21,7 @@ import { UpdateProfileUseCase } from './update-profile.use-case';
 import { DeleteProfileUseCase } from './delete-profile.use-case';
 import { ListProfileUseCase } from './list-profile.use-case';
 import { SearchProfileUseCase } from './search-profile.use-case';
+import { UpdateProfileAvatarUseCase } from './update-profile-avatar.use-case';
 
 describe('Profile use cases', () => {
   let repository: InMemoryProfileRepository;
@@ -173,6 +175,70 @@ describe('Profile use cases', () => {
           new UpdateProfileCommand('unknown-id', 'New Name'),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('UpdateProfileAvatarUseCase', () => {
+    it('sets avatarUrl on an existing Profile', async () => {
+      const created = await new CreateProfileUseCase(
+        repository,
+        identityRepository,
+      ).execute(
+        new CreateProfileCommand(
+          identityId,
+          'Ana',
+          null,
+          null,
+          ProfileVisibility.Public,
+        ),
+      );
+      expect(created.avatarUrl).toBeNull();
+
+      const updated = await new UpdateProfileAvatarUseCase(
+        repository,
+      ).execute(
+        new UpdateProfileAvatarCommand(
+          created.id,
+          `uploads/profiles/${created.id}/avatar.png`,
+        ),
+      );
+
+      expect(updated.avatarUrl).toBe(
+        `uploads/profiles/${created.id}/avatar.png`,
+      );
+      expect(updated.displayName).toBe('Ana');
+    });
+
+    it('throws NotFoundException for an unknown id', async () => {
+      await expect(
+        new UpdateProfileAvatarUseCase(repository).execute(
+          new UpdateProfileAvatarCommand(
+            'unknown-id',
+            'uploads/profiles/unknown-id/avatar.png',
+          ),
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ValidationException when avatarUrl is blank', async () => {
+      const created = await new CreateProfileUseCase(
+        repository,
+        identityRepository,
+      ).execute(
+        new CreateProfileCommand(
+          identityId,
+          'Ana',
+          null,
+          null,
+          ProfileVisibility.Public,
+        ),
+      );
+
+      await expect(
+        new UpdateProfileAvatarUseCase(repository).execute(
+          new UpdateProfileAvatarCommand(created.id, '  '),
+        ),
+      ).rejects.toThrow(ValidationException);
     });
   });
 

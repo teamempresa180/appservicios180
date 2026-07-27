@@ -11,13 +11,18 @@ import '../../../service/entities/service.dart';
 /// `HttpProviderProfileRepository` (real backend, see the feature
 /// README).
 ///
-/// There is no id-based lookup yet — this feature shows a single fixed
-/// provider (see the feature README for why).
+/// [getProvider] has no id parameter — only used as a fallback when the
+/// caller reaches this screen without already knowing which [Provider]
+/// to show (e.g. a direct/test navigation). The normal path (tapping a
+/// provider card in Marketplace, or the provider section of Service
+/// Detail — both already have the real [Provider]/[Profile] in hand)
+/// passes it into the "for(Provider)" getters below — real per-id
+/// lookups, not a fixed record.
 abstract class ProviderProfileRepository {
   Future<Provider> getProvider();
-  Future<Profile> getProfile();
-  Future<Availability> getAvailability();
-  Future<List<Review>> getReviews();
-  Future<List<Service>> getServices();
-  Future<List<Category>> getCategories();
+  Future<Profile> getProfileFor(Provider provider);
+  Future<Availability> getAvailabilityFor(Provider provider);
+  Future<List<Review>> getReviewsFor(Provider provider);
+  Future<List<Service>> getServicesFor(Provider provider);
+  Future<List<Category>> getCategoriesFor(List<Service> services);
 }

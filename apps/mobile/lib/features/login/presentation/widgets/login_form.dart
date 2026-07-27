@@ -6,9 +6,10 @@ import '../models/login_credentials.dart';
 import '../validators/login_validators.dart';
 import 'password_field.dart';
 
-/// Email + password fields and the "Continuar" button. Purely local
-/// validation — [onSubmit] only fires once the form passes validation.
-/// No API calls, no state management beyond the form's own fields.
+/// Document number + password fields and the "Continuar" button.
+/// Purely local validation — [onSubmit] only fires once the form
+/// passes validation. No API calls, no state management beyond the
+/// form's own fields.
 class LoginForm extends StatefulWidget {
   const LoginForm({
     super.key,
@@ -25,12 +26,12 @@ class LoginForm extends StatefulWidget {
 
 class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _documentNumberController = TextEditingController();
   final _passwordController = TextEditingController();
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _documentNumberController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -39,7 +40,7 @@ class _LoginFormState extends State<LoginForm> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     widget.onSubmit(
       LoginCredentials(
-        email: _emailController.text.trim(),
+        documentNumber: _documentNumberController.text.trim(),
         password: _passwordController.text,
       ),
     );
@@ -54,15 +55,15 @@ class _LoginFormState extends State<LoginForm> {
         children: [
           Semantics(
             textField: true,
-            label: 'Correo electrónico',
-            hint: 'Ingresa tu correo electrónico',
+            label: 'Número de documento',
+            hint: 'Ingresa tu número de documento',
             child: AppTextField(
-              controller: _emailController,
-              label: 'Correo electrónico',
-              hint: 'Ingresa tu correo electrónico',
-              keyboardType: TextInputType.emailAddress,
+              controller: _documentNumberController,
+              label: 'Número de documento',
+              hint: 'Ingresa tu número de documento',
+              keyboardType: TextInputType.text,
               enabled: !widget.isSubmitting,
-              validator: LoginValidators.email,
+              validator: LoginValidators.documentNumber,
             ),
           ),
           const SizedBox(height: AppSpacing.space16),

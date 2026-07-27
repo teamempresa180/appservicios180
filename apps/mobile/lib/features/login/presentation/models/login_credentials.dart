@@ -1,9 +1,13 @@
 /// Plain data captured by the Login form once local validation passes.
-/// No behavior — this is the shape that will eventually be handed to the
-/// Authentication Application layer (see the feature README).
+/// No behavior — this is the shape handed to `SessionManager.login`,
+/// which sends [documentNumber] straight through as the backend's
+/// `documentNumber` login identifier.
 class LoginCredentials {
-  const LoginCredentials({required this.email, required this.password});
+  const LoginCredentials({
+    required this.documentNumber,
+    required this.password,
+  });
 
-  final String email;
+  final String documentNumber;
   final String password;
 }

@@ -29,6 +29,16 @@ describe('VerificationHttpMapper', () => {
     expect(command.status).toBe(VerificationStatus.Rejected);
   });
 
+  it('toUploadDocumentCommand() carries the id and documentPath through', () => {
+    const command = VerificationHttpMapper.toUploadDocumentCommand(
+      'id-1',
+      'uploads/verifications/id-1/record.pdf',
+    );
+
+    expect(command.id).toBe('id-1');
+    expect(command.documentPath).toBe('uploads/verifications/id-1/record.pdf');
+  });
+
   it('toResponse() converts Date fields to ISO strings and null verifiedAt stays null', () => {
     const dto: VerificationDto = {
       id: 'id-1',
@@ -38,6 +48,7 @@ describe('VerificationHttpMapper', () => {
       verifiedAt: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+      documentPath: null,
     };
 
     const response = VerificationHttpMapper.toResponse(dto);
@@ -45,6 +56,7 @@ describe('VerificationHttpMapper', () => {
     expect(response.verifiedAt).toBeNull();
     expect(response.createdAt).toBe('2026-01-01T00:00:00.000Z');
     expect(response.updatedAt).toBe('2026-01-02T00:00:00.000Z');
+    expect(response.documentPath).toBeNull();
   });
 
   it('toResponse() converts a non-null verifiedAt to an ISO string', () => {
@@ -56,11 +68,13 @@ describe('VerificationHttpMapper', () => {
       verifiedAt: new Date('2026-01-03T00:00:00.000Z'),
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+      documentPath: 'uploads/verifications/id-1/record.pdf',
     };
 
     const response = VerificationHttpMapper.toResponse(dto);
 
     expect(response.verifiedAt).toBe('2026-01-03T00:00:00.000Z');
+    expect(response.documentPath).toBe('uploads/verifications/id-1/record.pdf');
   });
 
   it('toListResponse() maps each item and carries pagination metadata through', () => {
@@ -72,6 +86,7 @@ describe('VerificationHttpMapper', () => {
       verifiedAt: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      documentPath: null,
     };
 
     const response = VerificationHttpMapper.toListResponse({

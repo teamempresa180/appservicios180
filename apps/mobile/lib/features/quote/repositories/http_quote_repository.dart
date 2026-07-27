@@ -97,4 +97,16 @@ class HttpQuoteRepository implements QuoteRepository {
     );
     return AddressHttpMapper.fromJson(match);
   }
+
+  @override
+  Future<Quote> acceptQuote(Quote quote) async {
+    final json = await _apiClient.put('/quotes/${quote.id.value}/accept');
+    return QuoteHttpMapper.fromJson(json);
+  }
+
+  @override
+  Future<Quote> rejectQuote(Quote quote) async {
+    final json = await _apiClient.put('/quotes/${quote.id.value}/reject');
+    return QuoteHttpMapper.fromJson(json);
+  }
 }

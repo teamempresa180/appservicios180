@@ -13,9 +13,16 @@ import 'contact_actions.dart';
 /// color/icon stored anywhere — resolved here from `context.colors.*`,
 /// same rule already applied in `OrderStatusBadge`/`ScheduleBlockCard`.
 class ContactCard extends StatelessWidget {
-  const ContactCard({super.key, required this.contact});
+  const ContactCard({
+    super.key,
+    required this.contact,
+    this.onEdit,
+    this.onDelete,
+  });
 
   final Contact contact;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   IconData _iconFor(ContactType type) {
     switch (type) {
@@ -70,7 +77,7 @@ class ContactCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.space12),
-          const ContactActions(),
+          ContactActions(onEdit: onEdit, onDelete: onDelete),
         ],
       ),
     );

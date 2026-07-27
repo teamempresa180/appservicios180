@@ -13,6 +13,7 @@ class ShellNavigationItem {
     required this.selectedIcon,
     required this.label,
     required this.index,
+    this.opensDrawer = false,
   });
 
   /// Icon shown when this destination is not the current selection.
@@ -23,4 +24,11 @@ class ShellNavigationItem {
 
   final String label;
   final int index;
+
+  /// When `true`, selecting this destination opens the App Shell's
+  /// drawer instead of switching the [IndexedStack] to [index] — it
+  /// never becomes the "current" destination, so it never renders as
+  /// selected. Used for the "Menú" destination, which is a trigger
+  /// rather than a real tab.
+  final bool opensDrawer;
 }

@@ -8,9 +8,8 @@ import '../../models/search_result.dart';
 
 /// A single search result: service name, provider, category, base
 /// price, rating, reviews count, distance and a "Ver" button. Pressing
-/// "Ver" opens the (visual-only, single fixed mock service) Service
-/// Detail preview — see the feature README and `service_detail`'s
-/// README for why every result currently opens the same mock service.
+/// "Ver" opens Service Detail for this result's own [Service] —
+/// different results now open different services.
 ///
 /// `SearchResult` intentionally has no `Profile` (only `Provider`,
 /// which the domain does not give a display name) — the provider's
@@ -99,7 +98,9 @@ class SearchResultCard extends StatelessWidget {
                   MaterialPageRoute<void>(
                     builder: (context) => Scaffold(
                       appBar: AppBar(title: const Text('Detalle del servicio')),
-                      body: const SafeArea(child: ServiceDetailPage()),
+                      body: SafeArea(
+                        child: ServiceDetailPage(service: result.service),
+                      ),
                     ),
                   ),
                 ),

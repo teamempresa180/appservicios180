@@ -33,4 +33,21 @@ class Address extends Entity<AddressId> {
   final AddressStatus status;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  Address copyWith({String? alias, String? fullAddress}) {
+    return Address(
+      id: id,
+      identityId: identityId,
+      alias: alias ?? this.alias,
+      fullAddress: fullAddress ?? this.fullAddress,
+      city: city,
+      state: state,
+      country: country,
+      postalCode: postalCode,
+      type: type,
+      status: status,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
 }

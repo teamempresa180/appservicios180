@@ -2,14 +2,30 @@ import 'package:flutter/material.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_button.dart';
 import '../../../../core/ui/widgets/app_text_field.dart';
+import '../../../../identity/models/document_type.dart';
 import '../models/register_data.dart';
 import '../validators/register_validators.dart';
 import 'password_confirmation_field.dart';
 
-/// Full name, email, password and password confirmation fields plus the
-/// "Continuar" button. Purely local validation — [onSubmit] only fires
-/// once the form passes validation. No API calls, no state management
-/// beyond the form's own fields.
+String documentTypeLabel(DocumentType type) {
+  switch (type) {
+    case DocumentType.nationalId:
+      return 'Cédula de ciudadanía';
+    case DocumentType.passport:
+      return 'Pasaporte';
+    case DocumentType.foreignId:
+      return 'Cédula de extranjería';
+    case DocumentType.taxId:
+      return 'NIT';
+    case DocumentType.other:
+      return 'Otro';
+  }
+}
+
+/// Full name, document type/number, birth date, password and password
+/// confirmation fields plus the "Continuar" button. Purely local
+/// validation — [onSubmit] only fires once the form passes validation.
+/// No API calls, no state management beyond the form's own fields.
 class RegisterForm extends StatefulWidget {
   const RegisterForm({
     super.key,
@@ -27,28 +43,62 @@ class RegisterForm extends StatefulWidget {
 class _RegisterFormState extends State<RegisterForm> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
+  final _documentNumberController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
+  DocumentType _documentType = DocumentType.nationalId;
+  DateTime? _birthDate;
+  String? _birthDateError;
 
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose();
+    _documentNumberController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
   }
 
+  Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(now.year - 18, now.month, now.day),
+      firstDate: DateTime(now.year - 100),
+      lastDate: now,
+    );
+    if (picked != null) {
+      setState(() {
+        _birthDate = picked;
+        _birthDateError = null;
+      });
+    }
+  }
+
   void _handleSubmit() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final formValid = _formKey.currentState?.validate() ?? false;
+    final birthDate = _birthDate;
+    setState(() {
+      _birthDateError = birthDate == null
+          ? 'La fecha de nacimiento es obligatoria.'
+          : null;
+    });
+    if (!formValid || birthDate == null) return;
     widget.onSubmit(
       RegisterData(
         fullName: _nameController.text.trim(),
-        email: _emailController.text.trim(),
+        documentType: _documentType,
+        documentNumber: _documentNumberController.text.trim(),
+        birthDate: birthDate,
         password: _passwordController.text,
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
   }
 
   @override
@@ -72,17 +122,52 @@ class _RegisterFormState extends State<RegisterForm> {
             ),
           ),
           const SizedBox(height: AppSpacing.space16),
+          DropdownButtonFormField<DocumentType>(
+            initialValue: _documentType,
+            decoration: const InputDecoration(
+              labelText: 'Tipo de documento',
+            ),
+            isExpanded: true,
+            items: [
+              for (final type in DocumentType.values)
+                DropdownMenuItem(
+                  value: type,
+                  child: Text(documentTypeLabel(type)),
+                ),
+            ],
+            onChanged: widget.isSubmitting
+                ? null
+                : (value) {
+                    if (value != null) setState(() => _documentType = value);
+                  },
+          ),
+          const SizedBox(height: AppSpacing.space16),
           Semantics(
             textField: true,
-            label: 'Correo electrónico',
-            hint: 'Ingresa tu correo electrónico',
+            label: 'Número de documento',
+            hint: 'Ingresa tu número de documento',
             child: AppTextField(
-              controller: _emailController,
-              label: 'Correo electrónico',
-              hint: 'Ingresa tu correo electrónico',
-              keyboardType: TextInputType.emailAddress,
+              controller: _documentNumberController,
+              label: 'Número de documento',
+              hint: 'Ingresa tu número de documento',
+              keyboardType: TextInputType.text,
               enabled: !widget.isSubmitting,
-              validator: RegisterValidators.email,
+              validator: RegisterValidators.documentNumber,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.space16),
+          InkWell(
+            onTap: widget.isSubmitting ? null : _pickBirthDate,
+            child: InputDecorator(
+              decoration: InputDecoration(
+                labelText: 'Fecha de nacimiento',
+                errorText: _birthDateError,
+              ),
+              child: Text(
+                _birthDate == null
+                    ? 'Selecciona tu fecha de nacimiento'
+                    : _formatDate(_birthDate!),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.space16),

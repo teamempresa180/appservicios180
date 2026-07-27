@@ -8,9 +8,14 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -19,6 +24,7 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { ProfileRoutes } from '../routes/profile.routes';
 import { ProfileSwagger } from '../swagger/profile.swagger';
 import { CreateProfileUseCase } from '../../application/use_cases/create-profile.use-case';
@@ -27,6 +33,7 @@ import { DeleteProfileUseCase } from '../../application/use_cases/delete-profile
 import { GetProfileUseCase } from '../../application/use_cases/get-profile.use-case';
 import { ListProfileUseCase } from '../../application/use_cases/list-profile.use-case';
 import { SearchProfileUseCase } from '../../application/use_cases/search-profile.use-case';
+import { UpdateProfileAvatarUseCase } from '../../application/use_cases/update-profile-avatar.use-case';
 import { DeleteProfileCommand } from '../../application/commands/delete-profile.command';
 import { GetProfileQuery } from '../../application/queries/get-profile.query';
 import { ListProfileQuery } from '../../application/queries/list-profile.query';
@@ -36,6 +43,10 @@ import { UpdateProfileRequestDto } from '../dto/update-profile.request.dto';
 import { ProfileResponseDto } from '../dto/profile.response.dto';
 import { ProfileListResponseDto } from '../dto/profile-list.response.dto';
 import { ProfileHttpMapper } from '../dto/profile-http.mapper';
+import {
+  LocalProfileAvatarStorageService,
+  UploadedProfileAvatarFile,
+} from '../../infrastructure/storage/local-profile-avatar-storage.service';
 
 /**
  * REST controller for Profile. Only exposes routes, maps HTTP DTOs
@@ -62,6 +73,8 @@ export class ProfileController {
     private readonly getProfileUseCase: GetProfileUseCase,
     private readonly listProfileUseCase: ListProfileUseCase,
     private readonly searchProfileUseCase: SearchProfileUseCase,
+    private readonly updateProfileAvatarUseCase: UpdateProfileAvatarUseCase,
+    private readonly profileAvatarStorage: LocalProfileAvatarStorageService,
   ) {}
 
   @Post()
@@ -183,6 +196,66 @@ export class ProfileController {
   async findOne(@Param('id') id: string): Promise<ProfileResponseDto> {
     const profile = await this.getProfileUseCase.execute(
       new GetProfileQuery(id),
+    );
+    return ProfileHttpMapper.toResponse(profile);
+  }
+
+  /**
+   * Two-step because they're two different concerns: `profileAvatarStorage`
+   * writes the raw bytes to disk and validates the mimetype (an
+   * infrastructure/multipart concern), then
+   * `updateProfileAvatarUseCase` persists the resulting path onto the
+   * Profile (an Application concern) — same split as every other
+   * controller method, which never builds a domain entity by hand
+   * either.
+   */
+  @Post(ProfileRoutes.avatar)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation(ProfileSwagger.uploadAvatar)
+  @ApiParam({ name: 'id', description: 'Profile id' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Avatar uploaded and Profile updated.',
+    type: ProfileResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Missing file or unsupported mimetype.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Profile not found.',
+    type: ErrorResponseDto,
+  })
+  async uploadAvatar(
+    @Param('id') id: string,
+    @UploadedFile() file: UploadedProfileAvatarFile | undefined,
+  ): Promise<ProfileResponseDto> {
+    if (!file) {
+      throw new ValidationException('file is required');
+    }
+
+    // Confirms the Profile exists *before* writing anything to disk —
+    // otherwise an upload against an unknown id would leave an orphan
+    // file under `uploads/profiles/<id>/`. `GetProfileUseCase` throws
+    // `NotFoundException` (translated to a 404 by
+    // `DomainExceptionFilter`) exactly like every other `:id` route
+    // here.
+    await this.getProfileUseCase.execute(new GetProfileQuery(id));
+
+    const avatarUrl = await this.profileAvatarStorage.save(id, file);
+    const profile = await this.updateProfileAvatarUseCase.execute(
+      ProfileHttpMapper.toUpdateAvatarCommand(id, avatarUrl),
     );
     return ProfileHttpMapper.toResponse(profile);
   }

@@ -2,10 +2,12 @@ import '../../../attachment/entities/attachment.dart';
 import '../../../chat/entities/chat.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
+import '../../../core/session/session_manager.dart';
 import '../../../message/entities/message.dart';
 import '../../../order/entities/order.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
+import '../models/conversation_summary.dart';
 import 'chat_repository.dart';
 
 /// [ChatRepository] backed by [ApiClient].
@@ -25,9 +27,10 @@ import 'chat_repository.dart';
 /// both list the full unfiltered collection and match client-side.
 /// Adding those query filters is the natural Prompt 76 follow-up.
 class HttpChatRepository implements ChatRepository {
-  HttpChatRepository(this._apiClient);
+  HttpChatRepository(this._apiClient, this._sessionManager);
 
   final ApiClient _apiClient;
+  final SessionManager _sessionManager;
 
   Future<Chat> _fetchChat() async {
     final json = await _apiClient.get('/chats');
@@ -90,5 +93,70 @@ class HttpChatRepository implements ChatRepository {
         .where((item) => messageIds.contains(item['messageId']))
         .map(AttachmentHttpMapper.fromJson)
         .toList();
+  }
+
+  /// Builds one [ConversationSummary] per Chat the backend returns,
+  /// each with its own N+1 lookup (bounded by however many chats the
+  /// current session has — the same trade-off the rest of this
+  /// repository already accepts for a single chat, just repeated per
+  /// row). The provider's display name comes from its Profile; if
+  /// either lookup fails for a given chat, that chat is skipped rather
+  /// than surfacing a broken row.
+  @override
+  Future<List<ConversationSummary>> getConversations() async {
+    final chatsJson = await _apiClient.get('/chats');
+    final chatItems = (chatsJson['items'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+    final messagesJson = await _apiClient.get('/messages');
+    final messageItems = (messagesJson['items'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+    final allMessages = messageItems.map(MessageHttpMapper.fromJson).toList();
+    final currentUserId = _sessionManager.currentUserId;
+
+    final summaries = <ConversationSummary>[];
+    for (final chatJson in chatItems) {
+      final chat = ChatHttpMapper.fromJson(chatJson);
+      final chatMessages =
+          allMessages.where((message) => message.chatId == chat.id).toList()
+            ..sort((a, b) => a.sentAt.compareTo(b.sentAt));
+      if (chatMessages.isEmpty) continue;
+
+      final last = chatMessages.last;
+      final unreadCount = chatMessages
+          .where(
+            (message) =>
+                message.readAt == null &&
+                message.senderIdentityId.value != currentUserId,
+          )
+          .length;
+
+      String counterpartName;
+      try {
+        final providerJson = await _apiClient.get(
+          '/providers/${chat.providerId.value}',
+        );
+        final provider = ProviderHttpMapper.fromJson(providerJson);
+        final profileJson = await _apiClient.get(
+          '/profiles/${provider.providerProfileId.value}',
+        );
+        counterpartName = ProfileHttpMapper.fromJson(profileJson).displayName;
+      } catch (_) {
+        continue;
+      }
+
+      summaries.add(
+        ConversationSummary(
+          chatId: chat.id,
+          counterpartName: counterpartName,
+          lastMessagePreview: last.content,
+          lastMessageAt: last.sentAt,
+          unreadCount: unreadCount,
+          isUnanswered:
+              last.senderIdentityId.value != currentUserId && unreadCount > 0,
+        ),
+      );
+    }
+    summaries.sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
+    return summaries;
   }
 }

@@ -39,31 +39,31 @@ class _FakeServiceDetailRepository implements ServiceDetailRepository {
   }
 
   @override
-  Future<Provider> getProvider() {
+  Future<Provider> getProviderFor(Service service) {
     if (neverResolves) return Completer<Provider>().future;
     if (forceError) throw const NetworkHttpException('sin conexión');
-    return _delegate.getProvider();
+    return _delegate.getProviderFor(service);
   }
 
   @override
-  Future<Profile> getProviderProfile() {
+  Future<Profile> getProviderProfileFor(Provider provider) {
     if (neverResolves) return Completer<Profile>().future;
     if (forceError) throw const NetworkHttpException('sin conexión');
-    return _delegate.getProviderProfile();
+    return _delegate.getProviderProfileFor(provider);
   }
 
   @override
-  Future<Category> getCategory() {
+  Future<Category> getCategoryFor(Service service) {
     if (neverResolves) return Completer<Category>().future;
     if (forceError) throw const NetworkHttpException('sin conexión');
-    return _delegate.getCategory();
+    return _delegate.getCategoryFor(service);
   }
 
   @override
-  Future<List<Review>> getReviews() {
+  Future<List<Review>> getReviewsFor(Service service) {
     if (neverResolves) return Completer<List<Review>>().future;
     if (forceError) throw const NetworkHttpException('sin conexión');
-    return _delegate.getReviews();
+    return _delegate.getReviewsFor(service);
   }
 }
 

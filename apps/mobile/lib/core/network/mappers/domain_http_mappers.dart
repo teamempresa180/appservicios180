@@ -72,6 +72,10 @@ import '../../../trust/models/trust_id.dart';
 import '../../../trust/models/trust_level.dart';
 import '../../../trust/models/trust_score.dart';
 import '../../../trust/models/trust_status.dart';
+import '../../../verification/entities/verification.dart';
+import '../../../verification/models/verification_id.dart';
+import '../../../verification/models/verification_status.dart';
+import '../../../verification/models/verification_type.dart';
 import 'enum_json.dart';
 
 /// JSON → domain-entity mappers shared by the Orders and Chat pilot
@@ -377,5 +381,24 @@ class AuditHttpMapper {
     ),
     description: json['description'] as String,
     occurredAt: DateTime.parse(json['occurredAt'] as String),
+  );
+}
+
+class VerificationHttpMapper {
+  static Verification fromJson(Map<String, dynamic> json) => Verification(
+    id: VerificationId.fromString(json['id'] as String),
+    identityId: IdentityId.fromString(json['identityId'] as String),
+    type: VerificationType.values.byName(
+      enumFromJson(json['type'] as String),
+    ),
+    status: VerificationStatus.values.byName(
+      enumFromJson(json['status'] as String),
+    ),
+    verifiedAt: json['verifiedAt'] == null
+        ? null
+        : DateTime.parse(json['verifiedAt'] as String),
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+    documentPath: json['documentPath'] as String?,
   );
 }

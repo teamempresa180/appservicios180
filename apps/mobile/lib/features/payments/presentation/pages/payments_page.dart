@@ -6,6 +6,7 @@ import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
+import '../../../../order/entities/order.dart';
 import '../../repositories/payments_repository.dart';
 import '../view_models/payments_view_model.dart';
 import '../widgets/payment_actions.dart';
@@ -20,15 +21,23 @@ import '../widgets/payments_header.dart';
 /// Payments screen. Does NOT build its own `Scaffold` — it is meant to
 /// live within the existing navigation flow, the same way every other
 /// feature so far does. Completely independent: its own repository,
-/// its own view model, loaded from the real backend via
-/// [PaymentsViewModel] (resolved from the service locator — see
-/// `core/di/service_locator.dart`).
+/// its own view model.
 ///
-/// Shows a single, fixed payment (no id-based lookup yet) — see the
-/// feature README.
+/// Pass [order] when navigating here from an order action that already
+/// has it (`OrderActions`'s "Ver detalle") — that's what makes
+/// different orders open their own real payment instead of always the
+/// same one. Omitting it falls back to [PaymentsRepository.getOrder]'s
+/// single fixed record (only meant for tests/direct navigation without
+/// that context). Data is loaded via [PaymentsViewModel] (resolved from
+/// the service locator — see `core/di/service_locator.dart`).
 class PaymentsPage extends StatefulWidget {
-  const PaymentsPage({super.key, PaymentsRepository? repository})
-    : _repository = repository;
+  const PaymentsPage({
+    super.key,
+    this.order,
+    PaymentsRepository? repository,
+  }) : _repository = repository;
+
+  final Order? order;
 
   /// Overridable for tests only — production call sites always resolve
   /// the real repository from the service locator.
@@ -41,6 +50,7 @@ class PaymentsPage extends StatefulWidget {
 class _PaymentsPageState extends State<PaymentsPage> {
   late final PaymentsViewModel _viewModel = PaymentsViewModel(
     widget._repository ?? locator<PaymentsRepository>(),
+    presetOrder: widget.order,
   );
 
   @override

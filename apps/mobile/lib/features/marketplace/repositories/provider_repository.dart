@@ -14,9 +14,9 @@ abstract class ProviderRepository {
   /// embedded entities" rule) — never a name directly.
   Future<Profile> profileOf(ProviderId id);
 
-  /// Simulated rating for [id] — no `Review` aggregate is consulted yet.
+  /// Average rating for [id], derived from real `Review` records.
   Future<double> ratingOf(ProviderId id);
 
-  /// Simulated count for [id] — no real `Service` lookup is performed.
+  /// Real count of `Service` records that belong to [id].
   Future<int> servicesCountOf(ProviderId id);
 }

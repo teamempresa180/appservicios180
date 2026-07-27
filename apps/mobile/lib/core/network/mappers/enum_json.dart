@@ -8,3 +8,18 @@ String enumFromJson(String snakeCase) {
   return words.first +
       words.skip(1).map((w) => w[0].toUpperCase() + w.substring(1)).join();
 }
+
+/// The reverse of [enumFromJson] — needed by the few repository methods
+/// that send an enum value to the backend (e.g. `Contact.type` on
+/// create) instead of only ever reading one back.
+String enumToJson(String camelCase) {
+  final buffer = StringBuffer();
+  for (var i = 0; i < camelCase.length; i++) {
+    final char = camelCase[i];
+    if (i > 0 && char.toUpperCase() == char && char.toLowerCase() != char) {
+      buffer.write('_');
+    }
+    buffer.write(char.toUpperCase());
+  }
+  return buffer.toString();
+}

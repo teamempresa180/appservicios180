@@ -5,4 +5,5 @@ export const VerificationRoutes = {
   base: 'verifications',
   search: 'search',
   byId: ':id',
+  document: ':id/document',
 } as const;

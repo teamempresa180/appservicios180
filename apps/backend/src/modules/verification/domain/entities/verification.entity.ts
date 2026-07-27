@@ -11,6 +11,15 @@ export interface VerificationProps {
   verifiedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  /**
+   * Relative path (e.g. `uploads/verifications/<id>/<file>`) to an
+   * uploaded document backing this Verification (criminal-record check,
+   * certification, etc.). Only ever set via
+   * `UploadVerificationDocumentUseCase` — the plain `create`/`update`
+   * flows never touch it, since a Verification can exist before any
+   * file has been uploaded for it.
+   */
+  documentPath: string | null;
 }
 
 /**
@@ -24,6 +33,7 @@ export class Verification extends Entity<VerificationId> {
   public readonly verifiedAt: Date | null;
   public readonly createdAt: Date;
   public readonly updatedAt: Date;
+  public readonly documentPath: string | null;
 
   constructor(id: VerificationId, props: VerificationProps) {
     super(id);
@@ -33,5 +43,6 @@ export class Verification extends Entity<VerificationId> {
     this.verifiedAt = props.verifiedAt;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+    this.documentPath = props.documentPath;
   }
 }

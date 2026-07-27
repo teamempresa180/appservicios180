@@ -5,4 +5,5 @@ export const ProfileRoutes = {
   base: 'profiles',
   search: 'search',
   byId: ':id',
+  avatar: ':id/avatar',
 } as const;

@@ -9,6 +9,7 @@ import { VerificationType } from '../../domain/value-objects/verification-type.v
 import { VerificationStatus } from '../../domain/value-objects/verification-status.value-object';
 import { CreateVerificationCommand } from '../commands/create-verification.command';
 import { UpdateVerificationCommand } from '../commands/update-verification.command';
+import { UploadVerificationDocumentCommand } from '../commands/upload-verification-document.command';
 import { GetVerificationQuery } from '../queries/get-verification.query';
 import { ListVerificationQuery } from '../queries/list-verification.query';
 import { SearchVerificationQuery } from '../queries/search-verification.query';
@@ -18,6 +19,7 @@ import { GetVerificationUseCase } from './get-verification.use-case';
 import { UpdateVerificationUseCase } from './update-verification.use-case';
 import { ListVerificationUseCase } from './list-verification.use-case';
 import { SearchVerificationUseCase } from './search-verification.use-case';
+import { UploadVerificationDocumentUseCase } from './upload-verification-document.use-case';
 
 describe('Verification use cases', () => {
   let repository: InMemoryVerificationRepository;
@@ -123,6 +125,61 @@ describe('Verification use cases', () => {
           ),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('UploadVerificationDocumentUseCase', () => {
+    it('sets documentPath on an existing Verification', async () => {
+      const created = await new CreateVerificationUseCase(
+        repository,
+        identityRepository,
+      ).execute(
+        new CreateVerificationCommand(
+          identityId,
+          VerificationType.CriminalRecord,
+        ),
+      );
+      expect(created.documentPath).toBeNull();
+
+      const updated = await new UploadVerificationDocumentUseCase(
+        repository,
+      ).execute(
+        new UploadVerificationDocumentCommand(
+          created.id,
+          `uploads/verifications/${created.id}/record.pdf`,
+        ),
+      );
+
+      expect(updated.documentPath).toBe(
+        `uploads/verifications/${created.id}/record.pdf`,
+      );
+      expect(updated.status).toBe(VerificationStatus.Pending);
+    });
+
+    it('throws NotFoundException for an unknown id', async () => {
+      await expect(
+        new UploadVerificationDocumentUseCase(repository).execute(
+          new UploadVerificationDocumentCommand(
+            'unknown-id',
+            'uploads/verifications/unknown-id/record.pdf',
+          ),
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ValidationException when documentPath is blank', async () => {
+      const created = await new CreateVerificationUseCase(
+        repository,
+        identityRepository,
+      ).execute(
+        new CreateVerificationCommand(identityId, VerificationType.Document),
+      );
+
+      await expect(
+        new UploadVerificationDocumentUseCase(repository).execute(
+          new UploadVerificationDocumentCommand(created.id, '  '),
+        ),
+      ).rejects.toThrow(ValidationException);
     });
   });
 

@@ -47,16 +47,24 @@ class _FakePaymentsRepository implements PaymentsRepository {
   Future<Order> getOrder() => _guard(() => _delegate.getOrder());
 
   @override
-  Future<Quote> getQuote() => _guard(() => _delegate.getQuote());
+  Future<Payment> getPaymentFor(Order order) =>
+      _guard(() => _delegate.getPaymentFor(order));
 
   @override
-  Future<Service> getService() => _guard(() => _delegate.getService());
+  Future<Quote> getQuoteFor(Payment payment) =>
+      _guard(() => _delegate.getQuoteFor(payment));
 
   @override
-  Future<Provider> getProvider() => _guard(() => _delegate.getProvider());
+  Future<Service> getServiceFor(Order order) =>
+      _guard(() => _delegate.getServiceFor(order));
 
   @override
-  Future<Profile> getProfile() => _guard(() => _delegate.getProfile());
+  Future<Provider> getProviderFor(Payment payment) =>
+      _guard(() => _delegate.getProviderFor(payment));
+
+  @override
+  Future<Profile> getProfileFor(Provider provider) =>
+      _guard(() => _delegate.getProfileFor(provider));
 }
 
 void main() {

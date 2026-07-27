@@ -1,9 +1,6 @@
 /// Local, dependency-free validation rules for the Register form. No
-/// package is used — just plain string checks and a simple email-shape
-/// regex, mirroring the rules already used by the Login feature.
+/// package is used — just plain string/date checks.
 abstract final class RegisterValidators {
-  static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-
   static const int minPasswordLength = 8;
 
   static String? fullName(String? value) {
@@ -12,10 +9,9 @@ abstract final class RegisterValidators {
     return null;
   }
 
-  static String? email(String? value) {
+  static String? documentNumber(String? value) {
     final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) return 'El correo es obligatorio.';
-    if (!_emailPattern.hasMatch(trimmed)) return 'Ingresa un correo válido.';
+    if (trimmed.isEmpty) return 'El número de documento es obligatorio.';
     return null;
   }
 

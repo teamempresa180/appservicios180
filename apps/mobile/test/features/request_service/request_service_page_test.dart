@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/core/di/service_locator.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_chip.dart';
+import 'package:mobile/features/quote/repositories/mock_quote_repository.dart';
+import 'package:mobile/features/quote/repositories/quote_repository.dart';
 import 'package:mobile/features/request_service/presentation/pages/request_service_page.dart';
 import 'package:mobile/features/request_service/repositories/mock_request_service_repository.dart';
 import 'package:mobile/features/request_service/presentation/widgets/address_summary.dart';
@@ -106,6 +109,24 @@ void main() {
 
     expect(find.text('Continuar'), findsOneWidget);
   });
+
+  testWidgets(
+    'tapping "Continuar" creates a real Order and opens the Quote screen',
+    (tester) async {
+      locator.registerSingleton<QuoteRepository>(MockQuoteRepository());
+      addTearDown(locator.reset);
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Continuar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Continuar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Solicitud enviada.'), findsOneWidget);
+      expect(find.text('Cotización'), findsWidgets);
+    },
+  );
 
   testWidgets('does not build its own Scaffold', (tester) async {
     await tester.pumpWidget(buildApp());

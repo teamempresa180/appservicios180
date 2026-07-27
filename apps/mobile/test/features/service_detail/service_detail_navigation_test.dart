@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/di/service_locator.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
+import 'package:mobile/features/app_shell/navigation_intent.dart';
 import 'package:mobile/features/marketplace/presentation/pages/marketplace_page.dart';
 import 'package:mobile/features/marketplace/repositories/category_repository.dart'
     as marketplace;
@@ -14,6 +15,7 @@ import 'package:mobile/features/marketplace/repositories/provider_repository.dar
 import 'package:mobile/features/marketplace/repositories/service_repository.dart';
 import 'package:mobile/features/search/presentation/pages/search_page.dart';
 import 'package:mobile/features/search/repositories/mock_search_repository.dart';
+import 'package:mobile/features/search/repositories/search_repository.dart';
 import 'package:mobile/features/service_detail/presentation/pages/service_detail_page.dart';
 import 'package:mobile/features/service_detail/repositories/mock_service_detail_repository.dart';
 import 'package:mobile/features/service_detail/repositories/service_detail_repository.dart';
@@ -36,6 +38,10 @@ void main() {
     );
     locator.registerSingleton<ServiceRepository>(MockServiceRepository());
     locator.registerSingleton<ProviderRepository>(MockProviderRepository());
+    locator.registerSingleton<SearchRepository>(MockSearchRepository());
+    locator.registerSingleton<AppShellNavigationIntent>(
+      AppShellNavigationIntent(),
+    );
   });
   tearDown(() => locator.reset());
 

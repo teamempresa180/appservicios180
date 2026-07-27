@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/widgets/app_button.dart';
 
-/// "Agregar método" call to action. Purely visual — [onPressed] is a
-/// no-op by default; it does not create a real `Authentication` method
-/// yet (see the feature README).
+/// "Agregar método" call to action. `SecurityPage` wires [onPressed]
+/// to open `AuthMethodTypeSheet` and create a real `Authentication`
+/// method via `SecurityRepository.createAuthMethod`.
 class AddAuthMethodButton extends StatelessWidget {
   const AddAuthMethodButton({super.key, this.onPressed});
 

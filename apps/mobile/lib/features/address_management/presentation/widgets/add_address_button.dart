@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/widgets/app_button.dart';
 
-/// "Agregar dirección" call to action. Purely visual — [onPressed] is
-/// a no-op by default; it does not create a real `Address` yet (see
-/// the feature README).
+/// "Agregar dirección" call to action — opens `AddressFormSheet` and
+/// creates a real `Address` via `AddressManagementRepository`.
 class AddAddressButton extends StatelessWidget {
-  const AddAddressButton({super.key, this.onPressed});
+  const AddAddressButton({super.key, required this.onPressed});
 
-  final VoidCallback? onPressed;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return AppButton(label: 'Agregar dirección', onPressed: onPressed ?? () {});
+    return AppButton(label: 'Agregar dirección', onPressed: onPressed);
   }
 }

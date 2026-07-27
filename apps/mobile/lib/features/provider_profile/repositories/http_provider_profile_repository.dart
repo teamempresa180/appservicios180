@@ -11,33 +11,29 @@ import 'provider_profile_repository.dart';
 
 /// [ProviderProfileRepository] backed by [ApiClient].
 ///
-/// The feature interface still models a single fixed provider (see
-/// `provider_profile_repository.dart`'s own doc comment: "no id-based
-/// lookup yet"). The backend mirrors that limitation — there is no
-/// "provider for the current screen" endpoint, only `GET /providers`
-/// (paginated, unfiltered) and `GET /providers/:id`. [_fetchProvider]
-/// takes the first item of the list as the one provider this screen
-/// shows, exactly matching what the previous mock data represented (a
-/// single fixed provider) — just sourced from the real backend now
-/// instead of a hardcoded object.
+/// [getProvider] has no id parameter (only `GET /providers`, paginated,
+/// unfiltered) — [_fetchProvider] takes the first item as a fallback
+/// for when the caller doesn't already have a [Provider] in hand. The
+/// normal path skips it: every other getter takes the real [Provider]
+/// the caller already resolved (from Marketplace/Service Detail) and
+/// looks up its data directly.
 ///
-/// [getAvailability], [getReviews] and [getServices] have the same
-/// interim shape as `HttpChatRepository.getMessages`: the backend has
-/// no `GET /availabilities?providerId=`, `GET /reviews?providerId=` or
-/// `GET /services?providerId=` filter, so all three list the full
+/// [getAvailabilityFor], [getReviewsFor] and [getServicesFor] have the
+/// same interim shape as `HttpChatRepository.getMessages`: the backend
+/// has no `GET /availabilities?providerId=`, `GET /reviews?providerId=`
+/// or `GET /services?providerId=` filter, so all three list the full
 /// unfiltered collection and match `providerId` client-side. Adding
-/// those query filters is the natural Prompt 76 follow-up.
+/// those query filters is the natural follow-up.
 ///
-/// [getCategories] goes one step further: there is no
+/// [getCategoriesFor] goes one step further: there is no
 /// `GET /categories?providerId=` endpoint at all, direct or otherwise.
-/// Instead it derives the provider's categories from the provider's own
-/// services — it calls [getServices], collects the distinct
-/// `categoryId`s referenced by them, then lists `GET /categories` and
-/// keeps only the ones whose id is in that set. This is correct today
-/// (a provider's categories are exactly the categories of the services
-/// they offer) but is one more client-side join than the other getters
-/// need — worth revisiting if the backend ever exposes a direct
-/// provider→category relationship.
+/// Instead it derives the categories from the already-fetched services
+/// list — collects the distinct `categoryId`s they reference, then
+/// lists `GET /categories` and keeps only the ones whose id is in that
+/// set. This is correct today (a provider's categories are exactly the
+/// categories of the services they offer) but is one more client-side
+/// join than the other getters need — worth revisiting if the backend
+/// ever exposes a direct provider→category relationship.
 class HttpProviderProfileRepository implements ProviderProfileRepository {
   HttpProviderProfileRepository(this._apiClient);
 
@@ -56,8 +52,7 @@ class HttpProviderProfileRepository implements ProviderProfileRepository {
   Future<Provider> getProvider() => _fetchProvider();
 
   @override
-  Future<Profile> getProfile() async {
-    final provider = await _fetchProvider();
+  Future<Profile> getProfileFor(Provider provider) async {
     final json = await _apiClient.get(
       '/profiles/${provider.providerProfileId.value}',
     );
@@ -65,8 +60,7 @@ class HttpProviderProfileRepository implements ProviderProfileRepository {
   }
 
   @override
-  Future<Availability> getAvailability() async {
-    final provider = await _fetchProvider();
+  Future<Availability> getAvailabilityFor(Provider provider) async {
     final json = await _apiClient.get('/availabilities');
     final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
     final matches = items
@@ -81,8 +75,7 @@ class HttpProviderProfileRepository implements ProviderProfileRepository {
   }
 
   @override
-  Future<List<Review>> getReviews() async {
-    final provider = await _fetchProvider();
+  Future<List<Review>> getReviewsFor(Provider provider) async {
     final json = await _apiClient.get('/reviews');
     final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
     return items
@@ -92,8 +85,7 @@ class HttpProviderProfileRepository implements ProviderProfileRepository {
   }
 
   @override
-  Future<List<Service>> getServices() async {
-    final provider = await _fetchProvider();
+  Future<List<Service>> getServicesFor(Provider provider) async {
     final json = await _apiClient.get('/services');
     final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
     return items
@@ -103,8 +95,7 @@ class HttpProviderProfileRepository implements ProviderProfileRepository {
   }
 
   @override
-  Future<List<Category>> getCategories() async {
-    final services = await getServices();
+  Future<List<Category>> getCategoriesFor(List<Service> services) async {
     final categoryIds = services
         .map((service) => service.categoryId.value)
         .toSet();

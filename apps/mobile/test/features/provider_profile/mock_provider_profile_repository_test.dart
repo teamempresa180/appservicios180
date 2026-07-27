@@ -16,40 +16,47 @@ void main() {
       expect(await repository.getProvider(), isA<Provider>());
     });
 
-    test('getProfile returns a real Profile with a display name', () async {
-      final profile = await repository.getProfile();
+    test('getProfileFor returns a real Profile with a display name', () async {
+      final provider = await repository.getProvider();
+      final profile = await repository.getProfileFor(provider);
       expect(profile, isA<Profile>());
       expect(profile.displayName, isNotEmpty);
     });
 
-    test('getAvailability returns a real Availability entity', () async {
-      expect(await repository.getAvailability(), isA<Availability>());
+    test('getAvailabilityFor returns a real Availability entity', () async {
+      final provider = await repository.getProvider();
+      expect(await repository.getAvailabilityFor(provider), isA<Availability>());
     });
 
-    test('getReviews returns real Review entities, not maps', () async {
-      final reviews = await repository.getReviews();
+    test('getReviewsFor returns real Review entities, not maps', () async {
+      final provider = await repository.getProvider();
+      final reviews = await repository.getReviewsFor(provider);
       expect(reviews, isNotEmpty);
       expect(reviews, everyElement(isA<Review>()));
     });
 
-    test('getServices returns real Service entities, not maps', () async {
-      final services = await repository.getServices();
+    test('getServicesFor returns real Service entities, not maps', () async {
+      final provider = await repository.getProvider();
+      final services = await repository.getServicesFor(provider);
       expect(services, isNotEmpty);
       expect(services, everyElement(isA<Service>()));
     });
 
-    test('getCategories returns real Category entities, not maps', () async {
-      final categories = await repository.getCategories();
+    test('getCategoriesFor returns real Category entities, not maps', () async {
+      final provider = await repository.getProvider();
+      final services = await repository.getServicesFor(provider);
+      final categories = await repository.getCategoriesFor(services);
       expect(categories, isNotEmpty);
       expect(categories, everyElement(isA<Category>()));
     });
 
     test('services and availability reference the same provider id', () async {
-      final providerId = (await repository.getProvider()).id;
-      final services = await repository.getServices();
+      final provider = await repository.getProvider();
+      final providerId = provider.id;
+      final services = await repository.getServicesFor(provider);
       expect(services.every((s) => s.providerId == providerId), isTrue);
       expect(
-        (await repository.getAvailability()).providerId,
+        (await repository.getAvailabilityFor(provider)).providerId,
         equals(providerId),
       );
     });

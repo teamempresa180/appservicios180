@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_chip.dart';
 
-/// The five purely-visual tabs this screen can show. No real filtering
-/// happens when a tab is selected — see the feature README (same
-/// approach as `OrderStatusTabs` in `orders`).
+/// The five tabs this screen can show — see `NotificationsPage` for how
+/// [NotificationTab] maps to a real filter over the loaded list.
 enum NotificationTab { all, unread, orders, payments, messages }
 
 extension NotificationTabLabel on NotificationTab {
@@ -24,29 +23,18 @@ extension NotificationTabLabel on NotificationTab {
   }
 }
 
-/// Tab selector for the Notifications screen. **Purely visual** —
-/// selecting a tab only changes which tab looks selected; it does not
-/// filter `NotificationsList`.
-class NotificationFilterTabs extends StatefulWidget {
+/// Controlled tab selector for the Notifications screen — [selected]/
+/// [onChanged] are owned by the caller (`NotificationsPage`), which
+/// filters `NotificationsList` accordingly.
+class NotificationFilterTabs extends StatelessWidget {
   const NotificationFilterTabs({
     super.key,
-    this.initialTab = NotificationTab.all,
+    required this.selected,
+    required this.onChanged,
   });
 
-  final NotificationTab initialTab;
-
-  @override
-  State<NotificationFilterTabs> createState() => _NotificationFilterTabsState();
-}
-
-class _NotificationFilterTabsState extends State<NotificationFilterTabs> {
-  late NotificationTab _selected;
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = widget.initialTab;
-  }
+  final NotificationTab selected;
+  final ValueChanged<NotificationTab> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -57,8 +45,8 @@ class _NotificationFilterTabsState extends State<NotificationFilterTabs> {
           for (final tab in NotificationTab.values) ...[
             AppChip(
               label: tab.label,
-              selected: _selected == tab,
-              onTap: () => setState(() => _selected = tab),
+              selected: selected == tab,
+              onTap: () => onChanged(tab),
             ),
             const SizedBox(width: AppSpacing.space8),
           ],

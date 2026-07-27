@@ -15,6 +15,7 @@ export class VerificationMapper {
     dto.verifiedAt = verification.verifiedAt;
     dto.createdAt = verification.createdAt;
     dto.updatedAt = verification.updatedAt;
+    dto.documentPath = verification.documentPath;
     return dto;
   }
 }

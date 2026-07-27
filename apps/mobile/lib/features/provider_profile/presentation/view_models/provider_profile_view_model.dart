@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../../../core/network/http_exceptions.dart';
+import '../../../../profiles/entities/profile.dart';
+import '../../../../provider/entities/provider.dart';
 import '../../mock/mock_provider_profile_data.dart';
 import '../../models/provider_profile_data.dart';
 import '../../repositories/provider_profile_repository.dart';
@@ -13,15 +15,28 @@ enum ProviderProfileLoadStatus { loading, success, error }
 /// `Future` — a real network call needs a real Loading/Success/Error
 /// state, not a synchronous build.
 ///
+/// When [presetProvider]/[presetProfile] are supplied (the normal path —
+/// Marketplace/Service Detail already have the real [Provider]/[Profile]
+/// the user tapped), they're used directly instead of falling back to
+/// [ProviderProfileRepository.getProvider]'s single fixed record, so
+/// different cards genuinely open different providers.
+///
 /// [rating] and [reviewsCount] are still derived from the loaded
 /// reviews; [completedServices], [responseTime], [coverImages], [about]
 /// and [specialties] are still simulated constants sourced from the
 /// feature's mock data file — see `ProviderProfileData`'s class doc for
 /// why those aren't modeled by any domain entity yet.
 class ProviderProfileViewModel extends ChangeNotifier {
-  ProviderProfileViewModel(this._repository);
+  ProviderProfileViewModel(
+    this._repository, {
+    Provider? presetProvider,
+    Profile? presetProfile,
+  }) : _presetProvider = presetProvider,
+       _presetProfile = presetProfile;
 
   final ProviderProfileRepository _repository;
+  final Provider? _presetProvider;
+  final Profile? _presetProfile;
 
   ProviderProfileLoadStatus _status = ProviderProfileLoadStatus.loading;
   ProviderProfileData? _data;
@@ -35,20 +50,24 @@ class ProviderProfileViewModel extends ChangeNotifier {
     _status = ProviderProfileLoadStatus.loading;
     notifyListeners();
     try {
-      // Awaited sequentially rather than via `Future.wait` — every
-      // getter on the interim `ProviderProfileRepository` independently
-      // re-resolves "the current provider" from scratch (see
-      // `HttpProviderProfileRepository`'s doc comment), so starting all
-      // six concurrently just means every one of them fails
-      // independently the moment the provider lookup itself fails,
-      // which surfaces as unhandled-future errors instead of the single
-      // caught [HttpException] below.
-      final provider = await _repository.getProvider();
-      final profile = await _repository.getProfile();
-      final availability = await _repository.getAvailability();
-      final reviews = await _repository.getReviews();
-      final services = await _repository.getServices();
-      final categories = await _repository.getCategories();
+      final provider = _presetProvider ?? await _repository.getProvider();
+
+      // Every remaining getter takes `provider` directly, so they can
+      // safely run concurrently — none of them re-resolve "the current
+      // provider" from scratch anymore.
+      final profileFuture =
+          _presetProfile != null
+              ? Future.value(_presetProfile)
+              : _repository.getProfileFor(provider);
+      final availabilityFuture = _repository.getAvailabilityFor(provider);
+      final reviewsFuture = _repository.getReviewsFor(provider);
+      final servicesFuture = _repository.getServicesFor(provider);
+
+      final profile = await profileFuture;
+      final availability = await availabilityFuture;
+      final reviews = await reviewsFuture;
+      final services = await servicesFuture;
+      final categories = await _repository.getCategoriesFor(services);
 
       final averageRating = reviews.isEmpty
           ? 0.0

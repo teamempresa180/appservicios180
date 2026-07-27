@@ -21,4 +21,18 @@ abstract class OrdersRepository {
   Future<Profile> getProfileFor(Order order);
   Future<Category> getCategoryFor(Order order);
   Future<Quote> getQuoteFor(Order order);
+
+  /// The client who placed [order] — distinct from [getProfileFor],
+  /// which returns the *provider's* profile. Backs the provider-facing
+  /// "Servicios" screen (incoming requests), which needs to show who is
+  /// asking.
+  Future<Profile> getClientProfileFor(Order order);
+
+  /// Transitions a pending Order to [OrderStatus.accepted]/
+  /// [OrderStatus.rejected] — backs the provider's "Servicios" screen
+  /// (incoming client requests to accept or reject). See
+  /// `HttpOrdersRepository`'s doc comment for why [acceptOrder] can't
+  /// fully persist server-side yet.
+  Future<Order> acceptOrder(Order order);
+  Future<Order> rejectOrder(Order order);
 }

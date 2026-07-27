@@ -2,11 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/di/service_locator.dart';
+import 'package:mobile/core/session/mock_auth_repository.dart';
+import 'package:mobile/core/session/provider_availability_controller.dart';
+import 'package:mobile/core/session/provider_availability_storage.dart';
+import 'package:mobile/core/session/session_manager.dart';
+import 'package:mobile/core/session/user_role.dart';
+import 'package:mobile/core/session/user_role_controller.dart';
+import 'package:mobile/core/session/user_role_storage.dart';
+import 'package:mobile/core/storage/secure_token_storage.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
+import 'package:mobile/features/app_shell/navigation_intent.dart';
 import 'package:mobile/features/app_shell/presentation/pages/app_shell_page.dart';
 import 'package:mobile/features/app_shell/presentation/widgets/app_bottom_navigation.dart';
+import 'package:mobile/features/app_shell/presentation/widgets/app_drawer.dart';
 import 'package:mobile/features/app_shell/presentation/widgets/app_navigation_rail.dart';
-import 'package:mobile/features/app_shell/presentation/widgets/shell_placeholder.dart';
+import 'package:mobile/features/chat/presentation/pages/chat_list_page.dart';
+import 'package:mobile/features/chat/repositories/chat_repository.dart';
+import 'package:mobile/features/chat/repositories/mock_chat_repository.dart';
 import 'package:mobile/features/home/presentation/pages/home_page.dart';
 import 'package:mobile/features/marketplace/presentation/pages/marketplace_page.dart';
 import 'package:mobile/features/marketplace/repositories/category_repository.dart'
@@ -17,17 +29,40 @@ import 'package:mobile/features/marketplace/repositories/mock_provider_repositor
 import 'package:mobile/features/marketplace/repositories/mock_service_repository.dart';
 import 'package:mobile/features/marketplace/repositories/provider_repository.dart';
 import 'package:mobile/features/marketplace/repositories/service_repository.dart';
+import 'package:mobile/features/orders/presentation/pages/orders_page.dart';
+import 'package:mobile/features/orders/repositories/mock_orders_repository.dart';
+import 'package:mobile/features/orders/repositories/orders_repository.dart';
 import 'package:mobile/features/profile/presentation/pages/profile_page.dart';
 import 'package:mobile/features/profile/repositories/mock_profile_repository.dart';
 import 'package:mobile/features/profile/repositories/profile_repository.dart';
+import 'package:mobile/features/orders/presentation/pages/provider_requests_page.dart';
+import 'package:mobile/features/search/repositories/mock_search_repository.dart';
+import 'package:mobile/features/search/repositories/search_repository.dart';
 
-/// `ProfilePage` (the "Perfil" destination) is reached here via
-/// internal navigation, not constructed directly, so it always
-/// resolves its repository from the service locator — hence
-/// registering a mock here. `MarketplacePage` is built eagerly by the
-/// `IndexedStack` (not lazily on navigation), but it's constructed with
-/// no explicit repository overrides either, so its three repositories
-/// need registering too.
+class _FakeSecureTokenStorage implements SecureTokenStorage {
+  @override
+  Future<void> save({
+    required String accessToken,
+    required String refreshToken,
+  }) async {}
+
+  @override
+  Future<String?> readAccessToken() async => null;
+
+  @override
+  Future<String?> readRefreshToken() async => null;
+
+  @override
+  Future<void> clear() async {}
+}
+
+/// `ProfilePage` (reached from the drawer's "Perfil" tile, not
+/// constructed directly) always resolves its repository from the
+/// service locator — hence registering a mock here. Every destination
+/// still in the `IndexedStack` is built eagerly (not lazily on
+/// navigation) with no explicit repository overrides either, so every
+/// repository the Cliente/Prestador tab sets need needs registering
+/// too.
 void main() {
   setUp(() {
     locator.registerSingleton<ProfileRepository>(MockProfileRepository());
@@ -36,6 +71,24 @@ void main() {
     );
     locator.registerSingleton<ServiceRepository>(MockServiceRepository());
     locator.registerSingleton<ProviderRepository>(MockProviderRepository());
+    locator.registerSingleton<SearchRepository>(MockSearchRepository());
+    locator.registerSingleton<OrdersRepository>(MockOrdersRepository());
+    locator.registerSingleton<ChatRepository>(MockChatRepository());
+    locator.registerSingleton<AppShellNavigationIntent>(
+      AppShellNavigationIntent(),
+    );
+    locator.registerSingleton<UserRoleController>(
+      UserRoleController(storage: UserRoleStorage()),
+    );
+    locator.registerSingleton<ProviderAvailabilityController>(
+      ProviderAvailabilityController(storage: ProviderAvailabilityStorage()),
+    );
+    locator.registerSingleton<SessionManager>(
+      SessionManager(
+        authRepository: MockAuthRepository(),
+        tokenStorage: _FakeSecureTokenStorage(),
+      ),
+    );
   });
   tearDown(() => locator.reset());
 
@@ -60,10 +113,15 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('AppServicios'), findsOneWidget);
-    expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/icon/app_icon_source.png')),
+      findsOneWidget,
+    );
     expect(find.byType(HomePage), findsOneWidget);
     expect(find.text('¿Qué servicio necesitas hoy?'), findsOneWidget);
+    // Cliente role: shows "Modo Cliente", not "Modo Proveedor".
+    expect(find.text('Modo Cliente'), findsOneWidget);
+    expect(find.text('Modo Proveedor'), findsNothing);
   });
 
   testWidgets('uses BottomNavigationBar on narrow (mobile) widths', (
@@ -76,38 +134,24 @@ void main() {
     expect(find.byType(AppBottomNavigation), findsOneWidget);
     expect(find.byType(AppNavigationRail), findsNothing);
 
-    final labelsFinder = find.descendant(
-      of: find.byType(AppBottomNavigation),
-      matching: find.text('Inicio'),
-    );
-    expect(labelsFinder, findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byType(AppBottomNavigation),
-        matching: find.text('Buscar'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byType(AppBottomNavigation),
-        matching: find.text('Órdenes'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byType(AppBottomNavigation),
-        matching: find.text('Mensajes'),
-      ),
-      findsOneWidget,
-    );
+    for (final label in ['Inicio', 'Buscar', 'Órdenes', 'Mensajes', 'Menú']) {
+      expect(
+        find.descendant(
+          of: find.byType(AppBottomNavigation),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+        reason: '"$label" should be a bottom navigation destination',
+      );
+    }
+    // Compact bottom nav: Perfil no longer has its own tab — it lives in
+    // the drawer opened via "Menú".
     expect(
       find.descendant(
         of: find.byType(AppBottomNavigation),
         matching: find.text('Perfil'),
       ),
-      findsOneWidget,
+      findsNothing,
     );
   });
 
@@ -140,7 +184,7 @@ void main() {
     await tester.tap(
       find.descendant(
         of: find.byType(AppBottomNavigation),
-        matching: find.text('Perfil'),
+        matching: find.text('Mensajes'),
       ),
     );
     await tester.pumpAndSettle();
@@ -151,8 +195,59 @@ void main() {
         matching: find.byType(NavigationBar),
       ),
     );
-    expect(updatedBottomNav.selectedIndex, 4);
-    expect(find.byType(ProfilePage, skipOffstage: false), findsOneWidget);
+    expect(updatedBottomNav.selectedIndex, 3);
+    expect(find.byType(ChatListPage, skipOffstage: false), findsOneWidget);
+  });
+
+  testWidgets('tapping "Menú" opens the drawer instead of switching tabs', (
+    tester,
+  ) async {
+    await setSurfaceSize(tester, const Size(400, 800));
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomNavigation),
+        matching: find.text('Menú'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppDrawer), findsOneWidget);
+    expect(find.text('Perfil'), findsOneWidget);
+    expect(find.text('Notificaciones'), findsOneWidget);
+
+    // The tab selection underneath the (now open) drawer is untouched —
+    // "Menú" is a trigger, not a real destination.
+    final bottomNav = tester.widget<NavigationBar>(
+      find.descendant(
+        of: find.byType(AppBottomNavigation),
+        matching: find.byType(NavigationBar),
+      ),
+    );
+    expect(bottomNav.selectedIndex, 0);
+  });
+
+  testWidgets('the drawer\'s "Perfil" tile opens ProfilePage', (
+    tester,
+  ) async {
+    await setSurfaceSize(tester, const Size(400, 800));
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomNavigation),
+        matching: find.text('Menú'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Perfil'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProfilePage), findsOneWidget);
   });
 
   testWidgets('tapping a navigation rail destination selects it', (
@@ -195,22 +290,20 @@ void main() {
       await tester.pumpAndSettle();
 
       final stack = tester.widget<IndexedStack>(find.byType(IndexedStack));
-      expect(stack.children, hasLength(5));
+      expect(stack.children, hasLength(4));
       expect(stack.index, 0);
 
-      // All five destinations are already built (IndexedStack keeps every
-      // child in the tree, it only paints the selected one): Home
-      // (Inicio), Marketplace (Buscar), Profile (Perfil) plus two
-      // placeholders (Órdenes, Mensajes). The default finder skips
-      // "offstage" widgets, so the non-selected ones must be looked up
-      // with skipOffstage: false to prove they exist.
+      // All four real destinations are already built (IndexedStack keeps
+      // every child in the tree, it only paints the selected one): Home
+      // (Inicio), Marketplace (Buscar), Orders (Órdenes), Chat
+      // (Mensajes). "Menú" isn't a stack destination — it opens the
+      // drawer instead. The default finder skips "offstage" widgets, so
+      // the non-selected ones must be looked up with skipOffstage: false
+      // to prove they exist.
       expect(find.byType(HomePage, skipOffstage: false), findsOneWidget);
       expect(find.byType(MarketplacePage, skipOffstage: false), findsOneWidget);
-      expect(find.byType(ProfilePage, skipOffstage: false), findsOneWidget);
-      expect(
-        find.byType(ShellPlaceholder, skipOffstage: false),
-        findsNWidgets(2),
-      );
+      expect(find.byType(OrdersPage, skipOffstage: false), findsOneWidget);
+      expect(find.byType(ChatListPage, skipOffstage: false), findsOneWidget);
 
       await tester.tap(
         find.descendant(
@@ -225,15 +318,100 @@ void main() {
       );
       expect(updatedStack.index, 3);
 
-      // Still all five destinations built after switching tabs — none
+      // Still all four destinations built after switching tabs — none
       // were disposed/recreated.
       expect(find.byType(HomePage, skipOffstage: false), findsOneWidget);
       expect(find.byType(MarketplacePage, skipOffstage: false), findsOneWidget);
-      expect(find.byType(ProfilePage, skipOffstage: false), findsOneWidget);
+      expect(find.byType(OrdersPage, skipOffstage: false), findsOneWidget);
+      expect(find.byType(ChatListPage, skipOffstage: false), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Prestador role shows Servicios/Historial instead of Buscar, and the '
+    '"Modo Proveedor" badge',
+    (tester) async {
+      await setSurfaceSize(tester, const Size(400, 800));
+      locator<UserRoleController>().setRole(UserRole.provider);
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Modo Proveedor'), findsOneWidget);
+
       expect(
-        find.byType(ShellPlaceholder, skipOffstage: false),
-        findsNWidgets(2),
+        find.descendant(
+          of: find.byType(AppBottomNavigation),
+          matching: find.text('Buscar'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(AppBottomNavigation),
+          matching: find.text('Servicios'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(AppBottomNavigation),
+          matching: find.text('Historial'),
+        ),
+        findsOneWidget,
+      );
+
+      final stack = tester.widget<IndexedStack>(find.byType(IndexedStack));
+      expect(stack.children, hasLength(4));
+      expect(
+        find.byType(ProviderRequestsPage, skipOffstage: false),
+        findsOneWidget,
+      );
+      expect(
+        find.byType(MarketplacePage, skipOffstage: false),
+        findsNothing,
       );
     },
   );
+
+  testWidgets('switching role resets the selected tab back to Inicio', (
+    tester,
+  ) async {
+    await setSurfaceSize(tester, const Size(400, 800));
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomNavigation),
+        matching: find.text('Mensajes'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<NavigationBar>(
+            find.descendant(
+              of: find.byType(AppBottomNavigation),
+              matching: find.byType(NavigationBar),
+            ),
+          )
+          .selectedIndex,
+      3,
+    );
+
+    locator<UserRoleController>().setRole(UserRole.provider);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<NavigationBar>(
+            find.descendant(
+              of: find.byType(AppBottomNavigation),
+              matching: find.byType(NavigationBar),
+            ),
+          )
+          .selectedIndex,
+      0,
+    );
+  });
 }

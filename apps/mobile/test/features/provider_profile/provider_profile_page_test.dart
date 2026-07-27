@@ -39,21 +39,24 @@ class _FakeProviderProfileRepository implements ProviderProfileRepository {
   Future<Provider> getProvider() => _run(() => _delegate.getProvider());
 
   @override
-  Future<Profile> getProfile() => _run(() => _delegate.getProfile());
+  Future<Profile> getProfileFor(Provider provider) =>
+      _run(() => _delegate.getProfileFor(provider));
 
   @override
-  Future<Availability> getAvailability() =>
-      _run(() => _delegate.getAvailability());
+  Future<Availability> getAvailabilityFor(Provider provider) =>
+      _run(() => _delegate.getAvailabilityFor(provider));
 
   @override
-  Future<List<Review>> getReviews() => _run(() => _delegate.getReviews());
+  Future<List<Review>> getReviewsFor(Provider provider) =>
+      _run(() => _delegate.getReviewsFor(provider));
 
   @override
-  Future<List<Service>> getServices() => _run(() => _delegate.getServices());
+  Future<List<Service>> getServicesFor(Provider provider) =>
+      _run(() => _delegate.getServicesFor(provider));
 
   @override
-  Future<List<Category>> getCategories() =>
-      _run(() => _delegate.getCategories());
+  Future<List<Category>> getCategoriesFor(List<Service> services) =>
+      _run(() => _delegate.getCategoriesFor(services));
 
   Future<T> _run<T>(Future<T> Function() delegateCall) {
     if (neverResolves) return Completer<T>().future;

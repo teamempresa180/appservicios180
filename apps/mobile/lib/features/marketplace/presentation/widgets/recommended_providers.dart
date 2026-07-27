@@ -4,8 +4,8 @@ import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../models/provider_display.dart';
 import 'provider_card.dart';
 
-/// Horizontally scrollable row of recommended `Provider` cards. Purely
-/// visual — see the feature README.
+/// Horizontally scrollable row of recommended `Provider` cards — each
+/// `ProviderCard` opens its own Provider Profile when tapped.
 class RecommendedProviders extends StatelessWidget {
   const RecommendedProviders({super.key, required this.providers});
 

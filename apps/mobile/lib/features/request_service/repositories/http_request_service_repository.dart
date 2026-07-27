@@ -3,10 +3,13 @@ import '../../../availability/entities/availability.dart';
 import '../../../category/entities/category.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
+import '../../../core/session/session_manager.dart';
+import '../../../order/entities/order.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
 import '../../../service/entities/service.dart';
 import '../../categories/repositories/category_http_mapper.dart';
+import '../models/request_priority.dart';
 import 'request_service_repository.dart';
 
 /// [RequestServiceRepository] backed by [ApiClient].
@@ -32,9 +35,10 @@ import 'request_service_repository.dart';
 /// arbitrary/simulated-equivalent, documented here rather than silently
 /// picked: there is genuinely no domain link to resolve instead.
 class HttpRequestServiceRepository implements RequestServiceRepository {
-  HttpRequestServiceRepository(this._apiClient);
+  HttpRequestServiceRepository(this._apiClient, this._sessionManager);
 
   final ApiClient _apiClient;
+  final SessionManager _sessionManager;
 
   Future<Service> _fetchService() async {
     final json = await _apiClient.get('/services');
@@ -95,5 +99,29 @@ class HttpRequestServiceRepository implements RequestServiceRepository {
       throw StateError('No addresses available for the current session');
     }
     return AddressHttpMapper.fromJson(items.first);
+  }
+
+  @override
+  Future<Order> createOrder({
+    required Service service,
+    required Provider provider,
+    required String title,
+    required String description,
+    required DateTime scheduledDate,
+    required RequestPriority priority,
+  }) async {
+    final json = await _apiClient.post(
+      '/orders',
+      data: {
+        'identityId': _sessionManager.currentUserId,
+        'providerId': provider.id.value,
+        'serviceId': service.id.value,
+        'title': title,
+        'description': description,
+        'scheduledDate': scheduledDate.toIso8601String(),
+        'priority': priority.asOrderPriority.name.toUpperCase(),
+      },
+    );
+    return OrderHttpMapper.fromJson(json);
   }
 }

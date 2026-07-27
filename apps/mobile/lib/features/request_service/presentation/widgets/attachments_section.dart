@@ -3,6 +3,7 @@ import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
+import '../../../../core/ui/widgets/app_snack_bar.dart';
 
 /// Horizontally scrollable, simulated photo attachments. No real camera
 /// or gallery integration exists yet (no official branding, no
@@ -32,7 +33,11 @@ class AttachmentsSection extends StatelessWidget {
               itemBuilder: (context, index) {
                 if (index == attachments.length) {
                   return InkWell(
-                    onTap: () {},
+                    onTap: () => AppSnackBar.show(
+                      context,
+                      'Selección de fotos próximamente',
+                      type: AppSnackBarType.info,
+                    ),
                     child: SizedBox(
                       width: 96,
                       child: DecoratedBox(

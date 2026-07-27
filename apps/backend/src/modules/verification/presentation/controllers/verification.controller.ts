@@ -6,10 +6,15 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -18,6 +23,7 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { VerificationRoutes } from '../routes/verification.routes';
 import { VerificationSwagger } from '../swagger/verification.swagger';
 import { CreateVerificationUseCase } from '../../application/use_cases/create-verification.use-case';
@@ -25,6 +31,7 @@ import { UpdateVerificationUseCase } from '../../application/use_cases/update-ve
 import { GetVerificationUseCase } from '../../application/use_cases/get-verification.use-case';
 import { ListVerificationUseCase } from '../../application/use_cases/list-verification.use-case';
 import { SearchVerificationUseCase } from '../../application/use_cases/search-verification.use-case';
+import { UploadVerificationDocumentUseCase } from '../../application/use_cases/upload-verification-document.use-case';
 import { GetVerificationQuery } from '../../application/queries/get-verification.query';
 import { ListVerificationQuery } from '../../application/queries/list-verification.query';
 import { SearchVerificationQuery } from '../../application/queries/search-verification.query';
@@ -33,6 +40,10 @@ import { UpdateVerificationRequestDto } from '../dto/update-verification.request
 import { VerificationResponseDto } from '../dto/verification.response.dto';
 import { VerificationListResponseDto } from '../dto/verification-list.response.dto';
 import { VerificationHttpMapper } from '../dto/verification-http.mapper';
+import {
+  LocalVerificationDocumentStorageService,
+  UploadedVerificationDocumentFile,
+} from '../../infrastructure/storage/local-verification-document-storage.service';
 
 /**
  * REST controller for Verification. Only exposes routes, maps HTTP
@@ -63,6 +74,8 @@ export class VerificationController {
     private readonly getVerificationUseCase: GetVerificationUseCase,
     private readonly listVerificationUseCase: ListVerificationUseCase,
     private readonly searchVerificationUseCase: SearchVerificationUseCase,
+    private readonly uploadVerificationDocumentUseCase: UploadVerificationDocumentUseCase,
+    private readonly verificationDocumentStorage: LocalVerificationDocumentStorageService,
   ) {}
 
   @Post()
@@ -175,6 +188,65 @@ export class VerificationController {
   async findOne(@Param('id') id: string): Promise<VerificationResponseDto> {
     const verification = await this.getVerificationUseCase.execute(
       new GetVerificationQuery(id),
+    );
+    return VerificationHttpMapper.toResponse(verification);
+  }
+
+  /**
+   * Two-step because they're two different concerns: `verificationDocumentStorage`
+   * writes the raw bytes to disk and validates the mimetype (an
+   * infrastructure/multipart concern), then
+   * `uploadVerificationDocumentUseCase` persists the resulting path
+   * onto the Verification (an Application concern) — same split as
+   * every other controller method, which never builds a domain entity
+   * by hand either.
+   */
+  @Post(VerificationRoutes.document)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation(VerificationSwagger.uploadDocument)
+  @ApiParam({ name: 'id', description: 'Verification id' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Document uploaded and Verification updated.',
+    type: VerificationResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Missing file or unsupported mimetype.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Verification not found.',
+    type: ErrorResponseDto,
+  })
+  async uploadDocument(
+    @Param('id') id: string,
+    @UploadedFile() file: UploadedVerificationDocumentFile | undefined,
+  ): Promise<VerificationResponseDto> {
+    if (!file) {
+      throw new ValidationException('file is required');
+    }
+
+    // Confirms the Verification exists *before* writing anything to disk
+    // — otherwise an upload against an unknown id would leave an orphan
+    // file under `uploads/verifications/<id>/`. `GetVerificationUseCase`
+    // throws `NotFoundException` (translated to a 404 by
+    // `DomainExceptionFilter`) exactly like every other `:id` route here.
+    await this.getVerificationUseCase.execute(new GetVerificationQuery(id));
+
+    const documentPath = await this.verificationDocumentStorage.save(id, file);
+    const verification = await this.uploadVerificationDocumentUseCase.execute(
+      VerificationHttpMapper.toUploadDocumentCommand(id, documentPath),
     );
     return VerificationHttpMapper.toResponse(verification);
   }

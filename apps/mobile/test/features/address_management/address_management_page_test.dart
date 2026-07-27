@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/address/entities/address.dart';
+import 'package:mobile/address/models/address_type.dart';
 import 'package:mobile/contact/entities/contact.dart';
 import 'package:mobile/core/network/http_exceptions.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
@@ -11,7 +12,6 @@ import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
 import 'package:mobile/features/address_management/presentation/pages/address_management_page.dart';
 import 'package:mobile/features/address_management/presentation/widgets/address_card.dart';
-import 'package:mobile/features/address_management/presentation/widgets/address_form_preview.dart';
 import 'package:mobile/features/address_management/presentation/widgets/addresses_empty_state.dart';
 import 'package:mobile/features/address_management/presentation/widgets/default_address_badge.dart';
 import 'package:mobile/features/address_management/repositories/address_management_repository.dart';
@@ -50,6 +50,36 @@ class _FakeAddressManagementRepository implements AddressManagementRepository {
   @override
   Future<Contact> getContactFor(Address address) =>
       _delegate.getContactFor(address);
+
+  @override
+  Future<Address> createAddress({
+    required String alias,
+    required String fullAddress,
+    required String city,
+    required String state,
+    required String country,
+    required String postalCode,
+    required AddressType type,
+  }) => _delegate.createAddress(
+    alias: alias,
+    fullAddress: fullAddress,
+    city: city,
+    state: state,
+    country: country,
+    postalCode: postalCode,
+    type: type,
+  );
+
+  @override
+  Future<Address> updateAddress(
+    Address address, {
+    required String alias,
+    required String fullAddress,
+  }) => _delegate.updateAddress(address, alias: alias, fullAddress: fullAddress);
+
+  @override
+  Future<void> deleteAddress(Address address) =>
+      _delegate.deleteAddress(address);
 }
 
 void main() {
@@ -105,15 +135,115 @@ void main() {
     expect(find.text('Seleccionar'), findsNWidgets(3));
   });
 
-  testWidgets('shows the add-address button and the form preview', (
+  testWidgets('shows the add-address button', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Agregar dirección'), findsOneWidget);
+  });
+
+  testWidgets(
+    'tapping "Agregar dirección", filling the form and saving adds a real address',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AddressCard), findsNWidgets(3));
+
+      await tester.ensureVisible(find.text('Agregar dirección'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Agregar dirección'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Agregar dirección'), findsWidgets);
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Alias (Casa, Trabajo...)'),
+        'Finca',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Dirección completa'),
+        'Km 5 vía La Vega',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Ciudad'),
+        'La Vega',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Departamento/Estado'),
+        'Cundinamarca',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'País'),
+        'Colombia',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Código postal'),
+        '250040',
+      );
+
+      await tester.tap(find.text('Guardar'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AddressCard), findsNWidgets(4));
+      expect(find.text('Finca'), findsOneWidget);
+      expect(find.text('Dirección agregada.'), findsOneWidget);
+    },
+  );
+
+  testWidgets('tapping "Editar", changing the alias and saving updates it', (
     tester,
   ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Agregar dirección'), findsOneWidget);
-    expect(find.byType(AddressFormPreview), findsOneWidget);
-    expect(find.text('Guardar'), findsOneWidget);
+    await tester.tap(find.text('Editar').first);
+    await tester.pumpAndSettle();
+
+    final aliasField = find.widgetWithText(
+      TextFormField,
+      'Alias (Casa, Trabajo...)',
+    );
+    await tester.enterText(aliasField, 'Casa nueva');
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Casa nueva'), findsOneWidget);
+    expect(find.text('Dirección actualizada.'), findsOneWidget);
+  });
+
+  testWidgets('tapping "Eliminar" and confirming removes the address', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AddressCard), findsNWidgets(3));
+
+    await tester.tap(find.text('Eliminar').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Eliminar dirección'), findsOneWidget);
+    await tester.tap(find.text('Eliminar').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AddressCard), findsNWidgets(2));
+    expect(find.text('Dirección eliminada.'), findsOneWidget);
+  });
+
+  testWidgets('cancelling the delete confirmation keeps the address', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Eliminar').first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AddressCard), findsNWidgets(3));
   });
 
   testWidgets('loading state shows AppLoading instead of the list', (

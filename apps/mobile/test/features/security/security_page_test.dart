@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/audit/entities/audit.dart';
 import 'package:mobile/authentication/entities/authentication.dart';
+import 'package:mobile/authentication/models/auth_method_type.dart';
+import 'package:mobile/authentication/models/authentication_status.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
@@ -42,6 +44,22 @@ class _FakeSecurityRepository implements SecurityRepository {
 
   @override
   Future<List<Audit>> getAuditLog() => _delegate.getAuditLog();
+
+  @override
+  Future<Authentication> createAuthMethod({
+    required Identity identity,
+    required AuthMethodType methodType,
+  }) => _delegate.createAuthMethod(identity: identity, methodType: methodType);
+
+  @override
+  Future<Authentication> updateAuthMethodStatus(
+    Authentication authMethod,
+    AuthenticationStatus status,
+  ) => _delegate.updateAuthMethodStatus(authMethod, status);
+
+  @override
+  Future<void> deleteAuthMethod(Authentication authMethod) =>
+      _delegate.deleteAuthMethod(authMethod);
 }
 
 void main() {
@@ -109,6 +127,69 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Agregar método'), findsOneWidget);
+  });
+
+  testWidgets(
+    'tapping "Agregar método", picking a type adds a real Authentication',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AuthMethodCard), findsNWidgets(5));
+
+      await tester.ensureVisible(find.text('Agregar método'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Agregar método'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Agregar método de autenticación'), findsOneWidget);
+      await tester.tap(find.widgetWithText(ListTile, 'Biometría'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AuthMethodCard), findsNWidgets(6));
+      expect(
+        find.text('Método de autenticación agregado.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('tapping "Desactivar" toggles the method\'s status', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Activo'), findsNWidgets(2));
+
+    await tester.ensureVisible(find.text('Desactivar').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Desactivar').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Activo'), findsNWidgets(1));
+    expect(find.text('Método desactivado.'), findsOneWidget);
+  });
+
+  testWidgets('tapping "Eliminar" and confirming removes the method', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AuthMethodCard), findsNWidgets(5));
+
+    await tester.ensureVisible(find.text('Eliminar').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Eliminar').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Eliminar método'), findsOneWidget);
+    await tester.tap(find.text('Eliminar').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AuthMethodCard), findsNWidgets(4));
+    expect(find.text('Método eliminado.'), findsOneWidget);
   });
 
   testWidgets('shows every mock credential with its type and status', (

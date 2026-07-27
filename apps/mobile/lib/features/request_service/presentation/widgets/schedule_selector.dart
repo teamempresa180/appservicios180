@@ -4,20 +4,23 @@ import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 
-/// Date + time pickers for the requested schedule. **Simulated** — see
-/// `RequestServiceData.selectedDate`/`selectedTime` and the feature
-/// README: there is no Schedule/booking slot use case implemented yet,
-/// so the picked values only live in this widget's local state and are
-/// never sent anywhere.
+/// Date + time pickers for the requested schedule. The picked values
+/// are surfaced to the parent via [onDateChanged]/[onTimeChanged] so
+/// `RequestServicePage` can send the real chosen schedule when
+/// submitting the request (see `RequestServiceRepository.createOrder`).
 class ScheduleSelector extends StatefulWidget {
   const ScheduleSelector({
     super.key,
     required this.initialDate,
     required this.initialTime,
+    this.onDateChanged,
+    this.onTimeChanged,
   });
 
   final DateTime initialDate;
   final String initialTime;
+  final ValueChanged<DateTime>? onDateChanged;
+  final ValueChanged<String>? onTimeChanged;
 
   @override
   State<ScheduleSelector> createState() => _ScheduleSelectorState();
@@ -47,7 +50,10 @@ class _ScheduleSelectorState extends State<ScheduleSelector> {
       firstDate: DateTime(_date.year - 1),
       lastDate: DateTime(_date.year + 1),
     );
-    if (picked != null) setState(() => _date = picked);
+    if (picked != null) {
+      setState(() => _date = picked);
+      widget.onDateChanged?.call(picked);
+    }
   }
 
   Future<void> _pickTime() async {
@@ -61,11 +67,11 @@ class _ScheduleSelectorState extends State<ScheduleSelector> {
       initialTime: initialTime,
     );
     if (picked != null) {
-      setState(() {
-        _time =
-            '${picked.hour.toString().padLeft(2, '0')}:'
-            '${picked.minute.toString().padLeft(2, '0')}';
-      });
+      final formatted =
+          '${picked.hour.toString().padLeft(2, '0')}:'
+          '${picked.minute.toString().padLeft(2, '0')}';
+      setState(() => _time = formatted);
+      widget.onTimeChanged?.call(formatted);
     }
   }
 

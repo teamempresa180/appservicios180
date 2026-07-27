@@ -9,10 +9,8 @@ import '../../models/service_detail_data.dart';
 
 /// Provider information: name (from `Profile`, since `Provider` itself
 /// has no display name), biography and years of experience. Tapping it
-/// opens the (visual-only, single fixed mock provider) Provider Profile
-/// preview — the only change authorized this prompt. See the feature
-/// README and `provider_profile`'s README for why it always opens the
-/// same mock provider.
+/// opens Provider Profile for this service's own provider — real
+/// per-provider navigation, not a fixed mock preview.
 class ProviderInformation extends StatelessWidget {
   const ProviderInformation({super.key, required this.data});
 
@@ -25,7 +23,12 @@ class ProviderInformation extends StatelessWidget {
         MaterialPageRoute<void>(
           builder: (context) => Scaffold(
             appBar: AppBar(title: const Text('Perfil del proveedor')),
-            body: const SafeArea(child: ProviderProfilePage()),
+            body: SafeArea(
+              child: ProviderProfilePage(
+                provider: data.provider,
+                profile: data.profile,
+              ),
+            ),
           ),
         ),
       ),

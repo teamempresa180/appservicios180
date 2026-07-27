@@ -216,4 +216,64 @@ describe('ProfileController (e2e)', () => {
     expect(body).toHaveLength(1);
     expect(body[0].displayName).toBe('Jane Doe');
   });
+
+  it('POST /profiles/:id/avatar uploads a photo and stores its path', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/profiles')
+      .set('Authorization', authHeader)
+      .send({
+        identityId,
+        displayName: 'Jane Doe',
+        visibility: ProfileVisibility.Public,
+      });
+    const createdId = (created.body as ProfileResponseDto).id;
+
+    const response = await request(app.getHttpServer())
+      .post(`/profiles/${createdId}/avatar`)
+      .set('Authorization', authHeader)
+      .attach('file', Buffer.from('fake-png-bytes'), {
+        filename: 'avatar.png',
+        contentType: 'image/png',
+      })
+      .expect(201);
+
+    const body = response.body as ProfileResponseDto;
+    expect(body.avatarUrl).toBe(`uploads/profiles/${createdId}/avatar.png`);
+  });
+
+  it('POST /profiles/:id/avatar returns 400 for an unsupported mimetype', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/profiles')
+      .set('Authorization', authHeader)
+      .send({
+        identityId,
+        displayName: 'Jane Doe',
+        visibility: ProfileVisibility.Public,
+      });
+    const createdId = (created.body as ProfileResponseDto).id;
+
+    const response = await request(app.getHttpServer())
+      .post(`/profiles/${createdId}/avatar`)
+      .set('Authorization', authHeader)
+      .attach('file', Buffer.from('fake-pdf-bytes'), {
+        filename: 'document.pdf',
+        contentType: 'application/pdf',
+      })
+      .expect(400);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ValidationException',
+    );
+  });
+
+  it('POST /profiles/:id/avatar returns 404 for an unknown id', async () => {
+    await request(app.getHttpServer())
+      .post('/profiles/unknown-id/avatar')
+      .set('Authorization', authHeader)
+      .attach('file', Buffer.from('fake-png-bytes'), {
+        filename: 'avatar.png',
+        contentType: 'image/png',
+      })
+      .expect(404);
+  });
 });

@@ -6,10 +6,8 @@ import '../../../service_detail/presentation/pages/service_detail_page.dart';
 import '../../models/service_display.dart';
 
 /// A single featured service card: name, provider, category, base price
-/// and a simulated rating. Tapping it opens the (visual-only, single
-/// fixed mock service) Service Detail preview — see the feature README
-/// and `service_detail`'s README for why every card currently opens the
-/// same mock service.
+/// and a simulated rating. Tapping it opens Service Detail for this
+/// card's own [Service] — different cards now open different services.
 class ServiceCard extends StatelessWidget {
   const ServiceCard({super.key, required this.display});
 
@@ -24,7 +22,7 @@ class ServiceCard extends StatelessWidget {
           MaterialPageRoute<void>(
             builder: (context) => Scaffold(
               appBar: AppBar(title: const Text('Detalle del servicio')),
-              body: const SafeArea(child: ServiceDetailPage()),
+              body: SafeArea(child: ServiceDetailPage(service: display.service)),
             ),
           ),
         ),

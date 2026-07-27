@@ -11,11 +11,13 @@ import { DeleteProfileUseCase } from '../application/use_cases/delete-profile.us
 import { GetProfileUseCase } from '../application/use_cases/get-profile.use-case';
 import { ListProfileUseCase } from '../application/use_cases/list-profile.use-case';
 import { SearchProfileUseCase } from '../application/use_cases/search-profile.use-case';
+import { UpdateProfileAvatarUseCase } from '../application/use_cases/update-profile-avatar.use-case';
 import {
   PROFILE_REPOSITORY,
   ProfileRepository,
 } from '../domain/interfaces/profile-repository.interface';
 import { PrismaProfileRepository } from '../infrastructure/persistence/prisma-profile.repository';
+import { LocalProfileAvatarStorageService } from '../infrastructure/storage/local-profile-avatar-storage.service';
 
 /**
  * Wires the Profiles presentation layer to its Use Cases, which are
@@ -64,6 +66,13 @@ import { PrismaProfileRepository } from '../infrastructure/persistence/prisma-pr
       useFactory: (repo: ProfileRepository) => new SearchProfileUseCase(repo),
       inject: [PROFILE_REPOSITORY],
     },
+    {
+      provide: UpdateProfileAvatarUseCase,
+      useFactory: (repo: ProfileRepository) =>
+        new UpdateProfileAvatarUseCase(repo),
+      inject: [PROFILE_REPOSITORY],
+    },
+    LocalProfileAvatarStorageService,
   ],
   exports: [PROFILE_REPOSITORY],
 })

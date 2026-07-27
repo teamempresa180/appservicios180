@@ -3,19 +3,38 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/category/entities/category.dart';
+import 'package:mobile/category/models/category_id.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/search/presentation/pages/search_page.dart';
 import 'package:mobile/features/search/repositories/mock_search_repository.dart';
 import 'package:mobile/features/search/repositories/search_repository.dart';
+import 'package:mobile/provider/entities/provider.dart';
+import 'package:mobile/provider/models/provider_id.dart';
 import 'package:mobile/service/entities/service.dart';
 
 class _FakeSearchRepository implements SearchRepository {
   _FakeSearchRepository(this._result);
 
   final Future<List<Service>> Function() _result;
+  final _delegate = MockSearchRepository();
 
   @override
   Future<List<Service>> getAll() => _result();
+
+  @override
+  Future<Provider> providerOf(ProviderId id) => _delegate.providerOf(id);
+
+  @override
+  Future<Category> categoryOf(CategoryId id) => _delegate.categoryOf(id);
+
+  @override
+  Future<double> ratingOf(ProviderId providerId) =>
+      _delegate.ratingOf(providerId);
+
+  @override
+  Future<int> reviewsCountOf(ProviderId providerId) =>
+      _delegate.reviewsCountOf(providerId);
 }
 
 void main() {

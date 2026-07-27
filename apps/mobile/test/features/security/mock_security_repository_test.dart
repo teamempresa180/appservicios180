@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/audit/entities/audit.dart';
 import 'package:mobile/authentication/entities/authentication.dart';
+import 'package:mobile/authentication/models/auth_method_type.dart';
+import 'package:mobile/authentication/models/authentication_status.dart';
 import 'package:mobile/credentials/entities/credential.dart';
 import 'package:mobile/features/security/repositories/mock_security_repository.dart';
 import 'package:mobile/identity/entities/identity.dart';
@@ -73,6 +75,52 @@ void main() {
     test('is independent from every other feature mock data', () async {
       final identity = await repository.getIdentity();
       expect(identity.id.value.startsWith('security-'), isTrue);
+    });
+
+    test('createAuthMethod adds a real, active Authentication', () async {
+      final freshRepository = MockSecurityRepository();
+      final identity = await freshRepository.getIdentity();
+      final before = await freshRepository.getAuthMethods();
+      final created = await freshRepository.createAuthMethod(
+        identity: identity,
+        methodType: AuthMethodType.biometric,
+      );
+      final after = await freshRepository.getAuthMethods();
+
+      expect(after.length, equals(before.length + 1));
+      expect(created.identityId, equals(identity.id));
+      expect(created.status, equals(AuthenticationStatus.active));
+      expect(after, contains(created));
+    });
+
+    test('updateAuthMethodStatus changes only the targeted method', () async {
+      final freshRepository = MockSecurityRepository();
+      final methods = await freshRepository.getAuthMethods();
+      final target = methods.first;
+
+      final updated = await freshRepository.updateAuthMethodStatus(
+        target,
+        AuthenticationStatus.inactive,
+      );
+
+      expect(updated.status, equals(AuthenticationStatus.inactive));
+      final after = await freshRepository.getAuthMethods();
+      expect(
+        after.firstWhere((a) => a.id == target.id).status,
+        equals(AuthenticationStatus.inactive),
+      );
+    });
+
+    test('deleteAuthMethod removes the targeted method', () async {
+      final freshRepository = MockSecurityRepository();
+      final before = await freshRepository.getAuthMethods();
+      final target = before.first;
+
+      await freshRepository.deleteAuthMethod(target);
+
+      final after = await freshRepository.getAuthMethods();
+      expect(after.length, equals(before.length - 1));
+      expect(after.any((a) => a.id == target.id), isFalse);
     });
   });
 }

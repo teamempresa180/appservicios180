@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/di/service_locator.dart';
+import 'package:mobile/core/theme/theme_mode_controller.dart';
+import 'package:mobile/core/theme/theme_mode_storage.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/contact_management/presentation/pages/contact_management_page.dart';
 import 'package:mobile/features/contact_management/repositories/contact_management_repository.dart';
@@ -19,11 +21,14 @@ import 'package:mobile/features/settings/repositories/mock_settings_repository.d
 /// here. `SettingsPage` is constructed directly, so it gets its own
 /// mock repository via constructor injection instead.
 void main() {
-  setUp(
-    () => locator.registerSingleton<ContactManagementRepository>(
+  setUp(() {
+    locator.registerSingleton<ContactManagementRepository>(
       MockContactManagementRepository(),
-    ),
-  );
+    );
+    locator.registerSingleton<ThemeModeController>(
+      ThemeModeController(storage: ThemeModeStorage()),
+    );
+  });
   tearDown(() => locator.reset());
 
   testWidgets('tapping "Contactos" in Settings opens Contact Management', (

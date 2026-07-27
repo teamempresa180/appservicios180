@@ -4,8 +4,10 @@ import { UpdateVerificationUseCase } from '../../application/use_cases/update-ve
 import { GetVerificationUseCase } from '../../application/use_cases/get-verification.use-case';
 import { ListVerificationUseCase } from '../../application/use_cases/list-verification.use-case';
 import { SearchVerificationUseCase } from '../../application/use_cases/search-verification.use-case';
+import { UploadVerificationDocumentUseCase } from '../../application/use_cases/upload-verification-document.use-case';
 import { CreateVerificationCommand } from '../../application/commands/create-verification.command';
 import { UpdateVerificationCommand } from '../../application/commands/update-verification.command';
+import { UploadVerificationDocumentCommand } from '../../application/commands/upload-verification-document.command';
 import { GetVerificationQuery } from '../../application/queries/get-verification.query';
 import { ListVerificationQuery } from '../../application/queries/list-verification.query';
 import { SearchVerificationQuery } from '../../application/queries/search-verification.query';
@@ -14,6 +16,9 @@ import { VerificationType } from '../../domain/value-objects/verification-type.v
 import { VerificationStatus } from '../../domain/value-objects/verification-status.value-object';
 import { CreateVerificationRequestDto } from '../dto/create-verification.request.dto';
 import { UpdateVerificationRequestDto } from '../dto/update-verification.request.dto';
+import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
+import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { LocalVerificationDocumentStorageService } from '../../infrastructure/storage/local-verification-document-storage.service';
 
 describe('VerificationController', () => {
   let controller: VerificationController;
@@ -22,6 +27,8 @@ describe('VerificationController', () => {
   let getUseCase: { execute: jest.Mock };
   let listUseCase: { execute: jest.Mock };
   let searchUseCase: { execute: jest.Mock };
+  let uploadDocumentUseCase: { execute: jest.Mock };
+  let documentStorage: { save: jest.Mock };
 
   const verificationDto: VerificationDto = {
     id: 'id-1',
@@ -31,6 +38,12 @@ describe('VerificationController', () => {
     verifiedAt: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    documentPath: null,
+  };
+
+  const verificationWithDocumentDto: VerificationDto = {
+    ...verificationDto,
+    documentPath: 'uploads/verifications/id-1/record.pdf',
   };
 
   beforeEach(() => {
@@ -46,6 +59,14 @@ describe('VerificationController', () => {
       }),
     };
     searchUseCase = { execute: jest.fn().mockResolvedValue([verificationDto]) };
+    uploadDocumentUseCase = {
+      execute: jest.fn().mockResolvedValue(verificationWithDocumentDto),
+    };
+    documentStorage = {
+      save: jest
+        .fn()
+        .mockResolvedValue('uploads/verifications/id-1/record.pdf'),
+    };
 
     controller = new VerificationController(
       createUseCase as unknown as CreateVerificationUseCase,
@@ -53,6 +74,8 @@ describe('VerificationController', () => {
       getUseCase as unknown as GetVerificationUseCase,
       listUseCase as unknown as ListVerificationUseCase,
       searchUseCase as unknown as SearchVerificationUseCase,
+      uploadDocumentUseCase as unknown as UploadVerificationDocumentUseCase,
+      documentStorage as unknown as LocalVerificationDocumentStorageService,
     );
   });
 
@@ -111,5 +134,50 @@ describe('VerificationController', () => {
       new GetVerificationQuery('id-1'),
     );
     expect(response.type).toBe(VerificationType.Document);
+  });
+
+  describe('uploadDocument()', () => {
+    const file = {
+      originalname: 'record.pdf',
+      mimetype: 'application/pdf',
+      buffer: Buffer.from('pdf-bytes'),
+    };
+
+    it('confirms the Verification exists, stores the file, then persists the resulting path', async () => {
+      const response = await controller.uploadDocument('id-1', file);
+
+      expect(getUseCase.execute).toHaveBeenCalledWith(
+        new GetVerificationQuery('id-1'),
+      );
+      expect(documentStorage.save).toHaveBeenCalledWith('id-1', file);
+      expect(uploadDocumentUseCase.execute).toHaveBeenCalledWith(
+        new UploadVerificationDocumentCommand(
+          'id-1',
+          'uploads/verifications/id-1/record.pdf',
+        ),
+      );
+      expect(response.documentPath).toBe(
+        'uploads/verifications/id-1/record.pdf',
+      );
+    });
+
+    it('throws ValidationException when no file is provided', async () => {
+      await expect(
+        controller.uploadDocument('id-1', undefined),
+      ).rejects.toThrow(ValidationException);
+      expect(documentStorage.save).not.toHaveBeenCalled();
+      expect(uploadDocumentUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    it('propagates NotFoundException from GetVerificationUseCase without touching storage', async () => {
+      getUseCase.execute.mockRejectedValueOnce(
+        new NotFoundException('Verification unknown-id not found'),
+      );
+
+      await expect(
+        controller.uploadDocument('unknown-id', file),
+      ).rejects.toThrow(NotFoundException);
+      expect(documentStorage.save).not.toHaveBeenCalled();
+    });
   });
 });

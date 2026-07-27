@@ -1,4 +1,5 @@
 import '../../../contact/entities/contact.dart';
+import '../../../contact/models/contact_type.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
 import '../../../core/session/session_manager.dart';
@@ -45,4 +46,33 @@ class HttpContactManagementRepository implements ContactManagementRepository {
         .map(ContactHttpMapper.fromJson)
         .toList();
   }
+
+  @override
+  Future<Contact> createContact({
+    required ContactType type,
+    required String value,
+  }) async {
+    final json = await _apiClient.post(
+      '/contacts',
+      data: {
+        'identityId': _identityId,
+        'type': type.name.toUpperCase(),
+        'value': value,
+      },
+    );
+    return ContactHttpMapper.fromJson(json);
+  }
+
+  @override
+  Future<Contact> updateContact(Contact contact, {required String value}) async {
+    final json = await _apiClient.put(
+      '/contacts/${contact.id.value}',
+      data: {'value': value},
+    );
+    return ContactHttpMapper.fromJson(json);
+  }
+
+  @override
+  Future<void> deleteContact(Contact contact) =>
+      _apiClient.delete('/contacts/${contact.id.value}');
 }

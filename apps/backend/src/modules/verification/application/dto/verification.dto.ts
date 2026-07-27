@@ -12,4 +12,5 @@ export class VerificationDto {
   verifiedAt!: Date | null;
   createdAt!: Date;
   updatedAt!: Date;
+  documentPath!: string | null;
 }

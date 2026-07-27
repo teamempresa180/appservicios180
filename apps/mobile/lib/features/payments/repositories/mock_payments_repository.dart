@@ -9,6 +9,11 @@ import 'payments_repository.dart';
 
 /// In-memory `PaymentsRepository` backed by fixed mock data. No
 /// backend, no persistence, no network — see the feature README.
+///
+/// [getPaymentFor] stays the single fixed mock payment regardless of
+/// which order was passed — this feature's mock data only models one
+/// order/payment pair, unlike the real backend (`HttpPaymentsRepository`)
+/// which genuinely filters `GET /payments` by `orderId`.
 class MockPaymentsRepository implements PaymentsRepository {
   @override
   Future<Payment> getPayment() => Future.value(mockPayment);
@@ -17,14 +22,20 @@ class MockPaymentsRepository implements PaymentsRepository {
   Future<Order> getOrder() => Future.value(mockPaymentOrder);
 
   @override
-  Future<Quote> getQuote() => Future.value(mockPaymentQuote);
+  Future<Payment> getPaymentFor(Order order) => Future.value(mockPayment);
 
   @override
-  Future<Service> getService() => Future.value(mockPaymentService);
+  Future<Quote> getQuoteFor(Payment payment) => Future.value(mockPaymentQuote);
 
   @override
-  Future<Provider> getProvider() => Future.value(mockPaymentProvider);
+  Future<Service> getServiceFor(Order order) =>
+      Future.value(mockPaymentService);
 
   @override
-  Future<Profile> getProfile() => Future.value(mockPaymentProfile);
+  Future<Provider> getProviderFor(Payment payment) =>
+      Future.value(mockPaymentProvider);
+
+  @override
+  Future<Profile> getProfileFor(Provider provider) =>
+      Future.value(mockPaymentProfile);
 }

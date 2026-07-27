@@ -20,4 +20,18 @@ abstract final class ApiConfig {
   static const Duration connectTimeout = Duration(seconds: 10);
   static const Duration receiveTimeout = Duration(seconds: 15);
   static const Duration sendTimeout = Duration(seconds: 15);
+
+  /// Resolves a relative path the backend returned for an uploaded file
+  /// (e.g. `uploads/profiles/<id>/photo.jpg`, from `POST /profiles/:id/avatar`)
+  /// into an absolute URL servable by `Image.network`/`NetworkImage`.
+  /// Already-absolute URLs (or `data:` URIs, used by mock repositories)
+  /// pass through unchanged.
+  static String resolveUploadUrl(String path) {
+    if (path.startsWith('http://') ||
+        path.startsWith('https://') ||
+        path.startsWith('data:')) {
+      return path;
+    }
+    return '$baseUrl/$path';
+  }
 }

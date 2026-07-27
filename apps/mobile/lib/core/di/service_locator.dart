@@ -1,18 +1,28 @@
 import 'package:get_it/get_it.dart';
+import '../../features/app_shell/navigation_intent.dart';
 import '../network/api_client.dart';
 import '../network/api_config.dart';
 import '../network/token_provider.dart';
 import '../session/auth_repository.dart';
 import '../session/http_auth_repository.dart';
 import '../session/mock_auth_repository.dart';
+import '../session/provider_availability_controller.dart';
+import '../session/provider_availability_storage.dart';
 import '../session/session_manager.dart';
+import '../session/user_role_controller.dart';
+import '../session/user_role_storage.dart';
 import '../storage/secure_token_storage.dart';
+import '../theme/theme_mode_controller.dart';
+import '../theme/theme_mode_storage.dart';
 import '../../features/address_management/repositories/address_management_repository.dart';
 import '../../features/address_management/repositories/http_address_management_repository.dart';
 import '../../features/address_management/repositories/mock_address_management_repository.dart';
 import '../../features/availability/repositories/availability_repository.dart';
 import '../../features/availability/repositories/http_availability_repository.dart';
 import '../../features/availability/repositories/mock_availability_repository.dart';
+import '../../features/become_provider/repositories/become_provider_repository.dart';
+import '../../features/become_provider/repositories/http_become_provider_repository.dart';
+import '../../features/become_provider/repositories/mock_become_provider_repository.dart';
 import '../../features/categories/repositories/category_repository.dart';
 import '../../features/categories/repositories/http_category_repository.dart';
 import '../../features/categories/repositories/mock_category_repository.dart';
@@ -55,6 +65,9 @@ import '../../features/provider_services/repositories/provider_services_reposito
 import '../../features/quote/repositories/http_quote_repository.dart';
 import '../../features/quote/repositories/mock_quote_repository.dart';
 import '../../features/quote/repositories/quote_repository.dart';
+import '../../features/register/repositories/http_register_repository.dart';
+import '../../features/register/repositories/mock_register_repository.dart';
+import '../../features/register/repositories/register_repository.dart';
 import '../../features/request_service/repositories/http_request_service_repository.dart';
 import '../../features/request_service/repositories/mock_request_service_repository.dart';
 import '../../features/request_service/repositories/request_service_repository.dart';
@@ -76,6 +89,8 @@ import '../../features/service_detail/repositories/service_detail_repository.dar
 import '../../features/settings/repositories/http_settings_repository.dart';
 import '../../features/settings/repositories/mock_settings_repository.dart';
 import '../../features/settings/repositories/settings_repository.dart';
+import '../../features/tracking/repositories/mock_tracking_repository.dart';
+import '../../features/tracking/repositories/tracking_repository.dart';
 import '../../features/trust/repositories/http_trust_repository.dart';
 import '../../features/trust/repositories/mock_trust_repository.dart';
 import '../../features/trust/repositories/trust_repository.dart';
@@ -105,6 +120,22 @@ void setupServiceLocator() {
 
   locator.registerSingleton<SecureTokenStorage>(SecureTokenStorage());
 
+  locator.registerSingleton<ThemeModeController>(
+    ThemeModeController(storage: ThemeModeStorage()),
+  );
+
+  locator.registerSingleton<AppShellNavigationIntent>(
+    AppShellNavigationIntent(),
+  );
+
+  locator.registerSingleton<UserRoleController>(
+    UserRoleController(storage: UserRoleStorage()),
+  );
+
+  locator.registerSingleton<ProviderAvailabilityController>(
+    ProviderAvailabilityController(storage: ProviderAvailabilityStorage()),
+  );
+
   locator.registerSingleton<AuthRepository>(
     ApiConfig.useMockBackend
         ? MockAuthRepository()
@@ -132,7 +163,7 @@ void setupServiceLocator() {
   locator.registerSingleton<ChatRepository>(
     ApiConfig.useMockBackend
         ? MockChatRepository()
-        : HttpChatRepository(apiClient),
+        : HttpChatRepository(apiClient, sessionManager),
   );
 
   // Remaining modules (Prompt 76) — identity/account cluster.
@@ -251,6 +282,24 @@ void setupServiceLocator() {
   locator.registerSingleton<RequestServiceRepository>(
     ApiConfig.useMockBackend
         ? MockRequestServiceRepository()
-        : HttpRequestServiceRepository(apiClient),
+        : HttpRequestServiceRepository(apiClient, sessionManager),
   );
+  locator.registerSingleton<RegisterRepository>(
+    ApiConfig.useMockBackend
+        ? MockRegisterRepository()
+        : HttpRegisterRepository(apiClient),
+  );
+  locator.registerSingleton<BecomeProviderRepository>(
+    ApiConfig.useMockBackend
+        ? MockBecomeProviderRepository(locator<CategoryRepository>())
+        : HttpBecomeProviderRepository(
+            apiClient,
+            sessionManager,
+            locator<CategoryRepository>(),
+          ),
+  );
+  // Always Mock — no Http counterpart exists yet (needs a live-location
+  // WebSocket backend, not built yet). See `TrackingRepository`'s doc
+  // comment.
+  locator.registerSingleton<TrackingRepository>(MockTrackingRepository());
 }

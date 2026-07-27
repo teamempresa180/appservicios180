@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import '../../di/service_locator.dart';
 import '../../session/session_manager.dart';
 import '../../../features/app_shell/presentation/pages/app_shell_page.dart';
+import '../../../features/become_provider/presentation/pages/become_provider_page.dart';
 import '../../../features/login/presentation/pages/login_page.dart';
 import '../../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../../features/register/presentation/pages/register_page.dart';
@@ -47,6 +48,10 @@ abstract final class AppRouter {
       GoRoute(
         path: AppRoutes.home,
         builder: (context, state) => const AppShellPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.becomeProvider,
+        builder: (context, state) => const BecomeProviderPage(),
       ),
     ],
   );

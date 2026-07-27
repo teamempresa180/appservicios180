@@ -79,7 +79,7 @@ describe('Provider use cases', () => {
   }
 
   describe('CreateProviderUseCase', () => {
-    it('creates a Provider in Active status', async () => {
+    it('creates a Provider in Pending status', async () => {
       const useCase = new CreateProviderUseCase(
         repository,
         identityRepository,
@@ -89,7 +89,7 @@ describe('Provider use cases', () => {
 
       expect(dto.identityId).toBe(identityId);
       expect(dto.providerProfileId).toBe(profileId);
-      expect(dto.status).toBe(ProviderStatus.Active);
+      expect(dto.status).toBe(ProviderStatus.Pending);
     });
 
     it('throws NotFoundException when the Identity does not exist', async () => {

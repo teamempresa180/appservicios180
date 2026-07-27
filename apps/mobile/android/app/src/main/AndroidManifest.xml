@@ -5,6 +5,13 @@
          release APK's HTTP calls failed regardless of backend/cleartext
          fixes. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- "My location" marker on the Home map (client and provider) —
+         see `HomeMapBackground._requestLocationPermission`. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Camera capture for profile photos and the provider registration
+         selfie step (see `image_picker` usages). -->
+    <uses-permission android:name="android.permission.CAMERA" />
     <application
         android:label="SERVICIOS 180°"
         android:name="${applicationName}"

@@ -27,4 +27,16 @@ class Profile extends Entity<ProfileId> {
   final ProfileStatus status;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  Profile copyWith({String? displayName, String? avatarUrl}) => Profile(
+    id: id,
+    identityId: identityId,
+    displayName: displayName ?? this.displayName,
+    avatarUrl: avatarUrl ?? this.avatarUrl,
+    bio: bio,
+    visibility: visibility,
+    status: status,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+  );
 }

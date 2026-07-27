@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/core/di/service_locator.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
+import 'package:mobile/features/app_shell/navigation_intent.dart';
 import 'package:mobile/features/marketplace/presentation/pages/marketplace_page.dart';
 import 'package:mobile/features/marketplace/repositories/mock_category_repository.dart';
 import 'package:mobile/features/marketplace/repositories/mock_provider_repository.dart';
 import 'package:mobile/features/marketplace/repositories/mock_service_repository.dart';
+import 'package:mobile/features/search/repositories/mock_search_repository.dart';
 
 void main() {
+  setUp(
+    () => locator.registerSingleton<AppShellNavigationIntent>(
+      AppShellNavigationIntent(),
+    ),
+  );
+  tearDown(() => locator.reset());
+
   Widget buildApp() {
     return MaterialApp(
       theme: AppTheme.light,
@@ -16,6 +26,7 @@ void main() {
           categoryRepository: MockCategoryRepository(),
           serviceRepository: MockServiceRepository(),
           providerRepository: MockProviderRepository(),
+          searchRepository: MockSearchRepository(),
         ),
       ),
     );

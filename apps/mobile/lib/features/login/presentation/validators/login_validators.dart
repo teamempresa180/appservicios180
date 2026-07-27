@@ -1,14 +1,11 @@
-/// Local, dependency-free validation rules for the Login form. No package
-/// is used — just plain string checks and a simple email-shape regex.
+/// Local, dependency-free validation rules for the Login form. No
+/// package is used — just plain string checks.
 abstract final class LoginValidators {
-  static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-
   static const int minPasswordLength = 8;
 
-  static String? email(String? value) {
+  static String? documentNumber(String? value) {
     final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) return 'El correo es obligatorio.';
-    if (!_emailPattern.hasMatch(trimmed)) return 'Ingresa un correo válido.';
+    if (trimmed.isEmpty) return 'El número de documento es obligatorio.';
     return null;
   }
 

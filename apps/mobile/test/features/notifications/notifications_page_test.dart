@@ -86,7 +86,7 @@ void main() {
     expect(find.widgetWithText(AppChip, 'Mensajes'), findsOneWidget);
   });
 
-  testWidgets('selecting a tab only changes its visual selection', (
+  testWidgets('selecting "No leídas" filters the list to unread only', (
     tester,
   ) async {
     await tester.pumpWidget(buildApp());
@@ -104,8 +104,24 @@ void main() {
       find.widgetWithText(AppChip, 'No leídas'),
     );
     expect(chipAfter.selected, isTrue);
-    // The list is unaffected — still shows every mock notification.
-    expect(find.byType(NotificationCard), findsNWidgets(5));
+    // 3 of the 5 mock notifications are unread (order/quote/chat) — see
+    // `mock_notifications_data.dart`.
+    expect(find.byType(NotificationCard), findsNWidgets(3));
+    expect(find.text('Pago completado'), findsNothing);
+    expect(find.text('Bienvenido a AppServicios'), findsNothing);
+  });
+
+  testWidgets('selecting "Pedidos" filters the list to order notifications', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Pedidos'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NotificationCard), findsNWidgets(1));
+    expect(find.text('Tu orden fue aceptada'), findsOneWidget);
   });
 
   testWidgets('list state shows every mock notification', (tester) async {

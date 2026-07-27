@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/core/di/service_locator.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
+import 'package:mobile/features/orders/repositories/mock_orders_repository.dart';
+import 'package:mobile/features/orders/repositories/orders_repository.dart';
 import 'package:mobile/features/quote/presentation/pages/quote_page.dart';
 import 'package:mobile/features/quote/repositories/mock_quote_repository.dart';
 import 'package:mobile/features/quote/presentation/widgets/address_resume.dart';
@@ -105,6 +108,24 @@ void main() {
 
     expect(find.text('Confirmar solicitud'), findsOneWidget);
   });
+
+  testWidgets(
+    'tapping "Confirmar solicitud" accepts the real Quote and opens Orders',
+    (tester) async {
+      locator.registerSingleton<OrdersRepository>(MockOrdersRepository());
+      addTearDown(locator.reset);
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Confirmar solicitud'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Confirmar solicitud'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cotización confirmada.'), findsOneWidget);
+      expect(find.text('Mis órdenes'), findsWidgets);
+    },
+  );
 
   testWidgets('does not build its own Scaffold', (tester) async {
     await tester.pumpWidget(buildApp());

@@ -17,6 +17,7 @@ import 'package:mobile/features/chat/presentation/widgets/provider_header.dart';
 import 'package:mobile/features/chat/presentation/widgets/typing_indicator.dart';
 import 'package:mobile/features/chat/repositories/chat_repository.dart';
 import 'package:mobile/features/chat/repositories/mock_chat_repository.dart';
+import 'package:mobile/features/chat/models/conversation_summary.dart';
 import 'package:mobile/message/entities/message.dart';
 import 'package:mobile/order/entities/order.dart';
 import 'package:mobile/profiles/entities/profile.dart';
@@ -54,6 +55,10 @@ class _FakeChatRepository implements ChatRepository {
   @override
   Future<List<Attachment>> getAttachments() =>
       forceEmpty ? Future.value(const []) : _delegate.getAttachments();
+
+  @override
+  Future<List<ConversationSummary>> getConversations() =>
+      _delegate.getConversations();
 }
 
 void main() {

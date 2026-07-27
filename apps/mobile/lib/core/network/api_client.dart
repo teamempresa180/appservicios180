@@ -65,11 +65,13 @@ class ApiClient {
     String path, {
     Object? data,
     CancelToken? cancelToken,
+    void Function(int sent, int total)? onSendProgress,
   }) => _send(
     () => _dio.post<Map<String, dynamic>>(
       path,
       data: data,
       cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
     ),
   );
 

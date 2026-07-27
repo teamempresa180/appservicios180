@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 
-/// Plain text rendering of the app name. No logo, no imagery — a neutral
-/// placeholder until official branding exists.
+/// Splash screen branding — the real 180° logo mark instead of the
+/// former plain-text placeholder.
 class AppNameText extends StatelessWidget {
   const AppNameText({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      'AppServicios',
-      style: Theme.of(
-        context,
-      ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
+    return Image.asset(
+      'assets/icon/app_icon_source.png',
+      height: 96,
+      filterQuality: FilterQuality.high,
     );
   }
 }

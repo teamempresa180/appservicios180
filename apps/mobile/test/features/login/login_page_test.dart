@@ -94,7 +94,7 @@ void main() {
 
     expect(find.text('Iniciar sesión'), findsOneWidget);
     expect(find.text('Ingresa tus datos para continuar.'), findsOneWidget);
-    expect(find.text('Correo electrónico'), findsOneWidget);
+    expect(find.text('Número de documento'), findsOneWidget);
     expect(find.text('Contraseña'), findsOneWidget);
     expect(find.text('Continuar'), findsOneWidget);
   });
@@ -106,19 +106,20 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Continuar'));
     await tester.pumpAndSettle();
 
-    expect(find.text('El correo es obligatorio.'), findsOneWidget);
+    expect(
+      find.text('El número de documento es obligatorio.'),
+      findsOneWidget,
+    );
     expect(find.text('La contraseña es obligatoria.'), findsOneWidget);
   });
 
-  testWidgets('shows an error for an invalid email and a short password', (
-    tester,
-  ) async {
+  testWidgets('shows an error for a short password', (tester) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Correo electrónico'),
-      'not-an-email',
+      find.widgetWithText(TextFormField, 'Número de documento'),
+      '123456789',
     );
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Contraseña'),
@@ -127,7 +128,6 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Continuar'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ingresa un correo válido.'), findsOneWidget);
     expect(
       find.text('La contraseña debe tener al menos 8 caracteres.'),
       findsOneWidget,
@@ -164,8 +164,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Correo electrónico'),
-      'user@example.com',
+      find.widgetWithText(TextFormField, 'Número de documento'),
+      '123456789',
     );
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Contraseña'),

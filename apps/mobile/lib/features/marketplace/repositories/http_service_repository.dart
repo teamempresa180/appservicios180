@@ -2,7 +2,6 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
 import '../../../service/entities/service.dart';
 import '../../../service/models/service_id.dart';
-import 'mock_service_repository.dart';
 import 'service_repository.dart';
 
 /// [ServiceRepository] (Marketplace's own) backed by [ApiClient].
@@ -12,15 +11,16 @@ import 'service_repository.dart';
 /// service list, not a real featured-services algorithm (same judgment
 /// call already documented elsewhere for simulated fields).
 ///
-/// `ratingOf` has no backend counterpart at all — there is no
-/// `Review`-aggregation endpoint yet — so it stays simulated by
-/// delegating to a kept-around [MockServiceRepository] instance, same
-/// as `HttpMarketplaceProviderRepository.ratingOf`/`servicesCountOf`.
+/// `ratingOf` is real, but approximated: `Review` only links to a
+/// `Provider`, never to a `Service` directly, so there is no way to
+/// compute a rating scoped to one specific service. This averages the
+/// **provider's** reviews instead (fetches the service to read its
+/// `providerId`, then `GET /reviews` filtered client-side) — the
+/// closest real signal available, not a fabricated number.
 class HttpMarketplaceServiceRepository implements ServiceRepository {
   HttpMarketplaceServiceRepository(this._apiClient);
 
   final ApiClient _apiClient;
-  final _mockFallback = MockServiceRepository();
 
   @override
   Future<List<Service>> getFeatured() async {
@@ -30,5 +30,20 @@ class HttpMarketplaceServiceRepository implements ServiceRepository {
   }
 
   @override
-  Future<double> ratingOf(ServiceId id) => _mockFallback.ratingOf(id);
+  Future<double> ratingOf(ServiceId id) async {
+    final serviceJson = await _apiClient.get('/services/${id.value}');
+    final service = ServiceHttpMapper.fromJson(serviceJson);
+    final json = await _apiClient.get('/reviews');
+    final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final reviews = items
+        .map(ReviewHttpMapper.fromJson)
+        .where((review) => review.providerId == service.providerId)
+        .toList();
+    if (reviews.isEmpty) return 0;
+    final total = reviews.fold<num>(
+      0,
+      (sum, review) => sum + review.rating.value,
+    );
+    return total / reviews.length;
+  }
 }

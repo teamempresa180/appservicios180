@@ -7,6 +7,8 @@ import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
+import '../../../../core/ui/widgets/app_snack_bar.dart';
+import '../../../orders/presentation/pages/orders_page.dart';
 import '../../repositories/quote_repository.dart';
 import '../view_models/quote_view_model.dart';
 import '../widgets/address_resume.dart';
@@ -27,7 +29,8 @@ import '../widgets/service_resume.dart';
 /// `core/di/service_locator.dart`).
 ///
 /// Shows a single, fixed quote (no id-based lookup yet) — see the
-/// feature README.
+/// feature README. "Confirmar solicitud" accepts the real `Quote` via
+/// `QuoteRepository.acceptQuote`.
 class QuotePage extends StatefulWidget {
   const QuotePage({super.key, QuoteRepository? repository})
     : _repository = repository;
@@ -41,9 +44,9 @@ class QuotePage extends StatefulWidget {
 }
 
 class _QuotePageState extends State<QuotePage> {
-  late final QuoteViewModel _viewModel = QuoteViewModel(
-    widget._repository ?? locator<QuoteRepository>(),
-  );
+  late final QuoteRepository _repository =
+      widget._repository ?? locator<QuoteRepository>();
+  late final QuoteViewModel _viewModel = QuoteViewModel(_repository);
 
   @override
   void initState() {
@@ -59,6 +62,25 @@ class _QuotePageState extends State<QuotePage> {
     _viewModel.removeListener(_onViewModelChanged);
     _viewModel.dispose();
     super.dispose();
+  }
+
+  Future<void> _confirm() async {
+    final data = _viewModel.data!;
+    await _repository.acceptQuote(data.quote);
+    if (!mounted) return;
+    AppSnackBar.show(
+      context,
+      'Cotización confirmada.',
+      type: AppSnackBarType.success,
+    );
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Mis órdenes')),
+          body: const SafeArea(child: OrdersPage()),
+        ),
+      ),
+    );
   }
 
   @override
@@ -99,7 +121,7 @@ class _QuotePageState extends State<QuotePage> {
               const SizedBox(height: AppSpacing.space16),
               SlideIn(child: QuoteNotes(data: data)),
               const SizedBox(height: AppSpacing.space16),
-              const ConfirmQuoteButton(),
+              ConfirmQuoteButton(onPressed: _confirm),
             ],
           ),
         );

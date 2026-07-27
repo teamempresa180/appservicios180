@@ -3,9 +3,8 @@ import '../../../../core/ui/widgets/app_action_row.dart';
 import '../../../../core/ui/widgets/app_button.dart';
 
 /// "Desactivar"/"Eliminar" actions for one authentication method.
-/// Purely visual — every button is a documented no-op; it does not
-/// disable or remove a real `Authentication` method yet (see the
-/// feature README).
+/// `SecurityPage` wires these to toggle the method's status and to
+/// delete it via `SecurityRepository`.
 class AuthMethodActions extends StatelessWidget {
   const AuthMethodActions({super.key, this.onDisable, this.onDelete});
 

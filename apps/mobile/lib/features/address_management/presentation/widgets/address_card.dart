@@ -10,9 +10,11 @@ import 'default_address_badge.dart';
 /// state, associated contact, default indicator and the edit/delete/
 /// select actions.
 class AddressCard extends StatelessWidget {
-  const AddressCard({super.key, required this.data});
+  const AddressCard({super.key, required this.data, this.onEdit, this.onDelete});
 
   final AddressDisplay data;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +62,7 @@ class AddressCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.space4),
           Text(data.deliveryInstructions, style: context.textStyles.bodySmall),
           const SizedBox(height: AppSpacing.space12),
-          const AddressActions(),
+          AddressActions(onEdit: onEdit, onDelete: onDelete),
         ],
       ),
     );

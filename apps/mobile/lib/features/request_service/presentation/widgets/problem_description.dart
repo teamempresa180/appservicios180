@@ -4,13 +4,19 @@ import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../../../core/ui/widgets/app_text_field.dart';
 
-/// Free-text description of the problem. **Simulated** — typed text only
-/// lives in this widget's local `TextEditingController`, never sent
-/// anywhere (see the feature README).
+/// Free-text description of the problem. Typed text is surfaced to the
+/// parent via [onChanged] so `RequestServicePage` can send the real
+/// description when submitting the request (see
+/// `RequestServiceRepository.createOrder`).
 class ProblemDescription extends StatefulWidget {
-  const ProblemDescription({super.key, required this.initialText});
+  const ProblemDescription({
+    super.key,
+    required this.initialText,
+    this.onChanged,
+  });
 
   final String initialText;
+  final ValueChanged<String>? onChanged;
 
   @override
   State<ProblemDescription> createState() => _ProblemDescriptionState();
@@ -23,6 +29,7 @@ class _ProblemDescriptionState extends State<ProblemDescription> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialText);
+    _controller.addListener(() => widget.onChanged?.call(_controller.text));
   }
 
   @override

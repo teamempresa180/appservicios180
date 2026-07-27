@@ -47,6 +47,7 @@ describe('PrismaVerificationRepository (integration)', () => {
       verifiedAt: null,
       createdAt: now,
       updatedAt: now,
+      documentPath: null,
     });
   }
 
@@ -88,6 +89,7 @@ describe('PrismaVerificationRepository (integration)', () => {
       verifiedAt: new Date(),
       createdAt: verification.createdAt,
       updatedAt: new Date(),
+      documentPath: verification.documentPath,
     });
     await repository.save(updated);
 

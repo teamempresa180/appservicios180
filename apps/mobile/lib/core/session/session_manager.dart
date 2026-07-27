@@ -102,6 +102,7 @@ class SessionManager extends ChangeNotifier implements TokenProvider {
       }
     }
     await _clear();
+    notifyListeners();
   }
 
   @override

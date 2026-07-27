@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/ui/widgets/app_action_row.dart';
 import '../../../../core/ui/widgets/app_button.dart';
 
-/// "Editar"/"Pausar"/"Eliminar" actions for one service. Purely visual
-/// — every button is a documented no-op; it does not edit, pause or
-/// delete a real service yet (see the feature README).
+/// "Editar"/"Pausar"/"Eliminar" actions for one service — call through
+/// to `ProviderServicesRepository` for a real update/pause/delete.
 class ServiceActions extends StatelessWidget {
   const ServiceActions({super.key, this.onEdit, this.onPause, this.onDelete});
 

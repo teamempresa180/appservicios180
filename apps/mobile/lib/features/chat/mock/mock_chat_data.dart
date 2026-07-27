@@ -25,6 +25,7 @@ import '../../../provider/models/provider_id.dart';
 import '../../../provider/models/provider_status.dart';
 import '../../../provider/models/provider_type.dart';
 import '../../../service/models/service_id.dart';
+import '../models/conversation_summary.dart';
 
 final DateTime _seedTimestamp = DateTime(2026, 1, 1);
 
@@ -200,3 +201,46 @@ const bool mockChatIsOnline = true;
 const String mockChatLastSeen = 'Activo hace 2 min';
 
 const bool mockChatIsTyping = false;
+
+/// Mock data backing the "Mensajes" conversation list
+/// (`getConversations()`). The first entry mirrors [mockChat]/
+/// [mockChatMessages] above (same provider, last real message, no
+/// unread since every message from Diana was already read) — the rest
+/// are additional fixed conversations covering unread/answered/
+/// unanswered states for the filter tabs. `ConversationSummary` is a
+/// display-only summary (see its own doc comment), so these don't need
+/// a full backing `Chat`/`Message` graph like [mockChat] does.
+final List<ConversationSummary> mockConversations = [
+  ConversationSummary(
+    chatId: mockChat.id,
+    counterpartName: mockChatProfile.displayName,
+    lastMessagePreview: mockChatMessages.last.content,
+    lastMessageAt: mockChatMessages.last.sentAt,
+    unreadCount: 0,
+    isUnanswered: false,
+  ),
+  ConversationSummary(
+    chatId: ChatId.fromString('chat-conversation-carlos'),
+    counterpartName: 'Carlos Gómez',
+    lastMessagePreview: '¿Puedes venir mañana en la mañana?',
+    lastMessageAt: DateTime(2026, 1, 12, 8, 15),
+    unreadCount: 2,
+    isUnanswered: true,
+  ),
+  ConversationSummary(
+    chatId: ChatId.fromString('chat-conversation-ferreteria'),
+    counterpartName: 'Ferretería Central',
+    lastMessagePreview: 'Con gusto, quedamos así entonces.',
+    lastMessageAt: DateTime(2026, 1, 11, 17, 40),
+    unreadCount: 0,
+    isUnanswered: false,
+  ),
+  ConversationSummary(
+    chatId: ChatId.fromString('chat-conversation-ana'),
+    counterpartName: 'Ana Martínez',
+    lastMessagePreview: 'Hola, ¿ya tienes la cotización lista?',
+    lastMessageAt: DateTime(2026, 1, 9, 14, 5),
+    unreadCount: 1,
+    isUnanswered: true,
+  ),
+];

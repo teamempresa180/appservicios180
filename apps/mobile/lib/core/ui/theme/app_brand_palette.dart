@@ -21,6 +21,19 @@ abstract final class AppBrandPalette {
   static const Color ink = Color(0xFF1C1C1E);
 
   // ---------------------------------------------------------------
+  // Dark mode neutrals — true black/white (not the warm-tinted
+  // `background600-900`/`surface600-900` stops above, which read as
+  // dark brown, not black). Mirrors Apple's dark-mode elevation system
+  // (pure black canvas, `#1C1C1E`/`#2C2C2E` elevated surfaces).
+  // ---------------------------------------------------------------
+  static const Color darkBackground = Color(0xFF000000);
+  static const Color darkSurface = Color(0xFF1C1C1E);
+  static const Color darkSurfaceElevated = Color(0xFF2C2C2E);
+  static const Color darkDivider = Color(0xFF38383A);
+  static const Color darkOnBackground = Color(0xFFFFFFFF);
+  static const Color darkSecondaryText = Color(0xFFA0A0A5);
+
+  // ---------------------------------------------------------------
   // Primary — "Oro 180°". Traced to the logo's gold radial gradients
   // (terminal stop `#F0BF00`) and the "GRUPO EMPRESARIAL" wordmark
   // color (`#8E690D`), which becomes 900 exactly.

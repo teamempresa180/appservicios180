@@ -16,11 +16,33 @@ describe('Verification', () => {
       verifiedAt: now,
       createdAt: now,
       updatedAt: now,
+      documentPath: null,
     });
 
     expect(verification.id).toBe(id);
     expect(verification.identityId).toBe(identityId);
     expect(verification.type).toBe(VerificationType.Document);
     expect(verification.status).toBe(VerificationStatus.Approved);
+    expect(verification.documentPath).toBeNull();
+  });
+
+  it('holds an assigned documentPath', () => {
+    const id = VerificationId.create();
+    const identityId = IdentityId.create();
+    const now = new Date();
+    const verification = new Verification(id, {
+      identityId,
+      type: VerificationType.CriminalRecord,
+      status: VerificationStatus.Pending,
+      verifiedAt: null,
+      createdAt: now,
+      updatedAt: now,
+      documentPath: 'uploads/verifications/id-1/record.pdf',
+    });
+
+    expect(verification.type).toBe(VerificationType.CriminalRecord);
+    expect(verification.documentPath).toBe(
+      'uploads/verifications/id-1/record.pdf',
+    );
   });
 });

@@ -7,6 +7,8 @@ import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
+import '../../../../profiles/entities/profile.dart';
+import '../../../../provider/entities/provider.dart';
 import '../../models/provider_profile_data.dart';
 import '../../repositories/provider_profile_repository.dart';
 import '../view_models/provider_profile_view_model.dart';
@@ -24,14 +26,24 @@ import '../widgets/provider_statistics.dart';
 /// same way every other feature so far does. Completely independent:
 /// its own repository, its own mock data.
 ///
-/// Shows a single, fixed provider (no id-based lookup yet) — see the
-/// feature README. Data is loaded from the real backend via
-/// [ProviderProfileViewModel] (resolved from the service locator when
-/// no [repository] override is supplied — see
-/// `core/di/service_locator.dart`).
+/// Pass [provider]/[profile] when navigating here from a card that
+/// already has them (Marketplace, or Service Detail's provider
+/// section) — that's what makes different cards open their own real
+/// provider instead of always the same one. Omitting them falls back
+/// to [ProviderProfileRepository.getProvider]'s single fixed record
+/// (only meant for tests/direct navigation without that context). Data
+/// is loaded via [ProviderProfileViewModel] (resolved from the service
+/// locator — see `core/di/service_locator.dart`).
 class ProviderProfilePage extends StatefulWidget {
-  const ProviderProfilePage({super.key, ProviderProfileRepository? repository})
-    : _repository = repository;
+  const ProviderProfilePage({
+    super.key,
+    this.provider,
+    this.profile,
+    ProviderProfileRepository? repository,
+  }) : _repository = repository;
+
+  final Provider? provider;
+  final Profile? profile;
 
   /// Overridable for tests only — production call sites always resolve
   /// the real repository from the service locator.
@@ -44,6 +56,8 @@ class ProviderProfilePage extends StatefulWidget {
 class _ProviderProfilePageState extends State<ProviderProfilePage> {
   late final ProviderProfileViewModel _viewModel = ProviderProfileViewModel(
     widget._repository ?? locator<ProviderProfileRepository>(),
+    presetProvider: widget.provider,
+    presetProfile: widget.profile,
   );
 
   @override

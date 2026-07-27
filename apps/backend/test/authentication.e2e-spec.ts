@@ -154,6 +154,54 @@ describe('AuthenticationController (e2e)', () => {
     expect((response.body as ErrorResponseDto).error).toBe('NotFoundException');
   });
 
+  it('POST /authentications succeeds without an Authorization header — it is the public registration step that creates the very first Authentication record a caller needs before they can log in at all', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/authentications')
+      .send({ identityId, methodType: 'PASSWORD' })
+      .expect(201);
+
+    const body = response.body as AuthenticationResponseDto;
+    expect(body.identityId).toBe(identityId);
+    expect(body.status).toBe('ACTIVE');
+  });
+
+  it('PUT /authentications/:id still returns 401 without an Authorization header', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/authentications')
+      .set('Authorization', authHeader)
+      .send({ identityId, methodType: 'PASSWORD' });
+    const createdId = (created.body as AuthenticationResponseDto).id;
+
+    await request(app.getHttpServer())
+      .put(`/authentications/${createdId}`)
+      .send({ status: 'LOCKED' })
+      .expect(401);
+  });
+
+  it('DELETE /authentications/:id still returns 401 without an Authorization header', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/authentications')
+      .set('Authorization', authHeader)
+      .send({ identityId, methodType: 'PASSWORD' });
+    const createdId = (created.body as AuthenticationResponseDto).id;
+
+    await request(app.getHttpServer())
+      .delete(`/authentications/${createdId}`)
+      .expect(401);
+  });
+
+  it('GET /authentications/:id still returns 401 without an Authorization header', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/authentications')
+      .set('Authorization', authHeader)
+      .send({ identityId, methodType: 'PASSWORD' });
+    const createdId = (created.body as AuthenticationResponseDto).id;
+
+    await request(app.getHttpServer())
+      .get(`/authentications/${createdId}`)
+      .expect(401);
+  });
+
   it('GET /authentications/:id returns 404 for an unknown id', async () => {
     await request(app.getHttpServer())
       .get('/authentications/unknown-id')

@@ -216,6 +216,27 @@ final Map<OrderId, Profile> mockOrderProfiles = {
   for (final order in mockOrders) order.id: mockOrdersProfile,
 };
 
+/// The client who placed the order — distinct from [mockOrdersProfile]
+/// (the provider's own profile, already exposed via
+/// `getProfileFor`/[mockOrderProfiles]). Backs the provider-facing
+/// "Servicios" screen (incoming requests), which needs to show *who is
+/// asking*, not the provider's own name.
+final Profile mockOrdersClientProfile = Profile(
+  id: ProfileId.fromString('orders-profile-client'),
+  identityId: IdentityId.fromString('orders-identity-client'),
+  displayName: 'Laura Gómez',
+  avatarUrl: null,
+  bio: null,
+  visibility: ProfileVisibility.public,
+  status: ProfileStatus.active,
+  createdAt: _seedTimestamp,
+  updatedAt: _seedTimestamp,
+);
+
+final Map<OrderId, Profile> mockOrderClientProfiles = {
+  for (final order in mockOrders) order.id: mockOrdersClientProfile,
+};
+
 final Map<OrderId, Category> mockOrderCategories = {
   _pendingId: mockOrdersCategoryPlumbing,
   _inProgressId: mockOrdersCategoryElectrical,

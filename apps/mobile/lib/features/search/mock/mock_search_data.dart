@@ -156,21 +156,20 @@ final List<Service> mockSearchServices = [
   ),
 ];
 
-/// Simulated rating/reviewsCount/distance, keyed by service id value.
-/// Not part of any domain entity — see [SearchResult] and the feature
-/// README for why these are simulated.
+/// Rating/reviewsCount, keyed by provider id value — mirrors how
+/// `HttpSearchRepository` computes them for real (per-provider, since
+/// `Review` links to a `Provider`, not a `Service`). `distance` stays
+/// simulated (keyed by service id) — no real geolocation yet.
 final Map<String, double> mockSearchRatings = {
-  'search-service-leak-repair': 4.7,
-  'search-service-pipe-install': 4.6,
-  'search-service-lighting-install': 4.9,
-  'search-service-deep-cleaning': 4.5,
+  'search-provider-diana': 4.65,
+  'search-provider-felipe': 4.9,
+  'search-provider-marta': 4.5,
 };
 
 final Map<String, int> mockSearchReviewsCount = {
-  'search-service-leak-repair': 32,
-  'search-service-pipe-install': 18,
-  'search-service-lighting-install': 47,
-  'search-service-deep-cleaning': 64,
+  'search-provider-diana': 50,
+  'search-provider-felipe': 47,
+  'search-provider-marta': 64,
 };
 
 final Map<String, double> mockSearchDistanceKm = {

@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import { join } from 'node:path';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ConfigService } from './config/config.service';
@@ -22,7 +24,10 @@ try {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // `NestExpressApplication` (rather than the default `INestApplication`)
+  // is only needed for `useStaticAssets` below — everything else in this
+  // file works identically on the plain interface.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
 
   // Order matters for readability, not matching: Nest already picks the
@@ -39,6 +44,19 @@ async function bootstrap() {
   // production to restrict it. No new dependency — built into Nest's
   // Express adapter.
   app.enableCors({ origin: config.corsOrigin });
+
+  // Serves `uploads/` (Verification documents — see
+  // `LocalVerificationDocumentStorageService`) at `/uploads/...`.
+  // Deliberately outside `JwtAuthGuard`: these are static files on
+  // disk, not an application route, the same trust model a CDN or
+  // object-storage bucket would have in front of this API — anyone
+  // with the exact stored path (a random id + original filename, never
+  // enumerable) can fetch the file, but the path itself is only ever
+  // returned to callers who already passed `JwtAuthGuard` on the
+  // Verification endpoints.
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads',
+  });
 
   // Minimal, dependency-free security headers (Prompt 78, Security
   // Hardening). A `helmet` package would cover more ground, but

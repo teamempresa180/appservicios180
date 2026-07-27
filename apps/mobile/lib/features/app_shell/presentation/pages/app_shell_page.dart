@@ -1,30 +1,40 @@
 import 'package:flutter/material.dart';
+import '../../../../core/di/service_locator.dart';
+import '../../../../core/session/user_role_controller.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_curves.dart';
 import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../chat/presentation/pages/chat_list_page.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../marketplace/presentation/pages/marketplace_page.dart';
-import '../../../profile/presentation/pages/profile_page.dart';
+import '../../../orders/presentation/pages/orders_page.dart';
+import '../../../orders/presentation/pages/provider_requests_page.dart';
+import '../../navigation_intent.dart';
 import '../models/shell_navigation_item.dart';
 import '../widgets/app_bottom_navigation.dart';
+import '../widgets/app_drawer.dart';
 import '../widgets/app_navigation_rail.dart';
 import '../widgets/app_top_bar.dart';
-import '../widgets/shell_placeholder.dart';
 
 /// Reusable App Shell: top bar + an [IndexedStack] body + a navigation
 /// surface that automatically switches between [AppBottomNavigation]
 /// (mobile) and [AppNavigationRail] (tablet/desktop, width >=
 /// [wideBreakpoint]).
 ///
-/// This is the chrome every future authenticated screen (Home, Search,
-/// Orders, Chat, Profile, ...) will be hosted inside of. "Inicio"
-/// (`HomePage`), "Buscar" (`MarketplacePage`) and "Perfil"
-/// (`ProfilePage`, wired in Prompt 38) have real screens so far — the
-/// "Órdenes" and "Mensajes" slots still show a [ShellPlaceholder].
-/// Navigation between destinations is purely local ([_selectedIndex] via
-/// `setState`) — see the feature README for the GoRouter integration
-/// plan.
+/// The 5 destinations depend on [UserRoleController]'s current role
+/// (switched from the App Shell's drawer): Cliente gets Inicio/Buscar/
+/// Órdenes/Mensajes/Menú; Prestador gets Inicio/Servicios/Historial/
+/// Mensajes/Menú instead — a provider doesn't browse/request services,
+/// they manage the ones they offer (accept/reject) and their job
+/// history. "Menú" (last destination, [ShellNavigationItem.opensDrawer])
+/// opens the App Shell's drawer instead of switching tabs — Perfil and
+/// Notificaciones live there now, keeping the bottom navigation at
+/// exactly 5 compact destinations. Switching role resets
+/// [_selectedIndex] to 0, since the two tab sets don't line up
+/// index-for-index. Navigation between destinations is purely local
+/// ([_selectedIndex] via `setState`) — see the feature README for the
+/// GoRouter integration plan.
 class AppShellPage extends StatefulWidget {
   const AppShellPage({super.key});
 
@@ -39,10 +49,7 @@ class AppShellPage extends StatefulWidget {
   /// cards/text stretch edge-to-edge at very large widths.
   static const double maxContentWidth = 1200;
 
-  /// Single source of truth for the navigation surface. Both
-  /// [AppBottomNavigation] and [AppNavigationRail] render from this same
-  /// list — it is never duplicated.
-  static const List<ShellNavigationItem> navigationItems = [
+  static const List<ShellNavigationItem> _clientNavigationItems = [
     ShellNavigationItem(
       icon: Icons.home_outlined,
       selectedIcon: Icons.home,
@@ -68,10 +75,45 @@ class AppShellPage extends StatefulWidget {
       index: 3,
     ),
     ShellNavigationItem(
-      icon: Icons.person_outline,
-      selectedIcon: Icons.person,
-      label: 'Perfil',
+      icon: Icons.menu_outlined,
+      selectedIcon: Icons.menu,
+      label: 'Menú',
       index: 4,
+      opensDrawer: true,
+    ),
+  ];
+
+  static const List<ShellNavigationItem> _providerNavigationItems = [
+    ShellNavigationItem(
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home,
+      label: 'Inicio',
+      index: 0,
+    ),
+    ShellNavigationItem(
+      icon: Icons.design_services_outlined,
+      selectedIcon: Icons.design_services,
+      label: 'Servicios',
+      index: 1,
+    ),
+    ShellNavigationItem(
+      icon: Icons.history_outlined,
+      selectedIcon: Icons.history,
+      label: 'Historial',
+      index: 2,
+    ),
+    ShellNavigationItem(
+      icon: Icons.chat_bubble_outline,
+      selectedIcon: Icons.chat_bubble,
+      label: 'Mensajes',
+      index: 3,
+    ),
+    ShellNavigationItem(
+      icon: Icons.menu_outlined,
+      selectedIcon: Icons.menu,
+      label: 'Menú',
+      index: 4,
+      opensDrawer: true,
     ),
   ];
 
@@ -80,35 +122,63 @@ class AppShellPage extends StatefulWidget {
 }
 
 class _AppShellPageState extends State<AppShellPage> {
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   int _selectedIndex = 0;
 
-  void _onDestinationSelected(int index) {
+  @override
+  void initState() {
+    super.initState();
+    locator<AppShellNavigationIntent>().addListener(_onNavigationIntent);
+    locator<UserRoleController>().addListener(_onRoleChanged);
+  }
+
+  @override
+  void dispose() {
+    locator<AppShellNavigationIntent>().removeListener(_onNavigationIntent);
+    locator<UserRoleController>().removeListener(_onRoleChanged);
+    super.dispose();
+  }
+
+  void _onRoleChanged() {
+    // The two tab sets don't share a common index layout (e.g. index 1
+    // is "Buscar" for Cliente but "Servicios" for Prestador) — staying
+    // on the same index across a role switch would land on the wrong
+    // destination, so always land back on "Inicio".
+    setState(() => _selectedIndex = 0);
+  }
+
+  void _onNavigationIntent() {
+    final tabIndex = locator<AppShellNavigationIntent>().pendingTabIndex;
+    if (tabIndex == null) return;
+    locator<AppShellNavigationIntent>().consumeTabIndex();
+    setState(() => _selectedIndex = tabIndex);
+  }
+
+  void _onDestinationSelected(int index, List<ShellNavigationItem> items) {
+    if (items[index].opensDrawer) {
+      _scaffoldKey.currentState?.openDrawer();
+      return;
+    }
     setState(() => _selectedIndex = index);
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(bool isProvider) {
+    final children = isProvider
+        ? const [
+            HomePage(),
+            ProviderRequestsPage(),
+            OrdersPage(),
+            ChatListPage(),
+          ]
+        : const [
+            HomePage(),
+            MarketplacePage(),
+            OrdersPage(),
+            ChatListPage(),
+          ];
     return _TabFade(
       index: _selectedIndex,
-      child: IndexedStack(
-        index: _selectedIndex,
-        children: const [
-          HomePage(),
-          MarketplacePage(),
-          ShellPlaceholder(
-            icon: Icons.receipt_long_outlined,
-            title: 'Órdenes',
-            description:
-                'Aquí vivirá el listado y seguimiento de las Órdenes de '
-                'servicio.',
-          ),
-          ShellPlaceholder(
-            icon: Icons.chat_bubble_outline,
-            title: 'Mensajes',
-            description: 'Aquí vivirá el Chat entre clientes y proveedores.',
-          ),
-          ProfilePage(),
-        ],
-      ),
+      child: IndexedStack(index: _selectedIndex, children: children),
     );
   }
 
@@ -116,18 +186,25 @@ class _AppShellPageState extends State<AppShellPage> {
   Widget build(BuildContext context) {
     final isWide =
         MediaQuery.sizeOf(context).width >= AppShellPage.wideBreakpoint;
+    final isProvider = locator<UserRoleController>().isProvider;
+    final navigationItems = isProvider
+        ? AppShellPage._providerNavigationItems
+        : AppShellPage._clientNavigationItems;
 
-    final body = _buildBody();
+    final body = _buildBody(isProvider);
 
     if (isWide) {
       return Scaffold(
+        key: _scaffoldKey,
         appBar: const AppTopBar(),
+        drawer: const AppDrawer(),
         body: Row(
           children: [
             AppNavigationRail(
-              items: AppShellPage.navigationItems,
+              items: navigationItems,
               currentIndex: _selectedIndex,
-              onTap: _onDestinationSelected,
+              onTap: (index) =>
+                  _onDestinationSelected(index, navigationItems),
             ),
             const VerticalDivider(width: 1),
             Expanded(
@@ -150,15 +227,17 @@ class _AppShellPageState extends State<AppShellPage> {
     }
 
     return Scaffold(
+      key: _scaffoldKey,
       appBar: const AppTopBar(),
+      drawer: const AppDrawer(),
       body: Padding(
         padding: const EdgeInsets.all(AppSpacing.space16),
         child: body,
       ),
       bottomNavigationBar: AppBottomNavigation(
-        items: AppShellPage.navigationItems,
+        items: navigationItems,
         currentIndex: _selectedIndex,
-        onTap: _onDestinationSelected,
+        onTap: (index) => _onDestinationSelected(index, navigationItems),
       ),
     );
   }
@@ -167,11 +246,11 @@ class _AppShellPageState extends State<AppShellPage> {
 /// Fades [child] in whenever [index] changes, without unmounting it —
 /// unlike wrapping the `IndexedStack` in a plain `FadeIn` (which only
 /// plays once, on the Shell's very first build), this retriggers on
-/// every destination switch, so moving between "Inicio"/"Buscar"/
-/// "Órdenes"/"Mensajes"/"Perfil" reads as a soft cross-fade instead of
-/// an instant cut. Deliberately keeps `IndexedStack` itself as the
-/// direct child of `build()` (not recreated), so every destination's
-/// scroll position/state stays preserved exactly as before.
+/// every destination switch, so moving between destinations reads as a
+/// soft cross-fade instead of an instant cut. Deliberately keeps
+/// `IndexedStack` itself as the direct child of `build()` (not
+/// recreated), so every destination's scroll position/state stays
+/// preserved exactly as before.
 class _TabFade extends StatefulWidget {
   const _TabFade({required this.index, required this.child});
 

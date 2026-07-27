@@ -1,10 +1,11 @@
 import '../../../service/entities/service.dart';
 
 /// Presentation-only composition of a [Service] with the extra display
-/// data a card needs (resolved provider/category names, simulated
-/// rating). These fields intentionally do NOT live on the `Service`
-/// domain entity — it only knows `providerId`/`categoryId` (IDs), per
-/// the domain's "no embedded entities" rule. No `Map`, no `dynamic` —
+/// data a card needs (resolved provider/category names, a real rating
+/// derived from `Review` records via `ServiceRepository.ratingOf`).
+/// These fields intentionally do NOT live on the `Service` domain
+/// entity — it only knows `providerId`/`categoryId` (IDs), per the
+/// domain's "no embedded entities" rule. No `Map`, no `dynamic` —
 /// every field is typed.
 class ServiceDisplay {
   const ServiceDisplay({

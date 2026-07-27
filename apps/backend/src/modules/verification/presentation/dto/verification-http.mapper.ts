@@ -1,6 +1,7 @@
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { CreateVerificationCommand } from '../../application/commands/create-verification.command';
 import { UpdateVerificationCommand } from '../../application/commands/update-verification.command';
+import { UploadVerificationDocumentCommand } from '../../application/commands/upload-verification-document.command';
 import { VerificationDto } from '../../application/dto/verification.dto';
 import { CreateVerificationRequestDto } from './create-verification.request.dto';
 import { UpdateVerificationRequestDto } from './update-verification.request.dto';
@@ -27,6 +28,13 @@ export class VerificationHttpMapper {
     return new UpdateVerificationCommand(id, dto.status);
   }
 
+  static toUploadDocumentCommand(
+    id: string,
+    documentPath: string,
+  ): UploadVerificationDocumentCommand {
+    return new UploadVerificationDocumentCommand(id, documentPath);
+  }
+
   static toResponse(dto: VerificationDto): VerificationResponseDto {
     const response = new VerificationResponseDto();
     response.id = dto.id;
@@ -36,6 +44,7 @@ export class VerificationHttpMapper {
     response.verifiedAt = dto.verifiedAt ? dto.verifiedAt.toISOString() : null;
     response.createdAt = dto.createdAt.toISOString();
     response.updatedAt = dto.updatedAt.toISOString();
+    response.documentPath = dto.documentPath;
     return response;
   }
 

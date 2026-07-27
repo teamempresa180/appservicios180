@@ -7,6 +7,9 @@ import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
+import '../../../../core/ui/widgets/app_snack_bar.dart';
+import '../../../quote/presentation/pages/quote_page.dart';
+import '../../models/request_priority.dart';
 import '../../repositories/request_service_repository.dart';
 import '../view_models/request_service_view_model.dart';
 import '../widgets/address_summary.dart';
@@ -27,7 +30,9 @@ import '../widgets/service_summary.dart';
 /// locator — see `core/di/service_locator.dart`).
 ///
 /// Shows a single, fixed service/provider (no id-based lookup yet) —
-/// see the feature README.
+/// see the feature README. "Continuar" submits the schedule/
+/// description/priority the user picked as a real `Order` via
+/// `RequestServiceRepository.createOrder`.
 class RequestServicePage extends StatefulWidget {
   const RequestServicePage({super.key, RequestServiceRepository? repository})
     : _repository = repository;
@@ -41,9 +46,16 @@ class RequestServicePage extends StatefulWidget {
 }
 
 class _RequestServicePageState extends State<RequestServicePage> {
+  late final RequestServiceRepository _repository =
+      widget._repository ?? locator<RequestServiceRepository>();
   late final RequestServiceViewModel _viewModel = RequestServiceViewModel(
-    widget._repository ?? locator<RequestServiceRepository>(),
+    _repository,
   );
+
+  DateTime? _selectedDate;
+  String? _selectedTime;
+  String? _problemDescription;
+  RequestPriority? _priority;
 
   @override
   void initState() {
@@ -59,6 +71,45 @@ class _RequestServicePageState extends State<RequestServicePage> {
     _viewModel.removeListener(_onViewModelChanged);
     _viewModel.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final data = _viewModel.data!;
+    final date = _selectedDate ?? data.selectedDate;
+    final time = _selectedTime ?? data.selectedTime;
+    final timeParts = time.split(':');
+    final scheduledDate = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      int.parse(timeParts[0]),
+      int.parse(timeParts[1]),
+    );
+    await _repository.createOrder(
+      service: data.service,
+      provider: data.provider,
+      title: data.service.name,
+      description: _problemDescription ?? data.problemDescription,
+      scheduledDate: scheduledDate,
+      priority: _priority ?? data.priority,
+    );
+    if (!mounted) return;
+    AppSnackBar.show(
+      context,
+      'Solicitud enviada.',
+      type: AppSnackBarType.success,
+    );
+    // `QuotePage` has no id-based lookup yet (see its own doc comment)
+    // — it still shows a single fixed quote, not one scoped to the
+    // order just created above. Documented, pre-existing limitation.
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Cotización')),
+          body: const SafeArea(child: QuotePage()),
+        ),
+      ),
+    );
   }
 
   @override
@@ -93,20 +144,30 @@ class _RequestServicePageState extends State<RequestServicePage> {
                 child: ScheduleSelector(
                   initialDate: data.selectedDate,
                   initialTime: data.selectedTime,
+                  onDateChanged: (date) => _selectedDate = date,
+                  onTimeChanged: (time) => _selectedTime = time,
                 ),
               ),
               const SizedBox(height: AppSpacing.space16),
               SlideIn(child: AddressSummary(data: data)),
               const SizedBox(height: AppSpacing.space16),
               SlideIn(
-                child: ProblemDescription(initialText: data.problemDescription),
+                child: ProblemDescription(
+                  initialText: data.problemDescription,
+                  onChanged: (text) => _problemDescription = text,
+                ),
               ),
               const SizedBox(height: AppSpacing.space16),
               SlideIn(child: AttachmentsSection(attachments: data.attachments)),
               const SizedBox(height: AppSpacing.space16),
-              SlideIn(child: PrioritySelector(initialPriority: data.priority)),
+              SlideIn(
+                child: PrioritySelector(
+                  initialPriority: data.priority,
+                  onChanged: (priority) => _priority = priority,
+                ),
+              ),
               const SizedBox(height: AppSpacing.space16),
-              const ContinueButton(),
+              ContinueButton(onPressed: _submit),
             ],
           ),
         );

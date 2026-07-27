@@ -24,4 +24,16 @@ class Contact extends Entity<ContactId> {
   final ContactStatus status;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  Contact copyWith({String? value}) {
+    return Contact(
+      id: id,
+      identityId: identityId,
+      type: type,
+      value: value ?? this.value,
+      status: status,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
 }

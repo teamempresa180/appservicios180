@@ -1,6 +1,7 @@
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { CreateProfileCommand } from '../../application/commands/create-profile.command';
 import { UpdateProfileCommand } from '../../application/commands/update-profile.command';
+import { UpdateProfileAvatarCommand } from '../../application/commands/update-profile-avatar.command';
 import { ProfileDto } from '../../application/dto/profile.dto';
 import { CreateProfileRequestDto } from './create-profile.request.dto';
 import { UpdateProfileRequestDto } from './update-profile.request.dto';
@@ -34,6 +35,13 @@ export class ProfileHttpMapper {
       dto.visibility,
       dto.status,
     );
+  }
+
+  static toUpdateAvatarCommand(
+    id: string,
+    avatarUrl: string,
+  ): UpdateProfileAvatarCommand {
+    return new UpdateProfileAvatarCommand(id, avatarUrl);
   }
 
   static toResponse(dto: ProfileDto): ProfileResponseDto {

@@ -11,13 +11,18 @@ import '../../../service/entities/service.dart';
 /// `ApiPaymentsRepository` or `FirebasePaymentsRepository` would
 /// implement this same interface (see the feature README).
 ///
-/// There is no id-based lookup yet — this feature shows a single fixed
-/// payment (see the feature README for why).
+/// [getPayment]/[getOrder] have no parameter — only used as a fallback
+/// when the caller reaches this screen without already knowing which
+/// [Order] to show (e.g. a direct/test navigation). The normal path
+/// (tapping "Ver detalle" on an in-progress order, which already has
+/// the real [Order] in hand) calls [getPaymentFor] instead — a real
+/// per-order lookup, not a fixed record.
 abstract class PaymentsRepository {
   Future<Payment> getPayment();
   Future<Order> getOrder();
-  Future<Quote> getQuote();
-  Future<Service> getService();
-  Future<Provider> getProvider();
-  Future<Profile> getProfile();
+  Future<Payment> getPaymentFor(Order order);
+  Future<Quote> getQuoteFor(Payment payment);
+  Future<Service> getServiceFor(Order order);
+  Future<Provider> getProviderFor(Payment payment);
+  Future<Profile> getProfileFor(Provider provider);
 }

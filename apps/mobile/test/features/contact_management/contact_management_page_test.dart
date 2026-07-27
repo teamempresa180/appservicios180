@@ -14,6 +14,7 @@ import 'package:mobile/features/contact_management/presentation/widgets/contacts
 import 'package:mobile/features/contact_management/repositories/contact_management_repository.dart';
 import 'package:mobile/features/contact_management/repositories/mock_contact_management_repository.dart';
 import 'package:mobile/contact/entities/contact.dart';
+import 'package:mobile/contact/models/contact_type.dart';
 import 'package:mobile/profiles/entities/profile.dart';
 
 /// Wraps [MockContactManagementRepository] (already `Future`-returning)
@@ -44,6 +45,20 @@ class _FakeContactManagementRepository implements ContactManagementRepository {
   @override
   Future<List<Contact>> getContacts() =>
       forceEmpty ? Future.value(const []) : _delegate.getContacts();
+
+  @override
+  Future<Contact> createContact({
+    required ContactType type,
+    required String value,
+  }) => _delegate.createContact(type: type, value: value);
+
+  @override
+  Future<Contact> updateContact(Contact contact, {required String value}) =>
+      _delegate.updateContact(contact, value: value);
+
+  @override
+  Future<void> deleteContact(Contact contact) =>
+      _delegate.deleteContact(contact);
 }
 
 void main() {
@@ -104,6 +119,71 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Agregar contacto'), findsOneWidget);
+  });
+
+  testWidgets(
+    'tapping "Agregar contacto", filling the form and saving adds a real contact',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ContactCard), findsNWidgets(5));
+
+      await tester.ensureVisible(find.text('Agregar contacto'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Agregar contacto'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Valor'),
+        'nuevo@example.com',
+      );
+      await tester.tap(find.text('Guardar'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ContactCard), findsNWidgets(6));
+      expect(find.text('nuevo@example.com'), findsOneWidget);
+      expect(find.text('Contacto agregado.'), findsOneWidget);
+    },
+  );
+
+  testWidgets('tapping "Editar", changing the value and saving updates it', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Editar').first);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Valor'),
+      'actualizado@example.com',
+    );
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('actualizado@example.com'), findsOneWidget);
+    expect(find.text('Contacto actualizado.'), findsOneWidget);
+  });
+
+  testWidgets('tapping "Eliminar" and confirming removes the contact', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ContactCard), findsNWidgets(5));
+
+    await tester.tap(find.text('Eliminar').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Eliminar contacto'), findsOneWidget);
+    await tester.tap(find.text('Eliminar').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ContactCard), findsNWidgets(4));
+    expect(find.text('Contacto eliminado.'), findsOneWidget);
   });
 
   testWidgets('loading state shows AppLoading instead of the list', (

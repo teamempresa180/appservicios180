@@ -8,6 +8,9 @@ import '../../../service/models/service_id.dart';
 abstract class ServiceRepository {
   Future<List<Service>> getFeatured();
 
-  /// Simulated rating for [id] — no `Review` aggregate is consulted yet.
+  /// Average rating for [id], derived from real `Review` records (via
+  /// the service's provider — see `HttpMarketplaceServiceRepository`'s
+  /// doc comment for why `Review` only links to a provider, not a
+  /// service, directly).
   Future<double> ratingOf(ServiceId id);
 }

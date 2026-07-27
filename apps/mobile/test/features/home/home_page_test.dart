@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/core/di/service_locator.dart';
+import 'package:mobile/core/session/user_role_controller.dart';
+import 'package:mobile/core/session/user_role_storage.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/home/presentation/pages/home_page.dart';
 
 void main() {
+  setUp(
+    () => locator.registerSingleton<UserRoleController>(
+      UserRoleController(storage: UserRoleStorage()),
+    ),
+  );
+  tearDown(() => locator.reset());
+
   Widget buildApp() {
     return MaterialApp(
       theme: AppTheme.light,

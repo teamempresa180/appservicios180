@@ -10,9 +10,18 @@ import 'service_status_badge.dart';
 /// simulated views/requests, simulated last-updated label and the
 /// edit/pause/delete actions.
 class ServiceCard extends StatelessWidget {
-  const ServiceCard({super.key, required this.data});
+  const ServiceCard({
+    super.key,
+    required this.data,
+    this.onEdit,
+    this.onPause,
+    this.onDelete,
+  });
 
   final ProviderServiceDisplay data;
+  final VoidCallback? onEdit;
+  final VoidCallback? onPause;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +69,7 @@ class ServiceCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.space4),
           Text(data.lastUpdatedLabel, style: context.textStyles.bodySmall),
           const SizedBox(height: AppSpacing.space12),
-          const ServiceActions(),
+          ServiceActions(onEdit: onEdit, onPause: onPause, onDelete: onDelete),
         ],
       ),
     );

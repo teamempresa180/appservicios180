@@ -7,6 +7,7 @@ import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
+import '../../../../service/entities/service.dart';
 import '../../repositories/service_detail_repository.dart';
 import '../view_models/service_detail_view_model.dart';
 import '../widgets/provider_information.dart';
@@ -22,13 +23,21 @@ import '../widgets/service_information.dart';
 /// independent of those features: its own repository, its own view
 /// model.
 ///
-/// Shows a single, fixed service (no id-based lookup yet), loaded from
-/// the real backend via [ServiceDetailViewModel] (resolved from the
-/// service locator — see `core/di/service_locator.dart`) — see the
-/// feature README.
+/// Pass [service] when navigating here from a card that already has it
+/// (Marketplace/Search) — that's what makes different cards open their
+/// own real service instead of always the same one. Omitting it falls
+/// back to [ServiceDetailRepository.getService]'s single fixed record
+/// (only meant for tests/direct navigation without that context). Data
+/// is loaded via [ServiceDetailViewModel] (resolved from the service
+/// locator — see `core/di/service_locator.dart`).
 class ServiceDetailPage extends StatefulWidget {
-  const ServiceDetailPage({super.key, ServiceDetailRepository? repository})
-    : _repository = repository;
+  const ServiceDetailPage({
+    super.key,
+    this.service,
+    ServiceDetailRepository? repository,
+  }) : _repository = repository;
+
+  final Service? service;
 
   /// Overridable for tests only — production call sites always resolve
   /// the real repository from the service locator.
@@ -41,6 +50,7 @@ class ServiceDetailPage extends StatefulWidget {
 class _ServiceDetailPageState extends State<ServiceDetailPage> {
   late final ServiceDetailViewModel _viewModel = ServiceDetailViewModel(
     widget._repository ?? locator<ServiceDetailRepository>(),
+    presetService: widget.service,
   );
 
   @override

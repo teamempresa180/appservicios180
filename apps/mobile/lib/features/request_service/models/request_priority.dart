@@ -1,6 +1,8 @@
-/// Priority level for a service request. **Fully simulated** — no domain
-/// module models urgency/priority for a Service/Order today. Lives only in
-/// presentation, never added to any domain entity. See the feature README.
+import '../../../order/models/order_priority.dart';
+
+/// Priority level for a service request. Presentation-only label — see
+/// [asOrderPriority] for how it maps onto the real `Order.priority`
+/// once a request is submitted.
 enum RequestPriority {
   low,
   normal,
@@ -14,6 +16,19 @@ enum RequestPriority {
         return 'Normal';
       case RequestPriority.high:
         return 'Alta';
+    }
+  }
+
+  /// Maps onto the real `OrderPriority` domain enum — [normal] becomes
+  /// [OrderPriority.medium] (this feature has no `urgent` option).
+  OrderPriority get asOrderPriority {
+    switch (this) {
+      case RequestPriority.low:
+        return OrderPriority.low;
+      case RequestPriority.normal:
+        return OrderPriority.medium;
+      case RequestPriority.high:
+        return OrderPriority.high;
     }
   }
 }

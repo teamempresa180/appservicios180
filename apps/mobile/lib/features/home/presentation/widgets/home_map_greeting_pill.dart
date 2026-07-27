@@ -4,7 +4,7 @@ import '../../../../core/ui/tokens/app_radius.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_avatar.dart';
 import '../mock/mock_home_data.dart';
-import '../models/user_role.dart';
+import '../../../../core/session/user_role.dart';
 
 /// Compact greeting card floating over [HomeMapBackground] — the
 /// map-layout replacement for [HomeHeader], which needed a solid

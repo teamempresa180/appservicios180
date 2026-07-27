@@ -1,5 +1,7 @@
 import '../../../audit/entities/audit.dart';
 import '../../../authentication/entities/authentication.dart';
+import '../../../authentication/models/auth_method_type.dart';
+import '../../../authentication/models/authentication_status.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
 import '../../../core/session/session_manager.dart';
@@ -29,6 +31,16 @@ import 'security_repository.dart';
 /// new backend endpoint (out of scope: "no rediseñar arquitectura").
 /// Adding a properly-scoped, identity-filtered list endpoint for both
 /// modules is the real fix, left for a future backend-focused prompt.
+///
+/// For the same reason, [createAuthMethod]/[updateAuthMethodStatus]/
+/// [deleteAuthMethod] also delegate to [MockSecurityRepository] rather
+/// than calling the real `POST/PUT/DELETE /authentications` endpoints
+/// directly: those endpoints do exist, but the ids this repository can
+/// ever see come from the mock-backed list above, not from the
+/// backend's own record ids, so a real `PUT/DELETE /authentications/:id`
+/// call against them would always 404. Wiring these three to the real
+/// endpoints is only safe once [getAuthMethods] itself is backed by a
+/// real identity-scoped list — left for the same future backend prompt.
 class HttpSecurityRepository implements SecurityRepository {
   HttpSecurityRepository(this._apiClient, this._sessionManager);
 
@@ -61,4 +73,23 @@ class HttpSecurityRepository implements SecurityRepository {
         .map(AuditHttpMapper.fromJson)
         .toList();
   }
+
+  @override
+  Future<Authentication> createAuthMethod({
+    required Identity identity,
+    required AuthMethodType methodType,
+  }) => _mockFallback.createAuthMethod(
+    identity: identity,
+    methodType: methodType,
+  );
+
+  @override
+  Future<Authentication> updateAuthMethodStatus(
+    Authentication authMethod,
+    AuthenticationStatus status,
+  ) => _mockFallback.updateAuthMethodStatus(authMethod, status);
+
+  @override
+  Future<void> deleteAuthMethod(Authentication authMethod) =>
+      _mockFallback.deleteAuthMethod(authMethod);
 }

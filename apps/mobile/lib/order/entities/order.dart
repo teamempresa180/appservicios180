@@ -34,4 +34,20 @@ class Order extends Entity<OrderId> {
   final OrderPriority priority;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  Order copyWith({OrderStatus? status}) {
+    return Order(
+      id: id,
+      identityId: identityId,
+      providerId: providerId,
+      serviceId: serviceId,
+      title: title,
+      description: description,
+      scheduledDate: scheduledDate,
+      status: status ?? this.status,
+      priority: priority,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
 }

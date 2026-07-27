@@ -22,12 +22,6 @@ import '../widgets/login_form.dart';
 /// `core/di/service_locator.dart`). On a valid submit it calls
 /// `SessionManager.login`; on success it navigates to Home, on
 /// failure it shows the backend's error message in an `AppSnackBar`.
-///
-/// [LoginCredentials.email] is passed through as the backend's
-/// `documentNumber` login identifier — the form's field is still
-/// labeled/validated as an email (no aesthetic changes in this
-/// prompt), a naming mismatch to reconcile in a later UI-focused
-/// prompt.
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, SessionManager? sessionManager})
     : _sessionManager = sessionManager;
@@ -48,7 +42,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final sessionManager = widget._sessionManager ?? locator<SessionManager>();
       await sessionManager.login(
-        documentNumber: credentials.email,
+        documentNumber: credentials.documentNumber,
         password: credentials.password,
       );
       if (!mounted) return;

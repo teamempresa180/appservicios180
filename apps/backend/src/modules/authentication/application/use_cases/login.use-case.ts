@@ -3,6 +3,7 @@ import { UnauthorizedException } from '../../../core/domain/exceptions/unauthori
 import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
 import { IdentityStatus } from '../../../identity/domain/value-objects/identity-status.value-object';
 import { ProviderRepository } from '../../../provider/domain/interfaces/provider-repository.interface';
+import { ProviderStatus } from '../../../provider/domain/value-objects/provider-status.value-object';
 import { CredentialRepository } from '../../../credentials/domain/interfaces/credential-repository.interface';
 import { CredentialType } from '../../../credentials/domain/value-objects/credential-type.value-object';
 import { CredentialStatus } from '../../../credentials/domain/value-objects/credential-status.value-object';
@@ -30,9 +31,14 @@ const INVALID_CREDENTIALS_MESSAGE = 'Invalid document number or password';
  *
  * Role derivation (Sprint 4, Etapa 7 decision): the domain has no
  * "role" field on `Identity`. The role is derived at login time by
- * checking whether a `Provider` record exists for the Identity —
- * `Role.Provider` if so, `Role.Customer` otherwise. This is a read,
- * not a new business rule.
+ * checking whether an **Active** `Provider` record exists for the
+ * Identity — `Role.Provider` if so, `Role.Customer` otherwise. A
+ * `Pending` Provider (the status every newly-created Provider starts
+ * in — see `CreateProviderUseCase`) does not yet grant `Role.Provider`:
+ * the account keeps acting as a Customer until its verification
+ * documents are reviewed and its Provider record is moved to `Active`
+ * (today via `PUT /providers/:id`). This is a read, not a new business
+ * rule.
  */
 export class LoginUseCase {
   constructor(
@@ -88,7 +94,10 @@ export class LoginUseCase {
     const provider = await this.providerRepository.findByIdentityId(
       identity.id,
     );
-    const role = provider ? Role.Provider : Role.Customer;
+    const role =
+      provider && provider.status === ProviderStatus.Active
+        ? Role.Provider
+        : Role.Customer;
 
     return issueTokenPair(
       this.tokenService,

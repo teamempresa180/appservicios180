@@ -5,13 +5,19 @@ import '../../../../core/ui/widgets/app_chip.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../models/request_priority.dart';
 
-/// Priority chip selector. **Simulated** — see `RequestPriority` and the
-/// feature README: the chosen value only lives in this widget's local
-/// state, never sent anywhere.
+/// Priority chip selector. The chosen [RequestPriority] is surfaced to
+/// the parent via [onChanged] so `RequestServicePage` can send the
+/// real priority when submitting the request (mapped onto
+/// `Order.priority` — see `RequestPriority.asOrderPriority`).
 class PrioritySelector extends StatefulWidget {
-  const PrioritySelector({super.key, required this.initialPriority});
+  const PrioritySelector({
+    super.key,
+    required this.initialPriority,
+    this.onChanged,
+  });
 
   final RequestPriority initialPriority;
+  final ValueChanged<RequestPriority>? onChanged;
 
   @override
   State<PrioritySelector> createState() => _PrioritySelectorState();
@@ -39,7 +45,10 @@ class _PrioritySelectorState extends State<PrioritySelector> {
               return AppChip(
                 label: priority.label,
                 selected: _priority == priority,
-                onTap: () => setState(() => _priority = priority),
+                onTap: () {
+                  setState(() => _priority = priority);
+                  widget.onChanged?.call(priority);
+                },
               );
             }).toList(),
           ),

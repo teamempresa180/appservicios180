@@ -10,26 +10,20 @@ import 'service_detail_repository.dart';
 
 /// [ServiceDetailRepository] backed by [ApiClient].
 ///
-/// The feature interface still models a single fixed service (see
-/// `service_detail_repository.dart`'s own doc comment: "no id-based
-/// lookup yet"). The backend mirrors that limitation — there is no
-/// "service for the current screen" endpoint, only `GET /services`
-/// (paginated, unfiltered) and `GET /services/:id`. [_fetchService]
-/// takes the first item of the list as the one service this screen
-/// shows, exactly matching what the previous mock data represented (a
-/// single fixed service) — just sourced from the real backend now
-/// instead of a hardcoded object.
-///
-/// [getProvider], [getProviderProfile] and [getCategory] follow the ids
-/// already carried by the [Service] itself (`providerId`, `categoryId`)
+/// [getService] has no id parameter (only `GET /services`, paginated,
+/// unfiltered) — [_fetchService] takes the first item as a fallback for
+/// when the caller doesn't already have a [Service] in hand. The normal
+/// path skips it entirely: [getProviderFor], [getProviderProfileFor] and
+/// [getCategoryFor] follow the ids already carried by the passed-in
+/// [Service]/[Provider] (`providerId`, `categoryId`, `providerProfileId`)
 /// via `GET /{resource}/:id`, the same direct-lookup pattern as
 /// `HttpOrdersRepository.getProviderFor`/`getCategoryFor`.
 ///
-/// [getReviews] has no backend support at all for filtering by service —
-/// `Review` (see `review/entities/review.dart`) has no `serviceId` field,
-/// only `orderId` and `providerId`. Reviews shown here are therefore
-/// approximated as every review for the service's provider, not strictly
-/// for this specific service.
+/// [getReviewsFor] has no backend support at all for filtering by
+/// service — `Review` (see `review/entities/review.dart`) has no
+/// `serviceId` field, only `orderId` and `providerId`. Reviews shown
+/// here are therefore approximated as every review for the service's
+/// provider, not strictly for this specific service.
 class HttpServiceDetailRepository implements ServiceDetailRepository {
   HttpServiceDetailRepository(this._apiClient);
 
@@ -48,15 +42,13 @@ class HttpServiceDetailRepository implements ServiceDetailRepository {
   Future<Service> getService() => _fetchService();
 
   @override
-  Future<Provider> getProvider() async {
-    final service = await _fetchService();
+  Future<Provider> getProviderFor(Service service) async {
     final json = await _apiClient.get('/providers/${service.providerId.value}');
     return ProviderHttpMapper.fromJson(json);
   }
 
   @override
-  Future<Profile> getProviderProfile() async {
-    final provider = await getProvider();
+  Future<Profile> getProviderProfileFor(Provider provider) async {
     final json = await _apiClient.get(
       '/profiles/${provider.providerProfileId.value}',
     );
@@ -64,8 +56,7 @@ class HttpServiceDetailRepository implements ServiceDetailRepository {
   }
 
   @override
-  Future<Category> getCategory() async {
-    final service = await _fetchService();
+  Future<Category> getCategoryFor(Service service) async {
     final json = await _apiClient.get(
       '/categories/${service.categoryId.value}',
     );
@@ -76,8 +67,7 @@ class HttpServiceDetailRepository implements ServiceDetailRepository {
   // reviews shown for a service are approximated by the reviews for its
   // provider — see the class doc comment for the full explanation.
   @override
-  Future<List<Review>> getReviews() async {
-    final service = await _fetchService();
+  Future<List<Review>> getReviewsFor(Service service) async {
     final json = await _apiClient.get('/reviews');
     final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
     return items

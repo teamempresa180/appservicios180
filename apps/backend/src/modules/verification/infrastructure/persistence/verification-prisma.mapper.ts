@@ -20,6 +20,7 @@ export class VerificationPrismaMapper {
       verifiedAt: row.verifiedAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      documentPath: row.documentPath,
     });
   }
 
@@ -32,6 +33,7 @@ export class VerificationPrismaMapper {
       verifiedAt: verification.verifiedAt,
       createdAt: verification.createdAt,
       updatedAt: verification.updatedAt,
+      documentPath: verification.documentPath,
     };
   }
 }

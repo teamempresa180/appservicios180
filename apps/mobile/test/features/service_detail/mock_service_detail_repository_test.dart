@@ -17,30 +17,35 @@ void main() {
       expect(service.name, isNotEmpty);
     });
 
-    test('getProvider returns a real Provider entity', () async {
-      expect(await repository.getProvider(), isA<Provider>());
+    test('getProviderFor returns a real Provider entity', () async {
+      final service = await repository.getService();
+      expect(await repository.getProviderFor(service), isA<Provider>());
     });
 
-    test('getProviderProfile returns a real Profile with a display name', () async {
-      final profile = await repository.getProviderProfile();
+    test('getProviderProfileFor returns a real Profile with a display name', () async {
+      final service = await repository.getService();
+      final provider = await repository.getProviderFor(service);
+      final profile = await repository.getProviderProfileFor(provider);
       expect(profile, isA<Profile>());
       expect(profile.displayName, isNotEmpty);
     });
 
-    test('getCategory returns a real Category entity', () async {
-      expect(await repository.getCategory(), isA<Category>());
+    test('getCategoryFor returns a real Category entity', () async {
+      final service = await repository.getService();
+      expect(await repository.getCategoryFor(service), isA<Category>());
     });
 
-    test('getReviews returns real Review entities, not maps', () async {
-      final reviews = await repository.getReviews();
+    test('getReviewsFor returns real Review entities, not maps', () async {
+      final service = await repository.getService();
+      final reviews = await repository.getReviewsFor(service);
       expect(reviews, isNotEmpty);
       expect(reviews, everyElement(isA<Review>()));
     });
 
     test('the Service references the same Provider and Category ids', () async {
       final service = await repository.getService();
-      final provider = await repository.getProvider();
-      final category = await repository.getCategory();
+      final provider = await repository.getProviderFor(service);
+      final category = await repository.getCategoryFor(service);
       expect(service.providerId, equals(provider.id));
       expect(service.categoryId, equals(category.id));
     });

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../../../../core/network/http_exceptions.dart';
+import '../../../../order/entities/order.dart';
 import '../../mock/mock_payment_data.dart';
 import '../../models/payment_display.dart';
 import '../../repositories/payments_repository.dart';
@@ -12,10 +13,17 @@ enum PaymentsLoadStatus { loading, success, error }
 /// into a [PaymentDisplay] the same way the previous build-time-only
 /// `_buildData()` did — [paymentReference]/[receiptNumber] stay
 /// simulated (see [PaymentDisplay]'s own doc comment).
+///
+/// When [presetOrder] is supplied (the normal path — `OrderActions`
+/// already has the real [Order] the user tapped), it's used directly
+/// instead of falling back to [PaymentsRepository.getOrder]'s single
+/// fixed record, so different orders genuinely open their own payment.
 class PaymentsViewModel extends ChangeNotifier {
-  PaymentsViewModel(this._repository);
+  PaymentsViewModel(this._repository, {Order? presetOrder})
+    : _presetOrder = presetOrder;
 
   final PaymentsRepository _repository;
+  final Order? _presetOrder;
 
   PaymentsLoadStatus _status = PaymentsLoadStatus.loading;
   PaymentDisplay? _data;
@@ -29,12 +37,21 @@ class PaymentsViewModel extends ChangeNotifier {
     _status = PaymentsLoadStatus.loading;
     notifyListeners();
     try {
-      final payment = await _repository.getPayment();
-      final order = await _repository.getOrder();
-      final quote = await _repository.getQuote();
-      final service = await _repository.getService();
-      final provider = await _repository.getProvider();
-      final profile = await _repository.getProfile();
+      final order = _presetOrder ?? await _repository.getOrder();
+      final payment = _presetOrder != null
+          ? await _repository.getPaymentFor(order)
+          : await _repository.getPayment();
+
+      // Every remaining getter takes `order`/`payment` directly, so
+      // they can safely run concurrently.
+      final quoteFuture = _repository.getQuoteFor(payment);
+      final serviceFuture = _repository.getServiceFor(order);
+      final providerFuture = _repository.getProviderFor(payment);
+
+      final quote = await quoteFuture;
+      final service = await serviceFuture;
+      final provider = await providerFuture;
+      final profile = await _repository.getProfileFor(provider);
       _data = PaymentDisplay(
         payment: payment,
         order: order,

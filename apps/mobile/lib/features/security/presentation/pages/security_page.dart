@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../authentication/entities/authentication.dart';
+import '../../../../authentication/models/authentication_status.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/scale_in.dart';
@@ -8,11 +10,13 @@ import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
+import '../../../../core/ui/widgets/app_snack_bar.dart';
 import '../../repositories/security_repository.dart';
 import '../view_models/security_view_model.dart';
 import '../widgets/add_auth_method_button.dart';
 import '../widgets/audit_log_section.dart';
 import '../widgets/auth_method_card.dart';
+import '../widgets/auth_method_type_sheet.dart';
 import '../widgets/credentials_section.dart';
 import '../widgets/security_empty_state.dart';
 import '../widgets/security_header.dart';
@@ -24,8 +28,10 @@ import '../widgets/security_statistics.dart';
 /// Loads from the real backend via [SecurityViewModel] (resolved from
 /// the service locator — see `core/di/service_locator.dart`).
 ///
-/// Shows a fixed list of authentication methods (no id-based lookup
-/// yet) — see the feature README.
+/// "Agregar método"/"Desactivar"/"Eliminar" all call through to the
+/// real `SecurityRepository` CRUD methods for `Authentication`
+/// records — see `HttpSecurityRepository`'s class doc for the
+/// documented limitation on how far that migration currently goes.
 class SecurityPage extends StatefulWidget {
   const SecurityPage({super.key, SecurityRepository? repository})
     : _repository = repository;
@@ -39,9 +45,9 @@ class SecurityPage extends StatefulWidget {
 }
 
 class _SecurityPageState extends State<SecurityPage> {
-  late final SecurityViewModel _viewModel = SecurityViewModel(
-    widget._repository ?? locator<SecurityRepository>(),
-  );
+  late final SecurityRepository _repository =
+      widget._repository ?? locator<SecurityRepository>();
+  late final SecurityViewModel _viewModel = SecurityViewModel(_repository);
 
   @override
   void initState() {
@@ -57,6 +63,65 @@ class _SecurityPageState extends State<SecurityPage> {
     _viewModel.removeListener(_onViewModelChanged);
     _viewModel.dispose();
     super.dispose();
+  }
+
+  Future<void> _addAuthMethod() async {
+    final methodType = await AuthMethodTypeSheet.show(context);
+    if (methodType == null || !mounted) return;
+    final identity = _viewModel.data!.identity;
+    await _repository.createAuthMethod(
+      identity: identity,
+      methodType: methodType,
+    );
+    if (!mounted) return;
+    AppSnackBar.show(
+      context,
+      'Método de autenticación agregado.',
+      type: AppSnackBarType.success,
+    );
+    await _viewModel.load();
+  }
+
+  Future<void> _toggleStatus(Authentication authMethod) async {
+    final isActive = authMethod.status == AuthenticationStatus.active;
+    await _repository.updateAuthMethodStatus(
+      authMethod,
+      isActive ? AuthenticationStatus.inactive : AuthenticationStatus.active,
+    );
+    if (!mounted) return;
+    AppSnackBar.show(
+      context,
+      isActive ? 'Método desactivado.' : 'Método activado.',
+      type: AppSnackBarType.info,
+    );
+    await _viewModel.load();
+  }
+
+  Future<void> _deleteAuthMethod(Authentication authMethod) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar método'),
+        content: const Text(
+          '¿Eliminar este método de autenticación? Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _repository.deleteAuthMethod(authMethod);
+    if (!mounted) return;
+    AppSnackBar.show(context, 'Método eliminado.', type: AppSnackBarType.info);
+    await _viewModel.load();
   }
 
   Widget _buildBody() {
@@ -85,14 +150,18 @@ class _SecurityPageState extends State<SecurityPage> {
                   FadeIn(
                     delay: staggerDelayFor(index),
                     child: SlideIn(
-                      child: AuthMethodCard(authMethod: authMethod),
+                      child: AuthMethodCard(
+                        authMethod: authMethod,
+                        onDisable: () => _toggleStatus(authMethod),
+                        onDelete: () => _deleteAuthMethod(authMethod),
+                      ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.space12),
                 ],
               ],
             ),
-            const AddAuthMethodButton(),
+            AddAuthMethodButton(onPressed: _addAuthMethod),
             const SizedBox(height: AppSpacing.space16),
             SlideIn(child: CredentialsSection(data: data)),
             const SizedBox(height: AppSpacing.space16),

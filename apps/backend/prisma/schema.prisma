@@ -185,6 +185,8 @@ enum VerificationType {
   PHONE
   EMAIL
   OTHER
+  CRIMINAL_RECORD
+  CERTIFICATION
 
   @@map("verification_type")
 }
@@ -262,6 +264,7 @@ enum ServiceStatus {
 }
 
 enum ProviderStatus {
+  PENDING
   ACTIVE
   INACTIVE
   SUSPENDED
@@ -588,13 +591,14 @@ model AddressModel {
 }
 
 model VerificationModel {
-  id         String              @id
-  identityId String              @map("identity_id")
-  type       VerificationType
-  status     VerificationStatus
-  verifiedAt DateTime?           @map("verified_at")
-  createdAt  DateTime            @map("created_at")
-  updatedAt  DateTime            @map("updated_at")
+  id           String              @id
+  identityId   String              @map("identity_id")
+  type         VerificationType
+  status       VerificationStatus
+  verifiedAt   DateTime?           @map("verified_at")
+  createdAt    DateTime            @map("created_at")
+  updatedAt    DateTime            @map("updated_at")
+  documentPath String?             @map("document_path")
 
   identity IdentityModel @relation(fields: [identityId], references: [id])
 

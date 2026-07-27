@@ -52,6 +52,16 @@ class _FakeOrdersRepository implements OrdersRepository {
 
   @override
   Future<Quote> getQuoteFor(Order order) => _delegate.getQuoteFor(order);
+
+  @override
+  Future<Profile> getClientProfileFor(Order order) =>
+      _delegate.getClientProfileFor(order);
+
+  @override
+  Future<Order> acceptOrder(Order order) => _delegate.acceptOrder(order);
+
+  @override
+  Future<Order> rejectOrder(Order order) => _delegate.rejectOrder(order);
 }
 
 void main() {

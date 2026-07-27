@@ -53,8 +53,10 @@ class AddressManagementViewModel extends ChangeNotifier {
       address: address,
       profile: profile,
       contact: contact,
-      isDefault: mockAddressIsDefault[address.id]!,
-      deliveryInstructions: mockAddressDeliveryInstructions[address.id]!,
+      // `??` fallback: addresses created after this session started
+      // (see `AddressFormSheet`) aren't in this fixed simulated map.
+      isDefault: mockAddressIsDefault[address.id] ?? false,
+      deliveryInstructions: mockAddressDeliveryInstructions[address.id] ?? '',
     );
   }
 

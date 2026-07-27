@@ -31,4 +31,19 @@ class Quote extends Entity<QuoteId> {
   final QuoteType type;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  Quote copyWith({QuoteStatus? status}) {
+    return Quote(
+      id: id,
+      orderId: orderId,
+      providerId: providerId,
+      proposedPrice: proposedPrice,
+      estimatedDuration: estimatedDuration,
+      notes: notes,
+      status: status ?? this.status,
+      type: type,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
 }

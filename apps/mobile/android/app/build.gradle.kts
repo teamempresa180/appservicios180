@@ -16,7 +16,7 @@ if (secretsPropertiesFile.exists()) {
 
 android {
     namespace = "com.serviya.mobile"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

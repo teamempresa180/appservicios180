@@ -3,6 +3,7 @@ import '../../../../core/di/service_locator.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
+import '../../models/notification_display.dart';
 import '../../repositories/notifications_repository.dart';
 import '../view_models/notifications_view_model.dart';
 import '../widgets/notification_filter_tabs.dart';
@@ -37,6 +38,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
     widget._repository ?? locator<NotificationsRepository>(),
   );
 
+  NotificationTab _selectedTab = NotificationTab.all;
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +56,27 @@ class _NotificationsPageState extends State<NotificationsPage> {
     super.dispose();
   }
 
+  List<NotificationDisplay> get _filteredNotifications {
+    switch (_selectedTab) {
+      case NotificationTab.all:
+        return _viewModel.notifications;
+      case NotificationTab.unread:
+        return _viewModel.notifications.where((n) => n.isUnread).toList();
+      case NotificationTab.orders:
+        return _viewModel.notifications
+            .where((n) => n.category == NotificationCategory.order)
+            .toList();
+      case NotificationTab.payments:
+        return _viewModel.notifications
+            .where((n) => n.category == NotificationCategory.payment)
+            .toList();
+      case NotificationTab.messages:
+        return _viewModel.notifications
+            .where((n) => n.category == NotificationCategory.chat)
+            .toList();
+    }
+  }
+
   Widget _buildBody() {
     switch (_viewModel.status) {
       case NotificationsLoadStatus.loading:
@@ -66,9 +90,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
           onActionPressed: _viewModel.retry,
         );
       case NotificationsLoadStatus.success:
-        return _viewModel.notifications.isEmpty
+        final filtered = _filteredNotifications;
+        return filtered.isEmpty
             ? const NotificationsEmptyState()
-            : NotificationsList(notifications: _viewModel.notifications);
+            : NotificationsList(notifications: filtered);
     }
   }
 
@@ -76,7 +101,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Widget build(BuildContext context) {
     return AppPageBody(
       header: const NotificationsHeader(),
-      toolbar: const [NotificationFilterTabs()],
+      toolbar: [
+        NotificationFilterTabs(
+          selected: _selectedTab,
+          onChanged: (tab) => setState(() => _selectedTab = tab),
+        ),
+      ],
       body: _buildBody(),
     );
   }

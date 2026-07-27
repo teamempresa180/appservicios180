@@ -32,4 +32,13 @@ export class VerificationResponseDto {
 
   @ApiProperty({ example: '2026-01-01T00:00:00.000Z', type: String })
   updatedAt!: string;
+
+  @ApiProperty({
+    example: 'uploads/verifications/id-1/criminal-record.pdf',
+    type: String,
+    nullable: true,
+    description:
+      'Relative path to the uploaded document, reachable at GET /<documentPath>. Null until POST /verifications/:id/document is called.',
+  })
+  documentPath!: string | null;
 }

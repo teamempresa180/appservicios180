@@ -3,6 +3,7 @@ import { ProfileVisibility } from '../../domain/value-objects/profile-visibility
 import { ProfileStatus } from '../../domain/value-objects/profile-status.value-object';
 import { CreateProfileCommand } from '../commands/create-profile.command';
 import { UpdateProfileCommand } from '../commands/update-profile.command';
+import { UpdateProfileAvatarCommand } from '../commands/update-profile-avatar.command';
 import { ProfileValidator } from './profile.validator';
 
 describe('ProfileValidator', () => {
@@ -114,6 +115,61 @@ describe('ProfileValidator', () => {
             'INVALID' as ProfileStatus,
           ),
         ),
+      ).toThrow(ValidationException);
+    });
+  });
+
+  describe('validateUpdateAvatar', () => {
+    it('passes for a well-formed command', () => {
+      expect(() =>
+        ProfileValidator.validateUpdateAvatar(
+          new UpdateProfileAvatarCommand(
+            'id-1',
+            'uploads/profiles/id-1/avatar.png',
+          ),
+        ),
+      ).not.toThrow();
+    });
+
+    it('rejects a blank id', () => {
+      expect(() =>
+        ProfileValidator.validateUpdateAvatar(
+          new UpdateProfileAvatarCommand('  ', 'uploads/profiles/id-1/avatar.png'),
+        ),
+      ).toThrow(ValidationException);
+    });
+
+    it('rejects a blank avatarUrl', () => {
+      expect(() =>
+        ProfileValidator.validateUpdateAvatar(
+          new UpdateProfileAvatarCommand('id-1', '  '),
+        ),
+      ).toThrow(ValidationException);
+    });
+  });
+
+  describe('validateAvatarMimeType', () => {
+    it('accepts image/png', () => {
+      expect(() =>
+        ProfileValidator.validateAvatarMimeType('image/png'),
+      ).not.toThrow();
+    });
+
+    it('accepts image/jpeg', () => {
+      expect(() =>
+        ProfileValidator.validateAvatarMimeType('image/jpeg'),
+      ).not.toThrow();
+    });
+
+    it('rejects application/pdf', () => {
+      expect(() =>
+        ProfileValidator.validateAvatarMimeType('application/pdf'),
+      ).toThrow(ValidationException);
+    });
+
+    it('rejects an undefined mimetype', () => {
+      expect(() =>
+        ProfileValidator.validateAvatarMimeType(undefined),
       ).toThrow(ValidationException);
     });
   });

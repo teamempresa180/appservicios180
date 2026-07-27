@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../../../core/di/service_locator.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_radius.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
+import '../../../app_shell/navigation_intent.dart';
 import '../mock/mock_home_data.dart';
-import '../models/user_role.dart';
+import '../../../../core/session/user_role.dart';
 import 'quick_categories.dart';
 
 /// Static (non-draggable) panel floating over [HomeMapBackground] —
@@ -63,7 +65,11 @@ class HomeFloatingPanel extends StatelessWidget {
               style: context.textStyles.bodyMedium,
             ),
           ),
-          QuickCategories(categories: MockHomeData.quickCategories),
+          QuickCategories(
+            categories: MockHomeData.quickCategories,
+            onCategoryTap: (category) => locator<AppShellNavigationIntent>()
+                .goToBuscarWithCategory(category),
+          ),
         ],
       ),
     );

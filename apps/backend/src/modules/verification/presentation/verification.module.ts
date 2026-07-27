@@ -10,11 +10,13 @@ import { UpdateVerificationUseCase } from '../application/use_cases/update-verif
 import { GetVerificationUseCase } from '../application/use_cases/get-verification.use-case';
 import { ListVerificationUseCase } from '../application/use_cases/list-verification.use-case';
 import { SearchVerificationUseCase } from '../application/use_cases/search-verification.use-case';
+import { UploadVerificationDocumentUseCase } from '../application/use_cases/upload-verification-document.use-case';
 import {
   VERIFICATION_REPOSITORY,
   VerificationRepository,
 } from '../domain/interfaces/verification-repository.interface';
 import { PrismaVerificationRepository } from '../infrastructure/persistence/prisma-verification.repository';
+import { LocalVerificationDocumentStorageService } from '../infrastructure/storage/local-verification-document-storage.service';
 
 /**
  * Wires the Verification presentation layer to its Use Cases, which
@@ -64,6 +66,13 @@ import { PrismaVerificationRepository } from '../infrastructure/persistence/pris
         new SearchVerificationUseCase(repo),
       inject: [VERIFICATION_REPOSITORY],
     },
+    {
+      provide: UploadVerificationDocumentUseCase,
+      useFactory: (repo: VerificationRepository) =>
+        new UploadVerificationDocumentUseCase(repo),
+      inject: [VERIFICATION_REPOSITORY],
+    },
+    LocalVerificationDocumentStorageService,
   ],
   exports: [VERIFICATION_REPOSITORY],
 })

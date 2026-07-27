@@ -39,6 +39,7 @@ export class UpdateVerificationUseCase {
       verifiedAt: existing.verifiedAt,
       createdAt: existing.createdAt,
       updatedAt: new Date(),
+      documentPath: existing.documentPath,
     });
 
     await this.verificationRepository.save(updated);

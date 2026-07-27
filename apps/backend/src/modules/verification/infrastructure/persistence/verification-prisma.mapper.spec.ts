@@ -15,6 +15,7 @@ describe('VerificationPrismaMapper', () => {
     verifiedAt: null,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-02'),
+    documentPath: null,
   };
 
   it('maps a Prisma row to the domain entity', () => {
@@ -35,9 +36,26 @@ describe('VerificationPrismaMapper', () => {
       verifiedAt: null,
       createdAt: new Date('2024-01-01'),
       updatedAt: new Date('2024-01-02'),
+      documentPath: null,
     });
 
     expect(VerificationPrismaMapper.toPersistence(verification)).toEqual(row);
+  });
+
+  it('maps a non-null documentPath through in both directions', () => {
+    const rowWithDocument: PrismaVerification = {
+      ...row,
+      documentPath: 'uploads/verifications/id-1/record.pdf',
+    };
+
+    const verification = VerificationPrismaMapper.toDomain(rowWithDocument);
+
+    expect(verification.documentPath).toBe(
+      'uploads/verifications/id-1/record.pdf',
+    );
+    expect(VerificationPrismaMapper.toPersistence(verification)).toEqual(
+      rowWithDocument,
+    );
   });
 
   it('round-trips without losing data', () => {

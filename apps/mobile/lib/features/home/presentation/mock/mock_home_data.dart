@@ -1,4 +1,4 @@
-import '../models/user_role.dart';
+import '../../../../core/session/user_role.dart';
 
 /// Static mock content for the Home screen. No backend, no persistence —
 /// purely illustrative placeholder data until Provider/Service/Category/

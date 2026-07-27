@@ -1,5 +1,7 @@
 import '../../../audit/entities/audit.dart';
 import '../../../authentication/entities/authentication.dart';
+import '../../../authentication/models/auth_method_type.dart';
+import '../../../authentication/models/authentication_status.dart';
 import '../../../credentials/entities/credential.dart';
 import '../../../identity/entities/identity.dart';
 
@@ -13,4 +15,16 @@ abstract class SecurityRepository {
   Future<List<Authentication>> getAuthMethods();
   Future<List<Credential>> getCredentials();
   Future<List<Audit>> getAuditLog();
+
+  Future<Authentication> createAuthMethod({
+    required Identity identity,
+    required AuthMethodType methodType,
+  });
+
+  Future<Authentication> updateAuthMethodStatus(
+    Authentication authMethod,
+    AuthenticationStatus status,
+  );
+
+  Future<void> deleteAuthMethod(Authentication authMethod);
 }

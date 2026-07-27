@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/di/service_locator.dart';
@@ -5,6 +6,8 @@ import 'package:mobile/core/session/auth_repository.dart';
 import 'package:mobile/core/session/auth_tokens.dart';
 import 'package:mobile/core/session/session_manager.dart';
 import 'package:mobile/core/storage/secure_token_storage.dart';
+import 'package:mobile/core/theme/theme_mode_controller.dart';
+import 'package:mobile/core/theme/theme_mode_storage.dart';
 import 'package:mobile/main.dart';
 
 /// In-memory stand-in for [SecureTokenStorage] — avoids touching the
@@ -51,6 +54,9 @@ void main() {
         tokenStorage: _FakeSecureTokenStorage(),
       ),
     );
+    locator.registerSingleton<ThemeModeController>(
+      ThemeModeController(storage: ThemeModeStorage()),
+    );
   });
 
   tearDown(() => locator.reset());
@@ -60,7 +66,10 @@ void main() {
   ) async {
     await tester.pumpWidget(const AppServiciosApp());
 
-    expect(find.text('AppServicios'), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/icon/app_icon_source.png')),
+      findsOneWidget,
+    );
     expect(find.text('Inicializando...'), findsOneWidget);
 
     // No stored tokens (see `_FakeSecureTokenStorage.readAccessToken`),

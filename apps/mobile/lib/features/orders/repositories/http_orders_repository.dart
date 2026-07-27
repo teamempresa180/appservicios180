@@ -81,4 +81,40 @@ class HttpOrdersRepository implements OrdersRepository {
     );
     return QuoteHttpMapper.fromJson(match);
   }
+
+  /// Same client-side-match shape as [getQuoteFor] above — the backend
+  /// has no `GET /profiles?identityId=` filter, so this fetches the
+  /// full profiles list and matches `Order.identityId` client-side.
+  @override
+  Future<Profile> getClientProfileFor(Order order) async {
+    final json = await _apiClient.get('/profiles');
+    final items = json['items'] as List<dynamic>;
+    final match = items.cast<Map<String, dynamic>>().firstWhere(
+      (item) => item['identityId'] == order.identityId.value,
+      orElse: () => throw StateError(
+        'No profile found for identity ${order.identityId.value}',
+      ),
+    );
+    return ProfileHttpMapper.fromJson(match);
+  }
+
+  /// The backend's only real status-transition endpoint is
+  /// `PUT /orders/:id/cancel` — there is no `pending -> accepted`
+  /// transition yet (see `UpdateOrderRequestDto`'s own doc comment on
+  /// the backend: `status` isn't updatable via `PUT /orders/:id`
+  /// either). [acceptOrder] therefore can't persist server-side; it
+  /// returns [order] unchanged, and the caller
+  /// (`ProviderRequestsViewModel`) removes it from the pending list
+  /// purely client-side — an interim shape matching [getQuoteFor]'s own
+  /// documented gap above. [rejectOrder] does have a faithful mapping:
+  /// rejecting a request the provider never accepted is functionally
+  /// the same as cancelling it, so it calls the real cancel endpoint.
+  @override
+  Future<Order> acceptOrder(Order order) => Future.value(order);
+
+  @override
+  Future<Order> rejectOrder(Order order) async {
+    final json = await _apiClient.put('/orders/${order.id.value}/cancel');
+    return OrderHttpMapper.fromJson(json);
+  }
 }

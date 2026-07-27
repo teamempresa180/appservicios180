@@ -29,4 +29,9 @@ export const VerificationSwagger = {
     summary: 'Search Verifications',
     description: 'Free-text search over type/status.',
   },
+  uploadDocument: {
+    summary: 'Upload a Verification document',
+    description:
+      'Uploads a supporting document (e.g. criminal-record check, certification) for an existing Verification and stores its path on the record. Accepts application/pdf, image/png, or image/jpeg.',
+  },
 } as const;

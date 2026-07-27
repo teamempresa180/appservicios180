@@ -10,17 +10,16 @@ import 'payments_repository.dart';
 
 /// [PaymentsRepository] backed by [ApiClient].
 ///
-/// The feature interface still models a single fixed payment (see
-/// `payments_repository.dart`'s own doc comment: "no id-based lookup
-/// yet"). `_fetchPayment()` takes the first item of `GET /payments`
-/// (paginated, unfiltered) as that one payment — the same interim
-/// shape as `HttpChatRepository._fetchChat()`/`HttpQuoteRepository`.
-///
-/// Every other getter chains through an id already carried by
-/// [Payment] itself (`orderId`, `quoteId`, `receiverProviderId`) via
-/// `GET /{resource}/:id`, same style as `HttpOrdersRepository`.
-/// [getService] goes through the order's `serviceId` (`Payment` has no
-/// `serviceId` of its own) and [getProfile] goes through the
+/// [getPayment]/[getOrder] have no id parameter (only `GET /payments`,
+/// paginated, unfiltered) — `_fetchPayment()` takes the first item as a
+/// fallback for when the caller doesn't already have an [Order] in
+/// hand. The normal path skips it: [getPaymentFor] lists `GET /payments`
+/// and filters by `orderId` client-side (no `GET /payments?orderId=`
+/// filter exists yet — same interim shape as
+/// `HttpChatRepository.getMessages`), then every other getter chains
+/// through an id already carried by [Payment]/[Order] (`quoteId`,
+/// `receiverProviderId`, `serviceId`) via `GET /{resource}/:id`, same
+/// style as `HttpOrdersRepository`. [getProfileFor] goes through the
 /// provider's `providerProfileId`.
 class HttpPaymentsRepository implements PaymentsRepository {
   HttpPaymentsRepository(this._apiClient);
@@ -47,22 +46,32 @@ class HttpPaymentsRepository implements PaymentsRepository {
   }
 
   @override
-  Future<Quote> getQuote() async {
-    final payment = await _fetchPayment();
+  Future<Payment> getPaymentFor(Order order) async {
+    final json = await _apiClient.get('/payments');
+    final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final match = items.firstWhere(
+      (item) => item['orderId'] == order.id.value,
+      orElse: () => throw StateError(
+        'No payment found for order ${order.id.value}',
+      ),
+    );
+    return PaymentHttpMapper.fromJson(match);
+  }
+
+  @override
+  Future<Quote> getQuoteFor(Payment payment) async {
     final json = await _apiClient.get('/quotes/${payment.quoteId.value}');
     return QuoteHttpMapper.fromJson(json);
   }
 
   @override
-  Future<Service> getService() async {
-    final order = await getOrder();
+  Future<Service> getServiceFor(Order order) async {
     final json = await _apiClient.get('/services/${order.serviceId.value}');
     return ServiceHttpMapper.fromJson(json);
   }
 
   @override
-  Future<Provider> getProvider() async {
-    final payment = await _fetchPayment();
+  Future<Provider> getProviderFor(Payment payment) async {
     final json = await _apiClient.get(
       '/providers/${payment.receiverProviderId.value}',
     );
@@ -70,8 +79,7 @@ class HttpPaymentsRepository implements PaymentsRepository {
   }
 
   @override
-  Future<Profile> getProfile() async {
-    final provider = await getProvider();
+  Future<Profile> getProfileFor(Provider provider) async {
     final json = await _apiClient.get(
       '/profiles/${provider.providerProfileId.value}',
     );

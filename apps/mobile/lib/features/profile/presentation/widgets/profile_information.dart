@@ -10,9 +10,13 @@ import '../../models/profile_display.dart';
 /// Identity recap: avatar, display name, bio and member-since. Reuses
 /// `AppCard`/`AppSectionTitle`/`ProfileAvatar` only.
 class ProfileInformation extends StatelessWidget {
-  const ProfileInformation({super.key, required this.data});
+  const ProfileInformation({super.key, required this.data, this.onAvatarTap});
 
   final ProfileDisplay data;
+
+  /// Opens the photo picker when tapped — omitted (no edit badge shown)
+  /// if `null`.
+  final VoidCallback? onAvatarTap;
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +27,11 @@ class ProfileInformation extends StatelessWidget {
           const AppSectionTitle(title: 'Información personal'),
           Row(
             children: [
-              const ProfileAvatar(radius: 28),
+              ProfileAvatar(
+                radius: 28,
+                avatarUrl: data.profile.avatarUrl,
+                onEditTap: onAvatarTap,
+              ),
               const SizedBox(width: AppSpacing.space12),
               Expanded(
                 child: Column(

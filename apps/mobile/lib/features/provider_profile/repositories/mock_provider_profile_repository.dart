@@ -4,31 +4,48 @@ import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
 import '../../../review/entities/review.dart';
 import '../../../service/entities/service.dart';
+// Deliberate exception to "each feature owns independent mock data" —
+// same reasoning as `MockServiceDetailRepository`: resolving a *real*
+// provider (tapped from Marketplace/Service Detail) to its actual
+// display name needs the same mock universe those features seed.
+import '../../marketplace/mock/mock_providers_data.dart';
 import '../mock/mock_provider_profile_data.dart';
 import 'provider_profile_repository.dart';
 
 /// In-memory `ProviderProfileRepository` backed by fixed mock data. No
 /// backend, no persistence, no network — see the feature README.
+///
+/// [getAvailabilityFor]/[getReviewsFor]/[getServicesFor] stay the single
+/// fixed mock fixture regardless of which provider was passed — unlike
+/// [getProfileFor] (which can resolve real variety via
+/// `mockProviderProfiles`), this feature's own mock data only models one
+/// provider's availability/reviews/services. The real backend
+/// (`HttpProviderProfileRepository`) has no such limitation.
 class MockProviderProfileRepository implements ProviderProfileRepository {
   @override
   Future<Provider> getProvider() => Future.value(mockProviderProfileProvider);
 
   @override
-  Future<Profile> getProfile() => Future.value(mockProviderProfileProfile);
+  Future<Profile> getProfileFor(Provider provider) => Future.value(
+    mockProviderProfiles.firstWhere(
+      (profile) => profile.id == provider.providerProfileId,
+      orElse: () => mockProviderProfileProfile,
+    ),
+  );
 
   @override
-  Future<Availability> getAvailability() =>
+  Future<Availability> getAvailabilityFor(Provider provider) =>
       Future.value(mockProviderProfileAvailability);
 
   @override
-  Future<List<Review>> getReviews() =>
+  Future<List<Review>> getReviewsFor(Provider provider) =>
       Future.value(List.unmodifiable(mockProviderProfileReviews));
 
   @override
-  Future<List<Service>> getServices() =>
+  Future<List<Service>> getServicesFor(Provider provider) =>
       Future.value(List.unmodifiable(mockProviderProfileServices));
 
   @override
-  Future<List<Category>> getCategories() =>
+  Future<List<Category>> getCategoriesFor(List<Service> services) =>
       Future.value(List.unmodifiable(mockProviderProfileCategories));
 }

@@ -4,6 +4,8 @@ import '../../../core/network/mappers/domain_http_mappers.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
 import '../../../service/entities/service.dart';
+import '../../../service/models/service_status.dart';
+import '../../../service/models/service_type.dart';
 import '../../categories/repositories/category_http_mapper.dart';
 import 'provider_services_repository.dart';
 
@@ -75,4 +77,51 @@ class HttpProviderServicesRepository implements ProviderServicesRepository {
     );
     return CategoryHttpMapper.fromJson(json);
   }
+
+  @override
+  Future<Service> createService({
+    required Provider provider,
+    required Category category,
+    required String name,
+    required String description,
+    required num basePrice,
+    required int estimatedDuration,
+    required ServiceType type,
+  }) async {
+    final json = await _apiClient.post(
+      '/services',
+      data: {
+        'providerId': provider.id.value,
+        'categoryId': category.id.value,
+        'name': name,
+        'description': description,
+        'basePrice': basePrice,
+        'estimatedDuration': estimatedDuration,
+        'type': type.name.toUpperCase(),
+      },
+    );
+    return ServiceHttpMapper.fromJson(json);
+  }
+
+  @override
+  Future<Service> updateService(
+    Service service, {
+    num? basePrice,
+    int? estimatedDuration,
+    ServiceStatus? status,
+  }) async {
+    final json = await _apiClient.put(
+      '/services/${service.id.value}',
+      data: {
+        if (basePrice != null) 'basePrice': basePrice,
+        if (estimatedDuration != null) 'estimatedDuration': estimatedDuration,
+        if (status != null) 'status': status.name.toUpperCase(),
+      },
+    );
+    return ServiceHttpMapper.fromJson(json);
+  }
+
+  @override
+  Future<void> deleteService(Service service) =>
+      _apiClient.delete('/services/${service.id.value}');
 }

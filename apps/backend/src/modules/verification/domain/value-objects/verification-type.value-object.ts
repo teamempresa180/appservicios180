@@ -8,4 +8,8 @@ export enum VerificationType {
   Phone = 'PHONE',
   Email = 'EMAIL',
   Other = 'OTHER',
+  /** Criminal-record background check required from providers at registration. */
+  CriminalRecord = 'CRIMINAL_RECORD',
+  /** Certification/degree document required from providers at registration. */
+  Certification = 'CERTIFICATION',
 }

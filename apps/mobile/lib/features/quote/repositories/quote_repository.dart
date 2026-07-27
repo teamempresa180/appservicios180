@@ -20,4 +20,7 @@ abstract class QuoteRepository {
   Future<Profile> getProfile();
   Future<Category> getCategory();
   Future<Address> getAddress();
+
+  Future<Quote> acceptQuote(Quote quote);
+  Future<Quote> rejectQuote(Quote quote);
 }

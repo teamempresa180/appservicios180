@@ -33,4 +33,20 @@ class Service extends Entity<ServiceId> {
   final ServiceType type;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  Service copyWith({num? basePrice, int? estimatedDuration, ServiceStatus? status}) {
+    return Service(
+      id: id,
+      providerId: providerId,
+      categoryId: categoryId,
+      name: name,
+      description: description,
+      basePrice: basePrice ?? this.basePrice,
+      estimatedDuration: estimatedDuration ?? this.estimatedDuration,
+      status: status ?? this.status,
+      type: type,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
 }

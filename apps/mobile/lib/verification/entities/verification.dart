@@ -15,6 +15,7 @@ class Verification extends Entity<VerificationId> {
     required this.verifiedAt,
     required this.createdAt,
     required this.updatedAt,
+    this.documentPath,
   }) : super(id);
 
   final IdentityId identityId;
@@ -23,4 +24,10 @@ class Verification extends Entity<VerificationId> {
   final DateTime? verifiedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// Relative path to the uploaded document (e.g.
+  /// `uploads/verifications/<id>/<file>`), set via
+  /// `POST /verifications/:id/document`. `null` until a file has been
+  /// uploaded.
+  final String? documentPath;
 }

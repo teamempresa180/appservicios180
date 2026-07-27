@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../../../core/network/http_exceptions.dart';
 import '../../../../review/entities/review.dart';
+import '../../../../service/entities/service.dart';
 import '../../mock/mock_service_detail_data.dart';
 import '../../models/service_detail_data.dart';
 import '../../repositories/service_detail_repository.dart';
@@ -13,10 +14,18 @@ enum ServiceDetailLoadStatus { loading, success, error }
 /// build-time-only `_buildData()` now that every repository getter is a
 /// `Future` — a real network call needs a real Loading/Success/Error
 /// state, not a synchronous build.
+///
+/// When [presetService] is supplied (the normal path — Marketplace/
+/// Search already have the real [Service] the user tapped), it's used
+/// directly instead of falling back to [ServiceDetailRepository.getService]'s
+/// single fixed record, so different cards genuinely open different
+/// services.
 class ServiceDetailViewModel extends ChangeNotifier {
-  ServiceDetailViewModel(this._repository);
+  ServiceDetailViewModel(this._repository, {Service? presetService})
+    : _presetService = presetService;
 
   final ServiceDetailRepository _repository;
+  final Service? _presetService;
 
   ServiceDetailLoadStatus _status = ServiceDetailLoadStatus.loading;
   ServiceDetailData? _data;
@@ -30,17 +39,16 @@ class ServiceDetailViewModel extends ChangeNotifier {
     _status = ServiceDetailLoadStatus.loading;
     notifyListeners();
     try {
-      // Each call is started before any is awaited, so the five
-      // requests run concurrently rather than sequentially.
-      final serviceFuture = _repository.getService();
-      final providerFuture = _repository.getProvider();
-      final profileFuture = _repository.getProviderProfile();
-      final categoryFuture = _repository.getCategory();
-      final reviewsFuture = _repository.getReviews();
+      final service = _presetService ?? await _repository.getService();
 
-      final service = await serviceFuture;
+      // Each call is started before any is awaited, so the three
+      // requests that only depend on `service` run concurrently.
+      final providerFuture = _repository.getProviderFor(service);
+      final categoryFuture = _repository.getCategoryFor(service);
+      final reviewsFuture = _repository.getReviewsFor(service);
+
       final provider = await providerFuture;
-      final profile = await profileFuture;
+      final profile = await _repository.getProviderProfileFor(provider);
       final category = await categoryFuture;
       final reviews = await reviewsFuture;
 

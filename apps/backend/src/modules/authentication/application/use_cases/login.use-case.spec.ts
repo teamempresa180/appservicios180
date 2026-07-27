@@ -172,6 +172,29 @@ describe('LoginUseCase', () => {
     expect(result.role).toBe(Role.Provider);
   });
 
+  it('returns Role.Customer when the Identity has a Pending Provider record (not yet approved)', async () => {
+    const now = new Date();
+    await providerRepository.save(
+      new Provider(ProviderId.create(), {
+        identityId,
+        providerProfileId: ProfileId.create(),
+        status: ProviderStatus.Pending,
+        type: ProviderType.Independent,
+        experience: ProviderExperience.Intermediate,
+        biography: 'Plumber.',
+        yearsOfExperience: 5,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    );
+
+    const result = await useCase.execute(
+      new LoginCommand(documentNumber, password),
+    );
+
+    expect(result.role).toBe(Role.Customer);
+  });
+
   it('persists a RefreshToken row on successful login', async () => {
     const result = await useCase.execute(
       new LoginCommand(documentNumber, password),

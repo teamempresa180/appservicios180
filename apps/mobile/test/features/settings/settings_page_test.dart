@@ -1,12 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/core/di/service_locator.dart';
+import 'package:mobile/core/theme/theme_mode_controller.dart';
+import 'package:mobile/core/theme/theme_mode_storage.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/settings/presentation/pages/settings_page.dart';
 import 'package:mobile/features/settings/presentation/widgets/settings_option_tile.dart';
 import 'package:mobile/features/settings/repositories/mock_settings_repository.dart';
 
 void main() {
+  setUp(
+    () => locator.registerSingleton<ThemeModeController>(
+      ThemeModeController(storage: ThemeModeStorage()),
+    ),
+  );
+  tearDown(() => locator.reset());
+
   Widget buildApp() {
     return MaterialApp(
       theme: AppTheme.light,

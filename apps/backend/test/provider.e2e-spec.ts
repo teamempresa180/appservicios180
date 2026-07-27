@@ -124,7 +124,7 @@ describe('ProviderController (e2e)', () => {
 
     const body = response.body as ProviderResponseDto;
     expect(body.identityId).toBe(identityId);
-    expect(body.status).toBe('ACTIVE');
+    expect(body.status).toBe('PENDING');
   });
 
   it('POST /providers returns 404 when the Identity does not exist', async () => {

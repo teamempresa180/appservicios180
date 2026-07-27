@@ -4,6 +4,7 @@ apps/backend/dist/
 apps/backend/coverage/
 apps/backend/.env
 apps/backend/*.log
+apps/backend/uploads/
 
 # Flutter (mobile)
 apps/mobile/.dart_tool/

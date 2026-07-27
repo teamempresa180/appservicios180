@@ -9,9 +9,18 @@ import 'service_card.dart';
 /// Vertical list of `ServiceCard`s, entering with a staggered
 /// fade+slide (see `staggerDelayFor`).
 class ServicesList extends StatelessWidget {
-  const ServicesList({super.key, required this.services});
+  const ServicesList({
+    super.key,
+    required this.services,
+    this.onEdit,
+    this.onPause,
+    this.onDelete,
+  });
 
   final List<ProviderServiceDisplay> services;
+  final ValueChanged<ProviderServiceDisplay>? onEdit;
+  final ValueChanged<ProviderServiceDisplay>? onPause;
+  final ValueChanged<ProviderServiceDisplay>? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +29,14 @@ class ServicesList extends StatelessWidget {
         for (final (index, service) in services.indexed) ...[
           FadeIn(
             delay: staggerDelayFor(index),
-            child: SlideIn(child: ServiceCard(data: service)),
+            child: SlideIn(
+              child: ServiceCard(
+                data: service,
+                onEdit: onEdit == null ? null : () => onEdit!(service),
+                onPause: onPause == null ? null : () => onPause!(service),
+                onDelete: onDelete == null ? null : () => onDelete!(service),
+              ),
+            ),
           ),
           const SizedBox(height: AppSpacing.space12),
         ],

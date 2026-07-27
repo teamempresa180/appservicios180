@@ -31,4 +31,9 @@ export const ProfileSwagger = {
     summary: 'Search Profiles',
     description: 'Free-text search over displayName/bio.',
   },
+  uploadAvatar: {
+    summary: 'Upload a Profile avatar photo',
+    description:
+      'Uploads an avatar photo for an existing Profile and stores its path on the record. Accepts image/png or image/jpeg.',
+  },
 } as const;

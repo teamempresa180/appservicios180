@@ -4,12 +4,19 @@ import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 import 'category_chip.dart';
 
-/// Horizontally scrollable row of `Category` shortcuts. Purely visual —
-/// tapping a category does nothing yet (see the feature README).
+/// Horizontally scrollable row of `Category` shortcuts — tapping one
+/// filters the results list to that category (see `MarketplacePage`).
 class CategoriesSection extends StatelessWidget {
-  const CategoriesSection({super.key, required this.categories});
+  const CategoriesSection({
+    super.key,
+    required this.categories,
+    this.selectedCategory,
+    this.onCategoryTap,
+  });
 
   final List<Category> categories;
+  final Category? selectedCategory;
+  final ValueChanged<Category>? onCategoryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -24,8 +31,16 @@ class CategoriesSection extends StatelessWidget {
             itemCount: categories.length,
             separatorBuilder: (context, index) =>
                 const SizedBox(width: AppSpacing.space12),
-            itemBuilder: (context, index) =>
-                CategoryChip(category: categories[index]),
+            itemBuilder: (context, index) {
+              final category = categories[index];
+              return CategoryChip(
+                category: category,
+                selected: category.id == selectedCategory?.id,
+                onTap: onCategoryTap == null
+                    ? null
+                    : () => onCategoryTap!(category),
+              );
+            },
           ),
         ),
       ],

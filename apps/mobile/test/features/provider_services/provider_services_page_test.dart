@@ -16,6 +16,8 @@ import 'package:mobile/features/provider_services/repositories/provider_services
 import 'package:mobile/profiles/entities/profile.dart';
 import 'package:mobile/provider/entities/provider.dart';
 import 'package:mobile/service/entities/service.dart';
+import 'package:mobile/service/models/service_status.dart';
+import 'package:mobile/service/models/service_type.dart';
 
 /// Wraps [MockProviderServicesRepository] (already `Future`-returning)
 /// so tests can force it to never resolve (loading state) or return an
@@ -53,6 +55,41 @@ class _FakeProviderServicesRepository implements ProviderServicesRepository {
   @override
   Future<Category> getCategoryFor(Service service) =>
       _delegate.getCategoryFor(service);
+
+  @override
+  Future<Service> createService({
+    required Provider provider,
+    required Category category,
+    required String name,
+    required String description,
+    required num basePrice,
+    required int estimatedDuration,
+    required ServiceType type,
+  }) => _delegate.createService(
+    provider: provider,
+    category: category,
+    name: name,
+    description: description,
+    basePrice: basePrice,
+    estimatedDuration: estimatedDuration,
+    type: type,
+  );
+
+  @override
+  Future<Service> updateService(
+    Service service, {
+    num? basePrice,
+    int? estimatedDuration,
+    ServiceStatus? status,
+  }) => _delegate.updateService(
+    service,
+    basePrice: basePrice,
+    estimatedDuration: estimatedDuration,
+    status: status,
+  );
+
+  @override
+  Future<void> deleteService(Service service) => _delegate.deleteService(service);
 }
 
 void main() {
@@ -123,6 +160,105 @@ void main() {
     expect(find.text('Editar'), findsNWidgets(4));
     expect(find.text('Pausar'), findsNWidgets(4));
     expect(find.text('Eliminar'), findsNWidgets(4));
+  });
+
+  testWidgets(
+    'tapping "Nuevo servicio", filling the form and saving adds a real service',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ServiceCard), findsNWidgets(4));
+
+      await tester.ensureVisible(find.text('Nuevo servicio'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Nuevo servicio'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Nombre del servicio'),
+        'Destape de tuberías',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Descripción'),
+        'Destape de tuberías obstruidas.',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Precio base'),
+        '40',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Duración estimada (minutos)'),
+        '50',
+      );
+
+      await tester.tap(find.text('Guardar'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ServiceCard), findsNWidgets(5));
+      expect(find.text('Destape de tuberías'), findsOneWidget);
+      expect(find.text('Servicio creado.'), findsOneWidget);
+    },
+  );
+
+  testWidgets('tapping "Editar", changing the price and saving updates it', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Editar').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Editar').first);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Precio base'),
+      '99',
+    );
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('\$99'), findsOneWidget);
+    expect(find.text('Servicio actualizado.'), findsOneWidget);
+  });
+
+  testWidgets('tapping "Pausar" on an active service marks it as paused', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pausado'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Pausar').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pausar').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pausado'), findsNWidgets(2));
+    expect(find.text('Servicio pausado.'), findsOneWidget);
+  });
+
+  testWidgets('tapping "Eliminar" and confirming removes the service', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ServiceCard), findsNWidgets(4));
+
+    await tester.ensureVisible(find.text('Eliminar').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Eliminar').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Eliminar servicio'), findsOneWidget);
+    await tester.tap(find.text('Eliminar').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ServiceCard), findsNWidgets(3));
+    expect(find.text('Servicio eliminado.'), findsOneWidget);
   });
 
   testWidgets('loading state shows AppLoading instead of the list', (

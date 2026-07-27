@@ -1,4 +1,5 @@
 import '../../../address/entities/address.dart';
+import '../../../address/models/address_type.dart';
 import '../../../contact/entities/contact.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
@@ -64,4 +65,47 @@ class HttpAddressManagementRepository implements AddressManagementRepository {
     );
     return ContactHttpMapper.fromJson(match);
   }
+
+  @override
+  Future<Address> createAddress({
+    required String alias,
+    required String fullAddress,
+    required String city,
+    required String state,
+    required String country,
+    required String postalCode,
+    required AddressType type,
+  }) async {
+    final json = await _apiClient.post(
+      '/addresses',
+      data: {
+        'identityId': _identityId,
+        'alias': alias,
+        'fullAddress': fullAddress,
+        'city': city,
+        'state': state,
+        'country': country,
+        'postalCode': postalCode,
+        'type': type.name.toUpperCase(),
+      },
+    );
+    return AddressHttpMapper.fromJson(json);
+  }
+
+  @override
+  Future<Address> updateAddress(
+    Address address, {
+    required String alias,
+    required String fullAddress,
+  }) async {
+    final json = await _apiClient.put(
+      '/addresses/${address.id.value}',
+      data: {'alias': alias, 'fullAddress': fullAddress},
+    );
+    return AddressHttpMapper.fromJson(json);
+  }
+
+  @override
+  Future<void> deleteAddress(Address address) =>
+      _apiClient.delete('/addresses/${address.id.value}');
 }

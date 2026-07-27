@@ -55,6 +55,18 @@ dependencies:
   # key wired via android/secrets.properties (gitignored).
   google_maps_flutter: ^2.10.0
 
+  # File picker for the "become a provider" document uploads (criminal
+  # record / certification) — the only feature that needs real file
+  # selection from the device.
+  file_picker: ^11.0.2
+
+  # Camera/gallery capture for profile photos and the provider
+  # registration selfie step.
+  image_picker: ^1.1.2
+
+  # Device GPS position for the "my location" map marker.
+  geolocator: ^13.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -74,7 +86,13 @@ flutter_launcher_icons:
   android: true
   image_path: "assets/icon/app_icon_source.png"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/icon/app_icon_source.png"
+  # A dedicated, padded version of the logo — Android's adaptive icon
+  # mask (circle/squircle/rounded square, varies by launcher) only
+  # guarantees the inner ~66% "safe zone" of this layer stays visible;
+  # using the full-bleed source here cropped the logo at the edges on
+  # real devices. `app_icon_foreground.png` is the same logo scaled to
+  # fit inside that safe zone on a transparent canvas.
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -86,6 +104,11 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    # 180° logo mark, transparent background — used inline in the App
+    # Shell's top bar (see AppTopBar) instead of a text title.
+    - assets/icon/app_icon_source.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

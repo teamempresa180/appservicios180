@@ -5,9 +5,11 @@ import { DeleteProfileUseCase } from '../../application/use_cases/delete-profile
 import { GetProfileUseCase } from '../../application/use_cases/get-profile.use-case';
 import { ListProfileUseCase } from '../../application/use_cases/list-profile.use-case';
 import { SearchProfileUseCase } from '../../application/use_cases/search-profile.use-case';
+import { UpdateProfileAvatarUseCase } from '../../application/use_cases/update-profile-avatar.use-case';
 import { CreateProfileCommand } from '../../application/commands/create-profile.command';
 import { UpdateProfileCommand } from '../../application/commands/update-profile.command';
 import { DeleteProfileCommand } from '../../application/commands/delete-profile.command';
+import { UpdateProfileAvatarCommand } from '../../application/commands/update-profile-avatar.command';
 import { GetProfileQuery } from '../../application/queries/get-profile.query';
 import { ListProfileQuery } from '../../application/queries/list-profile.query';
 import { SearchProfileQuery } from '../../application/queries/search-profile.query';
@@ -16,6 +18,9 @@ import { ProfileVisibility } from '../../domain/value-objects/profile-visibility
 import { ProfileStatus } from '../../domain/value-objects/profile-status.value-object';
 import { CreateProfileRequestDto } from '../dto/create-profile.request.dto';
 import { UpdateProfileRequestDto } from '../dto/update-profile.request.dto';
+import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
+import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { LocalProfileAvatarStorageService } from '../../infrastructure/storage/local-profile-avatar-storage.service';
 
 describe('ProfileController', () => {
   let controller: ProfileController;
@@ -25,6 +30,8 @@ describe('ProfileController', () => {
   let getUseCase: { execute: jest.Mock };
   let listUseCase: { execute: jest.Mock };
   let searchUseCase: { execute: jest.Mock };
+  let updateAvatarUseCase: { execute: jest.Mock };
+  let avatarStorage: { save: jest.Mock };
 
   const profileDto: ProfileDto = {
     id: 'id-1',
@@ -36,6 +43,11 @@ describe('ProfileController', () => {
     status: ProfileStatus.Active,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+  };
+
+  const profileWithAvatarDto: ProfileDto = {
+    ...profileDto,
+    avatarUrl: 'uploads/profiles/id-1/avatar.png',
   };
 
   beforeEach(() => {
@@ -52,6 +64,12 @@ describe('ProfileController', () => {
       }),
     };
     searchUseCase = { execute: jest.fn().mockResolvedValue([profileDto]) };
+    updateAvatarUseCase = {
+      execute: jest.fn().mockResolvedValue(profileWithAvatarDto),
+    };
+    avatarStorage = {
+      save: jest.fn().mockResolvedValue('uploads/profiles/id-1/avatar.png'),
+    };
 
     controller = new ProfileController(
       createUseCase as unknown as CreateProfileUseCase,
@@ -60,6 +78,8 @@ describe('ProfileController', () => {
       getUseCase as unknown as GetProfileUseCase,
       listUseCase as unknown as ListProfileUseCase,
       searchUseCase as unknown as SearchProfileUseCase,
+      updateAvatarUseCase as unknown as UpdateProfileAvatarUseCase,
+      avatarStorage as unknown as LocalProfileAvatarStorageService,
     );
   });
 
@@ -139,5 +159,48 @@ describe('ProfileController', () => {
       new GetProfileQuery('id-1'),
     );
     expect(response.displayName).toBe('Jane Doe');
+  });
+
+  describe('uploadAvatar()', () => {
+    const file = {
+      originalname: 'avatar.png',
+      mimetype: 'image/png',
+      buffer: Buffer.from('png-bytes'),
+    };
+
+    it('confirms the Profile exists, stores the file, then persists the resulting path', async () => {
+      const response = await controller.uploadAvatar('id-1', file);
+
+      expect(getUseCase.execute).toHaveBeenCalledWith(
+        new GetProfileQuery('id-1'),
+      );
+      expect(avatarStorage.save).toHaveBeenCalledWith('id-1', file);
+      expect(updateAvatarUseCase.execute).toHaveBeenCalledWith(
+        new UpdateProfileAvatarCommand(
+          'id-1',
+          'uploads/profiles/id-1/avatar.png',
+        ),
+      );
+      expect(response.avatarUrl).toBe('uploads/profiles/id-1/avatar.png');
+    });
+
+    it('throws ValidationException when no file is provided', async () => {
+      await expect(
+        controller.uploadAvatar('id-1', undefined),
+      ).rejects.toThrow(ValidationException);
+      expect(avatarStorage.save).not.toHaveBeenCalled();
+      expect(updateAvatarUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    it('propagates NotFoundException from GetProfileUseCase without touching storage', async () => {
+      getUseCase.execute.mockRejectedValueOnce(
+        new NotFoundException('Profile unknown-id not found'),
+      );
+
+      await expect(
+        controller.uploadAvatar('unknown-id', file),
+      ).rejects.toThrow(NotFoundException);
+      expect(avatarStorage.save).not.toHaveBeenCalled();
+    });
   });
 });

@@ -22,4 +22,15 @@ class Authentication extends Entity<AuthenticationId> {
   final AuthenticationStatus status;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  Authentication copyWith({AuthenticationStatus? status}) {
+    return Authentication(
+      id: id,
+      identityId: identityId,
+      methodType: methodType,
+      status: status ?? this.status,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
 }

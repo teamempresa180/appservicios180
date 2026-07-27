@@ -4,14 +4,18 @@ import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 
-/// Horizontally scrollable row of mock service categories (Cliente Home
-/// only). Purely visual — tapping a category does nothing yet, real
-/// selection will come once `Category` is wired up (see the feature
-/// README).
+/// Horizontally scrollable row of quick service categories (Cliente
+/// Home only). Tapping one jumps to "Buscar" pre-filtered to that
+/// category — see [onCategoryTap]/`AppShellNavigationIntent`.
 class QuickCategories extends StatelessWidget {
-  const QuickCategories({super.key, required this.categories});
+  const QuickCategories({
+    super.key,
+    required this.categories,
+    this.onCategoryTap,
+  });
 
   final List<String> categories;
+  final ValueChanged<String>? onCategoryTap;
 
   static const Map<String, IconData> _icons = {
     'Plomería': Icons.plumbing_outlined,
@@ -39,6 +43,9 @@ class QuickCategories extends StatelessWidget {
               return SizedBox(
                 width: 96,
                 child: AppCard(
+                  onTap: onCategoryTap == null
+                      ? null
+                      : () => onCategoryTap!(category),
                   padding: const EdgeInsets.all(AppSpacing.space8),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,

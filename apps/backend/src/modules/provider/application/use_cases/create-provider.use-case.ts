@@ -14,17 +14,23 @@ import { ProviderMapper } from '../mappers/provider.mapper';
 import { ProviderValidator } from '../validators/provider.validator';
 
 /**
- * Creates a new Provider for an existing Identity, always in `Active`
- * status. Depends on `IdentityRepository` and `ProfileRepository` (not
- * just its own) to verify both the referenced Identity and the
- * referenced Profile (`providerProfileId`) actually exist before
- * creating a record — `Profile` already has Infrastructure since
- * Sprint 3 Etapa 3, so this check is real, not deferred. Also enforces
- * the real domain invariant carried by
- * `ProviderRepository.findByIdentityId` returning `Provider | null`
- * (not an array, same shape as `Trust`): **at most one Provider
- * record per Identity** — throws `BusinessRuleException` if one
- * already exists.
+ * Creates a new Provider for an existing Identity, always in `Pending`
+ * status. New providers start `Pending` until their submitted
+ * verification documents (criminal record check + professional
+ * certification, via `POST /verifications/:id/document`) are reviewed
+ * and approved; approval today happens through the already-existing
+ * `PUT /providers/:id` endpoint (which already accepts an optional
+ * `status` field), since this backend has no admin/staff role model
+ * yet to gate that transition specially. Depends on
+ * `IdentityRepository` and `ProfileRepository` (not just its own) to
+ * verify both the referenced Identity and the referenced Profile
+ * (`providerProfileId`) actually exist before creating a record —
+ * `Profile` already has Infrastructure since Sprint 3 Etapa 3, so this
+ * check is real, not deferred. Also enforces the real domain invariant
+ * carried by `ProviderRepository.findByIdentityId` returning
+ * `Provider | null` (not an array, same shape as `Trust`): **at most
+ * one Provider record per Identity** — throws `BusinessRuleException`
+ * if one already exists.
  */
 export class CreateProviderUseCase {
   constructor(
@@ -61,7 +67,7 @@ export class CreateProviderUseCase {
     const provider = new Provider(ProviderId.create(), {
       identityId,
       providerProfileId,
-      status: ProviderStatus.Active,
+      status: ProviderStatus.Pending,
       type: command.type,
       experience: command.experience,
       biography: command.biography,

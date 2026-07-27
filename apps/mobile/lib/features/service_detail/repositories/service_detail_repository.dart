@@ -10,12 +10,17 @@ import '../../../service/entities/service.dart';
 /// `MockServiceDetailRepository` (kept for tests/offline fallback, see
 /// the feature README).
 ///
-/// There is no id-based lookup yet — this feature shows a single fixed
-/// service (see the feature README for why).
+/// [getService] has no id parameter — it is only used as a fallback
+/// when the caller reaches this screen without already knowing which
+/// [Service] to show (e.g. a direct/test navigation). The normal path
+/// (tapping a service card in Marketplace/Search, which always already
+/// has the real [Service] in hand) passes it straight into
+/// [getProviderFor]/[getCategoryFor]/[getReviewsFor] — real per-id
+/// lookups, not a fixed record.
 abstract class ServiceDetailRepository {
   Future<Service> getService();
-  Future<Provider> getProvider();
-  Future<Profile> getProviderProfile();
-  Future<Category> getCategory();
-  Future<List<Review>> getReviews();
+  Future<Provider> getProviderFor(Service service);
+  Future<Profile> getProviderProfileFor(Provider provider);
+  Future<Category> getCategoryFor(Service service);
+  Future<List<Review>> getReviewsFor(Service service);
 }

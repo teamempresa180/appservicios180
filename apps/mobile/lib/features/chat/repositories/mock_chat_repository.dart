@@ -5,6 +5,7 @@ import '../../../order/entities/order.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
 import '../mock/mock_chat_data.dart';
+import '../models/conversation_summary.dart';
 import 'chat_repository.dart';
 
 /// In-memory `ChatRepository` backed by fixed mock data. No backend,
@@ -29,4 +30,8 @@ class MockChatRepository implements ChatRepository {
   @override
   Future<List<Attachment>> getAttachments() =>
       Future.value(List.unmodifiable(mockChatAttachments));
+
+  @override
+  Future<List<ConversationSummary>> getConversations() =>
+      Future.value(List.unmodifiable(mockConversations));
 }

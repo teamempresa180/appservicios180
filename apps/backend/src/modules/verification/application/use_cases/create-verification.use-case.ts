@@ -43,6 +43,7 @@ export class CreateVerificationUseCase {
       verifiedAt: null,
       createdAt: now,
       updatedAt: now,
+      documentPath: null,
     });
 
     await this.verificationRepository.save(verification);

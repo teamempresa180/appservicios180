@@ -57,11 +57,19 @@ import { AuthSessionHttpMapper } from '../dto/auth-session-http.mapper';
  * `findOne({ id: 'me' })` — same reasoning as `search` in every other
  * module since Prompt 71. `login`/`refresh`/`logout` are intentionally
  * public (a caller without a token is exactly who needs them); `me`
- * and the CRUD endpoints for 2FA-method records
- * (`create`/`update`/`delete`/`findOne`) all require `JwtAuthGuard`
- * (Prompt 78, Security Hardening) — managing an Identity's
+ * and `update`/`delete`/`findOne` all require `JwtAuthGuard` (Prompt
+ * 78, Security Hardening) — managing an *existing* Identity's
  * authentication methods is not part of the public login/registration
  * flow.
+ *
+ * `create` is the one exception, intentionally public — same
+ * rationale already documented on `CredentialController.create`:
+ * registering the initial `Password` authentication method is part of
+ * the same registration step as `POST /identities`/`POST /credentials`,
+ * before any token exists. Without this, self-registration would be
+ * impossible: `LoginUseCase` requires an *active* `Password`
+ * `Authentication` record to exist before it will even check the
+ * password, and there is no other way to create that first record.
  */
 @ApiTags('Authentication')
 @Controller(AuthenticationRoutes.base)
@@ -77,8 +85,6 @@ export class AuthenticationController {
   ) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation(AuthenticationSwagger.create)
   @ApiResponse({
     status: 201,
