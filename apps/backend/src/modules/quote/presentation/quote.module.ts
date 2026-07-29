@@ -52,8 +52,9 @@ import { PrismaQuoteRepository } from '../infrastructure/persistence/prisma-quot
     },
     {
       provide: AcceptQuoteUseCase,
-      useFactory: (repo: QuoteRepository) => new AcceptQuoteUseCase(repo),
-      inject: [QUOTE_REPOSITORY],
+      useFactory: (repo: QuoteRepository, orderRepo: OrderRepository) =>
+        new AcceptQuoteUseCase(repo, orderRepo),
+      inject: [QUOTE_REPOSITORY, ORDER_REPOSITORY],
     },
     {
       provide: RejectQuoteUseCase,

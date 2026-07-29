@@ -12,5 +12,7 @@ export class CreateProviderCommand {
     public readonly experience: ProviderExperience,
     public readonly biography: string,
     public readonly yearsOfExperience: number,
+    public readonly categoryId?: string,
+    public readonly specialization?: string,
   ) {}
 }

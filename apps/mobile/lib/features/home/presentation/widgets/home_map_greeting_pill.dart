@@ -38,9 +38,13 @@ class HomeMapGreetingPill extends StatelessWidget {
         children: [
           const AppAvatar(radius: 16),
           const SizedBox(width: AppSpacing.space8),
-          Text(
-            'Hola, ${MockHomeData.displayName(role)}',
-            style: context.textStyles.labelLarge,
+          Flexible(
+            child: Text(
+              'Hola, ${MockHomeData.displayName(role)}',
+              style: context.textStyles.labelLarge,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),

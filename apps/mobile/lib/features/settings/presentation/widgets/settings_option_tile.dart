@@ -44,7 +44,12 @@ class SettingsOptionTile extends StatelessWidget {
           Icon(_iconFor(option), color: context.colors.primary),
           const SizedBox(width: AppSpacing.space12),
           Expanded(
-            child: Text(option.label, style: context.textStyles.bodyMedium),
+            child: Text(
+              option.label,
+              style: context.textStyles.bodyMedium,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           Icon(AppIcons.chevronRight, color: context.colors.secondary),
         ],

@@ -63,6 +63,8 @@ class ProviderCard extends StatelessWidget {
             ),
             Text(
               '${display.servicesCount} servicios',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: context.textStyles.bodySmall,
             ),
           ],

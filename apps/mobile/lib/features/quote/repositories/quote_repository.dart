@@ -1,26 +1,42 @@
-import '../../../address/entities/address.dart';
-import '../../../category/entities/category.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
 import '../../../quote/entities/quote.dart';
-import '../../../service/entities/service.dart';
+import '../../../quote/models/quote_type.dart';
+import '../../../order/models/order_id.dart';
+import '../../../provider/models/provider_id.dart';
 
-/// Contract for reading the domain entities a Quote screen needs.
-/// Returns only real domain entities — no `Map`, no `dynamic`.
-/// Implemented today by `MockQuoteRepository`; a future
-/// `ApiQuoteRepository` or `FirebaseQuoteRepository` would implement
-/// this same interface (see the feature README).
+/// Contract for reading/writing the `Quote`s that belong to a single
+/// `Order` — an order-scoped, multi-quote-aware replacement of this
+/// feature's previous "one single fixed quote" shape (see the feature
+/// README for that history). An `Order.orderId` can now receive
+/// **several** `Quote`s from different providers (open request), so
+/// this screen shows a real list, not one fixed record.
 ///
-/// There is no id-based lookup yet — this feature shows a single fixed
-/// quote (see the feature README for why).
+/// Implemented today by `MockQuoteRepository` and `HttpQuoteRepository`
+/// (real backend).
 abstract class QuoteRepository {
-  Future<Quote> getQuote();
-  Future<Service> getService();
-  Future<Provider> getProvider();
-  Future<Profile> getProfile();
-  Future<Category> getCategory();
-  Future<Address> getAddress();
+  /// Every `Quote` submitted for [orderId], newest first.
+  Future<List<Quote>> getQuotesForOrder(OrderId orderId);
 
+  Future<Provider> getProviderFor(Quote quote);
+  Future<Profile> getProfileFor(Quote quote);
+
+  /// Submits a new `Quote` a provider offers for an order — used by the
+  /// provider-side flow (out of scope for this pass, kept here so the
+  /// interface matches the real `POST /quotes` contract completely).
+  Future<Quote> createQuote({
+    required OrderId orderId,
+    required ProviderId providerId,
+    required num proposedPrice,
+    required int estimatedDuration,
+    required String notes,
+    required QuoteType type,
+  });
+
+  /// Accepts [quote] — on the real backend this also cascades the
+  /// linked `Order` from `Pending` to `Accepted`, assigning its
+  /// `providerId` if it was an open request (see `Order`'s own doc
+  /// comment).
   Future<Quote> acceptQuote(Quote quote);
   Future<Quote> rejectQuote(Quote quote);
 }

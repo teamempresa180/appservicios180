@@ -43,6 +43,7 @@ import { InMemoryCategoryRepository } from '../src/modules/category/application/
 import { SERVICE_REPOSITORY } from '../src/modules/service/domain/interfaces/service-repository.interface';
 import { InMemoryServiceRepository } from '../src/modules/service/application/use_cases/test-support/in-memory-service.repository';
 import { ServiceId } from '../src/modules/service/domain/value-objects/service-id.value-object';
+import { CategoryId } from '../src/modules/category/domain/value-objects/category-id.value-object';
 import { PaymentMethod } from '../src/modules/payment/domain/value-objects/payment-method.value-object';
 import { PaymentResponseDto } from '../src/modules/payment/presentation/dto/payment.response.dto';
 import { PaymentListResponseDto } from '../src/modules/payment/presentation/dto/payment-list.response.dto';
@@ -107,6 +108,7 @@ describe('PaymentController (e2e)', () => {
       identityId: IdentityId.create(),
       providerId: ProviderId.create(),
       serviceId: ServiceId.create(),
+      categoryId: CategoryId.create(),
       title: 'Fix leaking kitchen faucet',
       description: 'Description.',
       scheduledDate: now,

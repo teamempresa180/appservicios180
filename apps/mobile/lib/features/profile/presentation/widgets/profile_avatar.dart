@@ -44,12 +44,15 @@ class ProfileAvatar extends StatelessWidget {
             child: InkWell(
               customBorder: const CircleBorder(),
               onTap: onEditTap,
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.space4),
-                child: Icon(
-                  Icons.camera_alt_outlined,
-                  size: AppSpacing.space16,
-                  color: context.colors.onPrimary,
+              child: Tooltip(
+                message: 'Cambiar foto de perfil',
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.space4),
+                  child: Icon(
+                    Icons.camera_alt_outlined,
+                    size: AppSpacing.space16,
+                    color: context.colors.onPrimary,
+                  ),
                 ),
               ),
             ),

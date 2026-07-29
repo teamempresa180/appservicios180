@@ -1,6 +1,10 @@
 import 'package:flutter/foundation.dart';
 import '../../../../core/network/http_exceptions.dart';
 import '../../../../order/entities/order.dart';
+import '../../../../profiles/entities/profile.dart';
+import '../../../../provider/entities/provider.dart';
+import '../../../../quote/entities/quote.dart';
+import '../../../../service/entities/service.dart';
 import '../../mock/mock_orders_data.dart';
 import '../../models/order_display.dart';
 import '../../repositories/orders_repository.dart';
@@ -40,12 +44,29 @@ class OrdersViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// [OrdersRepository.getServiceFor]/[getProviderFor]/[getQuoteFor] all
+  /// throw `StateError` when [order] is an open request with nothing
+  /// assigned yet, or a `Pending` order with no `Quote` yet (see the
+  /// repository's own doc comment) — caught here and degraded to `null`
+  /// so the UI can show a "waiting" state instead of an error screen.
+  Future<T?> _orNull<T>(Future<T> Function() call) async {
+    try {
+      return await call();
+    } on StateError {
+      return null;
+    }
+  }
+
   Future<OrderDisplay> _buildDisplay(Order order) async {
-    final service = await _repository.getServiceFor(order);
-    final provider = await _repository.getProviderFor(order);
-    final profile = await _repository.getProfileFor(order);
     final category = await _repository.getCategoryFor(order);
-    final quote = await _repository.getQuoteFor(order);
+    final service = await _orNull<Service>(() => _repository.getServiceFor(order));
+    final provider = await _orNull<Provider>(
+      () => _repository.getProviderFor(order),
+    );
+    final profile = await _orNull<Profile>(
+      () => _repository.getProfileFor(order),
+    );
+    final quote = await _orNull<Quote>(() => _repository.getQuoteFor(order));
     return OrderDisplay(
       order: order,
       service: service,

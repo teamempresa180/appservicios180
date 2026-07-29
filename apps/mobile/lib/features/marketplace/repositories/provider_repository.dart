@@ -1,3 +1,4 @@
+import '../../../category/models/category_id.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
 import '../../../provider/models/provider_id.dart';
@@ -8,6 +9,16 @@ import '../../../provider/models/provider_id.dart';
 /// the feature README).
 abstract class ProviderRepository {
   Future<List<Provider>> getRecommended();
+
+  /// Active providers compatible with [categoryId], optionally narrowed
+  /// by a case-insensitive substring match on their `specialization`
+  /// (`GET /providers/compatible?categoryId=&specialization=` on the
+  /// real backend) — backs the Marketplace's category →
+  /// specialization → compatible-providers browse flow.
+  Future<List<Provider>> getCompatible({
+    required CategoryId categoryId,
+    String? specialization,
+  });
 
   /// The `Profile` that carries this provider's display name. `Provider`
   /// itself only stores a `ProfileId` reference (per the domain's "no

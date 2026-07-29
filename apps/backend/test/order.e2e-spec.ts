@@ -28,6 +28,9 @@ import { ProviderExperience } from '../src/modules/provider/domain/value-objects
 import { ProfileId } from '../src/modules/profiles/domain/value-objects/profile-id.value-object';
 import { CATEGORY_REPOSITORY } from '../src/modules/category/domain/interfaces/category-repository.interface';
 import { InMemoryCategoryRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category.repository';
+import { Category } from '../src/modules/category/domain/entities/category.entity';
+import { CategoryType } from '../src/modules/category/domain/value-objects/category-type.value-object';
+import { CategoryStatus } from '../src/modules/category/domain/value-objects/category-status.value-object';
 import { SERVICE_REPOSITORY } from '../src/modules/service/domain/interfaces/service-repository.interface';
 import { InMemoryServiceRepository } from '../src/modules/service/application/use_cases/test-support/in-memory-service.repository';
 import { Service } from '../src/modules/service/domain/entities/service.entity';
@@ -60,6 +63,7 @@ describe('OrderController (e2e)', () => {
   let identityId: string;
   let providerId: string;
   let serviceId: string;
+  let categoryId: string;
 
   beforeEach(async () => {
     const now = new Date();
@@ -93,10 +97,23 @@ describe('OrderController (e2e)', () => {
     providerId = provider.id.value;
 
     const categoryRepository = new InMemoryCategoryRepository();
+    const category = new Category(CategoryId.create(), {
+      name: 'Plumbing',
+      description: 'Pipes and water systems',
+      icon: 'icon',
+      color: '#000',
+      status: CategoryStatus.Active,
+      type: CategoryType.Standard,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await categoryRepository.save(category);
+    categoryId = category.id.value;
+
     const serviceRepository = new InMemoryServiceRepository();
     const service = new Service(ServiceId.create(), {
       providerId: provider.id,
-      categoryId: CategoryId.create(),
+      categoryId: category.id,
       name: 'Pipe repair',
       description: 'Fixes leaking or broken pipes.',
       basePrice: 50.0,
@@ -149,6 +166,7 @@ describe('OrderController (e2e)', () => {
     overrides: Partial<Record<string, unknown>> = {},
   ) => ({
     identityId,
+    categoryId,
     providerId,
     serviceId,
     title: 'Fix leaking kitchen faucet',

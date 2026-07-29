@@ -82,7 +82,7 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                FadeIn(child: const AppSectionTitle(title: 'Crear cuenta')),
+                const FadeIn(child: AppSectionTitle(title: 'Crear cuenta')),
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.space16),
                   child: Text(

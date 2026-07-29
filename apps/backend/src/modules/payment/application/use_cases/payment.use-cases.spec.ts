@@ -125,6 +125,7 @@ describe('Payment use cases', () => {
       identityId: payer.id,
       providerId: provider.id,
       serviceId: service.id,
+      categoryId: service.categoryId,
       title: 'Fix the sink',
       description: 'The kitchen sink is leaking',
       scheduledDate: new Date('2026-01-01T08:00:00Z'),

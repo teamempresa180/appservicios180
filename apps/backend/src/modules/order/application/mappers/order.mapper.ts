@@ -10,8 +10,9 @@ export class OrderMapper {
     const dto = new OrderDto();
     dto.id = order.id.value;
     dto.identityId = order.identityId.value;
-    dto.providerId = order.providerId.value;
-    dto.serviceId = order.serviceId.value;
+    dto.providerId = order.providerId?.value ?? null;
+    dto.serviceId = order.serviceId?.value ?? null;
+    dto.categoryId = order.categoryId.value;
     dto.title = order.title;
     dto.description = order.description;
     dto.scheduledDate = order.scheduledDate;

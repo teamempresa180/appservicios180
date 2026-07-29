@@ -40,9 +40,13 @@ class PaymentMethodCard extends StatelessWidget {
             children: [
               Icon(_iconFor(data.paymentMethod), color: context.colors.primary),
               const SizedBox(width: AppSpacing.space8),
-              Text(
-                data.paymentMethod.label,
-                style: context.textStyles.bodyMedium,
+              Expanded(
+                child: Text(
+                  data.paymentMethod.label,
+                  style: context.textStyles.bodyMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),

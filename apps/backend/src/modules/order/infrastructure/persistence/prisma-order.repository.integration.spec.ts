@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
 import { ServiceId } from '../../../service/domain/value-objects/service-id.value-object';
+import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
 import { Order } from '../../domain/entities/order.entity';
 import { OrderId } from '../../domain/value-objects/order-id.value-object';
 import { OrderPriority } from '../../domain/value-objects/order-priority.value-object';
@@ -19,6 +20,7 @@ describe('PrismaOrderRepository (integration)', () => {
   let identityId: string;
   let providerId: string;
   let serviceId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     const identity = await prisma.identityModel.create({
@@ -91,6 +93,7 @@ describe('PrismaOrderRepository (integration)', () => {
         updatedAt: new Date(),
       },
     });
+    categoryId = category.id;
 
     const service = await prisma.serviceModel.create({
       data: {
@@ -120,6 +123,7 @@ describe('PrismaOrderRepository (integration)', () => {
       identityId: IdentityId.fromString(identityId),
       providerId: ProviderId.fromString(providerId),
       serviceId: ServiceId.fromString(serviceId),
+      categoryId: CategoryId.fromString(categoryId),
       title: overrides.title ?? 'Integration Test Order',
       description: 'desc',
       scheduledDate: new Date('2026-01-01T08:00:00Z'),
@@ -159,9 +163,34 @@ describe('PrismaOrderRepository (integration)', () => {
     const order = buildOrder();
     await repository.save(order);
 
-    const results = await repository.findByProviderId(order.providerId);
+    const results = await repository.findByProviderId(order.providerId!);
 
     expect(results.some((o) => o.id.equals(order.id))).toBe(true);
+  });
+
+  it('finds open (unassigned) Orders by categoryId', async () => {
+    const now = new Date();
+    const openOrder = new Order(OrderId.create(), {
+      identityId: IdentityId.fromString(identityId),
+      providerId: null,
+      serviceId: null,
+      categoryId: CategoryId.fromString(categoryId),
+      title: 'Open Integration Test Order',
+      description: 'desc',
+      scheduledDate: new Date('2026-01-01T08:00:00Z'),
+      status: OrderStatus.Pending,
+      priority: OrderPriority.Medium,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await repository.save(openOrder);
+
+    const results = await repository.findOpenByCategoryId(
+      CategoryId.fromString(categoryId),
+    );
+
+    expect(results.some((o) => o.id.equals(openOrder.id))).toBe(true);
+    expect(results.every((o) => o.providerId === null)).toBe(true);
   });
 
   it('updates an existing Order on save (upsert)', async () => {
@@ -172,6 +201,7 @@ describe('PrismaOrderRepository (integration)', () => {
       identityId: order.identityId,
       providerId: order.providerId,
       serviceId: order.serviceId,
+      categoryId: order.categoryId,
       title: 'After Update',
       description: order.description,
       scheduledDate: order.scheduledDate,

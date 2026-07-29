@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/ui/theme/app_theme.dart';
+import 'package:mobile/features/request_service/mock/mock_request_service_data.dart';
 import 'package:mobile/features/request_service/presentation/pages/request_service_page.dart';
 import 'package:mobile/features/request_service/repositories/mock_request_service_repository.dart';
 
@@ -29,6 +30,10 @@ void main() {
           theme: AppTheme.light,
           home: Scaffold(
             body: RequestServicePage(
+              category: mockRequestServiceCategory,
+              provider: mockRequestServiceProvider,
+              service: mockRequestServiceService,
+              profile: mockRequestServiceProfile,
               repository: MockRequestServiceRepository(),
             ),
           ),

@@ -6,6 +6,7 @@ import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_chip.dart';
 import 'package:mobile/features/quote/repositories/mock_quote_repository.dart';
 import 'package:mobile/features/quote/repositories/quote_repository.dart';
+import 'package:mobile/features/request_service/mock/mock_request_service_data.dart';
 import 'package:mobile/features/request_service/presentation/pages/request_service_page.dart';
 import 'package:mobile/features/request_service/repositories/mock_request_service_repository.dart';
 import 'package:mobile/features/request_service/presentation/widgets/address_summary.dart';
@@ -21,7 +22,13 @@ void main() {
     return MaterialApp(
       theme: AppTheme.light,
       home: Scaffold(
-        body: RequestServicePage(repository: MockRequestServiceRepository()),
+        body: RequestServicePage(
+          category: mockRequestServiceCategory,
+          provider: mockRequestServiceProvider,
+          service: mockRequestServiceService,
+          profile: mockRequestServiceProfile,
+          repository: MockRequestServiceRepository(),
+        ),
       ),
     );
   }
@@ -127,6 +134,26 @@ void main() {
       expect(find.text('Cotización'), findsWidgets);
     },
   );
+
+  testWidgets('open request (no provider/service) skips those summaries', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: RequestServicePage(
+            category: mockRequestServiceCategory,
+            repository: MockRequestServiceRepository(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ServiceSummary), findsNothing);
+    expect(find.byType(ProviderSummary), findsNothing);
+  });
 
   testWidgets('does not build its own Scaffold', (tester) async {
     await tester.pumpWidget(buildApp());

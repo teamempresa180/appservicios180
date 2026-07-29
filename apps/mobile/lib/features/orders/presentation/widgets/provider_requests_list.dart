@@ -9,19 +9,24 @@ import 'provider_request_card.dart';
 /// Vertical list of `ProviderRequestCard`s, entering with a staggered
 /// fade+slide (see `staggerDelayFor`) — same entrance pattern as
 /// `OrdersList`. [busyOrderId]/[busyAction] identify the single request
-/// currently being accepted/rejected, if any.
+/// currently being acted on, if any (`'reject'`/`'quote'`/`'start'`/
+/// `'complete'`).
 class ProviderRequestsList extends StatelessWidget {
   const ProviderRequestsList({
     super.key,
     required this.requests,
-    required this.onAccept,
+    required this.onSubmitQuote,
+    required this.onStart,
+    required this.onComplete,
     required this.onReject,
     this.busyOrderId,
     this.busyAction,
   });
 
   final List<ProviderRequestDisplay> requests;
-  final ValueChanged<ProviderRequestDisplay> onAccept;
+  final ValueChanged<ProviderRequestDisplay> onSubmitQuote;
+  final ValueChanged<ProviderRequestDisplay> onStart;
+  final ValueChanged<ProviderRequestDisplay> onComplete;
   final ValueChanged<ProviderRequestDisplay> onReject;
   final String? busyOrderId;
   final String? busyAction;
@@ -40,7 +45,9 @@ class ProviderRequestsList extends StatelessWidget {
                 busyAction: busyOrderId == request.order.id.value
                     ? busyAction
                     : null,
-                onAccept: () => onAccept(request),
+                onSubmitQuote: () => onSubmitQuote(request),
+                onStart: () => onStart(request),
+                onComplete: () => onComplete(request),
                 onReject: () => onReject(request),
               ),
             ),

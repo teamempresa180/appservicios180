@@ -9,6 +9,8 @@ export class ProviderDto {
   id!: string;
   identityId!: string;
   providerProfileId!: string;
+  categoryId!: string | null;
+  specialization!: string | null;
   status!: ProviderStatus;
   type!: ProviderType;
   experience!: ProviderExperience;

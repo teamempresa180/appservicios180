@@ -41,6 +41,7 @@ export class JwtTokenService implements TokenService {
         expiresIn: asExpiresIn(this.config.jwtAccessExpiresIn),
         issuer: this.config.jwtIssuer,
         audience: this.config.jwtAudience,
+        algorithm: 'HS256',
       },
     );
   }
@@ -58,6 +59,7 @@ export class JwtTokenService implements TokenService {
         expiresIn: asExpiresIn(this.config.jwtRefreshExpiresIn),
         issuer: this.config.jwtIssuer,
         audience: this.config.jwtAudience,
+        algorithm: 'HS256',
       },
     );
   }
@@ -88,6 +90,7 @@ export class JwtTokenService implements TokenService {
         secret,
         issuer: this.config.jwtIssuer,
         audience: this.config.jwtAudience,
+        algorithms: ['HS256'],
       });
     } catch {
       throw new UnauthorizedException('Invalid or expired token');

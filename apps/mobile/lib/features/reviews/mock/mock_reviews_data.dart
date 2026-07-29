@@ -127,6 +127,7 @@ final Map<ReviewId, Order> mockReviewOrders = {
   _review1Id: Order(
     id: OrderId.fromString('reviews-order-1'),
     identityId: IdentityId.fromString('reviews-identity-client-1'),
+    categoryId: CategoryId.fromString('reviews-category-plumbing'),
     providerId: mockReviewsProvider.id,
     serviceId: ServiceId.fromString('reviews-service-leak-repair'),
     title: 'Reparación de fuga de agua',
@@ -140,6 +141,7 @@ final Map<ReviewId, Order> mockReviewOrders = {
   _review2Id: Order(
     id: OrderId.fromString('reviews-order-2'),
     identityId: IdentityId.fromString('reviews-identity-client-1'),
+    categoryId: CategoryId.fromString('reviews-category-plumbing'),
     providerId: mockReviewsProvider.id,
     serviceId: ServiceId.fromString('reviews-service-pipe-install'),
     title: 'Instalación de tuberías',
@@ -153,6 +155,7 @@ final Map<ReviewId, Order> mockReviewOrders = {
   _review3Id: Order(
     id: OrderId.fromString('reviews-order-3'),
     identityId: IdentityId.fromString('reviews-identity-client-2'),
+    categoryId: CategoryId.fromString('reviews-category-plumbing'),
     providerId: mockReviewsProvider.id,
     serviceId: ServiceId.fromString('reviews-service-faucet-install'),
     title: 'Instalación de grifería',
@@ -166,6 +169,7 @@ final Map<ReviewId, Order> mockReviewOrders = {
   _review4Id: Order(
     id: OrderId.fromString('reviews-order-4'),
     identityId: IdentityId.fromString('reviews-identity-client-1'),
+    categoryId: CategoryId.fromString('reviews-category-electrical'),
     providerId: mockReviewsProvider.id,
     serviceId: ServiceId.fromString('reviews-service-outlet-install'),
     title: 'Instalación de tomacorrientes',

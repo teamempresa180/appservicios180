@@ -26,9 +26,17 @@ import 'provider_dashboard_repository.dart';
 /// correctly-scoped lookup, same shape as `HttpOrdersRepository`'s
 /// relation getters.
 ///
-/// [getOrders], [getQuotes] and [getReviews] have the same interim
-/// shape as `HttpOrdersRepository.getQuoteFor`/`HttpChatRepository`'s
-/// list getters: the backend has no `GET /orders?providerId=`,
+/// [getOrders] now calls `GET /orders/relevant-for-provider` instead of
+/// the old unfiltered `GET /orders` + client-side `providerId` filter —
+/// that previous shape both leaked every other provider's orders to
+/// this call site and missed open (unassigned) requests in this
+/// provider's own category entirely, a real scoping bug fixed the same
+/// way as `HttpOrdersRepository.getRelevantOrders`. The endpoint
+/// resolves the calling identity's Provider record server-side, so it
+/// doesn't need [_fetchProvider] at all.
+///
+/// [getQuotes] and [getReviews] still have the same interim shape as
+/// `HttpChatRepository`'s list getters: the backend has no
 /// `GET /quotes?providerId=` or `GET /reviews?providerId=` filter, so
 /// each lists the full unfiltered collection and matches `providerId`
 /// client-side. [getPayments] does the same against `GET /payments`,
@@ -66,11 +74,9 @@ class HttpProviderDashboardRepository implements ProviderDashboardRepository {
 
   @override
   Future<List<Order>> getOrders() async {
-    final provider = await _fetchProvider();
-    final json = await _apiClient.get('/orders');
-    final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final items = await _apiClient.getList('/orders/relevant-for-provider');
     return items
-        .where((item) => item['providerId'] == provider.id.value)
+        .cast<Map<String, dynamic>>()
         .map(OrderHttpMapper.fromJson)
         .toList();
   }

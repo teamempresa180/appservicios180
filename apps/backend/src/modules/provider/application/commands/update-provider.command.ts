@@ -10,5 +10,7 @@ export class UpdateProviderCommand {
     public readonly biography?: string,
     public readonly experience?: ProviderExperience,
     public readonly status?: ProviderStatus,
+    public readonly categoryId?: string,
+    public readonly specialization?: string,
   ) {}
 }

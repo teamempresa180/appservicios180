@@ -4,5 +4,6 @@
 export const ProviderRoutes = {
   base: 'providers',
   search: 'search',
+  compatible: 'compatible',
   byId: ':id',
 } as const;

@@ -7,21 +7,22 @@ import 'package:mobile/category/entities/category.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
+import 'package:mobile/core/ui/widgets/app_text_field.dart';
 import 'package:mobile/features/orders/presentation/pages/provider_requests_page.dart';
 import 'package:mobile/features/orders/presentation/widgets/provider_request_card.dart';
 import 'package:mobile/features/orders/repositories/mock_orders_repository.dart';
 import 'package:mobile/features/orders/repositories/orders_repository.dart';
 import 'package:mobile/order/entities/order.dart';
-import 'package:mobile/order/models/order_status.dart';
 import 'package:mobile/profiles/entities/profile.dart';
 import 'package:mobile/provider/entities/provider.dart';
 import 'package:mobile/quote/entities/quote.dart';
+import 'package:mobile/quote/models/quote_type.dart';
 import 'package:mobile/service/entities/service.dart';
 
-/// Wraps [MockOrdersRepository] so tests can force it to never resolve
-/// (loading state) or return no pending orders (empty state), and can
-/// swap in an accept/reject implementation that fails — same forwarding
-/// pattern as `orders_page_test.dart`'s `_FakeOrdersRepository`.
+/// Wraps [MockOrdersRepository] so tests can force `getRelevantOrders`
+/// to never resolve (loading state) or return no requests (empty
+/// state), same forwarding pattern as `orders_page_test.dart`'s
+/// `_FakeOrdersRepository` — every other method just delegates.
 class _FakeOrdersRepository implements OrdersRepository {
   _FakeOrdersRepository({this.neverResolves = false, this.forceEmpty = false});
 
@@ -30,11 +31,18 @@ class _FakeOrdersRepository implements OrdersRepository {
   final _delegate = MockOrdersRepository();
 
   @override
-  Future<List<Order>> getOrders() {
+  Future<List<Order>> getRelevantOrders() {
     if (neverResolves) return Completer<List<Order>>().future;
     if (forceEmpty) return Future.value(const []);
-    return _delegate.getOrders();
+    return _delegate.getRelevantOrders();
   }
+
+  @override
+  Future<List<Order>> getOrders() => _delegate.getOrders();
+
+  @override
+  Future<Category> getCategoryFor(Order order) =>
+      _delegate.getCategoryFor(order);
 
   @override
   Future<Service> getServiceFor(Order order) => _delegate.getServiceFor(order);
@@ -47,10 +55,6 @@ class _FakeOrdersRepository implements OrdersRepository {
   Future<Profile> getProfileFor(Order order) => _delegate.getProfileFor(order);
 
   @override
-  Future<Category> getCategoryFor(Order order) =>
-      _delegate.getCategoryFor(order);
-
-  @override
   Future<Quote> getQuoteFor(Order order) => _delegate.getQuoteFor(order);
 
   @override
@@ -58,10 +62,40 @@ class _FakeOrdersRepository implements OrdersRepository {
       _delegate.getClientProfileFor(order);
 
   @override
-  Future<Order> acceptOrder(Order order) => _delegate.acceptOrder(order);
+  Future<Order> rejectOrder(Order order) => _delegate.rejectOrder(order);
 
   @override
-  Future<Order> rejectOrder(Order order) => _delegate.rejectOrder(order);
+  Future<Order> cancelOrder(Order order) => _delegate.cancelOrder(order);
+
+  @override
+  Future<Provider> getCurrentProvider() => _delegate.getCurrentProvider();
+
+  @override
+  Future<Quote?> getMyQuoteFor(Order order, Provider provider) =>
+      _delegate.getMyQuoteFor(order, provider);
+
+  @override
+  Future<Quote> submitQuote({
+    required Order order,
+    required Provider provider,
+    required num proposedPrice,
+    required int estimatedDuration,
+    required String notes,
+    required QuoteType type,
+  }) => _delegate.submitQuote(
+    order: order,
+    provider: provider,
+    proposedPrice: proposedPrice,
+    estimatedDuration: estimatedDuration,
+    notes: notes,
+    type: type,
+  );
+
+  @override
+  Future<Order> startOrder(Order order) => _delegate.startOrder(order);
+
+  @override
+  Future<Order> completeOrder(Order order) => _delegate.completeOrder(order);
 }
 
 void main() {
@@ -69,7 +103,9 @@ void main() {
     return MaterialApp(
       theme: AppTheme.light,
       home: Scaffold(
-        body: ProviderRequestsPage(repository: repository ?? _FakeOrdersRepository()),
+        body: ProviderRequestsPage(
+          repository: repository ?? MockOrdersRepository(),
+        ),
       ),
     );
   }
@@ -81,69 +117,122 @@ void main() {
     expect(find.text('Servicios'), findsOneWidget);
   });
 
+  testWidgets('shows the Activas/Historial tabs', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Activas'), findsOneWidget);
+    expect(find.text('Historial'), findsOneWidget);
+  });
+
   testWidgets(
-    'lists only the pending order (mockOrders has exactly one)',
+    'Activas shows every pending/accepted/in-progress relevant order',
     (tester) async {
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
 
-      expect(find.byType(ProviderRequestCard), findsOneWidget);
-      expect(find.text('Laura Gómez'), findsOneWidget);
+      // mockProviderRequestOrders: 3 pending (direct-unquoted,
+      // direct-quoted, open) + 1 accepted + 1 in progress = 5 active,
+      // 1 completed (history only).
+      expect(find.byType(ProviderRequestCard), findsNWidgets(5));
     },
   );
 
-  testWidgets('does not show an "add service" affordance', (tester) async {
+  testWidgets('an order this provider already quoted shows a waiting badge '
+      'instead of the action buttons', (tester) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Nuevo servicio'), findsNothing);
+    expect(find.text('Cotización enviada'), findsOneWidget);
+    // Two of the three pending cards (direct + open) still need a quote.
+    expect(find.text('Enviar cotización'), findsNWidgets(2));
   });
 
-  testWidgets('tapping "Aceptar" removes the request from the list', (
+  testWidgets('submitting a quote replaces the action with the waiting badge', (
     tester,
   ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.byType(ProviderRequestCard), findsOneWidget);
+    expect(find.text('Cotización enviada'), findsOneWidget);
 
-    await tester.tap(find.text('Aceptar'));
+    await tester.tap(find.text('Enviar cotización').first);
     await tester.pumpAndSettle();
 
-    expect(find.byType(ProviderRequestCard), findsNothing);
-    expect(find.textContaining('Aceptaste la solicitud'), findsOneWidget);
+    // The bottom sheet form is now open.
+    expect(find.byType(AppTextField), findsNWidgets(3));
+    await tester.enterText(find.byType(AppTextField).at(0), '50');
+    await tester.enterText(find.byType(AppTextField).at(2), 'Puedo ir mañana.');
+    await tester.tap(find.text('Enviar cotización').last);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Enviaste tu cotización'), findsOneWidget);
+    // One more pending request now shows the waiting badge.
+    expect(find.text('Cotización enviada'), findsNWidgets(2));
+    expect(find.text('Enviar cotización'), findsOneWidget);
   });
 
-  testWidgets('tapping "Rechazar" removes the request from the list', (
+  testWidgets('tapping "Rechazar" moves the request out of Activas', (
     tester,
   ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Rechazar'));
+    expect(find.byType(ProviderRequestCard), findsNWidgets(5));
+
+    await tester.tap(find.text('Rechazar').first);
     await tester.pumpAndSettle();
 
-    expect(find.byType(ProviderRequestCard), findsNothing);
     expect(find.textContaining('Rechazaste la solicitud'), findsOneWidget);
+    expect(find.byType(ProviderRequestCard), findsNWidgets(4));
   });
 
   testWidgets(
-    'the mock repository actually flips the order status to accepted',
+    'tapping "Comenzar servicio" then "Marcar como finalizado" advances '
+    'the order out of Activas',
     (tester) async {
-      final repository = MockOrdersRepository();
-      await tester.pumpWidget(buildApp(repository: repository));
+      await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Aceptar'));
+      expect(find.text('Comenzar servicio'), findsOneWidget);
+      await tester.ensureVisible(find.text('Comenzar servicio'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Comenzar servicio'));
       await tester.pumpAndSettle();
 
-      final orders = await repository.getOrders();
-      final pending = orders.where((o) => o.status == OrderStatus.pending);
-      expect(pending, isEmpty);
-      final accepted = orders.where((o) => o.status == OrderStatus.accepted);
-      expect(accepted, hasLength(1));
+      expect(find.textContaining('Comenzaste el servicio'), findsOneWidget);
+      expect(find.text('Marcar como finalizado'), findsNWidgets(2));
+
+      // Let the first action's SnackBar finish its default 4s duration
+      // before triggering a second one — `ScaffoldMessenger` queues a
+      // new SnackBar behind a still-visible one instead of replacing it.
+      await tester.pump(const Duration(seconds: 5));
+
+      await tester.ensureVisible(find.text('Marcar como finalizado').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Marcar como finalizado').first);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('Marcaste como finalizado'),
+        findsOneWidget,
+      );
+      expect(find.byType(ProviderRequestCard), findsNWidgets(4));
     },
   );
+
+  testWidgets('Historial shows only completed/cancelled/rejected orders', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Historial'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProviderRequestCard), findsOneWidget);
+    expect(find.text('Finalizada'), findsOneWidget);
+  });
 
   testWidgets('loading state shows AppLoading instead of the list', (
     tester,

@@ -29,9 +29,19 @@ class OrderSummary extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(data.service.name, style: context.textStyles.titleSmall),
+        Text(
+          data.service?.name ?? data.category.name,
+          style: context.textStyles.titleSmall,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         const SizedBox(height: AppSpacing.space4),
-        Text(data.providerName, style: context.textStyles.bodySmall),
+        Text(
+          data.providerName,
+          style: context.textStyles.bodySmall,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         const SizedBox(height: AppSpacing.space8),
         Wrap(
           crossAxisAlignment: WrapCrossAlignment.center,
@@ -54,7 +64,10 @@ class OrderSummary extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.space8),
-        Text('\$${data.price}', style: context.textStyles.titleMedium),
+        Text(
+          data.price == null ? 'Esperando cotización' : '\$${data.price}',
+          style: context.textStyles.titleMedium,
+        ),
       ],
     );
   }

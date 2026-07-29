@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ProviderType } from '../../domain/value-objects/provider-type.value-object';
 import { ProviderExperience } from '../../domain/value-objects/provider-experience.value-object';
 
@@ -36,4 +36,13 @@ export class CreateProviderRequestDto {
 
   @ApiProperty({ example: 10 })
   yearsOfExperience!: number;
+
+  @ApiPropertyOptional({
+    example: 'category-id-123',
+    description: 'The Category this Provider specializes in, if chosen.',
+  })
+  categoryId?: string;
+
+  @ApiPropertyOptional({ example: 'Residential plumbing repairs' })
+  specialization?: string;
 }

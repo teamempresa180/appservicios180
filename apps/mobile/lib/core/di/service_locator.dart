@@ -158,7 +158,7 @@ void setupServiceLocator() {
   locator.registerSingleton<OrdersRepository>(
     ApiConfig.useMockBackend
         ? MockOrdersRepository()
-        : HttpOrdersRepository(apiClient),
+        : HttpOrdersRepository(apiClient, sessionManager),
   );
   locator.registerSingleton<ChatRepository>(
     ApiConfig.useMockBackend

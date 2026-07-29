@@ -4,6 +4,8 @@ import { IdentityRepository } from '../../../identity/domain/interfaces/identity
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { ProfileRepository } from '../../../profiles/domain/interfaces/profile-repository.interface';
 import { ProfileId } from '../../../profiles/domain/value-objects/profile-id.value-object';
+import { CategoryRepository } from '../../../category/domain/interfaces/category-repository.interface';
+import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
 import { Provider } from '../../domain/entities/provider.entity';
 import { ProviderRepository } from '../../domain/interfaces/provider-repository.interface';
 import { ProviderId } from '../../domain/value-objects/provider-id.value-object';
@@ -37,6 +39,7 @@ export class CreateProviderUseCase {
     private readonly providerRepository: ProviderRepository,
     private readonly identityRepository: IdentityRepository,
     private readonly profileRepository: ProfileRepository,
+    private readonly categoryRepository?: CategoryRepository,
   ) {}
 
   async execute(command: CreateProviderCommand): Promise<ProviderDto> {
@@ -63,10 +66,25 @@ export class CreateProviderUseCase {
       );
     }
 
+    let categoryId: CategoryId | null = null;
+    if (command.categoryId) {
+      categoryId = CategoryId.fromString(command.categoryId);
+      if (this.categoryRepository) {
+        const category = await this.categoryRepository.findById(categoryId);
+        if (!category) {
+          throw new NotFoundException(
+            `Category ${command.categoryId} not found`,
+          );
+        }
+      }
+    }
+
     const now = new Date();
     const provider = new Provider(ProviderId.create(), {
       identityId,
       providerProfileId,
+      categoryId,
+      specialization: command.specialization?.trim() || null,
       status: ProviderStatus.Pending,
       type: command.type,
       experience: command.experience,

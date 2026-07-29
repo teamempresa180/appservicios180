@@ -85,45 +85,55 @@ class _ScheduleSelectorState extends State<ScheduleSelector> {
           Row(
             children: [
               Expanded(
-                child: InkWell(
-                  onTap: _pickDate,
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today_outlined,
-                        color: context.colors.primary,
-                      ),
-                      const SizedBox(width: AppSpacing.space8),
-                      Flexible(
-                        child: Text(
-                          _formatDate(_date),
-                          overflow: TextOverflow.ellipsis,
-                          style: context.textStyles.bodyMedium,
+                child: Semantics(
+                  button: true,
+                  label: 'Fecha programada: ${_formatDate(_date)}',
+                  hint: 'Toca para cambiar la fecha',
+                  child: InkWell(
+                    onTap: _pickDate,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_outlined,
+                          color: context.colors.primary,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: AppSpacing.space8),
+                        Flexible(
+                          child: Text(
+                            _formatDate(_date),
+                            overflow: TextOverflow.ellipsis,
+                            style: context.textStyles.bodyMedium,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: AppSpacing.space8),
               Expanded(
-                child: InkWell(
-                  onTap: _pickTime,
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.access_time_outlined,
-                        color: context.colors.primary,
-                      ),
-                      const SizedBox(width: AppSpacing.space8),
-                      Flexible(
-                        child: Text(
-                          _time,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.textStyles.bodyMedium,
+                child: Semantics(
+                  button: true,
+                  label: 'Hora programada: $_time',
+                  hint: 'Toca para cambiar la hora',
+                  child: InkWell(
+                    onTap: _pickTime,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.access_time_outlined,
+                          color: context.colors.primary,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: AppSpacing.space8),
+                        Flexible(
+                          child: Text(
+                            _time,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.textStyles.bodyMedium,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

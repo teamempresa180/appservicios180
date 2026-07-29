@@ -11,6 +11,8 @@ export class ProviderMapper {
     dto.id = provider.id.value;
     dto.identityId = provider.identityId.value;
     dto.providerProfileId = provider.providerProfileId.value;
+    dto.categoryId = provider.categoryId?.value ?? null;
+    dto.specialization = provider.specialization;
     dto.status = provider.status;
     dto.type = provider.type;
     dto.experience = provider.experience;

@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from './config/config.module';
@@ -30,6 +32,12 @@ import { AuditPresentationModule } from './modules/audit/presentation/audit.modu
 @Module({
   imports: [
     ConfigModule,
+    // Global default: 100 requests / 60s per client IP. Sensitive
+    // auth endpoints (login/refresh) additionally set a much
+    // stricter per-route limit via `@Throttle()` — see
+    // `AuthenticationController` — since brute-forcing a password or
+    // refresh token is the realistic threat, not general API abuse.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     LoggerModule,
     PrismaModule,
     IdentityPresentationModule,
@@ -56,6 +64,9 @@ import { AuditPresentationModule } from './modules/audit/presentation/audit.modu
     AuditPresentationModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

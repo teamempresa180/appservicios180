@@ -17,6 +17,11 @@ class ProviderServices extends StatelessWidget {
     return AppSection(
       title: 'Servicios publicados',
       children: [
+        if (services.isEmpty)
+          Text(
+            'Este proveedor no tiene servicios publicados.',
+            style: context.textStyles.bodySmall,
+          ),
         for (final service in services) ...[
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -32,6 +37,8 @@ class ProviderServices extends StatelessWidget {
               const SizedBox(width: AppSpacing.space8),
               Text(
                 '\$${service.basePrice}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: context.textStyles.titleSmall,
               ),
             ],

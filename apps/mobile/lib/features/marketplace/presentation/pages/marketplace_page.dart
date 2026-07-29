@@ -5,6 +5,7 @@ import '../../../../core/di/service_locator.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_button.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
@@ -23,6 +24,7 @@ import '../widgets/featured_services.dart';
 import '../widgets/marketplace_header.dart';
 import '../widgets/recommended_providers.dart';
 import '../widgets/search_bar.dart';
+import 'compatible_providers_page.dart';
 
 /// Marketplace screen. Lives inside the App Shell's body (the "Buscar"
 /// destination) — it does NOT build its own `Scaffold`, it only returns
@@ -133,6 +135,17 @@ class _MarketplacePageState extends State<MarketplacePage> {
     });
   }
 
+  void _openCompatibleProviders(Category category) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Proveedores disponibles')),
+          body: SafeArea(child: CompatibleProvidersPage(category: category)),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _queryController.dispose();
@@ -206,6 +219,14 @@ class _MarketplacePageState extends State<MarketplacePage> {
                 onCategoryTap: _onCategoryTap,
               ),
             ),
+            if (_selectedCategory != null) ...[
+              const SizedBox(height: AppSpacing.space12),
+              AppButton(
+                label: 'Ver proveedores de ${_selectedCategory!.name}',
+                variant: AppButtonVariant.outlined,
+                onPressed: () => _openCompatibleProviders(_selectedCategory!),
+              ),
+            ],
             const SizedBox(height: AppSpacing.space16),
             SlideIn(child: FeaturedServices(services: _viewModel.services)),
             const SizedBox(height: AppSpacing.space16),

@@ -13,7 +13,7 @@ class RequestServiceHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppSectionTitle(
       title: 'Solicitar servicio',
-      subtitle: data.service.name,
+      subtitle: data.service?.name ?? data.category.name,
     );
   }
 }

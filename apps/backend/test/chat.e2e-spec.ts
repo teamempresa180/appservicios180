@@ -37,6 +37,7 @@ import { InMemoryCategoryRepository } from '../src/modules/category/application/
 import { SERVICE_REPOSITORY } from '../src/modules/service/domain/interfaces/service-repository.interface';
 import { InMemoryServiceRepository } from '../src/modules/service/application/use_cases/test-support/in-memory-service.repository';
 import { ServiceId } from '../src/modules/service/domain/value-objects/service-id.value-object';
+import { CategoryId } from '../src/modules/category/domain/value-objects/category-id.value-object';
 import { ChatType } from '../src/modules/chat/domain/value-objects/chat-type.value-object';
 import { ChatResponseDto } from '../src/modules/chat/presentation/dto/chat.response.dto';
 import { ChatListResponseDto } from '../src/modules/chat/presentation/dto/chat-list.response.dto';
@@ -98,6 +99,7 @@ describe('ChatController (e2e)', () => {
       identityId: IdentityId.create(),
       providerId: ProviderId.create(),
       serviceId: ServiceId.create(),
+      categoryId: CategoryId.create(),
       title: 'Fix leaking kitchen faucet',
       description: 'Description.',
       scheduledDate: now,

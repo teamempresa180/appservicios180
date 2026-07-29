@@ -17,6 +17,8 @@ import { PROVIDER_REPOSITORY } from '../src/modules/provider/domain/interfaces/p
 import { InMemoryProviderRepository } from '../src/modules/provider/application/use_cases/test-support/in-memory-provider.repository';
 import { PROFILE_REPOSITORY } from '../src/modules/profiles/domain/interfaces/profile-repository.interface';
 import { InMemoryProfileRepository } from '../src/modules/profiles/application/use_cases/test-support/in-memory-profile.repository';
+import { CATEGORY_REPOSITORY } from '../src/modules/category/domain/interfaces/category-repository.interface';
+import { InMemoryCategoryRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category.repository';
 import { CREDENTIAL_REPOSITORY } from '../src/modules/credentials/domain/interfaces/credential-repository.interface';
 import { InMemoryCredentialRepository } from '../src/modules/credentials/application/use_cases/test-support/in-memory-credential.repository';
 import { Credential } from '../src/modules/credentials/domain/entities/credential.entity';
@@ -105,6 +107,8 @@ describe('AuthenticationController (e2e)', () => {
       .useValue(new InMemoryProfileRepository())
       .overrideProvider(CREDENTIAL_REPOSITORY)
       .useValue(credentialRepository)
+      .overrideProvider(CATEGORY_REPOSITORY)
+      .useValue(new InMemoryCategoryRepository())
       .compile();
 
     const nestApp = moduleFixture.createNestApplication();

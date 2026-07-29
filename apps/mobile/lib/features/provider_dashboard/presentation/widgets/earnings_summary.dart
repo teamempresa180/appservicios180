@@ -60,9 +60,19 @@ class _EarningsColumn extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: context.textStyles.bodySmall),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: context.textStyles.bodySmall,
+        ),
         const SizedBox(height: AppSpacing.space4),
-        Text('\$$amount', style: context.textStyles.titleMedium),
+        Text(
+          '\$$amount',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: context.textStyles.titleMedium,
+        ),
       ],
     );
   }

@@ -5,6 +5,7 @@ import { OrderPriority } from '../value-objects/order-priority.value-object';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
 import { ServiceId } from '../../../service/domain/value-objects/service-id.value-object';
+import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
 
 describe('Order', () => {
   it('holds all the assigned properties', () => {
@@ -12,11 +13,13 @@ describe('Order', () => {
     const identityId = IdentityId.create();
     const providerId = ProviderId.create();
     const serviceId = ServiceId.create();
+    const categoryId = CategoryId.create();
     const now = new Date();
     const order = new Order(id, {
       identityId,
       providerId,
       serviceId,
+      categoryId,
       title: 'Destape urgente',
       description: 'Tubería obstruida en la cocina',
       scheduledDate: new Date('2026-02-01'),
@@ -40,11 +43,13 @@ describe('Order', () => {
     const identityId = IdentityId.create();
     const providerId = ProviderId.create();
     const serviceId = ServiceId.create();
+    const categoryId = CategoryId.create();
     const now = new Date();
     const props = {
       identityId,
       providerId,
       serviceId,
+      categoryId,
       title: 'Servicio',
       description: 'Desc',
       scheduledDate: now,

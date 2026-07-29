@@ -22,6 +22,8 @@ export class ProviderHttpMapper {
       dto.experience,
       dto.biography,
       dto.yearsOfExperience,
+      dto.categoryId,
+      dto.specialization,
     );
   }
 
@@ -34,6 +36,8 @@ export class ProviderHttpMapper {
       dto.biography,
       dto.experience,
       dto.status,
+      dto.categoryId,
+      dto.specialization,
     );
   }
 
@@ -42,6 +46,8 @@ export class ProviderHttpMapper {
     response.id = dto.id;
     response.identityId = dto.identityId;
     response.providerProfileId = dto.providerProfileId;
+    response.categoryId = dto.categoryId;
+    response.specialization = dto.specialization;
     response.status = dto.status;
     response.type = dto.type;
     response.experience = dto.experience;

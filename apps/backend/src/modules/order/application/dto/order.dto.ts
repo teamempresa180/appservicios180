@@ -7,8 +7,9 @@ import { OrderPriority } from '../../domain/value-objects/order-priority.value-o
 export class OrderDto {
   id!: string;
   identityId!: string;
-  providerId!: string;
-  serviceId!: string;
+  providerId!: string | null;
+  serviceId!: string | null;
+  categoryId!: string;
   title!: string;
   description!: string;
   scheduledDate!: Date;

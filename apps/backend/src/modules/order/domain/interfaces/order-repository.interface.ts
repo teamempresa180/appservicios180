@@ -3,6 +3,7 @@ import { Order } from '../entities/order.entity';
 import { OrderId } from '../value-objects/order-id.value-object';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
+import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
 
 /**
  * Contract for Order persistence. No implementation lives in this
@@ -18,6 +19,10 @@ export interface OrderRepository {
   findById(id: OrderId): Promise<Order | null>;
   findByIdentityId(identityId: IdentityId): Promise<Order[]>;
   findByProviderId(providerId: ProviderId): Promise<Order[]>;
+  /** Pending, unassigned (`providerId IS NULL`) open requests in a
+   *  given Category — what a compatible Provider's dashboard shows
+   *  alongside their own `findByProviderId` orders. */
+  findOpenByCategoryId(categoryId: CategoryId): Promise<Order[]>;
   save(order: Order): Promise<void>;
   list(page: number, pageSize: number): Promise<PaginatedResult<Order>>;
   /** Free-text match against `title`/`description`. */

@@ -45,22 +45,37 @@ class OrderDisplay {
   });
 
   final Order order;
-  final Service service;
-  final Provider provider;
-  final Profile profile;
+
+  /// `null` for an open request with no service assigned yet — see
+  /// `Order.isDirectHire`.
+  final Service? service;
+
+  /// `null` for an open request whose `Quote` hasn't been accepted yet.
+  final Provider? provider;
+
+  /// `null` alongside [provider].
+  final Profile? profile;
   final Category category;
-  final Quote quote;
+
+  /// `null` while the order is still waiting on its first `Quote`.
+  final Quote? quote;
 
   /// Simulated — see the class doc.
   final String estimatedArrival;
 
-  String get providerName => profile.displayName;
+  /// `true` when this order is still an open request waiting on a
+  /// provider to be assigned (via `Quote` acceptance) — see
+  /// `Order.isDirectHire`.
+  bool get isWaitingForProvider => provider == null;
+
+  String get providerName => profile?.displayName ?? 'Por asignar';
 
   /// Real domain data (`Order.scheduledDate`) — see the class doc.
   DateTime get scheduledDate => order.scheduledDate;
 
-  /// Real domain data (`Quote.proposedPrice`) — see the class doc.
-  num get price => quote.proposedPrice;
+  /// Real domain data (`Quote.proposedPrice`) — `null` until a `Quote`
+  /// exists for this order.
+  num? get price => quote?.proposedPrice;
 
   /// UI label derived from `Order.status` — see the class doc.
   String get statusText {

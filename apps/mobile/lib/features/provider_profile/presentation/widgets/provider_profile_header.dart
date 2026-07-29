@@ -27,7 +27,12 @@ class ProviderProfileHeader extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(data.name, style: context.textStyles.titleLarge),
+                  Text(
+                    data.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.textStyles.titleLarge,
+                  ),
                   const SizedBox(height: AppSpacing.space4),
                   Row(
                     children: [
@@ -42,9 +47,13 @@ class ProviderProfileHeader extends StatelessWidget {
                         style: context.textStyles.bodyMedium,
                       ),
                       const SizedBox(width: AppSpacing.space4),
-                      Text(
-                        '(${data.reviewsCount} reseñas)',
-                        style: context.textStyles.bodySmall,
+                      Flexible(
+                        child: Text(
+                          '(${data.reviewsCount} reseñas)',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.textStyles.bodySmall,
+                        ),
                       ),
                     ],
                   ),

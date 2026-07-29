@@ -38,9 +38,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.text('Solicitar servicio'));
+      await tester.ensureVisible(find.text('Solicitar servicio').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Solicitar servicio'));
+      await tester.tap(find.text('Solicitar servicio').first);
+      await tester.pumpAndSettle();
+
+      // This provider offers more than one Service — a picker dialog
+      // appears first (see `ProviderActions._pickServiceAndRequest`).
+      expect(find.text('Elige un servicio'), findsOneWidget);
+      await tester.tap(find.byType(ListTile).first);
       await tester.pumpAndSettle();
 
       expect(find.byType(RequestServicePage), findsOneWidget);

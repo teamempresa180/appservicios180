@@ -23,6 +23,7 @@ class AddressSummary extends StatelessWidget {
         children: [
           const AppSectionTitle(title: 'Dirección'),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(Icons.place_outlined, color: context.colors.primary),
               const SizedBox(width: AppSpacing.space8),
@@ -30,9 +31,16 @@ class AddressSummary extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(address.alias, style: context.textStyles.titleSmall),
+                    Text(
+                      address.alias,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textStyles.titleSmall,
+                    ),
                     Text(
                       '${address.fullAddress}, ${address.city}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: context.textStyles.bodySmall,
                     ),
                   ],
@@ -43,6 +51,8 @@ class AddressSummary extends StatelessWidget {
           const SizedBox(height: AppSpacing.space8),
           Text(
             data.simulatedLocationLabel,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: context.textStyles.bodySmall,
           ),
         ],

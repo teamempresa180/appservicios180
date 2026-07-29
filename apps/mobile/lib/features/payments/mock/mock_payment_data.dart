@@ -76,6 +76,7 @@ final Service mockPaymentService = Service(
 final Order mockPaymentOrder = Order(
   id: OrderId.fromString('payments-order-1'),
   identityId: IdentityId.fromString('payments-identity-client'),
+  categoryId: mockPaymentService.categoryId,
   providerId: mockPaymentProvider.id,
   serviceId: mockPaymentService.id,
   title: mockPaymentService.name,

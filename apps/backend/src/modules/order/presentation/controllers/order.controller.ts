@@ -18,16 +18,24 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { OrderRoutes } from '../routes/order.routes';
 import { OrderSwagger } from '../swagger/order.swagger';
 import { CreateOrderUseCase } from '../../application/use_cases/create-order.use-case';
 import { UpdateOrderUseCase } from '../../application/use_cases/update-order.use-case';
 import { CancelOrderUseCase } from '../../application/use_cases/cancel-order.use-case';
+import { StartOrderUseCase } from '../../application/use_cases/start-order.use-case';
+import { CompleteOrderUseCase } from '../../application/use_cases/complete-order.use-case';
 import { GetOrderUseCase } from '../../application/use_cases/get-order.use-case';
 import { ListOrderUseCase } from '../../application/use_cases/list-order.use-case';
 import { SearchOrderUseCase } from '../../application/use_cases/search-order.use-case';
+import { ListMyOrdersUseCase } from '../../application/use_cases/list-my-orders.use-case';
+import { ListOrdersForProviderUseCase } from '../../application/use_cases/list-orders-for-provider.use-case';
 import { CancelOrderCommand } from '../../application/commands/cancel-order.command';
+import { StartOrderCommand } from '../../application/commands/start-order.command';
+import { CompleteOrderCommand } from '../../application/commands/complete-order.command';
 import { GetOrderQuery } from '../../application/queries/get-order.query';
 import { ListOrderQuery } from '../../application/queries/list-order.query';
 import { SearchOrderQuery } from '../../application/queries/search-order.query';
@@ -73,9 +81,13 @@ export class OrderController {
     private readonly createOrderUseCase: CreateOrderUseCase,
     private readonly updateOrderUseCase: UpdateOrderUseCase,
     private readonly cancelOrderUseCase: CancelOrderUseCase,
+    private readonly startOrderUseCase: StartOrderUseCase,
+    private readonly completeOrderUseCase: CompleteOrderUseCase,
     private readonly getOrderUseCase: GetOrderUseCase,
     private readonly listOrderUseCase: ListOrderUseCase,
     private readonly searchOrderUseCase: SearchOrderUseCase,
+    private readonly listMyOrdersUseCase: ListMyOrdersUseCase,
+    private readonly listOrdersForProviderUseCase: ListOrdersForProviderUseCase,
   ) {}
 
   @Post()
@@ -150,6 +162,56 @@ export class OrderController {
     return OrderHttpMapper.toResponse(order);
   }
 
+  @Put(OrderRoutes.start)
+  @ApiOperation(OrderSwagger.start)
+  @ApiParam({ name: 'id', description: 'Order id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Order started.',
+    type: OrderResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Order not found.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 422,
+    description: 'Order is not Accepted.',
+    type: ErrorResponseDto,
+  })
+  async start(@Param('id') id: string): Promise<OrderResponseDto> {
+    const order = await this.startOrderUseCase.execute(
+      new StartOrderCommand(id),
+    );
+    return OrderHttpMapper.toResponse(order);
+  }
+
+  @Put(OrderRoutes.complete)
+  @ApiOperation(OrderSwagger.complete)
+  @ApiParam({ name: 'id', description: 'Order id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Order completed.',
+    type: OrderResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Order not found.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 422,
+    description: 'Order is not InProgress.',
+    type: ErrorResponseDto,
+  })
+  async complete(@Param('id') id: string): Promise<OrderResponseDto> {
+    const order = await this.completeOrderUseCase.execute(
+      new CompleteOrderCommand(id),
+    );
+    return OrderHttpMapper.toResponse(order);
+  }
+
   @Get()
   @ApiOperation(OrderSwagger.list)
   @ApiQuery({ name: 'page', required: false, example: 1 })
@@ -169,6 +231,32 @@ export class OrderController {
     );
     const result = await this.listOrderUseCase.execute(query);
     return OrderHttpMapper.toListResponse(result);
+  }
+
+  @Get(OrderRoutes.mine)
+  @ApiOperation(OrderSwagger.mine)
+  @ApiResponse({
+    status: 200,
+    description: "The caller's Orders.",
+    type: [OrderResponseDto],
+  })
+  async mine(@CurrentUser() user: AuthenticatedUser): Promise<OrderResponseDto[]> {
+    const orders = await this.listMyOrdersUseCase.execute(user.id);
+    return orders.map((order) => OrderHttpMapper.toResponse(order));
+  }
+
+  @Get(OrderRoutes.relevantForProvider)
+  @ApiOperation(OrderSwagger.relevantForProvider)
+  @ApiResponse({
+    status: 200,
+    description: "The caller's relevant Orders as a Provider.",
+    type: [OrderResponseDto],
+  })
+  async relevantForProvider(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<OrderResponseDto[]> {
+    const orders = await this.listOrdersForProviderUseCase.execute(user.id);
+    return orders.map((order) => OrderHttpMapper.toResponse(order));
   }
 
   @Get(OrderRoutes.search)

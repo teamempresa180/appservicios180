@@ -1,4 +1,5 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
 import { Provider } from '../../domain/entities/provider.entity';
 import { ProviderRepository } from '../../domain/interfaces/provider-repository.interface';
 import { ProviderId } from '../../domain/value-objects/provider-id.value-object';
@@ -30,6 +31,10 @@ export class UpdateProviderUseCase {
     const updated = new Provider(existing.id, {
       identityId: existing.identityId,
       providerProfileId: existing.providerProfileId,
+      categoryId: command.categoryId
+        ? CategoryId.fromString(command.categoryId)
+        : existing.categoryId,
+      specialization: command.specialization ?? existing.specialization,
       status: command.status ?? existing.status,
       type: existing.type,
       experience: command.experience ?? existing.experience,

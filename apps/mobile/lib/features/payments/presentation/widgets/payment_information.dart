@@ -17,9 +17,19 @@ class PaymentInformation extends StatelessWidget {
     return AppSection(
       title: 'Servicio',
       children: [
-        Text(data.service.name, style: context.textStyles.titleSmall),
+        Text(
+          data.service.name,
+          style: context.textStyles.titleSmall,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         const SizedBox(height: AppSpacing.space4),
-        Text(data.service.description, style: context.textStyles.bodySmall),
+        Text(
+          data.service.description,
+          style: context.textStyles.bodySmall,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
         const SizedBox(height: AppSpacing.space16),
         Row(
           children: [
@@ -29,10 +39,17 @@ class PaymentInformation extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(data.providerName, style: context.textStyles.titleSmall),
+                  Text(
+                    data.providerName,
+                    style: context.textStyles.titleSmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   Text(
                     '${data.provider.yearsOfExperience} años de experiencia',
                     style: context.textStyles.bodySmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

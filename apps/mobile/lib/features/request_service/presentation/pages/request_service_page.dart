@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../category/entities/category.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
@@ -8,6 +9,9 @@ import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../../core/ui/widgets/app_snack_bar.dart';
+import '../../../../profiles/entities/profile.dart';
+import '../../../../provider/entities/provider.dart';
+import '../../../../service/entities/service.dart';
 import '../../../quote/presentation/pages/quote_page.dart';
 import '../../models/request_priority.dart';
 import '../../repositories/request_service_repository.dart';
@@ -23,19 +27,33 @@ import '../widgets/schedule_selector.dart';
 import '../widgets/service_summary.dart';
 
 /// Request Service screen. Does NOT build its own `Scaffold` — it is
-/// meant to be inserted into the existing navigation flow later, the
-/// same way every other feature so far does. Completely independent:
-/// its own repository, its own view model, loaded from the real
-/// backend via [RequestServiceViewModel] (resolved from the service
-/// locator — see `core/di/service_locator.dart`).
+/// meant to be inserted into the existing navigation flow, the same way
+/// every other feature so far does.
 ///
-/// Shows a single, fixed service/provider (no id-based lookup yet) —
-/// see the feature README. "Continuar" submits the schedule/
-/// description/priority the user picked as a real `Order` via
-/// `RequestServiceRepository.createOrder`.
+/// Now accepts real navigation-time context instead of showing a single
+/// fixed service/provider: [category] is always required, and
+/// [provider]/[service]/[profile] are given together for a **direct
+/// hire** (the client picked a specific provider + one of their
+/// services) or omitted altogether for an **open request** (client only
+/// picked a category — any compatible provider may quote it later). On
+/// submit, "Continuar" creates the real `Order` via
+/// `RequestServiceRepository.createOrder` with the matching shape, then
+/// opens the order-scoped Quote/status screen for the order just
+/// created.
 class RequestServicePage extends StatefulWidget {
-  const RequestServicePage({super.key, RequestServiceRepository? repository})
-    : _repository = repository;
+  const RequestServicePage({
+    super.key,
+    required this.category,
+    this.provider,
+    this.service,
+    this.profile,
+    RequestServiceRepository? repository,
+  }) : _repository = repository;
+
+  final Category category;
+  final Provider? provider;
+  final Service? service;
+  final Profile? profile;
 
   /// Overridable for tests only — production call sites always resolve
   /// the real repository from the service locator.
@@ -50,12 +68,17 @@ class _RequestServicePageState extends State<RequestServicePage> {
       widget._repository ?? locator<RequestServiceRepository>();
   late final RequestServiceViewModel _viewModel = RequestServiceViewModel(
     _repository,
+    category: widget.category,
+    provider: widget.provider,
+    service: widget.service,
+    profile: widget.profile,
   );
 
   DateTime? _selectedDate;
   String? _selectedTime;
   String? _problemDescription;
   RequestPriority? _priority;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -74,6 +97,8 @@ class _RequestServicePageState extends State<RequestServicePage> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
     final data = _viewModel.data!;
     final date = _selectedDate ?? data.selectedDate;
     final time = _selectedTime ?? data.selectedTime;
@@ -85,31 +110,33 @@ class _RequestServicePageState extends State<RequestServicePage> {
       int.parse(timeParts[0]),
       int.parse(timeParts[1]),
     );
-    await _repository.createOrder(
-      service: data.service,
-      provider: data.provider,
-      title: data.service.name,
-      description: _problemDescription ?? data.problemDescription,
-      scheduledDate: scheduledDate,
-      priority: _priority ?? data.priority,
-    );
-    if (!mounted) return;
-    AppSnackBar.show(
-      context,
-      'Solicitud enviada.',
-      type: AppSnackBarType.success,
-    );
-    // `QuotePage` has no id-based lookup yet (see its own doc comment)
-    // — it still shows a single fixed quote, not one scoped to the
-    // order just created above. Documented, pre-existing limitation.
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: const Text('Cotización')),
-          body: const SafeArea(child: QuotePage()),
+    try {
+      final order = await _repository.createOrder(
+        categoryId: data.category.id,
+        providerId: data.provider?.id,
+        serviceId: data.service?.id,
+        title: data.service?.name ?? data.category.name,
+        description: _problemDescription ?? data.problemDescription,
+        scheduledDate: scheduledDate,
+        priority: _priority ?? data.priority,
+      );
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'Solicitud enviada.',
+        type: AppSnackBarType.success,
+      );
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => Scaffold(
+            appBar: AppBar(title: const Text('Cotización')),
+            body: SafeArea(child: QuotePage(order: order)),
+          ),
         ),
-      ),
-    );
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -136,10 +163,14 @@ class _RequestServicePageState extends State<RequestServicePage> {
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SlideIn(child: ServiceSummary(data: data)),
-              const SizedBox(height: AppSpacing.space16),
-              SlideIn(child: ProviderSummary(data: data)),
-              const SizedBox(height: AppSpacing.space16),
+              if (data.service != null) ...[
+                SlideIn(child: ServiceSummary(data: data)),
+                const SizedBox(height: AppSpacing.space16),
+              ],
+              if (data.provider != null) ...[
+                SlideIn(child: ProviderSummary(data: data)),
+                const SizedBox(height: AppSpacing.space16),
+              ],
               ScaleIn(
                 child: ScheduleSelector(
                   initialDate: data.selectedDate,

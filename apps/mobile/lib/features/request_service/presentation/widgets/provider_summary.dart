@@ -22,6 +22,7 @@ class ProviderSummary extends StatelessWidget {
         children: [
           const AppSectionTitle(title: 'Proveedor'),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const AppAvatar(),
               const SizedBox(width: AppSpacing.space12),
@@ -30,11 +31,15 @@ class ProviderSummary extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      data.providerName,
+                      data.providerName ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: context.textStyles.titleSmall,
                     ),
                     Text(
-                      '${data.provider.yearsOfExperience} años de experiencia',
+                      '${data.provider?.yearsOfExperience ?? 0} años de experiencia',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: context.textStyles.bodySmall,
                     ),
                   ],

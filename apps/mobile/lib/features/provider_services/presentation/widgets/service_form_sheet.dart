@@ -231,6 +231,12 @@ class _ServiceFormSheetState extends State<ServiceFormSheet> {
               ),
               const SizedBox(height: AppSpacing.space20),
               AppButton(label: 'Guardar', onPressed: _save),
+              const SizedBox(height: AppSpacing.space8),
+              AppButton(
+                label: 'Cancelar',
+                variant: AppButtonVariant.text,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
             ],
           ),
         ),

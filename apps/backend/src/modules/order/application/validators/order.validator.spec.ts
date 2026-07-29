@@ -10,12 +10,13 @@ describe('OrderValidator', () => {
   ): CreateOrderCommand {
     return new CreateOrderCommand(
       overrides.identityId ?? 'identity-1',
-      'provider-1',
-      'service-1',
+      'category-1',
       'Fix the sink',
       'The kitchen sink is leaking',
       new Date('2026-01-01T08:00:00Z'),
       OrderPriority.Medium,
+      'provider-1',
+      'service-1',
     );
   }
 
@@ -35,12 +36,61 @@ describe('OrderValidator', () => {
         OrderValidator.validateCreate(
           new CreateOrderCommand(
             'identity-1',
-            'provider-1',
-            'service-1',
+            'category-1',
             'Fix the sink',
             'desc',
             new Date('invalid'),
             OrderPriority.Medium,
+            'provider-1',
+            'service-1',
+          ),
+        ),
+      ).toThrow(ValidationException);
+    });
+
+    it('rejects a blank categoryId', () => {
+      expect(() =>
+        OrderValidator.validateCreate(
+          new CreateOrderCommand(
+            'identity-1',
+            '  ',
+            'Fix the sink',
+            'desc',
+            new Date('2026-01-01T08:00:00Z'),
+            OrderPriority.Medium,
+            'provider-1',
+            'service-1',
+          ),
+        ),
+      ).toThrow(ValidationException);
+    });
+
+    it('passes for an open request (providerId/serviceId both omitted)', () => {
+      expect(() =>
+        OrderValidator.validateCreate(
+          new CreateOrderCommand(
+            'identity-1',
+            'category-1',
+            'Fix the sink',
+            'desc',
+            new Date('2026-01-01T08:00:00Z'),
+            OrderPriority.Medium,
+          ),
+        ),
+      ).not.toThrow();
+    });
+
+    it('rejects providing only providerId without serviceId', () => {
+      expect(() =>
+        OrderValidator.validateCreate(
+          new CreateOrderCommand(
+            'identity-1',
+            'category-1',
+            'Fix the sink',
+            'desc',
+            new Date('2026-01-01T08:00:00Z'),
+            OrderPriority.Medium,
+            'provider-1',
           ),
         ),
       ).toThrow(ValidationException);
@@ -51,12 +101,13 @@ describe('OrderValidator', () => {
         OrderValidator.validateCreate(
           new CreateOrderCommand(
             'identity-1',
-            'provider-1',
-            'service-1',
+            'category-1',
             'Fix the sink',
             'desc',
             new Date('2026-01-01T08:00:00Z'),
             'INVALID' as OrderPriority,
+            'provider-1',
+            'service-1',
           ),
         ),
       ).toThrow(ValidationException);

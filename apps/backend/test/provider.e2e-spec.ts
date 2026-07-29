@@ -22,6 +22,8 @@ import { Profile } from '../src/modules/profiles/domain/entities/profile.entity'
 import { ProfileId } from '../src/modules/profiles/domain/value-objects/profile-id.value-object';
 import { ProfileVisibility } from '../src/modules/profiles/domain/value-objects/profile-visibility.value-object';
 import { ProfileStatus } from '../src/modules/profiles/domain/value-objects/profile-status.value-object';
+import { CATEGORY_REPOSITORY } from '../src/modules/category/domain/interfaces/category-repository.interface';
+import { InMemoryCategoryRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category.repository';
 import { ProviderType } from '../src/modules/provider/domain/value-objects/provider-type.value-object';
 import { ProviderExperience } from '../src/modules/provider/domain/value-objects/provider-experience.value-object';
 import { ProviderResponseDto } from '../src/modules/provider/presentation/dto/provider.response.dto';
@@ -87,6 +89,8 @@ describe('ProviderController (e2e)', () => {
       .useValue(identityRepository)
       .overrideProvider(PROFILE_REPOSITORY)
       .useValue(profileRepository)
+      .overrideProvider(CATEGORY_REPOSITORY)
+      .useValue(new InMemoryCategoryRepository())
       .compile();
 
     app = moduleFixture.createNestApplication();

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/di/service_locator.dart';
+import '../../../../core/ui/icons/app_icons.dart';
+import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../order/entities/order.dart';
 import '../../models/tracking_update.dart';
@@ -55,6 +57,13 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       body: StreamBuilder<TrackingUpdate>(
         stream: _stream,
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const AppEmptyState(
+              icon: AppIcons.error,
+              title: 'No se pudo cargar el rastreo',
+              description: 'Ocurrió un problema al obtener la ubicación.',
+            );
+          }
           final update = snapshot.data;
           if (update == null) {
             return const AppLoading(message: 'Buscando ubicación...');
@@ -65,10 +74,13 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
               TrackingMap(update: update, isDark: isDark),
               Align(
                 alignment: Alignment.bottomCenter,
-                child: TrackingInfoPanel(
-                  update: update,
-                  otherPartyName: widget.otherPartyName,
-                  otherPartyLabel: widget.otherPartyLabel,
+                child: SafeArea(
+                  top: false,
+                  child: TrackingInfoPanel(
+                    update: update,
+                    otherPartyName: widget.otherPartyName,
+                    otherPartyLabel: widget.otherPartyLabel,
+                  ),
                 ),
               ),
             ],

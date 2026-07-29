@@ -1,4 +1,5 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
 import { OrderRepository } from '../../../order/domain/interfaces/order-repository.interface';
 import { OrderId } from '../../../order/domain/value-objects/order-id.value-object';
 import { ProviderRepository } from '../../../provider/domain/interfaces/provider-repository.interface';
@@ -42,6 +43,12 @@ export class CreateQuoteUseCase {
     const provider = await this.providerRepository.findById(providerId);
     if (!provider) {
       throw new NotFoundException(`Provider ${command.providerId} not found`);
+    }
+
+    if (order.providerId && !order.providerId.equals(providerId)) {
+      throw new BusinessRuleException(
+        `Order ${command.orderId} is a direct hire for a different Provider`,
+      );
     }
 
     const now = new Date();

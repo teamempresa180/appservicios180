@@ -34,13 +34,24 @@ class ServiceCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(service.name, style: context.textStyles.titleSmall),
+                child: Text(
+                  service.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.textStyles.titleSmall,
+                ),
               ),
+              const SizedBox(width: AppSpacing.space8),
               ServiceStatusBadge(data: data),
             ],
           ),
           const SizedBox(height: AppSpacing.space4),
-          Text(data.category.name, style: context.textStyles.bodySmall),
+          Text(
+            data.category.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.textStyles.bodySmall,
+          ),
           const SizedBox(height: AppSpacing.space8),
           Text('\$${service.basePrice}', style: context.textStyles.titleMedium),
           const SizedBox(height: AppSpacing.space8),

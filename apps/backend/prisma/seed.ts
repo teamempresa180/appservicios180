@@ -234,6 +234,7 @@ async function main(): Promise<void> {
       identityId: identity.id,
       providerId: provider.id,
       serviceId: 'seed-service-1',
+      categoryId: category.id,
       title: 'Fix the kitchen sink',
       description: 'The kitchen sink is leaking under the counter.',
       scheduledDate: new Date('2026-02-01T09:00:00Z'),

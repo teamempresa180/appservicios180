@@ -2,9 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
+import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
 import { Provider } from '../../domain/entities/provider.entity';
 import { ProviderRepository } from '../../domain/interfaces/provider-repository.interface';
 import { ProviderId } from '../../domain/value-objects/provider-id.value-object';
+import { ProviderStatus } from '../../domain/value-objects/provider-status.value-object';
 import { ProviderPrismaMapper } from './provider-prisma.mapper';
 
 /**
@@ -77,5 +79,27 @@ export class PrismaProviderRepository implements ProviderRepository {
           row.biography.toUpperCase().includes(upper),
       )
       .map((row) => ProviderPrismaMapper.toDomain(row));
+  }
+
+  async findCompatible(
+    categoryId: CategoryId,
+    specialization?: string,
+  ): Promise<Provider[]> {
+    const rows = await this.prisma.providerModel.findMany({
+      where: {
+        categoryId: categoryId.value,
+        status: ProviderStatus.Active,
+        ...(specialization
+          ? {
+              specialization: {
+                contains: specialization,
+                mode: 'insensitive',
+              },
+            }
+          : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return rows.map((row) => ProviderPrismaMapper.toDomain(row));
   }
 }

@@ -1,3 +1,4 @@
+import '../../../category/models/category_id.dart';
 import '../../../identity/models/identity_id.dart';
 import '../../../order/entities/order.dart';
 import '../../../order/models/order_id.dart';
@@ -67,6 +68,7 @@ final Profile mockDashboardProfile = Profile(
 final Order _orderPending = Order(
   id: OrderId.fromString('provider-dashboard-order-pending'),
   identityId: _clientIdentityId,
+  categoryId: CategoryId.fromString('provider-dashboard-category-electrical'),
   providerId: mockDashboardProvider.id,
   serviceId: ServiceId.fromString('provider-dashboard-service-outlet'),
   title: 'Instalación de tomacorrientes',
@@ -81,6 +83,7 @@ final Order _orderPending = Order(
 final Order _orderInProgress = Order(
   id: OrderId.fromString('provider-dashboard-order-in-progress'),
   identityId: _clientIdentityId,
+  categoryId: CategoryId.fromString('provider-dashboard-category-plumbing'),
   providerId: mockDashboardProvider.id,
   serviceId: ServiceId.fromString('provider-dashboard-service-leak-repair'),
   title: 'Reparación de fuga de agua',
@@ -95,6 +98,7 @@ final Order _orderInProgress = Order(
 final Order _orderCompleted1 = Order(
   id: OrderId.fromString('provider-dashboard-order-completed-1'),
   identityId: _clientIdentityId,
+  categoryId: CategoryId.fromString('provider-dashboard-category-plumbing'),
   providerId: mockDashboardProvider.id,
   serviceId: ServiceId.fromString('provider-dashboard-service-pipe-install'),
   title: 'Instalación de tuberías',
@@ -109,6 +113,7 @@ final Order _orderCompleted1 = Order(
 final Order _orderCompleted2 = Order(
   id: OrderId.fromString('provider-dashboard-order-completed-2'),
   identityId: _clientIdentityId,
+  categoryId: CategoryId.fromString('provider-dashboard-category-plumbing'),
   providerId: mockDashboardProvider.id,
   serviceId: ServiceId.fromString('provider-dashboard-service-faucet'),
   title: 'Instalación de grifería',

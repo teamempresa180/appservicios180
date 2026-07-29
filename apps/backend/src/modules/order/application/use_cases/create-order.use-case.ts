@@ -1,10 +1,13 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
 import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { ProviderRepository } from '../../../provider/domain/interfaces/provider-repository.interface';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
 import { ServiceRepository } from '../../../service/domain/interfaces/service-repository.interface';
 import { ServiceId } from '../../../service/domain/value-objects/service-id.value-object';
+import { CategoryRepository } from '../../../category/domain/interfaces/category-repository.interface';
+import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
 import { Order } from '../../domain/entities/order.entity';
 import { OrderRepository } from '../../domain/interfaces/order-repository.interface';
 import { OrderId } from '../../domain/value-objects/order-id.value-object';
@@ -15,13 +18,15 @@ import { OrderMapper } from '../mappers/order.mapper';
 import { OrderValidator } from '../validators/order.validator';
 
 /**
- * Creates a new Order for a customer Identity requesting a Service
- * from a Provider, always in `Pending` status. Depends on
- * `IdentityRepository`, `ProviderRepository` and `ServiceRepository`
- * to verify all three referenced records actually exist before
- * creating the order — all three already have Infrastructure
- * (Identity since Sprint 3 Etapa 2, Provider since Etapa 7, Service
- * since Etapa 6), so none of these checks is deferred.
+ * Creates a new Order for a customer Identity, always in `Pending`
+ * status — either a **direct hire** (`providerId`/`serviceId` both
+ * given: verifies the Provider and Service both exist, and that the
+ * Service actually belongs to that Provider — a mismatched pair would
+ * be an inconsistent request) or an **open request** (`providerId`/
+ * `serviceId` both omitted: only `categoryId` matters). `categoryId`
+ * is always verified against `CategoryRepository`. Depends on
+ * `IdentityRepository`/`CategoryRepository` always, and
+ * `ProviderRepository`/`ServiceRepository` only for a direct hire.
  */
 export class CreateOrderUseCase {
   constructor(
@@ -29,6 +34,7 @@ export class CreateOrderUseCase {
     private readonly identityRepository: IdentityRepository,
     private readonly providerRepository: ProviderRepository,
     private readonly serviceRepository: ServiceRepository,
+    private readonly categoryRepository: CategoryRepository,
   ) {}
 
   async execute(command: CreateOrderCommand): Promise<OrderDto> {
@@ -40,16 +46,31 @@ export class CreateOrderUseCase {
       throw new NotFoundException(`Identity ${command.identityId} not found`);
     }
 
-    const providerId = ProviderId.fromString(command.providerId);
-    const provider = await this.providerRepository.findById(providerId);
-    if (!provider) {
-      throw new NotFoundException(`Provider ${command.providerId} not found`);
+    const categoryId = CategoryId.fromString(command.categoryId);
+    const category = await this.categoryRepository.findById(categoryId);
+    if (!category) {
+      throw new NotFoundException(`Category ${command.categoryId} not found`);
     }
 
-    const serviceId = ServiceId.fromString(command.serviceId);
-    const service = await this.serviceRepository.findById(serviceId);
-    if (!service) {
-      throw new NotFoundException(`Service ${command.serviceId} not found`);
+    let providerId: ProviderId | null = null;
+    let serviceId: ServiceId | null = null;
+    if (command.providerId && command.serviceId) {
+      providerId = ProviderId.fromString(command.providerId);
+      const provider = await this.providerRepository.findById(providerId);
+      if (!provider) {
+        throw new NotFoundException(`Provider ${command.providerId} not found`);
+      }
+
+      serviceId = ServiceId.fromString(command.serviceId);
+      const service = await this.serviceRepository.findById(serviceId);
+      if (!service) {
+        throw new NotFoundException(`Service ${command.serviceId} not found`);
+      }
+      if (service.providerId.value !== provider.id.value) {
+        throw new BusinessRuleException(
+          `Service ${command.serviceId} does not belong to Provider ${command.providerId}`,
+        );
+      }
     }
 
     const now = new Date();
@@ -57,6 +78,7 @@ export class CreateOrderUseCase {
       identityId,
       providerId,
       serviceId,
+      categoryId,
       title: command.title,
       description: command.description,
       scheduledDate: command.scheduledDate,

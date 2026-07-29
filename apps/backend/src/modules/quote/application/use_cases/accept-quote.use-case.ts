@@ -1,4 +1,8 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
+import { Order } from '../../../order/domain/entities/order.entity';
+import { OrderRepository } from '../../../order/domain/interfaces/order-repository.interface';
+import { OrderStatus } from '../../../order/domain/value-objects/order-status.value-object';
 import { Quote } from '../../domain/entities/quote.entity';
 import { QuoteRepository } from '../../domain/interfaces/quote-repository.interface';
 import { QuoteId } from '../../domain/value-objects/quote-id.value-object';
@@ -9,19 +13,67 @@ import { QuoteMapper } from '../mappers/quote.mapper';
 
 /**
  * Accepts an existing Quote by transitioning it to `Accepted` status.
- * No prior-status guard — same criterion as `UpdateProviderUseCase`,
- * which applies changes unconditionally to any found entity. No
- * side effect on the referenced Order or on other Quotes for the same
- * Order: neither `Order` nor `Quote` exposes any such behavior.
+ * Also advances the referenced `Order` from `Pending` to `Accepted` —
+ * accepting a Quote *is* the client's order-acceptance decision in
+ * this flow (closes the previously-documented gap where an Order
+ * could never move past `Pending` via the API). Two cases:
+ * - **Open request** (`Order.providerId` was `null`): this Quote's
+ *   Provider is assigned to the Order — this is the one moment an
+ *   open request becomes tied to a specific Provider.
+ * - **Direct hire** (`Order.providerId` already set): the accepted
+ *   Quote must belong to that same Provider, or `BusinessRuleException`
+ *   — a direct hire can't be reassigned to a different Provider by
+ *   accepting someone else's Quote.
+ *
+ * Throws `BusinessRuleException` if the Order isn't `Pending` (already
+ * accepted by another Quote, or cancelled) — a Quote can't be
+ * accepted twice over, from the Order's perspective. `orderRepository`
+ * is optional only so existing unit tests that construct this Use
+ * Case with just a `QuoteRepository` keep compiling unchanged; when
+ * omitted, only the Quote itself transitions (no Order side effect) —
+ * `QuotePresentationModule` always wires the real one.
  */
 export class AcceptQuoteUseCase {
-  constructor(private readonly quoteRepository: QuoteRepository) {}
+  constructor(
+    private readonly quoteRepository: QuoteRepository,
+    private readonly orderRepository?: OrderRepository,
+  ) {}
 
   async execute(command: AcceptQuoteCommand): Promise<QuoteDto> {
     const id = QuoteId.fromString(command.id);
     const existing = await this.quoteRepository.findById(id);
     if (!existing) {
       throw new NotFoundException(`Quote ${command.id} not found`);
+    }
+
+    if (this.orderRepository) {
+      const order = await this.orderRepository.findById(existing.orderId);
+      if (order) {
+        if (order.status !== OrderStatus.Pending) {
+          throw new BusinessRuleException(
+            `Order ${order.id.value} is not awaiting a quote decision`,
+          );
+        }
+        if (order.providerId && !order.providerId.equals(existing.providerId)) {
+          throw new BusinessRuleException(
+            `Order ${order.id.value} is a direct hire for a different Provider`,
+          );
+        }
+        const acceptedOrder = new Order(order.id, {
+          identityId: order.identityId,
+          providerId: order.providerId ?? existing.providerId,
+          serviceId: order.serviceId,
+          categoryId: order.categoryId,
+          title: order.title,
+          description: order.description,
+          scheduledDate: order.scheduledDate,
+          status: OrderStatus.Accepted,
+          priority: order.priority,
+          createdAt: order.createdAt,
+          updatedAt: new Date(),
+        });
+        await this.orderRepository.save(acceptedOrder);
+      }
     }
 
     const accepted = new Quote(existing.id, {

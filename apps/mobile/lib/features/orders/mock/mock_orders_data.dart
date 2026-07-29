@@ -93,6 +93,7 @@ final OrderId _cancelledId = OrderId.fromString('orders-order-cancelled');
 final Order mockOrderPending = Order(
   id: _pendingId,
   identityId: IdentityId.fromString('orders-identity-client'),
+  categoryId: mockOrdersCategoryPlumbing.id,
   providerId: mockOrdersProvider.id,
   serviceId: ServiceId.fromString('orders-service-leak-repair'),
   title: 'Reparación de fuga de agua',
@@ -107,6 +108,7 @@ final Order mockOrderPending = Order(
 final Order mockOrderInProgress = Order(
   id: _inProgressId,
   identityId: IdentityId.fromString('orders-identity-client'),
+  categoryId: mockOrdersCategoryElectrical.id,
   providerId: mockOrdersProvider.id,
   serviceId: ServiceId.fromString('orders-service-outlet-install'),
   title: 'Instalación de tomacorrientes',
@@ -121,6 +123,7 @@ final Order mockOrderInProgress = Order(
 final Order mockOrderCompleted = Order(
   id: _completedId,
   identityId: IdentityId.fromString('orders-identity-client'),
+  categoryId: mockOrdersCategoryPlumbing.id,
   providerId: mockOrdersProvider.id,
   serviceId: ServiceId.fromString('orders-service-pipe-install'),
   title: 'Instalación de tuberías',
@@ -135,6 +138,7 @@ final Order mockOrderCompleted = Order(
 final Order mockOrderCancelled = Order(
   id: _cancelledId,
   identityId: IdentityId.fromString('orders-identity-client'),
+  categoryId: mockOrdersCategoryPlumbing.id,
   providerId: mockOrdersProvider.id,
   serviceId: ServiceId.fromString('orders-service-faucet-install'),
   title: 'Instalación de grifería',

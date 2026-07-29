@@ -1,9 +1,11 @@
 import { PaginatedResult } from '../../../../core/application/paginated-result';
 import { IdentityId } from '../../../../identity/domain/value-objects/identity-id.value-object';
 import { ProviderId } from '../../../../provider/domain/value-objects/provider-id.value-object';
+import { CategoryId } from '../../../../category/domain/value-objects/category-id.value-object';
 import { Order } from '../../../domain/entities/order.entity';
 import { OrderRepository } from '../../../domain/interfaces/order-repository.interface';
 import { OrderId } from '../../../domain/value-objects/order-id.value-object';
+import { OrderStatus } from '../../../domain/value-objects/order-status.value-object';
 
 /** In-memory `OrderRepository` fake — see `InMemoryIdentityRepository`. */
 export class InMemoryOrderRepository implements OrderRepository {
@@ -24,7 +26,18 @@ export class InMemoryOrderRepository implements OrderRepository {
   findByProviderId(providerId: ProviderId): Promise<Order[]> {
     return Promise.resolve(
       [...this.rows.values()].filter((row) =>
-        row.providerId.equals(providerId),
+        row.providerId?.equals(providerId),
+      ),
+    );
+  }
+
+  findOpenByCategoryId(categoryId: CategoryId): Promise<Order[]> {
+    return Promise.resolve(
+      [...this.rows.values()].filter(
+        (row) =>
+          row.providerId === null &&
+          row.status === OrderStatus.Pending &&
+          row.categoryId.equals(categoryId),
       ),
     );
   }

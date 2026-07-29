@@ -5,7 +5,8 @@ import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_button.dart';
 import '../../../../order/models/order_status.dart';
 import '../../../payments/presentation/pages/payments_page.dart';
-import '../../../reviews/presentation/pages/reviews_page.dart';
+import '../../../quote/presentation/pages/quote_page.dart';
+import '../../../reviews/presentation/pages/create_review_page.dart';
 import '../../../tracking/presentation/pages/order_tracking_page.dart';
 import '../../models/order_display.dart';
 
@@ -52,12 +53,27 @@ class OrderActions extends StatelessWidget {
     );
   }
 
-  void _openReviews(BuildContext context) {
+  void _openQuote(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => Scaffold(
-          appBar: AppBar(title: const Text('Reseñas')),
-          body: const SafeArea(child: ReviewsPage()),
+          appBar: AppBar(title: const Text('Cotización')),
+          body: SafeArea(child: QuotePage(order: data.order)),
+        ),
+      ),
+    );
+  }
+
+  void _openCreateReview(BuildContext context) {
+    final providerId = data.provider?.id;
+    if (providerId == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Calificar')),
+          body: SafeArea(
+            child: CreateReviewPage(order: data.order, providerId: providerId),
+          ),
         ),
       ),
     );
@@ -85,16 +101,19 @@ class OrderActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPending = data.order.status == OrderStatus.pending;
     final isDetail =
         data.order.status == OrderStatus.accepted ||
         data.order.status == OrderStatus.inProgress;
     final isCompleted = data.order.status == OrderStatus.completed;
 
     VoidCallback? defaultOnPressed;
-    if (isDetail) {
+    if (isPending) {
+      defaultOnPressed = () => _openQuote(context);
+    } else if (isDetail) {
       defaultOnPressed = () => _openPayments(context);
     } else if (isCompleted) {
-      defaultOnPressed = () => _openReviews(context);
+      defaultOnPressed = () => _openCreateReview(context);
     } else {
       defaultOnPressed = () {};
     }

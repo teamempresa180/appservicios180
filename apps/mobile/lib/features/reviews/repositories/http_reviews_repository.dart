@@ -1,8 +1,11 @@
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
+import '../../../identity/models/identity_id.dart';
 import '../../../order/entities/order.dart';
+import '../../../order/models/order_id.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
+import '../../../provider/models/provider_id.dart';
 import '../../../review/entities/review.dart';
 import '../../../service/entities/service.dart';
 import 'reviews_repository.dart';
@@ -53,9 +56,40 @@ class HttpReviewsRepository implements ReviewsRepository {
 
   @override
   Future<Service> getServiceFor(Review review) async {
-    // Review has no serviceId of its own — go through its order.
+    // Review has no serviceId of its own — go through its order. Only
+    // meaningful for a direct-hire order (`Order.serviceId` set) — an
+    // open request's order may have none, in which case there is
+    // genuinely no service to resolve.
     final order = await getOrderFor(review);
-    final json = await _apiClient.get('/services/${order.serviceId.value}');
+    final serviceId = order.serviceId;
+    if (serviceId == null) {
+      throw StateError('Order ${order.id.value} has no service assigned');
+    }
+    final json = await _apiClient.get('/services/${serviceId.value}');
     return ServiceHttpMapper.fromJson(json);
+  }
+
+  @override
+  Future<Review> createReview({
+    required OrderId orderId,
+    required ProviderId providerId,
+    required IdentityId reviewerIdentityId,
+    required num rating,
+    required String title,
+    required String comment,
+  }) async {
+    final json = await _apiClient.post(
+      '/reviews',
+      data: {
+        'orderId': orderId.value,
+        'providerId': providerId.value,
+        'reviewerIdentityId': reviewerIdentityId.value,
+        'rating': rating,
+        'title': title,
+        'comment': comment,
+        'status': 'PUBLISHED',
+      },
+    );
+    return ReviewHttpMapper.fromJson(json);
   }
 }

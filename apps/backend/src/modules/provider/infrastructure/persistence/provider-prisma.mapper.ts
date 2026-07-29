@@ -1,6 +1,7 @@
 import { ProviderModel as PrismaProvider } from '@prisma/client';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { ProfileId } from '../../../profiles/domain/value-objects/profile-id.value-object';
+import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
 import { Provider } from '../../domain/entities/provider.entity';
 import { ProviderId } from '../../domain/value-objects/provider-id.value-object';
 import { ProviderExperience } from '../../domain/value-objects/provider-experience.value-object';
@@ -18,6 +19,8 @@ export class ProviderPrismaMapper {
     return new Provider(ProviderId.fromString(row.id), {
       identityId: IdentityId.fromString(row.identityId),
       providerProfileId: ProfileId.fromString(row.providerProfileId),
+      categoryId: row.categoryId ? CategoryId.fromString(row.categoryId) : null,
+      specialization: row.specialization,
       status: row.status as unknown as ProviderStatus,
       type: row.type as unknown as ProviderType,
       experience: row.experience as unknown as ProviderExperience,
@@ -33,6 +36,8 @@ export class ProviderPrismaMapper {
       id: provider.id.value,
       identityId: provider.identityId.value,
       providerProfileId: provider.providerProfileId.value,
+      categoryId: provider.categoryId?.value ?? null,
+      specialization: provider.specialization,
       status: provider.status,
       type: provider.type,
       experience: provider.experience,

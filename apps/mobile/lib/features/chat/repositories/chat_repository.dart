@@ -4,6 +4,7 @@ import '../../../message/entities/message.dart';
 import '../../../order/entities/order.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
+import '../../../provider/models/provider_id.dart';
 import '../models/conversation_summary.dart';
 
 /// Contract for reading the domain entities the Chat screen needs.
@@ -27,4 +28,13 @@ abstract class ChatRepository {
 
   /// One row per conversation, newest first — backs the "Mensajes" tab.
   Future<List<ConversationSummary>> getConversations();
+
+  /// Finds the existing `Chat` for [order] or creates one
+  /// (`POST /chats { orderId, clientIdentityId, providerId }` on the
+  /// real backend) — the moment a `Quote` is accepted and the client
+  /// should be taken straight into a conversation with that provider.
+  /// [providerId] is the provider whose `Quote` was just accepted
+  /// (needed for open requests, where `order.providerId` may not have
+  /// propagated into the caller's in-memory `Order` yet).
+  Future<Chat> createOrGetForOrder(Order order, ProviderId providerId);
 }

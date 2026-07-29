@@ -22,6 +22,7 @@ import 'package:mobile/message/entities/message.dart';
 import 'package:mobile/order/entities/order.dart';
 import 'package:mobile/profiles/entities/profile.dart';
 import 'package:mobile/provider/entities/provider.dart';
+import 'package:mobile/provider/models/provider_id.dart';
 
 /// Wraps [MockChatRepository] (already `Future`-returning) so tests
 /// can force it to never resolve (loading state) or return no
@@ -59,6 +60,10 @@ class _FakeChatRepository implements ChatRepository {
   @override
   Future<List<ConversationSummary>> getConversations() =>
       _delegate.getConversations();
+
+  @override
+  Future<Chat> createOrGetForOrder(Order order, ProviderId providerId) =>
+      _delegate.createOrGetForOrder(order, providerId);
 }
 
 void main() {

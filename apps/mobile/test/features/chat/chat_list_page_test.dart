@@ -19,6 +19,7 @@ import 'package:mobile/message/entities/message.dart';
 import 'package:mobile/order/entities/order.dart';
 import 'package:mobile/profiles/entities/profile.dart';
 import 'package:mobile/provider/entities/provider.dart';
+import 'package:mobile/provider/models/provider_id.dart';
 
 final List<ConversationSummary> _fixtures = [
   ConversationSummary(
@@ -75,6 +76,10 @@ class _FakeChatRepository implements ChatRepository {
     if (neverResolves) return Completer<List<ConversationSummary>>().future;
     return Future.value(conversations);
   }
+
+  @override
+  Future<Chat> createOrGetForOrder(Order order, ProviderId providerId) =>
+      _delegate.createOrGetForOrder(order, providerId);
 }
 
 void main() {

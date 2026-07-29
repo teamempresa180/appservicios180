@@ -2,11 +2,13 @@ import '../../../attachment/entities/attachment.dart';
 import '../../../chat/entities/chat.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
+import '../../../core/network/mappers/enum_json.dart';
 import '../../../core/session/session_manager.dart';
 import '../../../message/entities/message.dart';
 import '../../../order/entities/order.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
+import '../../../provider/models/provider_id.dart';
 import '../models/conversation_summary.dart';
 import 'chat_repository.dart';
 
@@ -158,5 +160,24 @@ class HttpChatRepository implements ChatRepository {
     }
     summaries.sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
     return summaries;
+  }
+
+  @override
+  Future<Chat> createOrGetForOrder(Order order, ProviderId providerId) async {
+    final json = await _apiClient.get('/chats');
+    final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final match = items.where((item) => item['orderId'] == order.id.value);
+    if (match.isNotEmpty) return ChatHttpMapper.fromJson(match.first);
+
+    final created = await _apiClient.post(
+      '/chats',
+      data: {
+        'orderId': order.id.value,
+        'clientIdentityId': order.identityId.value,
+        'providerId': providerId.value,
+        'type': enumToJson('orderRelated'),
+      },
+    );
+    return ChatHttpMapper.fromJson(created);
   }
 }

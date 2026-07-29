@@ -47,10 +47,14 @@ class ProviderInformation extends StatelessWidget {
                     Text(
                       data.providerName,
                       style: context.textStyles.titleSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       '${data.provider.yearsOfExperience} años de experiencia',
                       style: context.textStyles.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

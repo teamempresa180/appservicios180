@@ -5,10 +5,14 @@ import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../models/provider_dashboard_display.dart';
 
-/// List of the real `Order`s pending acceptance
+/// List of the real, correctly-scoped `Order`s still `Pending`
 /// (`ProviderDashboardDisplay.pendingOrders`, derived from `orders` —
-/// see the feature README). Purely visual — no accept/reject action
-/// yet.
+/// see the feature README), now including open requests in this
+/// provider's own category since `orders` comes from
+/// `GET /orders/relevant-for-provider` (see
+/// `HttpProviderDashboardRepository.getOrders`). Purely visual — no
+/// action here; submitting a Quote for one of these lives on the
+/// "Servicios" screen (`ProviderRequestsPage`).
 class PendingRequests extends StatelessWidget {
   const PendingRequests({super.key, required this.data});
 
@@ -45,6 +49,8 @@ class PendingRequests extends StatelessWidget {
                     Expanded(
                       child: Text(
                         order.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: context.textStyles.bodyMedium,
                       ),
                     ),

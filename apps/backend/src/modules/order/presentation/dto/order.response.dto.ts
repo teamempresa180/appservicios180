@@ -14,11 +14,14 @@ export class OrderResponseDto {
   @ApiProperty()
   identityId!: string;
 
-  @ApiProperty()
-  providerId!: string;
+  @ApiProperty({ nullable: true })
+  providerId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  serviceId!: string | null;
 
   @ApiProperty()
-  serviceId!: string;
+  categoryId!: string;
 
   @ApiProperty({ example: 'Fix leaking kitchen faucet' })
   title!: string;

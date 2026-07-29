@@ -40,25 +40,36 @@ class RecentOrders extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const AppSectionTitle(title: 'Órdenes recientes'),
-          for (final order in recent) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.space4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      order.title,
-                      style: context.textStyles.bodyMedium,
+          if (recent.isEmpty)
+            Text(
+              'Todavía no tienes órdenes.',
+              style: context.textStyles.bodySmall,
+            )
+          else
+            for (final order in recent) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.space4,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        order.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textStyles.bodyMedium,
+                      ),
                     ),
-                  ),
-                  Text(
-                    _statusLabel(order.status),
-                    style: context.textStyles.bodySmall,
-                  ),
-                ],
+                    const SizedBox(width: AppSpacing.space8),
+                    Text(
+                      _statusLabel(order.status),
+                      style: context.textStyles.bodySmall,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
         ],
       ),
     );

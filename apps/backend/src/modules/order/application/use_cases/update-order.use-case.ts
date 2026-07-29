@@ -10,9 +10,11 @@ import { OrderValidator } from '../validators/order.validator';
 /**
  * Updates the mutable fields of an existing Order (`title`,
  * `description`, `scheduledDate`, `priority`) — `identityId`/
- * `providerId`/`serviceId`/`status` are not offered by
+ * `providerId`/`serviceId`/`categoryId`/`status` are not offered by
  * `UpdateOrderCommand`; status changes go exclusively through
- * `CancelOrderUseCase`.
+ * `CancelOrderUseCase`/`StartOrderUseCase`/`CompleteOrderUseCase`
+ * (and, for `Pending` → `Accepted` on an open request, through
+ * `AcceptQuoteUseCase` assigning a Provider).
  */
 export class UpdateOrderUseCase {
   constructor(private readonly orderRepository: OrderRepository) {}
@@ -30,6 +32,7 @@ export class UpdateOrderUseCase {
       identityId: existing.identityId,
       providerId: existing.providerId,
       serviceId: existing.serviceId,
+      categoryId: existing.categoryId,
       title: command.title ?? existing.title,
       description: command.description ?? existing.description,
       scheduledDate: command.scheduledDate ?? existing.scheduledDate,

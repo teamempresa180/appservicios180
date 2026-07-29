@@ -1,3 +1,4 @@
+import '../../../category/models/category_id.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
 import '../../../profiles/entities/profile.dart';
@@ -40,6 +41,25 @@ class HttpMarketplaceProviderRepository implements ProviderRepository {
         .map(ProviderHttpMapper.fromJson)
         .where((provider) => provider.status == ProviderStatus.active)
         .toList();
+  }
+
+  /// `GET /providers/compatible` returns a plain JSON array (not
+  /// paginated) of active providers already scoped server-side to
+  /// [categoryId], optionally narrowed by [specialization].
+  @override
+  Future<List<Provider>> getCompatible({
+    required CategoryId categoryId,
+    String? specialization,
+  }) async {
+    final items = await _apiClient.getList(
+      '/providers/compatible',
+      queryParameters: {
+        'categoryId': categoryId.value,
+        if (specialization != null && specialization.trim().isNotEmpty)
+          'specialization': specialization.trim(),
+      },
+    );
+    return items.cast<Map<String, dynamic>>().map(ProviderHttpMapper.fromJson).toList();
   }
 
   @override

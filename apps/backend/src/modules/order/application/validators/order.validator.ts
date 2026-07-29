@@ -14,11 +14,15 @@ export class OrderValidator {
     if (!command.identityId?.trim()) {
       throw new ValidationException('identityId is required');
     }
-    if (!command.providerId?.trim()) {
-      throw new ValidationException('providerId is required');
+    if (!command.categoryId?.trim()) {
+      throw new ValidationException('categoryId is required');
     }
-    if (!command.serviceId?.trim()) {
-      throw new ValidationException('serviceId is required');
+    const hasProvider = !!command.providerId?.trim();
+    const hasService = !!command.serviceId?.trim();
+    if (hasProvider !== hasService) {
+      throw new ValidationException(
+        'providerId and serviceId must both be present (direct hire) or both be absent (open request)',
+      );
     }
     if (!command.title?.trim()) {
       throw new ValidationException('title is required');

@@ -114,6 +114,7 @@ describe('PrismaReviewRepository (integration)', () => {
         identityId: reviewerIdentity.id,
         providerId: provider.id,
         serviceId: service.id,
+        categoryId: category.id,
         title: 'Integration Test Order',
         description: 'desc',
         scheduledDate: new Date('2026-01-01T08:00:00Z'),

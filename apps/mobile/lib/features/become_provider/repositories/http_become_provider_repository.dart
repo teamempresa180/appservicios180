@@ -16,24 +16,15 @@ import 'become_provider_repository.dart';
 
 /// [BecomeProviderRepository] backed by [ApiClient].
 ///
-/// `Provider` has no dedicated `category`/`specialization`/`city`/
-/// `coverage` field in the domain (it only carries `type`/
-/// `experience`/`biography`/`yearsOfExperience` — see
-/// `lib/provider/entities/provider.dart`'s own "no categories... no
-/// location" doc comment). Rather than silently dropping data the
-/// applicant actually entered, this repository gives each field the
-/// closest **real** home that already exists on the backend instead
-/// of fabricating a new one:
+/// `Provider` now has dedicated `categoryId`/`specialization` columns
+/// on the backend (see `apps/backend` migration
+/// `provider_category_and_review_states`), so both are sent as real
+/// fields on `POST /providers` instead of being folded into
+/// `biography` as a text prefix (the previous, interim approach).
 ///
-/// - `category`/`specialization` are folded into the *start* of
-///   `biography` as a structured, human-readable prefix (still real,
-///   persisted text — not simulated) — a proper `categoryId` field on
-///   `Provider` is the correct long-term fix, left for a future
-///   backend prompt since it's a schema change beyond this flow's
-///   scope.
-/// - `city`/`department`/`coverage` become a real `Address` (`type:
-///   SERVICE`) for the identity, reusing the existing Address module
-///   rather than inventing a new "coverage area" concept.
+/// - `city`/`department`/`coverage` still become a real `Address`
+///   (`type: SERVICE`) for the identity, reusing the existing Address
+///   module rather than inventing a new "coverage area" concept.
 ///
 /// `type` (independent/freelancer/company) isn't asked in this form —
 /// defaults to `independent`. `experience` (the qualitative level
@@ -145,10 +136,6 @@ class HttpBecomeProviderRepository implements BecomeProviderRepository {
       coverage: coverage,
     );
 
-    final combinedBiography =
-        'Categoría: ${category.name}. Especialización: $specialization.\n\n'
-        '$biography';
-
     final providerJson = await _apiClient.post(
       '/providers',
       data: {
@@ -156,8 +143,10 @@ class HttpBecomeProviderRepository implements BecomeProviderRepository {
         'providerProfileId': profile.id.value,
         'type': 'INDEPENDENT',
         'experience': enumToJson(_experienceFor(yearsOfExperience).name),
-        'biography': combinedBiography,
+        'biography': biography,
         'yearsOfExperience': yearsOfExperience,
+        'categoryId': category.id.value,
+        'specialization': specialization,
       },
     );
     final provider = ProviderHttpMapper.fromJson(providerJson);

@@ -21,6 +21,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       secretOrKey: config.jwtAccessSecret,
       issuer: config.jwtIssuer,
       audience: config.jwtAudience,
+      // Pin the accepted signing algorithm explicitly (defense in
+      // depth) — without this, `jsonwebtoken` accepts whatever
+      // algorithm family the token itself declares, so a request
+      // shouldn't be able to switch algorithms out from under a fixed
+      // shared secret.
+      algorithms: ['HS256'],
     });
   }
 

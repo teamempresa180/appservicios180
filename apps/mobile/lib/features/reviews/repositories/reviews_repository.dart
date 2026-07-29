@@ -1,6 +1,9 @@
+import '../../../identity/models/identity_id.dart';
 import '../../../order/entities/order.dart';
+import '../../../order/models/order_id.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
+import '../../../provider/models/provider_id.dart';
 import '../../../review/entities/review.dart';
 import '../../../service/entities/service.dart';
 
@@ -19,4 +22,17 @@ abstract class ReviewsRepository {
   Future<Profile> getProfileFor(Review review);
   Future<Order> getOrderFor(Review review);
   Future<Service> getServiceFor(Review review);
+
+  /// Submits a real rating for a completed order (`POST /reviews` on the
+  /// real backend) — backs the "Calificar" action once an order is
+  /// `Completed`. [status] should be `ReviewStatus.published` for a
+  /// real user rating submitted from the UI.
+  Future<Review> createReview({
+    required OrderId orderId,
+    required ProviderId providerId,
+    required IdentityId reviewerIdentityId,
+    required num rating,
+    required String title,
+    required String comment,
+  });
 }

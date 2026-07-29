@@ -1,74 +1,46 @@
-import '../../../address/entities/address.dart';
-import '../../../category/entities/category.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
-import '../../../order/entities/order.dart';
+import '../../../core/network/mappers/enum_json.dart';
+import '../../../order/models/order_id.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
+import '../../../provider/models/provider_id.dart';
 import '../../../quote/entities/quote.dart';
-import '../../../service/entities/service.dart';
-import '../../categories/repositories/category_http_mapper.dart';
+import '../../../quote/models/quote_type.dart';
 import 'quote_repository.dart';
 
 /// [QuoteRepository] backed by [ApiClient].
 ///
-/// The feature interface still models a single fixed quote (see
-/// `quote_repository.dart`'s own doc comment: "no id-based lookup
-/// yet"). `_fetchQuote()` takes the first item of `GET /quotes`
-/// (paginated, unfiltered) as that one quote — the same interim shape
-/// as `HttpChatRepository._fetchChat()`.
-///
-/// `Quote` does not carry a `serviceId` directly — [getService] follows
-/// `quote.orderId` to `GET /orders/:id` first, then that order's
-/// `serviceId` to `GET /services/:id`. `getProvider` uses
-/// `quote.providerId` directly. `getProfile`/`getCategory` chain
-/// through the provider's `providerProfileId` and the service's
-/// `categoryId`, same style as `HttpOrdersRepository`.
-///
-/// `Address` has no domain relation to `Quote`/`Order` at all —
-/// [getAddress] fetches `GET /addresses` and matches client-side on
-/// `identityId == order.identityId` (the order's customer), taking the
-/// first match. Same interim shape as `HttpOrdersRepository.getQuoteFor`.
+/// [getQuotesForOrder] has no server-side `?orderId=` filter (`GET
+/// /quotes` is paginated, unfiltered) — lists the full collection and
+/// matches `orderId` client-side, same interim shape already documented
+/// on `HttpOrdersRepository.getQuoteFor`.
 class HttpQuoteRepository implements QuoteRepository {
   HttpQuoteRepository(this._apiClient);
 
   final ApiClient _apiClient;
 
-  Future<Quote> _fetchQuote() async {
+  @override
+  Future<List<Quote>> getQuotesForOrder(OrderId orderId) async {
     final json = await _apiClient.get('/quotes');
     final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
-    if (items.isEmpty) {
-      throw StateError('No quotes available for the current session');
-    }
-    return QuoteHttpMapper.fromJson(items.first);
-  }
-
-  Future<Order> _fetchOrder() async {
-    final quote = await _fetchQuote();
-    final json = await _apiClient.get('/orders/${quote.orderId.value}');
-    return OrderHttpMapper.fromJson(json);
+    final quotes = items
+        .where((item) => item['orderId'] == orderId.value)
+        .map(QuoteHttpMapper.fromJson)
+        .toList();
+    quotes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return quotes;
   }
 
   @override
-  Future<Quote> getQuote() => _fetchQuote();
-
-  @override
-  Future<Service> getService() async {
-    final order = await _fetchOrder();
-    final json = await _apiClient.get('/services/${order.serviceId.value}');
-    return ServiceHttpMapper.fromJson(json);
-  }
-
-  @override
-  Future<Provider> getProvider() async {
-    final quote = await _fetchQuote();
+  Future<Provider> getProviderFor(Quote quote) async {
     final json = await _apiClient.get('/providers/${quote.providerId.value}');
     return ProviderHttpMapper.fromJson(json);
   }
 
   @override
-  Future<Profile> getProfile() async {
-    final provider = await getProvider();
+  Future<Profile> getProfileFor(Quote quote) async {
+    final provider = await getProviderFor(quote);
     final json = await _apiClient.get(
       '/profiles/${provider.providerProfileId.value}',
     );
@@ -76,26 +48,26 @@ class HttpQuoteRepository implements QuoteRepository {
   }
 
   @override
-  Future<Category> getCategory() async {
-    final service = await getService();
-    final json = await _apiClient.get(
-      '/categories/${service.categoryId.value}',
+  Future<Quote> createQuote({
+    required OrderId orderId,
+    required ProviderId providerId,
+    required num proposedPrice,
+    required int estimatedDuration,
+    required String notes,
+    required QuoteType type,
+  }) async {
+    final json = await _apiClient.post(
+      '/quotes',
+      data: {
+        'orderId': orderId.value,
+        'providerId': providerId.value,
+        'proposedPrice': proposedPrice,
+        'estimatedDuration': estimatedDuration,
+        'notes': notes,
+        'type': enumToJson(type.name),
+      },
     );
-    return CategoryHttpMapper.fromJson(json);
-  }
-
-  @override
-  Future<Address> getAddress() async {
-    final order = await _fetchOrder();
-    final json = await _apiClient.get('/addresses');
-    final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
-    final match = items.firstWhere(
-      (item) => item['identityId'] == order.identityId.value,
-      orElse: () => throw StateError(
-        'No address found for identity ${order.identityId.value}',
-      ),
-    );
-    return AddressHttpMapper.fromJson(match);
+    return QuoteHttpMapper.fromJson(json);
   }
 
   @override

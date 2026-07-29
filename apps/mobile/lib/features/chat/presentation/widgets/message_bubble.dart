@@ -44,6 +44,8 @@ class MessageBubble extends StatelessWidget {
         ? context.colors.onSurface
         : context.colors.onPrimary;
 
+    final maxBubbleWidth = MediaQuery.of(context).size.width * 0.75;
+
     return Align(
       alignment: isFromProvider ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
@@ -52,7 +54,7 @@ class MessageBubble extends StatelessWidget {
           horizontal: AppSpacing.space12,
           vertical: AppSpacing.space8,
         ),
-        constraints: const BoxConstraints(maxWidth: 280),
+        constraints: BoxConstraints(maxWidth: maxBubbleWidth),
         decoration: BoxDecoration(
           color: bubbleColor,
           borderRadius: BorderRadius.circular(AppRadius.radius12),

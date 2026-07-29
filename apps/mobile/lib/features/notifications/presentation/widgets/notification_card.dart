@@ -31,6 +31,8 @@ class NotificationCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         data.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: context.textStyles.titleSmall,
                       ),
                     ),
@@ -38,7 +40,12 @@ class NotificationCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.space4),
-                Text(data.description, style: context.textStyles.bodyMedium),
+                Text(
+                  data.description,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.textStyles.bodyMedium,
+                ),
                 const SizedBox(height: AppSpacing.space4),
                 Text(data.timeAgo, style: context.textStyles.bodySmall),
                 const SizedBox(height: AppSpacing.space8),

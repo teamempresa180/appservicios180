@@ -13,9 +13,12 @@ import 'package:mobile/features/reviews/presentation/widgets/review_filters.dart
 import 'package:mobile/features/reviews/presentation/widgets/reviews_summary.dart';
 import 'package:mobile/features/reviews/repositories/mock_reviews_repository.dart';
 import 'package:mobile/features/reviews/repositories/reviews_repository.dart';
+import 'package:mobile/identity/models/identity_id.dart';
 import 'package:mobile/order/entities/order.dart';
+import 'package:mobile/order/models/order_id.dart';
 import 'package:mobile/profiles/entities/profile.dart';
 import 'package:mobile/provider/entities/provider.dart';
+import 'package:mobile/provider/models/provider_id.dart';
 import 'package:mobile/review/entities/review.dart';
 import 'package:mobile/service/entities/service.dart';
 
@@ -50,6 +53,23 @@ class _FakeReviewsRepository implements ReviewsRepository {
   @override
   Future<Service> getServiceFor(Review review) =>
       _delegate.getServiceFor(review);
+
+  @override
+  Future<Review> createReview({
+    required OrderId orderId,
+    required ProviderId providerId,
+    required IdentityId reviewerIdentityId,
+    required num rating,
+    required String title,
+    required String comment,
+  }) => _delegate.createReview(
+    orderId: orderId,
+    providerId: providerId,
+    reviewerIdentityId: reviewerIdentityId,
+    rating: rating,
+    title: title,
+    comment: comment,
+  );
 }
 
 void main() {

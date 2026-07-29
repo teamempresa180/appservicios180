@@ -2,6 +2,7 @@ import { PaginatedResult } from '../../../core/application/paginated-result';
 import { Provider } from '../entities/provider.entity';
 import { ProviderId } from '../value-objects/provider-id.value-object';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
+import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
 
 /**
  * Contract for Provider persistence. No implementation lives in this
@@ -26,4 +27,13 @@ export interface ProviderRepository {
   list(page: number, pageSize: number): Promise<PaginatedResult<Provider>>;
   /** Free-text match against `type`/`biography`. */
   search(term: string): Promise<Provider[]>;
+  /** Active Providers in a Category, optionally narrowed by a
+   *  case-insensitive substring match on `specialization` — what the
+   *  client's category→specialization marketplace search and the
+   *  "compatible providers" list use, distinct from `search`'s
+   *  free-text intent. */
+  findCompatible(
+    categoryId: CategoryId,
+    specialization?: string,
+  ): Promise<Provider[]>;
 }

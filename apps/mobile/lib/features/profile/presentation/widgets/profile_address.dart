@@ -28,10 +28,17 @@ class ProfileAddress extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(address.alias, style: context.textStyles.titleSmall),
+                    Text(
+                      address.alias,
+                      style: context.textStyles.titleSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     Text(
                       '${address.fullAddress}, ${address.city}',
                       style: context.textStyles.bodySmall,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

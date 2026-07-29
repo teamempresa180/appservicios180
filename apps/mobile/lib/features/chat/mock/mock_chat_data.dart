@@ -1,4 +1,5 @@
 import '../../../attachment/entities/attachment.dart';
+import '../../../category/models/category_id.dart';
 import '../../../attachment/models/attachment_id.dart';
 import '../../../attachment/models/attachment_status.dart';
 import '../../../attachment/models/attachment_type.dart';
@@ -67,6 +68,7 @@ final Profile mockChatProfile = Profile(
 final Order mockChatOrder = Order(
   id: OrderId.fromString('chat-order-1'),
   identityId: _clientIdentityId,
+  categoryId: CategoryId.fromString('chat-category-plumbing'),
   providerId: mockChatProvider.id,
   serviceId: ServiceId.fromString('chat-service-leak-repair'),
   title: 'Reparación de fuga de agua',

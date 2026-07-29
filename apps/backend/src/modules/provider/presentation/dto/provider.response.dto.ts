@@ -18,6 +18,12 @@ export class ProviderResponseDto {
   @ApiProperty()
   providerProfileId!: string;
 
+  @ApiProperty({ nullable: true, example: 'category-id-123' })
+  categoryId!: string | null;
+
+  @ApiProperty({ nullable: true, example: 'Residential plumbing repairs' })
+  specialization!: string | null;
+
   @ApiProperty({ enum: ProviderStatus })
   status!: ProviderStatus;
 

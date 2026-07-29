@@ -28,7 +28,12 @@ class DarkModeToggleTile extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.space12),
               Expanded(
-                child: Text('Modo oscuro', style: context.textStyles.bodyMedium),
+                child: Text(
+                  'Modo oscuro',
+                  style: context.textStyles.bodyMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               Switch(
                 value: controller.isDark,

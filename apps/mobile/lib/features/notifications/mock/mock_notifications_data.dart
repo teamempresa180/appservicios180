@@ -1,3 +1,4 @@
+import '../../../category/models/category_id.dart';
 import '../../../chat/entities/chat.dart';
 import '../../../chat/models/chat_id.dart';
 import '../../../chat/models/chat_status.dart';
@@ -43,6 +44,7 @@ final ProviderId _providerId = ProviderId.fromString(
 final Order _order = Order(
   id: OrderId.fromString('notifications-order-1'),
   identityId: _clientIdentityId,
+  categoryId: CategoryId.fromString('notifications-category-plumbing'),
   providerId: _providerId,
   serviceId: ServiceId.fromString('notifications-service-1'),
   title: 'Reparación de fuga de agua',

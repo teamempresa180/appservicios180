@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrderPriority } from '../../domain/value-objects/order-priority.value-object';
 
 /**
@@ -7,6 +7,10 @@ import { OrderPriority } from '../../domain/value-objects/order-priority.value-o
  * Application layer's internal input shape, this one is the wire
  * contract exposed to API clients (documented via `@ApiProperty` for
  * Swagger). `OrderHttpMapper` translates between the two.
+ * `providerId`/`serviceId` are optional together: omit both for an
+ * **open request** (any Provider in `categoryId` may quote it),
+ * provide both for a **direct hire** of a specific Provider's
+ * specific Service.
  */
 export class CreateOrderRequestDto {
   @ApiProperty({
@@ -16,16 +20,23 @@ export class CreateOrderRequestDto {
   identityId!: string;
 
   @ApiProperty({
-    example: 'provider-id-123',
-    description: 'The id of the Provider fulfilling the Order.',
+    example: 'category-id-123',
+    description: 'The id of the Category this request belongs to.',
   })
-  providerId!: string;
+  categoryId!: string;
 
-  @ApiProperty({
-    example: 'service-id-123',
-    description: 'The id of the Service being ordered.',
+  @ApiPropertyOptional({
+    example: 'provider-id-123',
+    description:
+      'The id of the Provider fulfilling the Order (direct hire only).',
   })
-  serviceId!: string;
+  providerId?: string;
+
+  @ApiPropertyOptional({
+    example: 'service-id-123',
+    description: 'The id of the Service being ordered (direct hire only).',
+  })
+  serviceId?: string;
 
   @ApiProperty({ example: 'Fix leaking kitchen faucet' })
   title!: string;

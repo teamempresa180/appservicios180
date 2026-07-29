@@ -28,6 +28,8 @@ class ReviewCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   data.reviewerName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: context.textStyles.titleSmall,
                 ),
               ),

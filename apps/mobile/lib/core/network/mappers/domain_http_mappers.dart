@@ -87,8 +87,13 @@ class OrderHttpMapper {
   static Order fromJson(Map<String, dynamic> json) => Order(
     id: OrderId.fromString(json['id'] as String),
     identityId: IdentityId.fromString(json['identityId'] as String),
-    providerId: ProviderId.fromString(json['providerId'] as String),
-    serviceId: ServiceId.fromString(json['serviceId'] as String),
+    categoryId: CategoryId.fromString(json['categoryId'] as String),
+    providerId: json['providerId'] == null
+        ? null
+        : ProviderId.fromString(json['providerId'] as String),
+    serviceId: json['serviceId'] == null
+        ? null
+        : ServiceId.fromString(json['serviceId'] as String),
     title: json['title'] as String,
     description: json['description'] as String,
     scheduledDate: DateTime.parse(json['scheduledDate'] as String),

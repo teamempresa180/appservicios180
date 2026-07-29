@@ -34,6 +34,7 @@ import { InMemoryCategoryRepository } from '../src/modules/category/application/
 import { SERVICE_REPOSITORY } from '../src/modules/service/domain/interfaces/service-repository.interface';
 import { InMemoryServiceRepository } from '../src/modules/service/application/use_cases/test-support/in-memory-service.repository';
 import { ServiceId } from '../src/modules/service/domain/value-objects/service-id.value-object';
+import { CategoryId } from '../src/modules/category/domain/value-objects/category-id.value-object';
 import { QuoteType } from '../src/modules/quote/domain/value-objects/quote-type.value-object';
 import { QuoteResponseDto } from '../src/modules/quote/presentation/dto/quote.response.dto';
 import { QuoteListResponseDto } from '../src/modules/quote/presentation/dto/quote-list.response.dto';
@@ -66,8 +67,9 @@ describe('QuoteController (e2e)', () => {
     const orderRepository = new InMemoryOrderRepository();
     const order = new Order(OrderId.create(), {
       identityId: IdentityId.create(),
-      providerId: ProviderId.create(),
-      serviceId: ServiceId.create(),
+      providerId: null,
+      serviceId: null,
+      categoryId: CategoryId.create(),
       title: 'Fix leaking kitchen faucet',
       description: 'Description.',
       scheduledDate: now,

@@ -1,9 +1,13 @@
 import '../../../attachment/entities/attachment.dart';
 import '../../../chat/entities/chat.dart';
+import '../../../chat/models/chat_id.dart';
+import '../../../chat/models/chat_status.dart';
+import '../../../chat/models/chat_type.dart';
 import '../../../message/entities/message.dart';
 import '../../../order/entities/order.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
+import '../../../provider/models/provider_id.dart';
 import '../mock/mock_chat_data.dart';
 import '../models/conversation_summary.dart';
 import 'chat_repository.dart';
@@ -34,4 +38,20 @@ class MockChatRepository implements ChatRepository {
   @override
   Future<List<ConversationSummary>> getConversations() =>
       Future.value(List.unmodifiable(mockConversations));
+
+  @override
+  Future<Chat> createOrGetForOrder(Order order, ProviderId providerId) async {
+    if (order.id == mockChatOrder.id) return mockChat;
+    final now = DateTime.now();
+    return Chat(
+      id: ChatId.create(),
+      orderId: order.id,
+      clientIdentityId: order.identityId,
+      providerId: providerId,
+      status: ChatStatus.active,
+      type: ChatType.orderRelated,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
 }

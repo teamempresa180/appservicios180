@@ -113,7 +113,7 @@ class _ProviderProfilePageState extends State<ProviderProfilePage> {
           const SizedBox(height: AppSpacing.space16),
           SlideIn(child: ProviderReviewsSummary(data: data)),
           const SizedBox(height: AppSpacing.space16),
-          const ProviderActions(),
+          ProviderActions(data: data),
         ],
       ),
     );

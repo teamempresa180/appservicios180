@@ -26,15 +26,19 @@ class HomeHeader extends StatelessWidget {
           children: [
             const AppAvatar(),
             const SizedBox(width: AppSpacing.space12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Hola', style: context.textStyles.titleLarge),
-                Text(
-                  MockHomeData.displayName(role),
-                  style: context.textStyles.bodyMedium,
-                ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Hola', style: context.textStyles.titleLarge),
+                  Text(
+                    MockHomeData.displayName(role),
+                    style: context.textStyles.bodyMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           ],
         ),

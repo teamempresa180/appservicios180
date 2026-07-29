@@ -17,6 +17,7 @@ import 'package:mobile/order/entities/order.dart';
 import 'package:mobile/profiles/entities/profile.dart';
 import 'package:mobile/provider/entities/provider.dart';
 import 'package:mobile/quote/entities/quote.dart';
+import 'package:mobile/quote/models/quote_type.dart';
 import 'package:mobile/service/entities/service.dart';
 
 /// Wraps [MockOrdersRepository] (already `Future`-returning) so tests
@@ -58,10 +59,43 @@ class _FakeOrdersRepository implements OrdersRepository {
       _delegate.getClientProfileFor(order);
 
   @override
-  Future<Order> acceptOrder(Order order) => _delegate.acceptOrder(order);
+  Future<Order> rejectOrder(Order order) => _delegate.rejectOrder(order);
 
   @override
-  Future<Order> rejectOrder(Order order) => _delegate.rejectOrder(order);
+  Future<Order> cancelOrder(Order order) => _delegate.cancelOrder(order);
+
+  @override
+  Future<List<Order>> getRelevantOrders() => _delegate.getRelevantOrders();
+
+  @override
+  Future<Provider> getCurrentProvider() => _delegate.getCurrentProvider();
+
+  @override
+  Future<Quote?> getMyQuoteFor(Order order, Provider provider) =>
+      _delegate.getMyQuoteFor(order, provider);
+
+  @override
+  Future<Quote> submitQuote({
+    required Order order,
+    required Provider provider,
+    required num proposedPrice,
+    required int estimatedDuration,
+    required String notes,
+    required QuoteType type,
+  }) => _delegate.submitQuote(
+    order: order,
+    provider: provider,
+    proposedPrice: proposedPrice,
+    estimatedDuration: estimatedDuration,
+    notes: notes,
+    type: type,
+  );
+
+  @override
+  Future<Order> startOrder(Order order) => _delegate.startOrder(order);
+
+  @override
+  Future<Order> completeOrder(Order order) => _delegate.completeOrder(order);
 }
 
 void main() {

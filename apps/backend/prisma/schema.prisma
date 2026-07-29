@@ -265,9 +265,12 @@ enum ServiceStatus {
 
 enum ProviderStatus {
   PENDING
+  IN_REVIEW
   ACTIVE
+  REJECTED
   INACTIVE
   SUSPENDED
+  BLOCKED
   ARCHIVED
 
   @@map("provider_status")
@@ -645,6 +648,8 @@ model CategoryModel {
   updatedAt   DateTime       @map("updated_at")
 
   services ServiceModel[]
+  providers ProviderModel[]
+  orders    OrderModel[]
 
   @@map("categories")
 }
@@ -675,6 +680,8 @@ model ProviderModel {
   id                String             @id
   identityId        String             @unique @map("identity_id")
   providerProfileId String             @map("provider_profile_id")
+  categoryId        String?            @map("category_id")
+  specialization    String?
   status            ProviderStatus
   type              ProviderType
   experience        ProviderExperience
@@ -685,6 +692,7 @@ model ProviderModel {
 
   identity      IdentityModel        @relation(fields: [identityId], references: [id])
   profile       ProfileModel         @relation(fields: [providerProfileId], references: [id])
+  category      CategoryModel?       @relation(fields: [categoryId], references: [id])
   services      ServiceModel[]
   availabilities AvailabilityModel[]
   schedules     ScheduleModel[]
@@ -695,6 +703,7 @@ model ProviderModel {
   chats            ChatModel[]
 
   @@index([providerProfileId])
+  @@index([categoryId])
   @@map("providers")
 }
 
@@ -733,8 +742,9 @@ model ScheduleModel {
 model OrderModel {
   id            String        @id
   identityId    String        @map("identity_id")
-  providerId    String        @map("provider_id")
-  serviceId     String        @map("service_id")
+  providerId    String?       @map("provider_id")
+  serviceId     String?       @map("service_id")
+  categoryId    String        @map("category_id")
   title         String
   description   String
   scheduledDate DateTime      @map("scheduled_date")
@@ -744,14 +754,16 @@ model OrderModel {
   updatedAt     DateTime      @map("updated_at")
 
   identity IdentityModel @relation(fields: [identityId], references: [id])
-  provider ProviderModel @relation(fields: [providerId], references: [id])
-  service  ServiceModel  @relation(fields: [serviceId], references: [id])
+  provider ProviderModel? @relation(fields: [providerId], references: [id])
+  service  ServiceModel?  @relation(fields: [serviceId], references: [id])
+  category CategoryModel  @relation(fields: [categoryId], references: [id])
   quotes   QuoteModel[]
   payments PaymentModel[]
   reviews  ReviewModel[]
   chats    ChatModel[]
 
   @@index([identityId])
+  @@index([categoryId])
   @@index([providerId])
   @@index([serviceId])
   @@map("orders")

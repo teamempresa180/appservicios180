@@ -87,10 +87,17 @@ class TrackingInfoPanel extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(otherPartyLabel, style: context.textStyles.bodySmall),
+                    Text(
+                      otherPartyLabel,
+                      style: context.textStyles.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     Text(
                       otherPartyName,
                       style: context.textStyles.titleSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

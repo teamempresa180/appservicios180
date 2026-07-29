@@ -9,6 +9,7 @@ describe('OrderHttpMapper', () => {
   it('toCreateCommand() parses the ISO date string to Date', () => {
     const dto: CreateOrderRequestDto = {
       identityId: 'identity-1',
+      categoryId: 'category-1',
       providerId: 'provider-1',
       serviceId: 'service-1',
       title: 'Fix leaking kitchen faucet',
@@ -43,6 +44,7 @@ describe('OrderHttpMapper', () => {
       identityId: 'identity-1',
       providerId: 'provider-1',
       serviceId: 'service-1',
+      categoryId: 'category-1',
       title: 'Fix leaking kitchen faucet',
       description: 'Description.',
       scheduledDate: new Date('2026-02-01T09:00:00.000Z'),
@@ -65,6 +67,7 @@ describe('OrderHttpMapper', () => {
       identityId: 'identity-1',
       providerId: 'provider-1',
       serviceId: 'service-1',
+      categoryId: 'category-1',
       title: 'Fix leaking kitchen faucet',
       description: 'Description.',
       scheduledDate: new Date('2026-02-01T09:00:00.000Z'),

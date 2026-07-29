@@ -1,5 +1,6 @@
 import 'package:collection/collection.dart';
 
+import '../../../category/models/category_id.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
 import '../../../provider/models/provider_id.dart';
@@ -12,6 +13,16 @@ class MockProviderRepository implements ProviderRepository {
   @override
   Future<List<Provider>> getRecommended() =>
       Future.value(List.unmodifiable(mockProviders));
+
+  /// No real category/specialization data exists on the fixed mock
+  /// providers — every active mock provider is returned regardless of
+  /// [categoryId]/[specialization], same "no real filter yet" shape as
+  /// this repository's other mock methods.
+  @override
+  Future<List<Provider>> getCompatible({
+    required CategoryId categoryId,
+    String? specialization,
+  }) => Future.value(List.unmodifiable(mockProviders));
 
   @override
   Future<Profile> profileOf(ProviderId id) {

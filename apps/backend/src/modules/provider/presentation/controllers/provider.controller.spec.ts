@@ -5,12 +5,14 @@ import { DeleteProviderUseCase } from '../../application/use_cases/delete-provid
 import { GetProviderUseCase } from '../../application/use_cases/get-provider.use-case';
 import { ListProviderUseCase } from '../../application/use_cases/list-provider.use-case';
 import { SearchProviderUseCase } from '../../application/use_cases/search-provider.use-case';
+import { FindCompatibleProvidersUseCase } from '../../application/use_cases/find-compatible-providers.use-case';
 import { CreateProviderCommand } from '../../application/commands/create-provider.command';
 import { UpdateProviderCommand } from '../../application/commands/update-provider.command';
 import { DeleteProviderCommand } from '../../application/commands/delete-provider.command';
 import { GetProviderQuery } from '../../application/queries/get-provider.query';
 import { ListProviderQuery } from '../../application/queries/list-provider.query';
 import { SearchProviderQuery } from '../../application/queries/search-provider.query';
+import { FindCompatibleProvidersQuery } from '../../application/queries/find-compatible-providers.query';
 import { ProviderDto } from '../../application/dto/provider.dto';
 import { ProviderType } from '../../domain/value-objects/provider-type.value-object';
 import { ProviderStatus } from '../../domain/value-objects/provider-status.value-object';
@@ -26,11 +28,14 @@ describe('ProviderController', () => {
   let getUseCase: { execute: jest.Mock };
   let listUseCase: { execute: jest.Mock };
   let searchUseCase: { execute: jest.Mock };
+  let compatibleUseCase: { execute: jest.Mock };
 
   const providerDto: ProviderDto = {
     id: 'id-1',
     identityId: 'identity-1',
     providerProfileId: 'profile-1',
+    categoryId: null,
+    specialization: null,
     status: ProviderStatus.Active,
     type: ProviderType.Independent,
     experience: ProviderExperience.Intermediate,
@@ -54,6 +59,7 @@ describe('ProviderController', () => {
       }),
     };
     searchUseCase = { execute: jest.fn().mockResolvedValue([providerDto]) };
+    compatibleUseCase = { execute: jest.fn().mockResolvedValue([providerDto]) };
 
     controller = new ProviderController(
       createUseCase as unknown as CreateProviderUseCase,
@@ -62,6 +68,7 @@ describe('ProviderController', () => {
       getUseCase as unknown as GetProviderUseCase,
       listUseCase as unknown as ListProviderUseCase,
       searchUseCase as unknown as SearchProviderUseCase,
+      compatibleUseCase as unknown as FindCompatibleProvidersUseCase,
     );
   });
 
@@ -127,6 +134,15 @@ describe('ProviderController', () => {
     );
     expect(response).toHaveLength(1);
     expect(response[0].biography).toBe('Plumber with 10 years of experience.');
+  });
+
+  it('compatible() maps categoryId/specialization query params', async () => {
+    const response = await controller.compatible('category-1', 'Residential');
+
+    expect(compatibleUseCase.execute).toHaveBeenCalledWith(
+      new FindCompatibleProvidersQuery('category-1', 'Residential'),
+    );
+    expect(response).toHaveLength(1);
   });
 
   it('findOne() maps the Application DTO returned by GetProviderUseCase', async () => {

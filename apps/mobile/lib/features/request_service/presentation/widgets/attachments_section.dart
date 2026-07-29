@@ -32,24 +32,31 @@ class AttachmentsSection extends StatelessWidget {
                   const SizedBox(width: AppSpacing.space12),
               itemBuilder: (context, index) {
                 if (index == attachments.length) {
-                  return InkWell(
-                    onTap: () => AppSnackBar.show(
-                      context,
-                      'Selección de fotos próximamente',
-                      type: AppSnackBarType.info,
-                    ),
-                    child: SizedBox(
-                      width: 96,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: context.colors.outline),
-                          borderRadius: BorderRadius.circular(
-                            AppSpacing.space8,
+                  return Semantics(
+                    button: true,
+                    label: 'Adjuntar fotografía',
+                    child: InkWell(
+                      onTap: () => AppSnackBar.show(
+                        context,
+                        'Selección de fotos próximamente',
+                        type: AppSnackBarType.info,
+                      ),
+                      borderRadius: BorderRadius.circular(AppSpacing.space8),
+                      child: SizedBox(
+                        width: 96,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: context.colors.outline),
+                            borderRadius: BorderRadius.circular(
+                              AppSpacing.space8,
+                            ),
                           ),
-                        ),
-                        child: Icon(
-                          Icons.add_a_photo_outlined,
-                          color: context.colors.primary,
+                          child: Center(
+                            child: Icon(
+                              Icons.add_a_photo_outlined,
+                              color: context.colors.primary,
+                            ),
+                          ),
                         ),
                       ),
                     ),

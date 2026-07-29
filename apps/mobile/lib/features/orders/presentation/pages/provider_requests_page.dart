@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/di/service_locator.dart';
+import '../../../../core/network/http_exceptions.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
@@ -11,11 +12,13 @@ import '../widgets/order_loading.dart';
 import '../widgets/provider_requests_empty_state.dart';
 import '../widgets/provider_requests_header.dart';
 import '../widgets/provider_requests_list.dart';
+import '../widgets/submit_quote_sheet.dart';
 
-/// Provider "Servicios" screen — replaces browsing/creating a service
-/// catalog (that's the client's job) with the list of incoming client
-/// requests the provider can accept or reject. Does NOT build its own
-/// `Scaffold`, same as every other App Shell destination.
+/// Provider "Servicios" screen — every Order relevant to this provider
+/// (`ProviderRequestsViewModel.activeRequests`/`historyRequests`, both
+/// derived from `OrdersRepository.getRelevantOrders()`), not the old
+/// unfiltered/unscoped list. Does NOT build its own `Scaffold`, same as
+/// every other App Shell destination.
 class ProviderRequestsPage extends StatefulWidget {
   const ProviderRequestsPage({super.key, OrdersRepository? repository})
     : _repository = repository;
@@ -33,6 +36,7 @@ class _ProviderRequestsPageState extends State<ProviderRequestsPage> {
     widget._repository ?? locator<OrdersRepository>(),
   );
 
+  ProviderRequestsTab _tab = ProviderRequestsTab.active;
   String? _busyOrderId;
   String? _busyAction;
 
@@ -52,41 +56,64 @@ class _ProviderRequestsPageState extends State<ProviderRequestsPage> {
     super.dispose();
   }
 
-  Future<void> _accept(ProviderRequestDisplay request) async {
+  Future<void> _runAction(
+    ProviderRequestDisplay request,
+    String action,
+    Future<void> Function() run, {
+    required String successMessage,
+  }) async {
     setState(() {
       _busyOrderId = request.order.id.value;
-      _busyAction = 'accept';
+      _busyAction = action;
     });
     try {
-      await _viewModel.accept(request);
+      await run();
       if (!mounted) return;
-      AppSnackBar.show(
-        context,
-        'Aceptaste la solicitud de ${request.clientName}.',
-        type: AppSnackBarType.success,
-      );
+      AppSnackBar.show(context, successMessage, type: AppSnackBarType.success);
+    } on HttpException catch (exception) {
+      if (!mounted) return;
+      AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
     } finally {
       if (mounted) setState(() => _busyOrderId = null);
     }
   }
 
-  Future<void> _reject(ProviderRequestDisplay request) async {
-    setState(() {
-      _busyOrderId = request.order.id.value;
-      _busyAction = 'reject';
-    });
-    try {
-      await _viewModel.reject(request);
-      if (!mounted) return;
-      AppSnackBar.show(
-        context,
-        'Rechazaste la solicitud de ${request.clientName}.',
-        type: AppSnackBarType.info,
-      );
-    } finally {
-      if (mounted) setState(() => _busyOrderId = null);
-    }
+  Future<void> _submitQuote(ProviderRequestDisplay request) async {
+    final result = await SubmitQuoteSheet.show(context);
+    if (result == null || !mounted) return;
+    await _runAction(
+      request,
+      'quote',
+      () => _viewModel.submitQuote(
+        request,
+        proposedPrice: result.proposedPrice,
+        estimatedDuration: result.estimatedDuration,
+        notes: result.notes,
+      ),
+      successMessage: 'Enviaste tu cotización a ${request.clientName}.',
+    );
   }
+
+  Future<void> _start(ProviderRequestDisplay request) => _runAction(
+    request,
+    'start',
+    () => _viewModel.start(request),
+    successMessage: 'Comenzaste el servicio de ${request.clientName}.',
+  );
+
+  Future<void> _complete(ProviderRequestDisplay request) => _runAction(
+    request,
+    'complete',
+    () => _viewModel.complete(request),
+    successMessage: 'Marcaste como finalizado el servicio de ${request.clientName}.',
+  );
+
+  Future<void> _reject(ProviderRequestDisplay request) => _runAction(
+    request,
+    'reject',
+    () => _viewModel.reject(request),
+    successMessage: 'Rechazaste la solicitud de ${request.clientName}.',
+  );
 
   Widget _buildBody() {
     switch (_viewModel.status) {
@@ -101,14 +128,18 @@ class _ProviderRequestsPageState extends State<ProviderRequestsPage> {
           onActionPressed: _viewModel.retry,
         );
       case ProviderRequestsLoadStatus.success:
-        final requests = _viewModel.requests;
+        final requests = _tab == ProviderRequestsTab.active
+            ? _viewModel.activeRequests
+            : _viewModel.historyRequests;
         return requests.isEmpty
-            ? const ProviderRequestsEmptyState()
+            ? ProviderRequestsEmptyState(tab: _tab)
             : ProviderRequestsList(
                 requests: requests,
                 busyOrderId: _busyOrderId,
                 busyAction: _busyAction,
-                onAccept: _accept,
+                onSubmitQuote: _submitQuote,
+                onStart: _start,
+                onComplete: _complete,
                 onReject: _reject,
               );
     }
@@ -117,7 +148,10 @@ class _ProviderRequestsPageState extends State<ProviderRequestsPage> {
   @override
   Widget build(BuildContext context) {
     return AppPageBody(
-      header: const ProviderRequestsHeader(),
+      header: ProviderRequestsHeader(
+        selectedTab: _tab,
+        onTabChanged: (tab) => setState(() => _tab = tab),
+      ),
       body: _buildBody(),
     );
   }

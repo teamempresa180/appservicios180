@@ -3,6 +3,7 @@ import 'package:mobile/order/entities/order.dart';
 import 'package:mobile/order/models/order_id.dart';
 import 'package:mobile/order/models/order_status.dart';
 import 'package:mobile/order/models/order_priority.dart';
+import 'package:mobile/category/models/category_id.dart';
 import 'package:mobile/identity/models/identity_id.dart';
 import 'package:mobile/provider/models/provider_id.dart';
 import 'package:mobile/service/models/service_id.dart';
@@ -17,6 +18,7 @@ void main() {
     final order = Order(
       id: id,
       identityId: identityId,
+      categoryId: CategoryId.create(),
       providerId: providerId,
       serviceId: serviceId,
       title: 'Destape urgente',
@@ -46,6 +48,7 @@ void main() {
     Order build() => Order(
       id: id,
       identityId: identityId,
+      categoryId: CategoryId.create(),
       providerId: providerId,
       serviceId: serviceId,
       title: 'Servicio',

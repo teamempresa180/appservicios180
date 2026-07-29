@@ -16,7 +16,12 @@ class ReviewComment extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(data.review.title, style: context.textStyles.titleSmall),
+        Text(
+          data.review.title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: context.textStyles.titleSmall,
+        ),
         const SizedBox(height: AppSpacing.space4),
         Text(data.review.comment, style: context.textStyles.bodyMedium),
       ],

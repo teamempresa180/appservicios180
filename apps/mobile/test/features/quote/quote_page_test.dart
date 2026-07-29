@@ -1,129 +1,91 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/category/models/category_id.dart';
 import 'package:mobile/core/di/service_locator.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
-import 'package:mobile/features/orders/repositories/mock_orders_repository.dart';
-import 'package:mobile/features/orders/repositories/orders_repository.dart';
+import 'package:mobile/features/chat/repositories/chat_repository.dart';
+import 'package:mobile/features/chat/repositories/mock_chat_repository.dart';
+import 'package:mobile/features/quote/mock/mock_quote_data.dart';
 import 'package:mobile/features/quote/presentation/pages/quote_page.dart';
+import 'package:mobile/features/quote/presentation/widgets/quote_list_item.dart';
 import 'package:mobile/features/quote/repositories/mock_quote_repository.dart';
-import 'package:mobile/features/quote/presentation/widgets/address_resume.dart';
-import 'package:mobile/features/quote/presentation/widgets/estimated_time.dart';
-import 'package:mobile/features/quote/presentation/widgets/price_breakdown.dart';
-import 'package:mobile/features/quote/presentation/widgets/provider_resume.dart';
-import 'package:mobile/features/quote/presentation/widgets/quote_notes.dart';
-import 'package:mobile/features/quote/presentation/widgets/schedule_resume.dart';
-import 'package:mobile/features/quote/presentation/widgets/service_resume.dart';
+import 'package:mobile/identity/models/identity_id.dart';
+import 'package:mobile/order/entities/order.dart';
+import 'package:mobile/order/models/order_priority.dart';
+import 'package:mobile/order/models/order_status.dart';
 
 void main() {
+  final order = Order(
+    id: mockQuoteOrderId,
+    identityId: IdentityId.create(),
+    categoryId: CategoryId.create(),
+    providerId: null,
+    serviceId: null,
+    title: 'Reparación de fuga de agua',
+    description: 'Fuga debajo del lavaplatos',
+    scheduledDate: DateTime(2026, 1, 10, 10, 0),
+    status: OrderStatus.pending,
+    priority: OrderPriority.medium,
+    createdAt: DateTime(2026, 1, 1),
+    updatedAt: DateTime(2026, 1, 1),
+  );
+
+  setUp(
+    () => locator.registerSingleton<ChatRepository>(MockChatRepository()),
+  );
+  tearDown(() => locator.reset());
+
   Widget buildApp() {
     return MaterialApp(
       theme: AppTheme.light,
-      home: Scaffold(body: QuotePage(repository: MockQuoteRepository())),
+      home: Scaffold(
+        body: QuotePage(order: order, repository: MockQuoteRepository()),
+      ),
     );
   }
 
-  testWidgets('shows the header with the service name', (tester) async {
+  testWidgets('shows the order title as header', (tester) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Cotización'), findsOneWidget);
-    expect(find.text('Reparación de fuga de agua'), findsWidgets);
+    expect(find.text('Reparación de fuga de agua'), findsOneWidget);
   });
 
-  testWidgets('shows the service resume with category', (tester) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
-
-    expect(find.byType(ServiceResume), findsOneWidget);
-    expect(find.text('Plomería'), findsOneWidget);
-  });
-
-  testWidgets('shows the provider resume with name and experience', (
+  testWidgets('shows one QuoteListItem per real submitted Quote', (
     tester,
   ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.byType(ProviderResume), findsOneWidget);
+    expect(find.byType(QuoteListItem), findsNWidgets(2));
     expect(find.text('Diana Restrepo'), findsOneWidget);
-    expect(find.text('8 años de experiencia'), findsOneWidget);
+    expect(find.text('Carlos Gómez'), findsOneWidget);
   });
 
-  testWidgets('shows the address resume', (tester) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
-
-    expect(find.byType(AddressResume), findsOneWidget);
-    expect(find.text('Casa'), findsOneWidget);
-  });
-
-  testWidgets('shows the schedule resume with date and time', (tester) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
-
-    expect(find.byType(ScheduleResume), findsOneWidget);
-    expect(find.text('10/01/2026'), findsOneWidget);
-    expect(find.text('10:00'), findsOneWidget);
-  });
-
-  testWidgets('shows the estimated time from the real Quote entity', (
+  testWidgets('shows the proposed price and estimated duration per quote', (
     tester,
   ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.byType(EstimatedTime), findsOneWidget);
+    expect(find.text('\$45.00'), findsOneWidget);
     expect(find.text('60 min'), findsOneWidget);
   });
 
-  testWidgets('shows the price breakdown with the derived total', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
-
-    expect(find.byType(PriceBreakdown), findsOneWidget);
-    expect(find.text('\$45.00'), findsOneWidget);
-    expect(find.text('\$5.00'), findsOneWidget);
-    expect(find.text('-\$5.00'), findsOneWidget);
-    expect(find.text('\$8.55'), findsOneWidget);
-    // total = 45 + 5 - 5 + 8.55 = 53.55
-    expect(find.text('\$53.55'), findsOneWidget);
-  });
-
-  testWidgets('shows the quote notes from the real Quote entity', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
-
-    expect(find.byType(QuoteNotes), findsOneWidget);
-    expect(find.textContaining('revisión general'), findsOneWidget);
-  });
-
-  testWidgets('shows the confirm quote button', (tester) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
-
-    expect(find.text('Confirmar solicitud'), findsOneWidget);
-  });
-
   testWidgets(
-    'tapping "Confirmar solicitud" accepts the real Quote and opens Orders',
+    'tapping "Aceptar cotización" accepts the real Quote and opens a Chat',
     (tester) async {
-      locator.registerSingleton<OrdersRepository>(MockOrdersRepository());
-      addTearDown(locator.reset);
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.text('Confirmar solicitud'));
+      await tester.ensureVisible(find.text('Aceptar cotización').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Confirmar solicitud'));
+      await tester.tap(find.text('Aceptar cotización').first);
       await tester.pumpAndSettle();
 
-      expect(find.text('Cotización confirmada.'), findsOneWidget);
-      expect(find.text('Mis órdenes'), findsWidgets);
+      expect(find.text('Cotización aceptada.'), findsOneWidget);
+      expect(find.text('Conversación'), findsWidgets);
     },
   );
 

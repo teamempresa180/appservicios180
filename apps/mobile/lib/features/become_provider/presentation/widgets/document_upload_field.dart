@@ -121,6 +121,8 @@ class _DocumentUploadFieldState extends State<DocumentUploadField> {
             Text(
               'Subiendo ${_fileName ?? ''}... ${(_progress * 100).round()}%',
               style: context.textStyles.bodySmall,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ] else if (_status == _UploadStatus.success) ...[
             Row(
@@ -137,7 +139,12 @@ class _DocumentUploadFieldState extends State<DocumentUploadField> {
             ),
           ] else ...[
             if (_fileName != null) ...[
-              Text(_fileName!, style: context.textStyles.bodyMedium),
+              Text(
+                _fileName!,
+                style: context.textStyles.bodyMedium,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
               const SizedBox(height: AppSpacing.space8),
             ],
             if (_errorMessage != null) ...[

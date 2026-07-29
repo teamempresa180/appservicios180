@@ -40,10 +40,14 @@ class ProfileInformation extends StatelessWidget {
                     Text(
                       data.displayName,
                       style: context.textStyles.titleSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       'Miembro desde ${data.memberSince}',
                       style: context.textStyles.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

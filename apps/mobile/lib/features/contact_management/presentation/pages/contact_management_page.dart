@@ -8,7 +8,6 @@ import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
-import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../../core/ui/widgets/app_snack_bar.dart';
 import '../../repositories/contact_management_repository.dart';
@@ -18,6 +17,7 @@ import '../widgets/contact_card.dart';
 import '../widgets/contact_form_sheet.dart';
 import '../widgets/contacts_empty_state.dart';
 import '../widgets/contacts_header.dart';
+import '../widgets/contacts_loading.dart';
 import '../widgets/contacts_statistics.dart';
 
 /// Contact Management screen. Does NOT build its own `Scaffold` — it
@@ -117,7 +117,7 @@ class _ContactManagementPageState extends State<ContactManagementPage> {
   Widget _buildBody() {
     switch (_viewModel.status) {
       case ContactManagementLoadStatus.loading:
-        return const AppLoading(message: 'Cargando contactos...');
+        return const ContactsLoading();
       case ContactManagementLoadStatus.error:
         return AppEmptyState(
           icon: AppIcons.error,

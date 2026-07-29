@@ -1,45 +1,70 @@
-import '../../../address/entities/address.dart';
-import '../../../category/entities/category.dart';
+import '../../../order/models/order_id.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
+import '../../../provider/models/provider_id.dart';
 import '../../../quote/entities/quote.dart';
+import '../../../quote/models/quote_id.dart';
 import '../../../quote/models/quote_status.dart';
-import '../../../service/entities/service.dart';
+import '../../../quote/models/quote_type.dart';
 import '../mock/mock_quote_data.dart';
 import 'quote_repository.dart';
 
 /// In-memory `QuoteRepository` backed by fixed mock data. No backend,
 /// no persistence, no network — see the feature README.
 class MockQuoteRepository implements QuoteRepository {
-  Quote _quote = mockQuote;
+  final List<Quote> _quotes = List.of(mockQuotes);
 
   @override
-  Future<Quote> getQuote() => Future.value(_quote);
+  Future<List<Quote>> getQuotesForOrder(OrderId orderId) => Future.value(
+    List.unmodifiable(_quotes.where((quote) => quote.orderId == orderId)),
+  );
 
   @override
-  Future<Service> getService() => Future.value(mockQuoteService);
+  Future<Provider> getProviderFor(Quote quote) =>
+      Future.value(mockQuoteProvidersById[quote.providerId]!);
 
   @override
-  Future<Provider> getProvider() => Future.value(mockQuoteProvider);
+  Future<Profile> getProfileFor(Quote quote) =>
+      Future.value(mockQuoteProfilesByProviderId[quote.providerId]!);
 
   @override
-  Future<Profile> getProfile() => Future.value(mockQuoteProfile);
+  Future<Quote> createQuote({
+    required OrderId orderId,
+    required ProviderId providerId,
+    required num proposedPrice,
+    required int estimatedDuration,
+    required String notes,
+    required QuoteType type,
+  }) async {
+    final now = DateTime.now();
+    final quote = Quote(
+      id: QuoteId.create(),
+      orderId: orderId,
+      providerId: providerId,
+      proposedPrice: proposedPrice,
+      estimatedDuration: estimatedDuration,
+      notes: notes,
+      status: QuoteStatus.pending,
+      type: type,
+      createdAt: now,
+      updatedAt: now,
+    );
+    _quotes.add(quote);
+    return quote;
+  }
 
-  @override
-  Future<Category> getCategory() => Future.value(mockQuoteCategory);
-
-  @override
-  Future<Address> getAddress() => Future.value(mockQuoteAddress);
-
-  @override
-  Future<Quote> acceptQuote(Quote quote) async {
-    _quote = quote.copyWith(status: QuoteStatus.accepted);
-    return _quote;
+  Quote _replace(Quote quote, QuoteStatus status) {
+    final updated = quote.copyWith(status: status);
+    final index = _quotes.indexWhere((existing) => existing.id == quote.id);
+    if (index != -1) _quotes[index] = updated;
+    return updated;
   }
 
   @override
-  Future<Quote> rejectQuote(Quote quote) async {
-    _quote = quote.copyWith(status: QuoteStatus.rejected);
-    return _quote;
-  }
+  Future<Quote> acceptQuote(Quote quote) =>
+      Future.value(_replace(quote, QuoteStatus.accepted));
+
+  @override
+  Future<Quote> rejectQuote(Quote quote) =>
+      Future.value(_replace(quote, QuoteStatus.rejected));
 }

@@ -1,8 +1,10 @@
 import { PaginatedResult } from '../../../../core/application/paginated-result';
 import { IdentityId } from '../../../../identity/domain/value-objects/identity-id.value-object';
+import { CategoryId } from '../../../../category/domain/value-objects/category-id.value-object';
 import { Provider } from '../../../domain/entities/provider.entity';
 import { ProviderRepository } from '../../../domain/interfaces/provider-repository.interface';
 import { ProviderId } from '../../../domain/value-objects/provider-id.value-object';
+import { ProviderStatus } from '../../../domain/value-objects/provider-status.value-object';
 
 /**
  * In-memory `ProviderRepository` fake — see `InMemoryIdentityRepository`.
@@ -52,6 +54,21 @@ export class InMemoryProviderRepository implements ProviderRepository {
         (row) =>
           row.type.toLowerCase().includes(lower) ||
           row.biography.toLowerCase().includes(lower),
+      ),
+    );
+  }
+
+  findCompatible(
+    categoryId: CategoryId,
+    specialization?: string,
+  ): Promise<Provider[]> {
+    const lower = specialization?.toLowerCase();
+    return Promise.resolve(
+      [...this.rows.values()].filter(
+        (row) =>
+          row.categoryId?.equals(categoryId) &&
+          row.status === ProviderStatus.Active &&
+          (!lower || (row.specialization?.toLowerCase().includes(lower) ?? false)),
       ),
     );
   }

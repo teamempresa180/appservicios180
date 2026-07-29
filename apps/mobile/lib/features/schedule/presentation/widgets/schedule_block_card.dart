@@ -105,7 +105,10 @@ class ScheduleBlockCard extends StatelessWidget {
               ],
             ),
           ),
-          AppBadge(label: _statusLabel(schedule.status), color: color),
+          const SizedBox(width: AppSpacing.space8),
+          Flexible(
+            child: AppBadge(label: _statusLabel(schedule.status), color: color),
+          ),
         ],
       ),
     );

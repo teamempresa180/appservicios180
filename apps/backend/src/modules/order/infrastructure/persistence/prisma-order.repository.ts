@@ -3,6 +3,8 @@ import { PrismaService } from '../../../../infrastructure/prisma/prisma.service'
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
+import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
+import { OrderStatus } from '../../domain/value-objects/order-status.value-object';
 import { Order } from '../../domain/entities/order.entity';
 import { OrderRepository } from '../../domain/interfaces/order-repository.interface';
 import { OrderId } from '../../domain/value-objects/order-id.value-object';
@@ -33,6 +35,18 @@ export class PrismaOrderRepository implements OrderRepository {
   async findByProviderId(providerId: ProviderId): Promise<Order[]> {
     const rows = await this.prisma.orderModel.findMany({
       where: { providerId: providerId.value },
+    });
+    return rows.map((row) => OrderPrismaMapper.toDomain(row));
+  }
+
+  async findOpenByCategoryId(categoryId: CategoryId): Promise<Order[]> {
+    const rows = await this.prisma.orderModel.findMany({
+      where: {
+        categoryId: categoryId.value,
+        providerId: null,
+        status: OrderStatus.Pending,
+      },
+      orderBy: { createdAt: 'desc' },
     });
     return rows.map((row) => OrderPrismaMapper.toDomain(row));
   }

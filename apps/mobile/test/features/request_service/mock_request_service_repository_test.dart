@@ -1,69 +1,56 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/address/entities/address.dart';
-import 'package:mobile/availability/entities/availability.dart';
-import 'package:mobile/category/entities/category.dart';
+import 'package:mobile/category/models/category_id.dart';
+import 'package:mobile/features/request_service/models/request_priority.dart';
 import 'package:mobile/features/request_service/repositories/mock_request_service_repository.dart';
-import 'package:mobile/profiles/entities/profile.dart';
-import 'package:mobile/provider/entities/provider.dart';
-import 'package:mobile/service/entities/service.dart';
+import 'package:mobile/order/entities/order.dart';
+import 'package:mobile/provider/models/provider_id.dart';
+import 'package:mobile/service/models/service_id.dart';
 
 void main() {
   group('MockRequestServiceRepository', () {
     final repository = MockRequestServiceRepository();
 
-    test('getService returns a real Service entity, not a map', () async {
-      expect(await repository.getService(), isA<Service>());
-    });
-
-    test('getProvider returns a real Provider entity, not a map', () async {
-      expect(await repository.getProvider(), isA<Provider>());
-    });
-
-    test('getProfile returns a real Profile with a display name', () async {
-      final profile = await repository.getProfile();
-      expect(profile, isA<Profile>());
-      expect(profile.displayName, isNotEmpty);
-    });
-
-    test('getCategory returns a real Category entity, not a map', () async {
-      expect(await repository.getCategory(), isA<Category>());
-    });
-
-    test('getAvailability returns a real Availability entity', () async {
-      expect(await repository.getAvailability(), isA<Availability>());
-    });
-
     test('getAddress returns a real Address entity, not a map', () async {
       expect(await repository.getAddress(), isA<Address>());
     });
 
-    test(
-      'service, availability and provider reference the same provider id',
-      () async {
-        final providerId = (await repository.getProvider()).id;
-        expect((await repository.getService()).providerId, equals(providerId));
-        expect(
-          (await repository.getAvailability()).providerId,
-          equals(providerId),
-        );
-      },
-    );
-
-    test('service references the same category id', () async {
-      expect(
-        (await repository.getService()).categoryId,
-        equals((await repository.getCategory()).id),
+    test('createOrder returns a real Order for a direct hire', () async {
+      final categoryId = CategoryId.create();
+      final providerId = ProviderId.create();
+      final serviceId = ServiceId.create();
+      final order = await repository.createOrder(
+        categoryId: categoryId,
+        providerId: providerId,
+        serviceId: serviceId,
+        title: 'Reparación',
+        description: 'Descripción',
+        scheduledDate: DateTime(2026, 1, 10, 10, 0),
+        priority: RequestPriority.normal,
       );
+
+      expect(order, isA<Order>());
+      expect(order.categoryId, categoryId);
+      expect(order.providerId, providerId);
+      expect(order.serviceId, serviceId);
+      expect(order.isDirectHire, isTrue);
     });
 
-    test('is independent from every other feature mock data', () async {
-      expect(
-        (await repository.getProvider()).id.value.startsWith(
-          'request-service-',
-        ),
-        isTrue,
+    test('createOrder returns an open request when provider/service are omitted', () async {
+      final categoryId = CategoryId.create();
+      final order = await repository.createOrder(
+        categoryId: categoryId,
+        title: 'Reparación',
+        description: 'Descripción',
+        scheduledDate: DateTime(2026, 1, 10, 10, 0),
+        priority: RequestPriority.normal,
       );
+
+      expect(order.categoryId, categoryId);
+      expect(order.providerId, isNull);
+      expect(order.serviceId, isNull);
+      expect(order.isDirectHire, isFalse);
     });
   });
 }

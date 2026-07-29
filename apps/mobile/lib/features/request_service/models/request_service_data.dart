@@ -1,5 +1,4 @@
 import '../../../address/entities/address.dart';
-import '../../../availability/entities/availability.dart';
 import '../../../category/entities/category.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
@@ -7,9 +6,12 @@ import '../../../service/entities/service.dart';
 import 'request_priority.dart';
 
 /// Presentation-only composition of everything a Request Service screen
-/// needs. Composes six real domain entities — [service], [provider],
-/// [profile], [category], [availability], [address] — plus fields that
-/// have no domain equivalent yet and are explicitly simulated:
+/// needs. [category] is always real and required — every order belongs
+/// to one. [provider]/[service]/[profile] are only present for a
+/// **direct hire** (the client picked a specific provider + service);
+/// they are `null` for an **open request** (client only picked a
+/// category) — see `Order`'s own doc comment for the same
+/// direct-hire/open-request split on the domain side.
 ///
 /// - [selectedDate]/[selectedTime]: **simulated** — there is no
 ///   Schedule/booking slot concept implemented in the domain yet
@@ -29,11 +31,10 @@ import 'request_priority.dart';
 /// Nothing here is added to the domain entities themselves.
 class RequestServiceData {
   const RequestServiceData({
-    required this.service,
-    required this.provider,
-    required this.profile,
     required this.category,
-    required this.availability,
+    this.provider,
+    this.service,
+    this.profile,
     required this.address,
     required this.selectedDate,
     required this.selectedTime,
@@ -43,11 +44,10 @@ class RequestServiceData {
     required this.simulatedLocationLabel,
   });
 
-  final Service service;
-  final Provider provider;
-  final Profile profile;
   final Category category;
-  final Availability availability;
+  final Provider? provider;
+  final Service? service;
+  final Profile? profile;
   final Address address;
 
   /// Simulated — see the class doc.
@@ -68,5 +68,9 @@ class RequestServiceData {
   /// Simulated — see the class doc.
   final String simulatedLocationLabel;
 
-  String get providerName => profile.displayName;
+  /// `true` when the client picked a specific provider + service instead
+  /// of just a category — see the class doc.
+  bool get isDirectHire => provider != null && service != null;
+
+  String? get providerName => profile?.displayName;
 }

@@ -16,6 +16,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { CurrentUser } from '../../../../common/auth/current-user.decorator';
@@ -159,6 +160,10 @@ export class AuthenticationController {
 
   @Post(AuthenticationRoutes.login)
   @HttpCode(200)
+  // Brute-force guard: 5 attempts / minute per client IP, far stricter
+  // than the global default — login is the highest-value target for
+  // credential-stuffing/brute-force attacks in this API.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation(AuthenticationSwagger.login)
   @ApiResponse({
     status: 200,
@@ -179,6 +184,9 @@ export class AuthenticationController {
 
   @Post(AuthenticationRoutes.refresh)
   @HttpCode(200)
+  // Same rationale as `login` — a stolen refresh token shouldn't be
+  // brute-forceable/replayable at high volume either.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation(AuthenticationSwagger.refresh)
   @ApiResponse({
     status: 200,

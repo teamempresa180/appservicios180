@@ -1,12 +1,10 @@
 import '../../../address/entities/address.dart';
-import '../../../availability/entities/availability.dart';
-import '../../../category/entities/category.dart';
+import '../../../category/models/category_id.dart';
 import '../../../order/entities/order.dart';
 import '../../../order/models/order_id.dart';
 import '../../../order/models/order_status.dart';
-import '../../../profiles/entities/profile.dart';
-import '../../../provider/entities/provider.dart';
-import '../../../service/entities/service.dart';
+import '../../../provider/models/provider_id.dart';
+import '../../../service/models/service_id.dart';
 import '../mock/mock_request_service_data.dart';
 import '../models/request_priority.dart';
 import 'request_service_repository.dart';
@@ -15,28 +13,13 @@ import 'request_service_repository.dart';
 /// backend, no persistence, no network — see the feature README.
 class MockRequestServiceRepository implements RequestServiceRepository {
   @override
-  Future<Service> getService() => Future.value(mockRequestServiceService);
-
-  @override
-  Future<Provider> getProvider() => Future.value(mockRequestServiceProvider);
-
-  @override
-  Future<Profile> getProfile() => Future.value(mockRequestServiceProfile);
-
-  @override
-  Future<Category> getCategory() => Future.value(mockRequestServiceCategory);
-
-  @override
-  Future<Availability> getAvailability() =>
-      Future.value(mockRequestServiceAvailability);
-
-  @override
   Future<Address> getAddress() => Future.value(mockRequestServiceAddress);
 
   @override
   Future<Order> createOrder({
-    required Service service,
-    required Provider provider,
+    required CategoryId categoryId,
+    ProviderId? providerId,
+    ServiceId? serviceId,
     required String title,
     required String description,
     required DateTime scheduledDate,
@@ -46,8 +29,9 @@ class MockRequestServiceRepository implements RequestServiceRepository {
     return Order(
       id: OrderId.create(),
       identityId: mockRequestServiceAddress.identityId,
-      providerId: provider.id,
-      serviceId: service.id,
+      categoryId: categoryId,
+      providerId: providerId,
+      serviceId: serviceId,
       title: title,
       description: description,
       scheduledDate: scheduledDate,

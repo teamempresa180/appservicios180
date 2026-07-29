@@ -21,12 +21,13 @@ export class OrderHttpMapper {
   static toCreateCommand(dto: CreateOrderRequestDto): CreateOrderCommand {
     return new CreateOrderCommand(
       dto.identityId,
-      dto.providerId,
-      dto.serviceId,
+      dto.categoryId,
       dto.title,
       dto.description,
       new Date(dto.scheduledDate),
       dto.priority,
+      dto.providerId,
+      dto.serviceId,
     );
   }
 
@@ -49,6 +50,7 @@ export class OrderHttpMapper {
     response.identityId = dto.identityId;
     response.providerId = dto.providerId;
     response.serviceId = dto.serviceId;
+    response.categoryId = dto.categoryId;
     response.title = dto.title;
     response.description = dto.description;
     response.scheduledDate = dto.scheduledDate.toISOString();

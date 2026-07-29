@@ -62,10 +62,15 @@ class ServiceCard extends StatelessWidget {
                   display.rating.toStringAsFixed(1),
                   style: context.textStyles.bodySmall,
                 ),
-                const Spacer(),
-                Text(
-                  '\$${display.service.basePrice}',
-                  style: context.textStyles.titleSmall,
+                const SizedBox(width: AppSpacing.space4),
+                Expanded(
+                  child: Text(
+                    '\$${display.service.basePrice}',
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.textStyles.titleSmall,
+                  ),
                 ),
               ],
             ),

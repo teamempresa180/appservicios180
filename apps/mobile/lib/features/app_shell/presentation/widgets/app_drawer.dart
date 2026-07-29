@@ -171,7 +171,9 @@ class AppDrawer extends StatelessWidget {
               leading: Icon(Icons.logout, color: context.colors.error),
               title: Text(
                 'Cerrar sesión',
-                style: TextStyle(color: context.colors.error),
+                style: context.textStyles.bodyLarge?.copyWith(
+                  color: context.colors.error,
+                ),
               ),
               onTap: () => _logout(context),
             ),

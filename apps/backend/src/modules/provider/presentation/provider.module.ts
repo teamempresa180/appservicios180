@@ -9,6 +9,11 @@ import {
   PROFILE_REPOSITORY,
   ProfileRepository,
 } from '../../profiles/domain/interfaces/profile-repository.interface';
+import { CategoryPresentationModule } from '../../category/presentation/category.module';
+import {
+  CATEGORY_REPOSITORY,
+  CategoryRepository,
+} from '../../category/domain/interfaces/category-repository.interface';
 import { ProviderController } from './controllers/provider.controller';
 import { CreateProviderUseCase } from '../application/use_cases/create-provider.use-case';
 import { UpdateProviderUseCase } from '../application/use_cases/update-provider.use-case';
@@ -16,6 +21,7 @@ import { DeleteProviderUseCase } from '../application/use_cases/delete-provider.
 import { GetProviderUseCase } from '../application/use_cases/get-provider.use-case';
 import { ListProviderUseCase } from '../application/use_cases/list-provider.use-case';
 import { SearchProviderUseCase } from '../application/use_cases/search-provider.use-case';
+import { FindCompatibleProvidersUseCase } from '../application/use_cases/find-compatible-providers.use-case';
 import {
   PROVIDER_REPOSITORY,
   ProviderRepository,
@@ -32,7 +38,11 @@ import { PrismaProviderRepository } from '../infrastructure/persistence/prisma-p
  * Identity before creating a Provider record.
  */
 @Module({
-  imports: [IdentityPresentationModule, ProfilesPresentationModule],
+  imports: [
+    IdentityPresentationModule,
+    ProfilesPresentationModule,
+    CategoryPresentationModule,
+  ],
   controllers: [ProviderController],
   providers: [
     { provide: PROVIDER_REPOSITORY, useClass: PrismaProviderRepository },
@@ -42,8 +52,20 @@ import { PrismaProviderRepository } from '../infrastructure/persistence/prisma-p
         providerRepo: ProviderRepository,
         identityRepo: IdentityRepository,
         profileRepo: ProfileRepository,
-      ) => new CreateProviderUseCase(providerRepo, identityRepo, profileRepo),
-      inject: [PROVIDER_REPOSITORY, IDENTITY_REPOSITORY, PROFILE_REPOSITORY],
+        categoryRepo: CategoryRepository,
+      ) =>
+        new CreateProviderUseCase(
+          providerRepo,
+          identityRepo,
+          profileRepo,
+          categoryRepo,
+        ),
+      inject: [
+        PROVIDER_REPOSITORY,
+        IDENTITY_REPOSITORY,
+        PROFILE_REPOSITORY,
+        CATEGORY_REPOSITORY,
+      ],
     },
     {
       provide: UpdateProviderUseCase,
@@ -68,6 +90,12 @@ import { PrismaProviderRepository } from '../infrastructure/persistence/prisma-p
     {
       provide: SearchProviderUseCase,
       useFactory: (repo: ProviderRepository) => new SearchProviderUseCase(repo),
+      inject: [PROVIDER_REPOSITORY],
+    },
+    {
+      provide: FindCompatibleProvidersUseCase,
+      useFactory: (repo: ProviderRepository) =>
+        new FindCompatibleProvidersUseCase(repo),
       inject: [PROVIDER_REPOSITORY],
     },
   ],

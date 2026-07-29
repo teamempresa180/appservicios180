@@ -47,7 +47,11 @@ class _MessageInputState extends State<MessageInput> {
           ),
         ),
         const SizedBox(width: AppSpacing.space8),
-        IconButton.filled(onPressed: _send, icon: const Icon(Icons.send_outlined)),
+        IconButton.filled(
+          onPressed: _send,
+          icon: const Icon(Icons.send_outlined),
+          tooltip: 'Enviar',
+        ),
       ],
     );
   }

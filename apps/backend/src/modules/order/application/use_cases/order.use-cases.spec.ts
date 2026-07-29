@@ -47,6 +47,7 @@ describe('Order use cases', () => {
   let identityId: string;
   let providerId: string;
   let serviceId: string;
+  let categoryId: string;
 
   beforeEach(async () => {
     repository = new InMemoryOrderRepository();
@@ -93,6 +94,7 @@ describe('Order use cases', () => {
       updatedAt: now,
     });
     await categoryRepository.save(category);
+    categoryId = category.id.value;
 
     const service = new Service(ServiceId.create(), {
       providerId: provider.id,
@@ -113,12 +115,13 @@ describe('Order use cases', () => {
   function createCommand(overrides: Partial<{ title: string }> = {}) {
     return new CreateOrderCommand(
       identityId,
-      providerId,
-      serviceId,
+      categoryId,
       overrides.title ?? 'Fix the sink',
       'The kitchen sink is leaking',
       new Date('2026-01-01T08:00:00Z'),
       OrderPriority.Medium,
+      providerId,
+      serviceId,
     );
   }
 
@@ -128,16 +131,36 @@ describe('Order use cases', () => {
       identityRepository,
       providerRepository,
       serviceRepository,
+      categoryRepository,
     );
   }
 
   describe('CreateOrderUseCase', () => {
-    it('creates an Order in Pending status', async () => {
+    it('creates a direct-hire Order in Pending status', async () => {
       const dto = await useCase().execute(createCommand());
 
       expect(dto.identityId).toBe(identityId);
       expect(dto.providerId).toBe(providerId);
       expect(dto.serviceId).toBe(serviceId);
+      expect(dto.categoryId).toBe(categoryId);
+      expect(dto.status).toBe(OrderStatus.Pending);
+    });
+
+    it('creates an open request with providerId/serviceId both null', async () => {
+      const dto = await useCase().execute(
+        new CreateOrderCommand(
+          identityId,
+          categoryId,
+          'Open plumbing request',
+          'Need a plumber, any compatible provider',
+          new Date('2026-01-01T08:00:00Z'),
+          OrderPriority.Medium,
+        ),
+      );
+
+      expect(dto.providerId).toBeNull();
+      expect(dto.serviceId).toBeNull();
+      expect(dto.categoryId).toBe(categoryId);
       expect(dto.status).toBe(OrderStatus.Pending);
     });
 
@@ -146,8 +169,24 @@ describe('Order use cases', () => {
         useCase().execute(
           new CreateOrderCommand(
             'unknown-identity',
+            categoryId,
+            'Fix the sink',
+            'desc',
+            new Date('2026-01-01T08:00:00Z'),
+            OrderPriority.Medium,
             providerId,
             serviceId,
+          ),
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws NotFoundException when the Category does not exist', async () => {
+      await expect(
+        useCase().execute(
+          new CreateOrderCommand(
+            identityId,
+            'unknown-category',
             'Fix the sink',
             'desc',
             new Date('2026-01-01T08:00:00Z'),
@@ -162,12 +201,13 @@ describe('Order use cases', () => {
         useCase().execute(
           new CreateOrderCommand(
             identityId,
-            'unknown-provider',
-            serviceId,
+            categoryId,
             'Fix the sink',
             'desc',
             new Date('2026-01-01T08:00:00Z'),
             OrderPriority.Medium,
+            'unknown-provider',
+            serviceId,
           ),
         ),
       ).rejects.toThrow(NotFoundException);
@@ -178,12 +218,13 @@ describe('Order use cases', () => {
         useCase().execute(
           new CreateOrderCommand(
             identityId,
-            providerId,
-            'unknown-service',
+            categoryId,
             'Fix the sink',
             'desc',
             new Date('2026-01-01T08:00:00Z'),
             OrderPriority.Medium,
+            providerId,
+            'unknown-service',
           ),
         ),
       ).rejects.toThrow(NotFoundException);
@@ -194,12 +235,29 @@ describe('Order use cases', () => {
         useCase().execute(
           new CreateOrderCommand(
             identityId,
-            providerId,
-            serviceId,
+            categoryId,
             '  ',
             'desc',
             new Date('2026-01-01T08:00:00Z'),
             OrderPriority.Medium,
+            providerId,
+            serviceId,
+          ),
+        ),
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it('rejects providing only one of providerId/serviceId', async () => {
+      await expect(
+        useCase().execute(
+          new CreateOrderCommand(
+            identityId,
+            categoryId,
+            'Fix the sink',
+            'desc',
+            new Date('2026-01-01T08:00:00Z'),
+            OrderPriority.Medium,
+            providerId,
           ),
         ),
       ).rejects.toThrow(ValidationException);

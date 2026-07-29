@@ -27,6 +27,7 @@ export class CancelOrderUseCase {
       identityId: existing.identityId,
       providerId: existing.providerId,
       serviceId: existing.serviceId,
+      categoryId: existing.categoryId,
       title: existing.title,
       description: existing.description,
       scheduledDate: existing.scheduledDate,

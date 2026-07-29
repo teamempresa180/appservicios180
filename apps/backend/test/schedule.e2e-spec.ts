@@ -23,6 +23,8 @@ import { IdentityId } from '../src/modules/identity/domain/value-objects/identit
 import { PROFILE_REPOSITORY } from '../src/modules/profiles/domain/interfaces/profile-repository.interface';
 import { InMemoryProfileRepository } from '../src/modules/profiles/application/use_cases/test-support/in-memory-profile.repository';
 import { ProfileId } from '../src/modules/profiles/domain/value-objects/profile-id.value-object';
+import { CATEGORY_REPOSITORY } from '../src/modules/category/domain/interfaces/category-repository.interface';
+import { InMemoryCategoryRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category.repository';
 import { ScheduleType } from '../src/modules/schedule/domain/value-objects/schedule-type.value-object';
 import { ScheduleResponseDto } from '../src/modules/schedule/presentation/dto/schedule.response.dto';
 import { ScheduleListResponseDto } from '../src/modules/schedule/presentation/dto/schedule-list.response.dto';
@@ -80,6 +82,8 @@ describe('ScheduleController (e2e)', () => {
       .useValue(new InMemoryIdentityRepository())
       .overrideProvider(PROFILE_REPOSITORY)
       .useValue(new InMemoryProfileRepository())
+      .overrideProvider(CATEGORY_REPOSITORY)
+      .useValue(new InMemoryCategoryRepository())
       .compile();
 
     app = moduleFixture.createNestApplication();

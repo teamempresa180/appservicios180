@@ -6,6 +6,7 @@ import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_button.dart';
 import '../../../../core/ui/widgets/app_card.dart';
+import '../../../../core/ui/widgets/app_loading_indicator.dart';
 
 enum _SelfieStatus { none, picked, uploading, success, error }
 
@@ -101,7 +102,7 @@ class _SelfieCaptureFieldState extends State<SelfieCaptureField> {
             ),
           const SizedBox(height: AppSpacing.space12),
           if (_status == _SelfieStatus.uploading)
-            const Center(child: CircularProgressIndicator())
+            const Center(child: AppLoadingIndicator())
           else ...[
             if (_errorMessage != null) ...[
               Text(

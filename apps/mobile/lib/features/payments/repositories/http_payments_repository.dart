@@ -66,7 +66,11 @@ class HttpPaymentsRepository implements PaymentsRepository {
 
   @override
   Future<Service> getServiceFor(Order order) async {
-    final json = await _apiClient.get('/services/${order.serviceId.value}');
+    // Payments only exist for orders whose Quote was already accepted —
+    // a direct-hire order (serviceId set at creation), so `!` is safe
+    // here. Open-request orders have no serviceId and never reach
+    // Payments in the current flow.
+    final json = await _apiClient.get('/services/${order.serviceId!.value}');
     return ServiceHttpMapper.fromJson(json);
   }
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/di/service_locator.dart';
-import '../../../../core/ui/animations/scale_in.dart';
+import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
@@ -8,36 +8,42 @@ import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../../core/ui/widgets/app_snack_bar.dart';
-import '../../../orders/presentation/pages/orders_page.dart';
+import '../../../../order/entities/order.dart';
+import '../../../../provider/models/provider_id.dart';
+import '../../../../quote/entities/quote.dart';
+import '../../../chat/presentation/pages/chat_page.dart';
+import '../../../chat/repositories/chat_repository.dart';
 import '../../repositories/quote_repository.dart';
 import '../view_models/quote_view_model.dart';
-import '../widgets/address_resume.dart';
-import '../widgets/confirm_quote_button.dart';
-import '../widgets/estimated_time.dart';
-import '../widgets/price_breakdown.dart';
-import '../widgets/provider_resume.dart';
 import '../widgets/quote_header.dart';
-import '../widgets/quote_notes.dart';
-import '../widgets/schedule_resume.dart';
-import '../widgets/service_resume.dart';
+import '../widgets/quote_list_item.dart';
 
-/// Quote screen. Does NOT build its own `Scaffold` — it is meant to be
-/// inserted into the existing navigation flow later, the same way
-/// every other feature so far does. Completely independent: its own
-/// repository, its own view model, loaded from the real backend via
-/// [QuoteViewModel] (resolved from the service locator — see
-/// `core/di/service_locator.dart`).
+/// Order status / quotes screen. Does NOT build its own `Scaffold` — it
+/// is meant to be inserted into the existing navigation flow, the same
+/// way every other feature so far does.
 ///
-/// Shows a single, fixed quote (no id-based lookup yet) — see the
-/// feature README. "Confirmar solicitud" accepts the real `Quote` via
-/// `QuoteRepository.acceptQuote`.
+/// Order-scoped and multi-quote-aware — shows every real `Quote`
+/// submitted for [order] (an open request can receive several, from
+/// different providers). Accepting one calls
+/// `QuoteRepository.acceptQuote` (which cascades the linked `Order` to
+/// `Accepted` on the real backend), then creates-or-gets the real chat
+/// for this order and navigates into it — replacing the previous
+/// unconditional "always go to `OrdersPage`" behavior.
 class QuotePage extends StatefulWidget {
-  const QuotePage({super.key, QuoteRepository? repository})
-    : _repository = repository;
+  const QuotePage({
+    super.key,
+    required this.order,
+    QuoteRepository? repository,
+    ChatRepository? chatRepository,
+  }) : _repository = repository,
+       _chatRepository = chatRepository;
+
+  final Order order;
 
   /// Overridable for tests only — production call sites always resolve
-  /// the real repository from the service locator.
+  /// the real repositories from the service locator.
   final QuoteRepository? _repository;
+  final ChatRepository? _chatRepository;
 
   @override
   State<QuotePage> createState() => _QuotePageState();
@@ -46,7 +52,14 @@ class QuotePage extends StatefulWidget {
 class _QuotePageState extends State<QuotePage> {
   late final QuoteRepository _repository =
       widget._repository ?? locator<QuoteRepository>();
-  late final QuoteViewModel _viewModel = QuoteViewModel(_repository);
+  late final ChatRepository _chatRepository =
+      widget._chatRepository ?? locator<ChatRepository>();
+  late final QuoteViewModel _viewModel = QuoteViewModel(
+    _repository,
+    widget.order,
+  );
+
+  bool _isAccepting = false;
 
   @override
   void initState() {
@@ -64,23 +77,33 @@ class _QuotePageState extends State<QuotePage> {
     super.dispose();
   }
 
-  Future<void> _confirm() async {
-    final data = _viewModel.data!;
-    await _repository.acceptQuote(data.quote);
-    if (!mounted) return;
-    AppSnackBar.show(
-      context,
-      'Cotización confirmada.',
-      type: AppSnackBarType.success,
-    );
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: const Text('Mis órdenes')),
-          body: const SafeArea(child: OrdersPage()),
+  Future<void> _accept(Quote quote, ProviderId providerId) async {
+    if (_isAccepting) return;
+    setState(() => _isAccepting = true);
+    try {
+      await _repository.acceptQuote(quote);
+      // Ensures a real Chat exists for this order before navigating in
+      // — `ChatPage` itself still has no id-based lookup yet (shows
+      // whichever conversation `GET /chats` returns first), a
+      // documented, pre-existing limitation this pass doesn't fix.
+      await _chatRepository.createOrGetForOrder(widget.order, providerId);
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'Cotización aceptada.',
+        type: AppSnackBarType.success,
+      );
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => Scaffold(
+            appBar: AppBar(title: const Text('Conversación')),
+            body: const SafeArea(child: ChatPage()),
+          ),
         ),
-      ),
-    );
+      );
+    } finally {
+      if (mounted) setState(() => _isAccepting = false);
+    }
   }
 
   @override
@@ -88,42 +111,46 @@ class _QuotePageState extends State<QuotePage> {
     switch (_viewModel.status) {
       case QuoteLoadStatus.loading:
         return const AppPageBody(
-          body: AppLoading(message: 'Cargando cotización...'),
+          body: AppLoading(message: 'Cargando cotizaciones...'),
         );
       case QuoteLoadStatus.error:
         return AppPageBody(
           body: AppEmptyState(
             icon: AppIcons.error,
-            title: 'No se pudo cargar la cotización',
+            title: 'No se pudieron cargar las cotizaciones',
             description: _viewModel.errorMessage,
             actionLabel: 'Reintentar',
             onActionPressed: _viewModel.retry,
           ),
         );
       case QuoteLoadStatus.success:
-        final data = _viewModel.data!;
+        final entries = _viewModel.entries;
         return AppPageBody(
-          header: QuoteHeader(data: data),
-          body: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SlideIn(child: ServiceResume(data: data)),
-              const SizedBox(height: AppSpacing.space16),
-              SlideIn(child: ProviderResume(data: data)),
-              const SizedBox(height: AppSpacing.space16),
-              SlideIn(child: AddressResume(data: data)),
-              const SizedBox(height: AppSpacing.space16),
-              ScaleIn(child: ScheduleResume(data: data)),
-              const SizedBox(height: AppSpacing.space16),
-              SlideIn(child: EstimatedTime(data: data)),
-              const SizedBox(height: AppSpacing.space16),
-              SlideIn(child: PriceBreakdown(data: data)),
-              const SizedBox(height: AppSpacing.space16),
-              SlideIn(child: QuoteNotes(data: data)),
-              const SizedBox(height: AppSpacing.space16),
-              ConfirmQuoteButton(onPressed: _confirm),
-            ],
-          ),
+          header: QuoteHeader(order: widget.order, quoteCount: entries.length),
+          body: entries.isEmpty
+              ? const AppEmptyState(
+                  icon: AppIcons.info,
+                  title: 'Esperando cotizaciones',
+                  description:
+                      'Te avisaremos apenas un proveedor envíe su cotización.',
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final entry in entries) ...[
+                      FadeIn(
+                        child: SlideIn(
+                          child: QuoteListItem(
+                            entry: entry,
+                            onAccept: () =>
+                                _accept(entry.quote, entry.provider.id),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.space12),
+                    ],
+                  ],
+                ),
         );
     }
   }

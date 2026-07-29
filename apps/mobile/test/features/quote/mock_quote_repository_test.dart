@@ -1,61 +1,54 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:mobile/address/entities/address.dart';
-import 'package:mobile/category/entities/category.dart';
+import 'package:mobile/features/quote/mock/mock_quote_data.dart';
 import 'package:mobile/features/quote/repositories/mock_quote_repository.dart';
 import 'package:mobile/profiles/entities/profile.dart';
 import 'package:mobile/provider/entities/provider.dart';
-import 'package:mobile/quote/entities/quote.dart';
-import 'package:mobile/service/entities/service.dart';
+import 'package:mobile/quote/models/quote_status.dart';
 
 void main() {
   group('MockQuoteRepository', () {
-    final repository = MockQuoteRepository();
+    late MockQuoteRepository repository;
 
-    test('getQuote returns a real Quote entity, not a map', () async {
-      expect(await repository.getQuote(), isA<Quote>());
+    setUp(() => repository = MockQuoteRepository());
+
+    test('getQuotesForOrder returns every real Quote for that order', () async {
+      final quotes = await repository.getQuotesForOrder(mockQuoteOrderId);
+      expect(quotes, isNotEmpty);
+      expect(
+        quotes.every((quote) => quote.orderId == mockQuoteOrderId),
+        isTrue,
+      );
     });
 
-    test('getService returns a real Service entity, not a map', () async {
-      expect(await repository.getService(), isA<Service>());
+    test('returns more than one quote for an order with multiple providers', () async {
+      final quotes = await repository.getQuotesForOrder(mockQuoteOrderId);
+      expect(quotes.length, greaterThan(1));
     });
 
-    test('getProvider returns a real Provider entity, not a map', () async {
-      expect(await repository.getProvider(), isA<Provider>());
+    test('getProviderFor returns a real Provider entity, not a map', () async {
+      final quotes = await repository.getQuotesForOrder(mockQuoteOrderId);
+      final provider = await repository.getProviderFor(quotes.first);
+      expect(provider, isA<Provider>());
     });
 
-    test('getProfile returns a real Profile with a display name', () async {
-      final profile = await repository.getProfile();
+    test('getProfileFor returns a real Profile with a display name', () async {
+      final quotes = await repository.getQuotesForOrder(mockQuoteOrderId);
+      final profile = await repository.getProfileFor(quotes.first);
       expect(profile, isA<Profile>());
       expect(profile.displayName, isNotEmpty);
     });
 
-    test('getCategory returns a real Category entity, not a map', () async {
-      expect(await repository.getCategory(), isA<Category>());
+    test('acceptQuote transitions the quote to accepted', () async {
+      final quotes = await repository.getQuotesForOrder(mockQuoteOrderId);
+      final accepted = await repository.acceptQuote(quotes.first);
+      expect(accepted.status, QuoteStatus.accepted);
     });
 
-    test('getAddress returns a real Address entity, not a map', () async {
-      expect(await repository.getAddress(), isA<Address>());
-    });
-
-    test('quote and service reference the same provider id', () async {
-      final providerId = (await repository.getProvider()).id;
-      expect((await repository.getQuote()).providerId, equals(providerId));
-      expect((await repository.getService()).providerId, equals(providerId));
-    });
-
-    test('service references the same category id', () async {
-      expect(
-        (await repository.getService()).categoryId,
-        equals((await repository.getCategory()).id),
-      );
-    });
-
-    test('is independent from every other feature mock data', () async {
-      expect(
-        (await repository.getProvider()).id.value.startsWith('quote-'),
-        isTrue,
-      );
+    test('rejectQuote transitions the quote to rejected', () async {
+      final quotes = await repository.getQuotesForOrder(mockQuoteOrderId);
+      final rejected = await repository.rejectQuote(quotes.last);
+      expect(rejected.status, QuoteStatus.rejected);
     });
   });
 }

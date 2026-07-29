@@ -2,6 +2,7 @@ import { OrderModel as PrismaOrder } from '@prisma/client';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
 import { ServiceId } from '../../../service/domain/value-objects/service-id.value-object';
+import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
 import { Order } from '../../domain/entities/order.entity';
 import { OrderId } from '../../domain/value-objects/order-id.value-object';
 import { OrderPriority } from '../../domain/value-objects/order-priority.value-object';
@@ -17,8 +18,9 @@ export class OrderPrismaMapper {
   static toDomain(row: PrismaOrder): Order {
     return new Order(OrderId.fromString(row.id), {
       identityId: IdentityId.fromString(row.identityId),
-      providerId: ProviderId.fromString(row.providerId),
-      serviceId: ServiceId.fromString(row.serviceId),
+      providerId: row.providerId ? ProviderId.fromString(row.providerId) : null,
+      serviceId: row.serviceId ? ServiceId.fromString(row.serviceId) : null,
+      categoryId: CategoryId.fromString(row.categoryId),
       title: row.title,
       description: row.description,
       scheduledDate: row.scheduledDate,
@@ -33,8 +35,9 @@ export class OrderPrismaMapper {
     return {
       id: order.id.value,
       identityId: order.identityId.value,
-      providerId: order.providerId.value,
-      serviceId: order.serviceId.value,
+      providerId: order.providerId?.value ?? null,
+      serviceId: order.serviceId?.value ?? null,
+      categoryId: order.categoryId.value,
       title: order.title,
       description: order.description,
       scheduledDate: order.scheduledDate,

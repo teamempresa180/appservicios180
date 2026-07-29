@@ -14,13 +14,22 @@ import {
   SERVICE_REPOSITORY,
   ServiceRepository,
 } from '../../service/domain/interfaces/service-repository.interface';
+import { CategoryPresentationModule } from '../../category/presentation/category.module';
+import {
+  CATEGORY_REPOSITORY,
+  CategoryRepository,
+} from '../../category/domain/interfaces/category-repository.interface';
 import { OrderController } from './controllers/order.controller';
 import { CreateOrderUseCase } from '../application/use_cases/create-order.use-case';
 import { UpdateOrderUseCase } from '../application/use_cases/update-order.use-case';
 import { CancelOrderUseCase } from '../application/use_cases/cancel-order.use-case';
+import { StartOrderUseCase } from '../application/use_cases/start-order.use-case';
+import { CompleteOrderUseCase } from '../application/use_cases/complete-order.use-case';
 import { GetOrderUseCase } from '../application/use_cases/get-order.use-case';
 import { ListOrderUseCase } from '../application/use_cases/list-order.use-case';
 import { SearchOrderUseCase } from '../application/use_cases/search-order.use-case';
+import { ListMyOrdersUseCase } from '../application/use_cases/list-my-orders.use-case';
+import { ListOrdersForProviderUseCase } from '../application/use_cases/list-orders-for-provider.use-case';
 import {
   ORDER_REPOSITORY,
   OrderRepository,
@@ -40,6 +49,7 @@ import { PrismaOrderRepository } from '../infrastructure/persistence/prisma-orde
     IdentityPresentationModule,
     ProviderPresentationModule,
     ServicePresentationModule,
+    CategoryPresentationModule,
   ],
   controllers: [OrderController],
   providers: [
@@ -51,18 +61,21 @@ import { PrismaOrderRepository } from '../infrastructure/persistence/prisma-orde
         identityRepo: IdentityRepository,
         providerRepo: ProviderRepository,
         serviceRepo: ServiceRepository,
+        categoryRepo: CategoryRepository,
       ) =>
         new CreateOrderUseCase(
           orderRepo,
           identityRepo,
           providerRepo,
           serviceRepo,
+          categoryRepo,
         ),
       inject: [
         ORDER_REPOSITORY,
         IDENTITY_REPOSITORY,
         PROVIDER_REPOSITORY,
         SERVICE_REPOSITORY,
+        CATEGORY_REPOSITORY,
       ],
     },
     {
@@ -73,6 +86,16 @@ import { PrismaOrderRepository } from '../infrastructure/persistence/prisma-orde
     {
       provide: CancelOrderUseCase,
       useFactory: (repo: OrderRepository) => new CancelOrderUseCase(repo),
+      inject: [ORDER_REPOSITORY],
+    },
+    {
+      provide: StartOrderUseCase,
+      useFactory: (repo: OrderRepository) => new StartOrderUseCase(repo),
+      inject: [ORDER_REPOSITORY],
+    },
+    {
+      provide: CompleteOrderUseCase,
+      useFactory: (repo: OrderRepository) => new CompleteOrderUseCase(repo),
       inject: [ORDER_REPOSITORY],
     },
     {
@@ -89,6 +112,17 @@ import { PrismaOrderRepository } from '../infrastructure/persistence/prisma-orde
       provide: SearchOrderUseCase,
       useFactory: (repo: OrderRepository) => new SearchOrderUseCase(repo),
       inject: [ORDER_REPOSITORY],
+    },
+    {
+      provide: ListMyOrdersUseCase,
+      useFactory: (repo: OrderRepository) => new ListMyOrdersUseCase(repo),
+      inject: [ORDER_REPOSITORY],
+    },
+    {
+      provide: ListOrdersForProviderUseCase,
+      useFactory: (repo: OrderRepository, providerRepo: ProviderRepository) =>
+        new ListOrdersForProviderUseCase(repo, providerRepo),
+      inject: [ORDER_REPOSITORY, PROVIDER_REPOSITORY],
     },
   ],
   exports: [ORDER_REPOSITORY],

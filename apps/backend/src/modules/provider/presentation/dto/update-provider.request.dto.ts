@@ -22,4 +22,10 @@ export class UpdateProviderRequestDto {
 
   @ApiPropertyOptional({ enum: ProviderStatus, example: ProviderStatus.Active })
   status?: ProviderStatus;
+
+  @ApiPropertyOptional({ example: 'category-id-123' })
+  categoryId?: string;
+
+  @ApiPropertyOptional({ example: 'Residential plumbing repairs' })
+  specialization?: string;
 }

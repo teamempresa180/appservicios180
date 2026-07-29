@@ -15,6 +15,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { IdentityRoutes } from '../routes/identity.routes';
@@ -56,6 +57,9 @@ export class IdentityController {
   ) {}
 
   @Post()
+  // Public registration entry point — throttled against automated
+  // mass account creation (same rationale as login/refresh).
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation(IdentitySwagger.create)
   @ApiResponse({
     status: 201,

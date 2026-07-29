@@ -27,10 +27,12 @@ import { DeleteProviderUseCase } from '../../application/use_cases/delete-provid
 import { GetProviderUseCase } from '../../application/use_cases/get-provider.use-case';
 import { ListProviderUseCase } from '../../application/use_cases/list-provider.use-case';
 import { SearchProviderUseCase } from '../../application/use_cases/search-provider.use-case';
+import { FindCompatibleProvidersUseCase } from '../../application/use_cases/find-compatible-providers.use-case';
 import { DeleteProviderCommand } from '../../application/commands/delete-provider.command';
 import { GetProviderQuery } from '../../application/queries/get-provider.query';
 import { ListProviderQuery } from '../../application/queries/list-provider.query';
 import { SearchProviderQuery } from '../../application/queries/search-provider.query';
+import { FindCompatibleProvidersQuery } from '../../application/queries/find-compatible-providers.query';
 import { CreateProviderRequestDto } from '../dto/create-provider.request.dto';
 import { UpdateProviderRequestDto } from '../dto/update-provider.request.dto';
 import { ProviderResponseDto } from '../dto/provider.response.dto';
@@ -66,6 +68,7 @@ export class ProviderController {
     private readonly getProviderUseCase: GetProviderUseCase,
     private readonly listProviderUseCase: ListProviderUseCase,
     private readonly searchProviderUseCase: SearchProviderUseCase,
+    private readonly findCompatibleProvidersUseCase: FindCompatibleProvidersUseCase,
   ) {}
 
   @Post()
@@ -172,6 +175,25 @@ export class ProviderController {
   async search(@Query('term') term: string): Promise<ProviderResponseDto[]> {
     const providers = await this.searchProviderUseCase.execute(
       new SearchProviderQuery(term),
+    );
+    return providers.map((provider) => ProviderHttpMapper.toResponse(provider));
+  }
+
+  @Get(ProviderRoutes.compatible)
+  @ApiOperation(ProviderSwagger.compatible)
+  @ApiQuery({ name: 'categoryId', required: true, example: 'category-id-123' })
+  @ApiQuery({ name: 'specialization', required: false, example: 'Residential' })
+  @ApiResponse({
+    status: 200,
+    description: 'Active Providers compatible with the given Category.',
+    type: [ProviderResponseDto],
+  })
+  async compatible(
+    @Query('categoryId') categoryId: string,
+    @Query('specialization') specialization?: string,
+  ): Promise<ProviderResponseDto[]> {
+    const providers = await this.findCompatibleProvidersUseCase.execute(
+      new FindCompatibleProvidersQuery(categoryId, specialization),
     );
     return providers.map((provider) => ProviderHttpMapper.toResponse(provider));
   }
