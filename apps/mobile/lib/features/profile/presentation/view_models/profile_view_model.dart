@@ -24,6 +24,7 @@ class ProfileViewModel extends ChangeNotifier {
   ProfileLoadStatus _status = ProfileLoadStatus.loading;
   ProfileDisplay? _data;
   String? _errorMessage;
+  bool _disposed = false;
 
   ProfileLoadStatus get status => _status;
   ProfileDisplay? get data => _data;
@@ -31,7 +32,7 @@ class ProfileViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = ProfileLoadStatus.loading;
-    notifyListeners();
+    _notifyListenersIfMounted();
     try {
       _data = await ProfileMapper.toDisplay(
         repository: _repository,
@@ -43,8 +44,19 @@ class ProfileViewModel extends ChangeNotifier {
       _errorMessage = exception.message;
       _status = ProfileLoadStatus.error;
     }
-    notifyListeners();
+    _notifyListenersIfMounted();
   }
 
   Future<void> retry() => load();
+
+  void _notifyListenersIfMounted() {
+    if (_disposed) return;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 }

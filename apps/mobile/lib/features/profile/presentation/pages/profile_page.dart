@@ -200,6 +200,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ProfileActions(
               onEditProfile: () => _editProfile(context),
               onLogout: _logout,
+              showProviderDashboard: _sessionManager.currentRole == 'PROVIDER',
               showBecomeProvider: _sessionManager.currentRole != 'PROVIDER',
               onBecomeProvider: () => context.push(AppRoutes.becomeProvider),
             ),

@@ -34,6 +34,7 @@ class NotificationsViewModel extends ChangeNotifier {
   NotificationsLoadStatus _status = NotificationsLoadStatus.loading;
   List<NotificationDisplay> _notifications = const [];
   String? _errorMessage;
+  bool _disposed = false;
 
   NotificationsLoadStatus get status => _status;
   List<NotificationDisplay> get notifications => _notifications;
@@ -41,7 +42,7 @@ class NotificationsViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = NotificationsLoadStatus.loading;
-    notifyListeners();
+    _notifyListenersIfMounted();
     try {
       final notifications = await _repository.getNotifications();
       _notifications = await Future.wait(notifications.map(_buildDisplay));
@@ -50,7 +51,18 @@ class NotificationsViewModel extends ChangeNotifier {
       _errorMessage = exception.message;
       _status = NotificationsLoadStatus.error;
     }
+    _notifyListenersIfMounted();
+  }
+
+  void _notifyListenersIfMounted() {
+    if (_disposed) return;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 
   Future<NotificationDisplay> _buildDisplay(Notification notification) async {
