@@ -29,7 +29,7 @@ describe('AllExceptionsFilter', () => {
     );
   });
 
-  it('maps an unexpected Error to 500', () => {
+  it('maps an unexpected Error to 500 without leaking its message', () => {
     const { host, status, json } = createHost();
     filter.catch(new Error('boom'), host);
 
@@ -38,8 +38,21 @@ describe('AllExceptionsFilter', () => {
       expect.objectContaining({
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         error: 'InternalServerError',
-        message: 'boom',
+        message: 'Internal server error',
       }),
+    );
+  });
+
+  it('never leaks a raw driver/internal error message (e.g. Prisma) to the client', () => {
+    const { host, status, json } = createHost();
+    filter.catch(
+      new Error("Unknown column 'foo' in 'field list' — SELECT * FROM users"),
+      host,
+    );
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Internal server error' }),
     );
   });
 

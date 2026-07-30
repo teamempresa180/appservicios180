@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Role } from '../../../../common/auth/role.enum';
 import { UnauthorizedException } from '../../../core/domain/exceptions/unauthorized.exception';
 import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
@@ -41,6 +42,10 @@ const INVALID_CREDENTIALS_MESSAGE = 'Invalid document number or password';
  * rule.
  */
 export class LoginUseCase {
+  // Business-event logging only — identity id and outcome, never the
+  // document number/password. See `common/README.md` logging conventions.
+  private readonly logger = new Logger(LoginUseCase.name);
+
   constructor(
     private readonly identityRepository: IdentityRepository,
     private readonly authenticationRepository: AuthenticationRepository,
@@ -56,6 +61,7 @@ export class LoginUseCase {
       command.documentNumber,
     );
     if (!identity || identity.status !== IdentityStatus.Active) {
+      this.logger.warn('Login failed: unknown or inactive identity');
       throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
     }
 
@@ -67,6 +73,9 @@ export class LoginUseCase {
         auth.status === AuthenticationStatus.Active,
     );
     if (!hasActivePasswordMethod) {
+      this.logger.warn(
+        `Login failed: no active Password method for identityId=${identity.id.value}`,
+      );
       throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
     }
 
@@ -80,6 +89,9 @@ export class LoginUseCase {
         credential.passwordHash,
     );
     if (!passwordCredential?.passwordHash) {
+      this.logger.warn(
+        `Login failed: no active Password credential for identityId=${identity.id.value}`,
+      );
       throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
     }
 
@@ -88,6 +100,9 @@ export class LoginUseCase {
       passwordCredential.passwordHash,
     );
     if (!passwordMatches) {
+      this.logger.warn(
+        `Login failed: wrong password for identityId=${identity.id.value}`,
+      );
       throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
     }
 
@@ -99,6 +114,9 @@ export class LoginUseCase {
         ? Role.Provider
         : Role.Customer;
 
+    this.logger.log(
+      `Login succeeded for identityId=${identity.id.value} role=${role}`,
+    );
     return issueTokenPair(
       this.tokenService,
       this.refreshTokenRepository,

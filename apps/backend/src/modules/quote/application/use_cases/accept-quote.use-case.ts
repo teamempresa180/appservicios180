@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
 import { Order } from '../../../order/domain/entities/order.entity';
@@ -34,6 +35,8 @@ import { QuoteMapper } from '../mappers/quote.mapper';
  * `QuotePresentationModule` always wires the real one.
  */
 export class AcceptQuoteUseCase {
+  private readonly logger = new Logger(AcceptQuoteUseCase.name);
+
   constructor(
     private readonly quoteRepository: QuoteRepository,
     private readonly orderRepository?: OrderRepository,
@@ -89,6 +92,9 @@ export class AcceptQuoteUseCase {
     });
 
     await this.quoteRepository.save(accepted);
+    this.logger.log(
+      `Quote accepted id=${accepted.id.value} orderId=${accepted.orderId.value}`,
+    );
     return QuoteMapper.toDto(accepted);
   }
 }

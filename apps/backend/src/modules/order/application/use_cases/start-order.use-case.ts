@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
 import { Order } from '../../domain/entities/order.entity';
@@ -17,6 +18,8 @@ import { OrderMapper } from '../mappers/order.mapper';
  * step this status machine depends on (see `AcceptQuoteUseCase`).
  */
 export class StartOrderUseCase {
+  private readonly logger = new Logger(StartOrderUseCase.name);
+
   constructor(private readonly orderRepository: OrderRepository) {}
 
   async execute(command: StartOrderCommand): Promise<OrderDto> {
@@ -46,6 +49,7 @@ export class StartOrderUseCase {
     });
 
     await this.orderRepository.save(started);
+    this.logger.log(`Order started (InProgress) id=${started.id.value}`);
     return OrderMapper.toDto(started);
   }
 }

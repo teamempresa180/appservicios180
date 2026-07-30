@@ -44,16 +44,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return;
     }
 
-    const message =
-      exception instanceof Error ? exception.message : 'Internal server error';
+    // Never forward the raw error message to the client for an
+    // unexpected failure — it may be a driver-level error (e.g. a
+    // Prisma error exposing column/table names or query fragments) or
+    // any other internal detail. The real message/stack is logged
+    // server-side only; the client always gets the same generic text.
+    const internalMessage =
+      exception instanceof Error ? exception.message : String(exception);
     const body = buildErrorResponse(
       HttpStatus.INTERNAL_SERVER_ERROR,
       'InternalServerError',
-      message,
+      'Internal server error',
       request.url,
     );
     this.logger.error(
-      message,
+      internalMessage,
       exception instanceof Error ? exception.stack : undefined,
     );
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json(body);
