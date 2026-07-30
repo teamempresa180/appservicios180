@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import '../../../../core/network/http_exceptions.dart';
+import '../../../../core/presentation/cancellable_view_model.dart';
 import '../../../../order/entities/order.dart';
 import '../../../../order/journey/order_journey_info.dart';
 import '../../../../order/journey/order_journey_stage.dart';
@@ -39,7 +39,7 @@ const _fallbackJourney = OrderJourneyInfo(
 /// timeline/copy/action buttons from, via [journeyFor]. That derivation
 /// needs each order's `Quote`s and whether the client already reviewed
 /// it, hence the two extra repositories.
-class OrdersViewModel extends ChangeNotifier {
+class OrdersViewModel extends CancellableViewModel {
   OrdersViewModel(
     this._repository, {
     required QuoteRepository quoteRepository,
@@ -68,20 +68,29 @@ class OrdersViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = OrdersLoadStatus.loading;
-    notifyListeners();
+    notifySafely();
     try {
-      final orders = await _repository.getOrders();
+      final orders = await _repository.getOrders(cancelToken: cancelToken);
       _orders = await Future.wait(
-        orders.map((order) => OrderDisplayLoader.load(order, _repository)),
+        orders.map(
+          (order) => OrderDisplayLoader.load(
+            order,
+            _repository,
+            cancelToken: cancelToken,
+          ),
+        ),
       );
 
-      final reviews = await _reviewsRepository.getReviews();
+      final reviews = await _reviewsRepository.getReviews(
+        cancelToken: cancelToken,
+      );
       final journeys = await Future.wait(
         orders.map(
           (order) => OrderJourneyLoader.load(
             order: order,
             quoteRepository: _quoteRepository,
             reviews: reviews,
+            cancelToken: cancelToken,
           ),
         ),
       );
@@ -91,10 +100,11 @@ class OrdersViewModel extends ChangeNotifier {
 
       _status = OrdersLoadStatus.success;
     } on HttpException catch (exception) {
+      if (exception is CancelledHttpException) return;
       _errorMessage = exception.message;
       _status = OrdersLoadStatus.error;
     }
-    notifyListeners();
+    notifySafely();
   }
 
   Future<void> retry() => load();

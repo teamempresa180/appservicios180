@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../identity/models/identity_id.dart';
 import '../../../order/entities/order.dart';
 import '../../../order/models/order_id.dart';
@@ -18,23 +20,23 @@ class MockReviewsRepository implements ReviewsRepository {
   final List<Review> _reviews = List.of(mockReviews);
 
   @override
-  Future<List<Review>> getReviews() =>
+  Future<List<Review>> getReviews({CancelToken? cancelToken}) =>
       Future.value(List.unmodifiable(_reviews));
 
   @override
-  Future<Provider> getProviderFor(Review review) =>
+  Future<Provider> getProviderFor(Review review, {CancelToken? cancelToken}) =>
       Future.value(mockReviewProviders[review.id]!);
 
   @override
-  Future<Profile> getProfileFor(Review review) =>
+  Future<Profile> getProfileFor(Review review, {CancelToken? cancelToken}) =>
       Future.value(mockReviewProfiles[review.id]!);
 
   @override
-  Future<Order> getOrderFor(Review review) =>
+  Future<Order> getOrderFor(Review review, {CancelToken? cancelToken}) =>
       Future.value(mockReviewOrders[review.id]!);
 
   @override
-  Future<Service> getServiceFor(Review review) =>
+  Future<Service> getServiceFor(Review review, {CancelToken? cancelToken}) =>
       Future.value(mockReviewServices[review.id]!);
 
   @override

@@ -9,6 +9,7 @@ import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../../core/ui/widgets/app_snack_bar.dart';
 import '../../../chat/presentation/pages/chat_page.dart';
 import '../../../chat/repositories/chat_repository.dart';
+import '../../../reviews/presentation/pages/reviews_page.dart';
 import '../../../reviews/repositories/reviews_repository.dart';
 import '../../models/provider_request_display.dart';
 import '../../repositories/orders_repository.dart';
@@ -161,6 +162,19 @@ class _ProviderRequestsPageState extends State<ProviderRequestsPage> {
     successMessage: 'Rechazaste la solicitud de ${request.clientName}.',
   );
 
+  void _openReviews() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Reseñas')),
+          body: SafeArea(
+            child: ReviewsPage(repository: widget._reviewsRepository),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _openChat(ProviderRequestDisplay request) async {
     final providerId = request.order.providerId;
     if (providerId == null) return;
@@ -218,6 +232,7 @@ class _ProviderRequestsPageState extends State<ProviderRequestsPage> {
       header: ProviderRequestsHeader(
         selectedTab: _tab,
         onTabChanged: (tab) => setState(() => _tab = tab),
+        onViewReviews: _openReviews,
       ),
       body: _buildBody(),
     );

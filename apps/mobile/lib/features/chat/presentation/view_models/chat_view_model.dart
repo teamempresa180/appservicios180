@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import '../../../../core/network/http_exceptions.dart';
+import '../../../../core/presentation/cancellable_view_model.dart';
 import '../../mock/mock_chat_data.dart';
 import '../../models/chat_display.dart';
 import '../../repositories/chat_repository.dart';
@@ -15,7 +15,13 @@ enum ChatLoadStatus { loading, success, error }
 /// [ChatDisplay.isOnline]/[lastSeen]/[isTyping] stay simulated
 /// (`mockChatIsOnline` etc.) — there is still no real-time transport
 /// backing presence/typing, on either the Flutter or the backend side.
-class ChatViewModel extends ChangeNotifier {
+///
+/// Extends [CancellableViewModel] so a response that lands after this
+/// view model is disposed (user navigated away from the chat) never
+/// calls `notifyListeners()` on an already-disposed `ChangeNotifier` —
+/// `ChatRepository` doesn't accept a `CancelToken` yet (unlike
+/// `OrdersRepository`), so only the disposed-guard half applies here.
+class ChatViewModel extends CancellableViewModel {
   ChatViewModel(this._repository);
 
   final ChatRepository _repository;
@@ -30,7 +36,7 @@ class ChatViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = ChatLoadStatus.loading;
-    notifyListeners();
+    notifySafely();
     try {
       final chat = await _repository.getChat();
       final provider = await _repository.getProvider();
@@ -57,7 +63,7 @@ class ChatViewModel extends ChangeNotifier {
       _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
       _status = ChatLoadStatus.error;
     }
-    notifyListeners();
+    notifySafely();
   }
 
   Future<void> retry() => load();

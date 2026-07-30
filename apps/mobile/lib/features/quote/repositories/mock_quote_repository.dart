@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../order/models/order_id.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
@@ -15,16 +17,19 @@ class MockQuoteRepository implements QuoteRepository {
   final List<Quote> _quotes = List.of(mockQuotes);
 
   @override
-  Future<List<Quote>> getQuotesForOrder(OrderId orderId) => Future.value(
+  Future<List<Quote>> getQuotesForOrder(
+    OrderId orderId, {
+    CancelToken? cancelToken,
+  }) => Future.value(
     List.unmodifiable(_quotes.where((quote) => quote.orderId == orderId)),
   );
 
   @override
-  Future<Provider> getProviderFor(Quote quote) =>
+  Future<Provider> getProviderFor(Quote quote, {CancelToken? cancelToken}) =>
       Future.value(mockQuoteProvidersById[quote.providerId]!);
 
   @override
-  Future<Profile> getProfileFor(Quote quote) =>
+  Future<Profile> getProfileFor(Quote quote, {CancelToken? cancelToken}) =>
       Future.value(mockQuoteProfilesByProviderId[quote.providerId]!);
 
   @override

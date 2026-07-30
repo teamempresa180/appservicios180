@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
 import '../../../identity/models/identity_id.dart';
@@ -27,45 +29,55 @@ class HttpReviewsRepository implements ReviewsRepository {
   final ApiClient _apiClient;
 
   @override
-  Future<List<Review>> getReviews() async {
-    final json = await _apiClient.get('/reviews');
+  Future<List<Review>> getReviews({CancelToken? cancelToken}) async {
+    final json = await _apiClient.get('/reviews', cancelToken: cancelToken);
     final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
     return items.map(ReviewHttpMapper.fromJson).toList();
   }
 
   @override
-  Future<Provider> getProviderFor(Review review) async {
-    final json = await _apiClient.get('/providers/${review.providerId.value}');
+  Future<Provider> getProviderFor(Review review, {CancelToken? cancelToken}) async {
+    final json = await _apiClient.get(
+      '/providers/${review.providerId.value}',
+      cancelToken: cancelToken,
+    );
     return ProviderHttpMapper.fromJson(json);
   }
 
   @override
-  Future<Profile> getProfileFor(Review review) async {
-    final provider = await getProviderFor(review);
+  Future<Profile> getProfileFor(Review review, {CancelToken? cancelToken}) async {
+    final provider = await getProviderFor(review, cancelToken: cancelToken);
     final json = await _apiClient.get(
       '/profiles/${provider.providerProfileId.value}',
+      cancelToken: cancelToken,
     );
     return ProfileHttpMapper.fromJson(json);
   }
 
   @override
-  Future<Order> getOrderFor(Review review) async {
-    final json = await _apiClient.get('/orders/${review.orderId.value}');
+  Future<Order> getOrderFor(Review review, {CancelToken? cancelToken}) async {
+    final json = await _apiClient.get(
+      '/orders/${review.orderId.value}',
+      cancelToken: cancelToken,
+    );
     return OrderHttpMapper.fromJson(json);
   }
 
   @override
-  Future<Service> getServiceFor(Review review) async {
+  Future<Service> getServiceFor(Review review, {CancelToken? cancelToken}) async {
     // Review has no serviceId of its own — go through its order. Only
     // meaningful for a direct-hire order (`Order.serviceId` set) — an
     // open request's order may have none, in which case there is
     // genuinely no service to resolve.
-    final order = await getOrderFor(review);
+    final order = await getOrderFor(review, cancelToken: cancelToken);
     final serviceId = order.serviceId;
     if (serviceId == null) {
       throw StateError('Order ${order.id.value} has no service assigned');
     }
-    final json = await _apiClient.get('/services/${serviceId.value}');
+    final json = await _apiClient.get(
+      '/services/${serviceId.value}',
+      cancelToken: cancelToken,
+    );
     return ServiceHttpMapper.fromJson(json);
   }
 

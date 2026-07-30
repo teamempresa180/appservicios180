@@ -5,6 +5,8 @@ import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_button.dart';
+import '../../../../core/ui/widgets/app_dialog.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
@@ -84,6 +86,30 @@ class _QuotePageState extends State<QuotePage> {
 
   Future<void> _accept(Quote quote, ProviderId providerId) async {
     if (_acceptingQuoteId != null) return;
+
+    final confirmed = await AppDialog.show<bool>(
+      context,
+      title: 'Aceptar cotización',
+      content: const Text(
+        '¿Confirmas que quieres aceptar esta cotización? Esta acción '
+        'asigna el servicio a este proveedor y no se puede deshacer.',
+      ),
+      actions: [
+        AppButton(
+          label: 'Cancelar',
+          variant: AppButtonVariant.text,
+          expand: false,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+        AppButton(
+          label: 'Aceptar',
+          expand: false,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+      ],
+    );
+    if (confirmed != true || !mounted) return;
+
     setState(() => _acceptingQuoteId = quote.id);
     try {
       await _repository.acceptQuote(quote);

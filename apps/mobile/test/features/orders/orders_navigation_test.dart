@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/category/models/category_id.dart';
 import 'package:mobile/core/di/service_locator.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
+import 'package:mobile/core/ui/widgets/app_button.dart';
 import 'package:mobile/features/chat/repositories/chat_repository.dart';
 import 'package:mobile/features/chat/repositories/mock_chat_repository.dart';
 import 'package:mobile/features/quote/mock/mock_quote_data.dart';
@@ -58,6 +59,10 @@ void main() {
     await tester.ensureVisible(find.text('Aceptar cotización').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Aceptar cotización').first);
+    await tester.pumpAndSettle();
+
+    // Confirmation dialog — accepting a quote is irreversible.
+    await tester.tap(find.widgetWithText(AppButton, 'Aceptar').last);
     await tester.pumpAndSettle();
 
     expect(find.text('Cotización aceptada.'), findsOneWidget);

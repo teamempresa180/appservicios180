@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
 import '../../../core/network/mappers/enum_json.dart';
@@ -21,8 +23,11 @@ class HttpQuoteRepository implements QuoteRepository {
   final ApiClient _apiClient;
 
   @override
-  Future<List<Quote>> getQuotesForOrder(OrderId orderId) async {
-    final json = await _apiClient.get('/quotes');
+  Future<List<Quote>> getQuotesForOrder(
+    OrderId orderId, {
+    CancelToken? cancelToken,
+  }) async {
+    final json = await _apiClient.get('/quotes', cancelToken: cancelToken);
     final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
     final quotes = items
         .where((item) => item['orderId'] == orderId.value)
@@ -33,16 +38,20 @@ class HttpQuoteRepository implements QuoteRepository {
   }
 
   @override
-  Future<Provider> getProviderFor(Quote quote) async {
-    final json = await _apiClient.get('/providers/${quote.providerId.value}');
+  Future<Provider> getProviderFor(Quote quote, {CancelToken? cancelToken}) async {
+    final json = await _apiClient.get(
+      '/providers/${quote.providerId.value}',
+      cancelToken: cancelToken,
+    );
     return ProviderHttpMapper.fromJson(json);
   }
 
   @override
-  Future<Profile> getProfileFor(Quote quote) async {
-    final provider = await getProviderFor(quote);
+  Future<Profile> getProfileFor(Quote quote, {CancelToken? cancelToken}) async {
+    final provider = await getProviderFor(quote, cancelToken: cancelToken);
     final json = await _apiClient.get(
       '/profiles/${provider.providerProfileId.value}',
+      cancelToken: cancelToken,
     );
     return ProfileHttpMapper.fromJson(json);
   }

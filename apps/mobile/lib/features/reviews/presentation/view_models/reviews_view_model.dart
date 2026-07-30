@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import '../../../../core/network/http_exceptions.dart';
+import '../../../../core/presentation/cancellable_view_model.dart';
 import '../../../../review/entities/review.dart';
 import '../../mock/mock_reviews_data.dart';
 import '../../models/review_display.dart';
@@ -13,7 +13,7 @@ enum ReviewsLoadStatus { loading, success, error }
 /// build-time-only `_buildReviews()` now that every repository method
 /// is a `Future` — a real network call needs a real
 /// Loading/Success/Error state, not a fixed `state` toggle.
-class ReviewsViewModel extends ChangeNotifier {
+class ReviewsViewModel extends CancellableViewModel {
   ReviewsViewModel(this._repository);
 
   final ReviewsRepository _repository;
@@ -28,23 +28,36 @@ class ReviewsViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = ReviewsLoadStatus.loading;
-    notifyListeners();
+    notifySafely();
     try {
-      final reviews = await _repository.getReviews();
+      final reviews = await _repository.getReviews(cancelToken: cancelToken);
       _reviews = await Future.wait(reviews.map(_buildDisplay));
       _status = ReviewsLoadStatus.success;
     } on HttpException catch (exception) {
+      if (exception is CancelledHttpException) return;
       _errorMessage = exception.message;
       _status = ReviewsLoadStatus.error;
     }
-    notifyListeners();
+    notifySafely();
   }
 
   Future<ReviewDisplay> _buildDisplay(Review review) async {
-    final provider = await _repository.getProviderFor(review);
-    final profile = await _repository.getProfileFor(review);
-    final order = await _repository.getOrderFor(review);
-    final service = await _repository.getServiceFor(review);
+    final provider = await _repository.getProviderFor(
+      review,
+      cancelToken: cancelToken,
+    );
+    final profile = await _repository.getProfileFor(
+      review,
+      cancelToken: cancelToken,
+    );
+    final order = await _repository.getOrderFor(
+      review,
+      cancelToken: cancelToken,
+    );
+    final service = await _repository.getServiceFor(
+      review,
+      cancelToken: cancelToken,
+    );
     return ReviewDisplay(
       review: review,
       provider: provider,
