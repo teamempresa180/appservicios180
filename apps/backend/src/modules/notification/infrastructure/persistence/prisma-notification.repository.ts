@@ -64,15 +64,11 @@ export class PrismaNotificationRepository implements NotificationRepository {
 
   async search(term: string): Promise<Notification[]> {
     const rows = await this.prisma.notificationModel.findMany({
+      where: {
+        OR: [{ title: { contains: term } }, { body: { contains: term } }],
+      },
       orderBy: { createdAt: 'desc' },
     });
-    const lower = term.toLowerCase();
-    return rows
-      .filter(
-        (row) =>
-          row.title.toLowerCase().includes(lower) ||
-          row.body.toLowerCase().includes(lower),
-      )
-      .map((row) => NotificationPrismaMapper.toDomain(row));
+    return rows.map((row) => NotificationPrismaMapper.toDomain(row));
   }
 }

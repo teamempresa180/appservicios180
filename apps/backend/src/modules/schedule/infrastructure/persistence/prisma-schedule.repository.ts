@@ -64,6 +64,9 @@ export class PrismaScheduleRepository implements ScheduleRepository {
   }
 
   async search(term: string): Promise<Schedule[]> {
+    // `type`/`status` are Prisma enum columns — enum filters only support
+    // `equals`/`in`, not `contains`, so a substring match across both
+    // fields has to happen in application code after the fetch.
     const rows = await this.prisma.scheduleModel.findMany({
       orderBy: { startDateTime: 'desc' },
     });

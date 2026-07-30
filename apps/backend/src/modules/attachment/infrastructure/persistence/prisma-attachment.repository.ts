@@ -64,11 +64,9 @@ export class PrismaAttachmentRepository implements AttachmentRepository {
 
   async search(term: string): Promise<Attachment[]> {
     const rows = await this.prisma.attachmentModel.findMany({
+      where: { fileName: { contains: term } },
       orderBy: { createdAt: 'desc' },
     });
-    const lower = term.toLowerCase();
-    return rows
-      .filter((row) => row.fileName.toLowerCase().includes(lower))
-      .map((row) => AttachmentPrismaMapper.toDomain(row));
+    return rows.map((row) => AttachmentPrismaMapper.toDomain(row));
   }
 }
