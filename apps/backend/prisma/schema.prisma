@@ -493,6 +493,7 @@ model IdentityModel {
   notifications   NotificationModel[]
   refreshTokens   RefreshTokenModel[]
 
+  @@index([documentNumber])
   @@map("identities")
 }
 
