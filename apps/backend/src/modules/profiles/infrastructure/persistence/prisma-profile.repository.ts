@@ -68,8 +68,8 @@ export class PrismaProfileRepository implements ProfileRepository {
     const rows = await this.prisma.profileModel.findMany({
       where: {
         OR: [
-          { displayName: { contains: term, mode: 'insensitive' } },
-          { bio: { contains: term, mode: 'insensitive' } },
+          { displayName: { contains: term } },
+          { bio: { contains: term } },
         ],
       },
       orderBy: { createdAt: 'desc' },

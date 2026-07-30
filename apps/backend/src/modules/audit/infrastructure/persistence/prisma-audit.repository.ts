@@ -59,7 +59,7 @@ export class PrismaAuditRepository implements AuditRepository {
 
   async search(term: string): Promise<Audit[]> {
     const rows = await this.prisma.auditModel.findMany({
-      where: { description: { contains: term, mode: 'insensitive' } },
+      where: { description: { contains: term } },
       orderBy: { occurredAt: 'desc' },
     });
     return rows.map((row) => AuditPrismaMapper.toDomain(row));

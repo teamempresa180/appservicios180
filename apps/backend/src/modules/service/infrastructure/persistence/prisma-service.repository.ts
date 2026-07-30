@@ -79,8 +79,8 @@ export class PrismaServiceRepository implements ServiceRepository {
     const rows = await this.prisma.serviceModel.findMany({
       where: {
         OR: [
-          { name: { contains: term, mode: 'insensitive' } },
-          { description: { contains: term, mode: 'insensitive' } },
+          { name: { contains: term } },
+          { description: { contains: term } },
         ],
       },
       orderBy: { createdAt: 'desc' },
