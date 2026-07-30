@@ -20,6 +20,7 @@ class SettingsViewModel extends ChangeNotifier {
   SettingsLoadStatus _status = SettingsLoadStatus.loading;
   SettingsDisplay? _data;
   String? _errorMessage;
+  bool _disposed = false;
 
   SettingsLoadStatus get status => _status;
   SettingsDisplay? get data => _data;
@@ -27,7 +28,7 @@ class SettingsViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = SettingsLoadStatus.loading;
-    notifyListeners();
+    _notifyListenersIfMounted();
     try {
       _data = await SettingsMapper.toDisplay(_repository);
       _status = SettingsLoadStatus.success;
@@ -35,8 +36,19 @@ class SettingsViewModel extends ChangeNotifier {
       _errorMessage = exception.message;
       _status = SettingsLoadStatus.error;
     }
-    notifyListeners();
+    _notifyListenersIfMounted();
   }
 
   Future<void> retry() => load();
+
+  void _notifyListenersIfMounted() {
+    if (_disposed) return;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 }

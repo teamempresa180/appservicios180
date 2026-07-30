@@ -17,6 +17,7 @@ class SecurityViewModel extends ChangeNotifier {
   SecurityLoadStatus _status = SecurityLoadStatus.loading;
   SecurityDisplay? _data;
   String? _errorMessage;
+  bool _disposed = false;
 
   SecurityLoadStatus get status => _status;
   SecurityDisplay? get data => _data;
@@ -24,7 +25,7 @@ class SecurityViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = SecurityLoadStatus.loading;
-    notifyListeners();
+    _notifyListenersIfMounted();
     try {
       _data = await SecurityMapper.toDisplay(_repository);
       _status = SecurityLoadStatus.success;
@@ -32,8 +33,19 @@ class SecurityViewModel extends ChangeNotifier {
       _errorMessage = exception.message;
       _status = SecurityLoadStatus.error;
     }
-    notifyListeners();
+    _notifyListenersIfMounted();
   }
 
   Future<void> retry() => load();
+
+  void _notifyListenersIfMounted() {
+    if (_disposed) return;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 }

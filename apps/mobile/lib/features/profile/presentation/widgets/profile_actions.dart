@@ -16,6 +16,7 @@ class ProfileActions extends StatelessWidget {
     this.onEditProfile,
     this.onProviderDashboard,
     this.onLogout,
+    this.showProviderDashboard = false,
     this.showBecomeProvider = false,
     this.onBecomeProvider,
   });
@@ -23,6 +24,14 @@ class ProfileActions extends StatelessWidget {
   final VoidCallback? onEditProfile;
   final VoidCallback? onProviderDashboard;
   final VoidCallback? onLogout;
+
+  /// Only accounts that already are a Provider have a dashboard to
+  /// show — showing this tile to a Cliente-only account led to a dead
+  /// end (an empty-state "no se pudo cargar el panel" for a provider
+  /// profile that doesn't exist). `ProfilePage` decides this from
+  /// `SessionManager.currentRole`, the same source `showBecomeProvider`
+  /// uses.
+  final bool showProviderDashboard;
 
   /// Shown only for accounts that aren't a Provider yet (see
   /// `SessionManager.currentRole` — `ProfilePage` decides this).
@@ -76,13 +85,15 @@ class ProfileActions extends StatelessWidget {
           label: 'Editar perfil',
           onTap: onEditProfile ?? () {},
         ),
-        const SizedBox(height: AppSpacing.space8),
-        _tile(
-          context,
-          icon: Icons.dashboard_outlined,
-          label: 'Panel del proveedor',
-          onTap: onProviderDashboard ?? () => _openProviderDashboard(context),
-        ),
+        if (showProviderDashboard) ...[
+          const SizedBox(height: AppSpacing.space8),
+          _tile(
+            context,
+            icon: Icons.dashboard_outlined,
+            label: 'Panel del proveedor',
+            onTap: onProviderDashboard ?? () => _openProviderDashboard(context),
+          ),
+        ],
         const SizedBox(height: AppSpacing.space8),
         if (showBecomeProvider) ...[
           _tile(
