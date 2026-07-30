@@ -39,6 +39,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // The description field starts empty (no canned prefill — see
+    // `RequestServiceViewModel.load`), so a real value is required
+    // before "Continuar" allows the submit through.
+    await tester.ensureVisible(find.byType(TextFormField));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Descripción'),
+      'Hay una fuga en la cocina.',
+    );
+    await tester.pumpAndSettle();
+
     await tester.ensureVisible(find.text('Continuar'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continuar'));

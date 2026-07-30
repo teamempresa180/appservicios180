@@ -110,7 +110,6 @@ class _RequestServicePageState extends State<RequestServicePage> {
       return;
     }
 
-    setState(() => _isSubmitting = true);
     final date = _selectedDate ?? data.selectedDate;
     final time = _selectedTime ?? data.selectedTime;
     final timeParts = time.split(':');
@@ -121,6 +120,16 @@ class _RequestServicePageState extends State<RequestServicePage> {
       int.parse(timeParts[0]),
       int.parse(timeParts[1]),
     );
+    if (scheduledDate.isBefore(DateTime.now())) {
+      AppSnackBar.show(
+        context,
+        'La fecha y hora programadas ya pasaron. Elige un horario futuro.',
+        type: AppSnackBarType.error,
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
     try {
       final order = await _repository.createOrder(
         categoryId: data.category.id,

@@ -24,27 +24,41 @@ class CompatibleProvidersViewModel extends ChangeNotifier {
   List<ProviderDisplay> _providers = const [];
   String? _errorMessage;
   String _specialization = '';
+  bool _disposed = false;
 
   CompatibleProvidersLoadStatus get status => _status;
   List<ProviderDisplay> get providers => _providers;
   String? get errorMessage => _errorMessage;
 
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  void _notifyIfActive() {
+    if (!_disposed) notifyListeners();
+  }
+
   Future<void> search([String specialization = '']) async {
     _specialization = specialization;
     _status = CompatibleProvidersLoadStatus.loading;
-    notifyListeners();
+    _notifyIfActive();
     try {
       final providers = await _repository.getCompatible(
         categoryId: category.id,
         specialization: specialization.isEmpty ? null : specialization,
       );
-      _providers = await Future.wait(providers.map(_buildDisplay));
+      final displays = await Future.wait(providers.map(_buildDisplay));
+      if (_disposed) return;
+      _providers = displays;
       _status = CompatibleProvidersLoadStatus.success;
     } on HttpException catch (exception) {
+      if (_disposed) return;
       _errorMessage = exception.message;
       _status = CompatibleProvidersLoadStatus.error;
     }
-    notifyListeners();
+    _notifyIfActive();
   }
 
   Future<ProviderDisplay> _buildDisplay(Provider provider) async {

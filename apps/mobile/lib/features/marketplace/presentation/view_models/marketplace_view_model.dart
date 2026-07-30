@@ -40,6 +40,7 @@ class MarketplaceViewModel extends ChangeNotifier {
   List<ServiceDisplay> _services = const [];
   List<ProviderDisplay> _providers = const [];
   String? _errorMessage;
+  bool _disposed = false;
 
   MarketplaceLoadStatus get status => _status;
   List<Category> get categories => _categories;
@@ -47,27 +48,46 @@ class MarketplaceViewModel extends ChangeNotifier {
   List<ProviderDisplay> get providers => _providers;
   String? get errorMessage => _errorMessage;
 
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  void _notifyIfActive() {
+    if (!_disposed) notifyListeners();
+  }
+
   Future<void> load() async {
     _status = MarketplaceLoadStatus.loading;
-    notifyListeners();
+    _notifyIfActive();
     try {
       final results = await Future.wait([
         _categoryRepository.getAll(),
         _serviceRepository.getFeatured(),
         _providerRepository.getRecommended(),
       ]);
-      _categories = results[0] as List<Category>;
+      final categories = results[0] as List<Category>;
       final services = results[1] as List<Service>;
       final providers = results[2] as List<Provider>;
 
-      _services = await Future.wait(services.map(_buildServiceDisplay));
-      _providers = await Future.wait(providers.map(_buildProviderDisplay));
+      final serviceDisplays = await Future.wait(
+        services.map(_buildServiceDisplay),
+      );
+      final providerDisplays = await Future.wait(
+        providers.map(_buildProviderDisplay),
+      );
+      if (_disposed) return;
+      _categories = categories;
+      _services = serviceDisplays;
+      _providers = providerDisplays;
       _status = MarketplaceLoadStatus.success;
     } on HttpException catch (exception) {
+      if (_disposed) return;
       _errorMessage = exception.message;
       _status = MarketplaceLoadStatus.error;
     }
-    notifyListeners();
+    _notifyIfActive();
   }
 
   Future<ServiceDisplay> _buildServiceDisplay(Service service) async {

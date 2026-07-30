@@ -6,13 +6,24 @@ import 'package:mobile/core/session/user_role_controller.dart';
 import 'package:mobile/core/session/user_role_storage.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/home/presentation/pages/home_page.dart';
+import 'package:mobile/features/marketplace/repositories/category_repository.dart'
+    as marketplace;
+import 'package:mobile/features/marketplace/repositories/mock_category_repository.dart'
+    as marketplace;
 
 void main() {
-  setUp(
-    () => locator.registerSingleton<UserRoleController>(
+  setUp(() {
+    locator.registerSingleton<UserRoleController>(
       UserRoleController(storage: UserRoleStorage()),
-    ),
-  );
+    );
+    // `ClientHomeContent`'s quick-categories row resolves this from DI
+    // (see its own doc comment) — registered here the same way
+    // `service_locator.dart` does for the real app, so Home's default
+    // (non-test) construction has something to load.
+    locator.registerSingleton<marketplace.CategoryRepository>(
+      marketplace.MockCategoryRepository(),
+    );
+  });
   tearDown(() => locator.reset());
 
   Widget buildApp() {
@@ -28,7 +39,7 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Hola, María'), findsOneWidget);
+    expect(find.text('Hola'), findsOneWidget);
     expect(find.text('¿Qué servicio necesitas hoy?'), findsOneWidget);
     expect(find.text('Categorías rápidas'), findsOneWidget);
     expect(find.text('Plomería'), findsOneWidget);
