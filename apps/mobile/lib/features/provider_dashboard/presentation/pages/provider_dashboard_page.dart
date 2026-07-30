@@ -20,6 +20,7 @@ import '../../../chat/repositories/chat_repository.dart';
 import '../../../orders/presentation/pages/provider_requests_page.dart';
 import '../../../orders/presentation/widgets/provider_requests_header.dart';
 import '../../../orders/repositories/orders_repository.dart';
+import '../../../../provider/models/provider_status.dart';
 import '../../../provider_services/presentation/pages/provider_services_page.dart';
 import '../../../schedule/presentation/pages/schedule_page.dart';
 import '../../models/provider_dashboard_display.dart';
@@ -284,14 +285,70 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
     );
   }
 
+  /// A provider whose account isn't [ProviderStatus.active] yet has
+  /// nothing real to manage — showing the full dashboard (start/
+  /// complete-service actions, quote lists, earnings) to a Pendiente/
+  /// En revisión/Rechazado/Suspendido/Bloqueado account is a dead end:
+  /// every action would fail against the backend, since only an Active
+  /// Provider record grants the Provider role and its endpoints (see
+  /// backend `login.use-case.ts`). Shown instead of [_buildBody] for
+  /// every non-Active status.
+  Widget _buildStatusGate(BuildContext context, ProviderStatus status) {
+    final (title, description) = switch (status) {
+      ProviderStatus.pending => (
+        'Solicitud enviada',
+        'Tu solicitud para ser proveedor fue recibida. Te avisaremos '
+            'apenas empiece la revisión.',
+      ),
+      ProviderStatus.inReview => (
+        'Tu cuenta está en revisión',
+        'Estamos revisando tus documentos de verificación. Esto puede '
+            'tomar un tiempo — te avisaremos en cuanto termine.',
+      ),
+      ProviderStatus.rejected => (
+        'Solicitud rechazada',
+        'Tu solicitud para ser proveedor no fue aprobada. Contacta a '
+            'soporte para más información.',
+      ),
+      ProviderStatus.suspended => (
+        'Cuenta suspendida',
+        'Tu cuenta de proveedor está suspendida temporalmente. '
+            'Contacta a soporte para más información.',
+      ),
+      ProviderStatus.blocked => (
+        'Cuenta bloqueada',
+        'Tu cuenta de proveedor fue bloqueada. Contacta a soporte para '
+            'más información.',
+      ),
+      ProviderStatus.inactive || ProviderStatus.archived => (
+        'Cuenta de proveedor inactiva',
+        'Tu cuenta de proveedor no está activa en este momento.',
+      ),
+      ProviderStatus.active => (
+        'Panel del proveedor',
+        null,
+      ),
+    };
+    return AppEmptyState(
+      icon: AppIcons.info,
+      title: title,
+      description: description,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = _viewModel.data;
+    final isActiveProvider =
+        _viewModel.status != ProviderDashboardLoadStatus.success ||
+        data!.provider.status == ProviderStatus.active;
 
     return AppPageBody(
       header: data == null
           ? const AppSectionTitle(title: 'Panel del proveedor')
-          : DashboardHeader(data: data),
+          : isActiveProvider
+          ? DashboardHeader(data: data)
+          : const AppSectionTitle(title: 'Panel del proveedor'),
       body: switch (_viewModel.status) {
         ProviderDashboardLoadStatus.loading => const AppLoading(
           message: 'Cargando panel...',
@@ -303,7 +360,10 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
           actionLabel: 'Reintentar',
           onActionPressed: _viewModel.retry,
         ),
-        ProviderDashboardLoadStatus.success => _buildBody(context, data!),
+        ProviderDashboardLoadStatus.success => data!.provider.status ==
+                ProviderStatus.active
+            ? _buildBody(context, data)
+            : _buildStatusGate(context, data.provider.status),
       },
     );
   }
