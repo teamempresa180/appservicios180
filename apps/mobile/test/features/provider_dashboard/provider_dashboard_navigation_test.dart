@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/di/service_locator.dart';
-import 'package:mobile/core/session/mock_auth_repository.dart';
+import 'package:mobile/core/session/auth_repository.dart';
+import 'package:mobile/core/session/auth_tokens.dart';
 import 'package:mobile/core/session/session_manager.dart';
 import 'package:mobile/core/storage/secure_token_storage.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
@@ -29,6 +30,36 @@ class _FakeSecureTokenStorage implements SecureTokenStorage {
   Future<void> clear() async {}
 }
 
+/// Always reports a `PROVIDER` role — `ProfilePage` only shows "Panel
+/// del proveedor" for a `SessionManager.currentRole == 'PROVIDER'`
+/// session (see `profile_page.dart`), so this test needs a real
+/// provider session, not `MockAuthRepository`'s hardcoded `'CUSTOMER'`.
+class _ProviderAuthRepository implements AuthRepository {
+  @override
+  Future<AuthTokens> login({
+    required String documentNumber,
+    required String password,
+  }) async => const AuthTokens(
+    accessToken: 'test-access-token',
+    refreshToken: 'test-refresh-token',
+    role: 'PROVIDER',
+  );
+
+  @override
+  Future<AuthTokens> refresh(String refreshToken) async => const AuthTokens(
+    accessToken: 'test-access-token',
+    refreshToken: 'test-refresh-token',
+    role: 'PROVIDER',
+  );
+
+  @override
+  Future<void> logout(String refreshToken) async {}
+
+  @override
+  Future<CurrentUser> me() async =>
+      const CurrentUser(id: 'test-provider-id', role: 'PROVIDER');
+}
+
 /// Confirms the minimal, explicitly-authorized wiring that lets
 /// Profile open Provider Dashboard — see the feature README.
 ///
@@ -49,8 +80,12 @@ void main() {
     'tapping "Panel del proveedor" in Profile opens Provider Dashboard',
     (tester) async {
       final sessionManager = SessionManager(
-        authRepository: MockAuthRepository(),
+        authRepository: _ProviderAuthRepository(),
         tokenStorage: _FakeSecureTokenStorage(),
+      );
+      await sessionManager.login(
+        documentNumber: '0000000000',
+        password: 'irrelevant',
       );
       await tester.pumpWidget(
         MaterialApp(
