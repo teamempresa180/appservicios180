@@ -38,6 +38,10 @@ class ProviderProfileViewModel extends ChangeNotifier {
   final Provider? _presetProvider;
   final Profile? _presetProfile;
 
+  /// Guards every [notifyListeners] call — see
+  /// `ProviderDashboardViewModel._disposed`'s doc comment for why.
+  bool _disposed = false;
+
   ProviderProfileLoadStatus _status = ProviderProfileLoadStatus.loading;
   ProviderProfileData? _data;
   String? _errorMessage;
@@ -48,7 +52,7 @@ class ProviderProfileViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = ProviderProfileLoadStatus.loading;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     try {
       final provider = _presetProvider ?? await _repository.getProvider();
 
@@ -96,8 +100,14 @@ class ProviderProfileViewModel extends ChangeNotifier {
       _errorMessage = exception.message;
       _status = ProviderProfileLoadStatus.error;
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> retry() => load();
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 }

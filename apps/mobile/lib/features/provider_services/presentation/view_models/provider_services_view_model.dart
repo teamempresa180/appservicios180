@@ -20,6 +20,10 @@ class ProviderServicesViewModel extends ChangeNotifier {
 
   final ProviderServicesRepository _repository;
 
+  /// Guards every [notifyListeners] call — see
+  /// `ProviderDashboardViewModel._disposed`'s doc comment for why.
+  bool _disposed = false;
+
   ProviderServicesLoadStatus _status = ProviderServicesLoadStatus.loading;
   List<ProviderServiceDisplay> _services = const [];
   String? _errorMessage;
@@ -30,7 +34,7 @@ class ProviderServicesViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = ProviderServicesLoadStatus.loading;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     try {
       final provider = await _repository.getProvider();
       final profile = await _repository.getProfile();
@@ -43,7 +47,7 @@ class ProviderServicesViewModel extends ChangeNotifier {
       _errorMessage = exception.message;
       _status = ProviderServicesLoadStatus.error;
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<ProviderServiceDisplay> _buildDisplay(
@@ -65,4 +69,10 @@ class ProviderServicesViewModel extends ChangeNotifier {
   }
 
   Future<void> retry() => load();
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 }

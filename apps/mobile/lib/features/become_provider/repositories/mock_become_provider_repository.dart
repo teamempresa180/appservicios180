@@ -23,6 +23,9 @@ class MockBecomeProviderRepository implements BecomeProviderRepository {
   final CategoryRepository _categoryRepository;
 
   @override
+  Future<Provider?> getExistingApplication() async => null;
+
+  @override
   Future<List<Category>> getCategories() => _categoryRepository.getAll();
 
   @override

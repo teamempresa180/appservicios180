@@ -8,6 +8,7 @@ import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
+import '../../../../core/ui/widgets/app_snack_bar.dart';
 import '../../repositories/verification_repository.dart';
 import '../view_models/verification_view_model.dart';
 import '../widgets/document_preview.dart';
@@ -57,6 +58,20 @@ class _VerificationPageState extends State<VerificationPage> {
     super.dispose();
   }
 
+  /// This screen shows a fixed, visual-only verification status (see
+  /// the class doc — there is no real backend Verification-by-provider
+  /// lookup yet), so "Tomar foto"/"Subir documento"/"Reintentar"/
+  /// "Enviar para revisión" have nothing real to do. A silent no-op
+  /// still reads as a broken button to whoever taps it, so each one
+  /// now at least confirms it isn't wired up instead of doing nothing.
+  void _notImplementedYet(BuildContext context) {
+    AppSnackBar.show(
+      context,
+      'Esta acción estará disponible próximamente.',
+      type: AppSnackBarType.info,
+    );
+  }
+
   Widget _buildBody() {
     switch (_viewModel.status) {
       case VerificationLoadStatus.loading:
@@ -82,9 +97,15 @@ class _VerificationPageState extends State<VerificationPage> {
             const SizedBox(height: AppSpacing.space16),
             SlideIn(child: VerificationSteps(data: data)),
             const SizedBox(height: AppSpacing.space16),
-            const VerificationActions(),
+            VerificationActions(
+              onTakePhoto: () => _notImplementedYet(context),
+              onUploadDocument: () => _notImplementedYet(context),
+              onRetry: () => _notImplementedYet(context),
+            ),
             const SizedBox(height: AppSpacing.space16),
-            const SubmitVerificationButton(),
+            SubmitVerificationButton(
+              onPressed: () => _notImplementedYet(context),
+            ),
           ],
         );
     }

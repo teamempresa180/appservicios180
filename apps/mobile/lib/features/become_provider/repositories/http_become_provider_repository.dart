@@ -7,6 +7,7 @@ import '../../../core/network/mappers/enum_json.dart';
 import '../../../core/session/session_manager.dart';
 import '../../../identity/entities/identity.dart';
 import '../../../profiles/entities/profile.dart';
+import '../../../provider/entities/provider.dart';
 import '../../../provider/models/provider_experience.dart';
 import '../../../verification/entities/verification.dart';
 import '../../../verification/models/verification_type.dart';
@@ -49,6 +50,15 @@ class HttpBecomeProviderRepository implements BecomeProviderRepository {
   final CategoryRepository _categoryRepository;
 
   String get _identityId => _sessionManager.currentUserId!;
+
+  @override
+  Future<Provider?> getExistingApplication() async {
+    final json = await _apiClient.get('/providers');
+    final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final match = items.where((item) => item['identityId'] == _identityId);
+    if (match.isEmpty) return null;
+    return ProviderHttpMapper.fromJson(match.first);
+  }
 
   @override
   Future<List<Category>> getCategories() => _categoryRepository.getAll();

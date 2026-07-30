@@ -23,6 +23,7 @@ import '../../../orders/repositories/orders_repository.dart';
 import '../../../../provider/models/provider_status.dart';
 import '../../../provider_services/presentation/pages/provider_services_page.dart';
 import '../../../schedule/presentation/pages/schedule_page.dart';
+import '../../../settings/presentation/pages/settings_page.dart';
 import '../../models/provider_dashboard_display.dart';
 import '../../repositories/provider_dashboard_repository.dart';
 import '../view_models/provider_dashboard_view_model.dart';
@@ -131,6 +132,17 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
         builder: (context) => Scaffold(
           appBar: AppBar(title: const Text('Agenda')),
           body: const SafeArea(child: SchedulePage()),
+        ),
+      ),
+    );
+  }
+
+  void _openSettings(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Configuración')),
+          body: const SafeArea(child: SettingsPage()),
         ),
       ),
     );
@@ -280,6 +292,7 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
           onViewServices: () => _openProviderServices(context),
           onAvailability: () => _openAvailability(context),
           onSchedule: () => _openSchedule(context),
+          onSettings: () => _openSettings(context),
         ),
       ],
     );

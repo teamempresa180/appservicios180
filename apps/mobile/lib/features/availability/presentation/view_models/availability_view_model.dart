@@ -22,6 +22,10 @@ class AvailabilityViewModel extends ChangeNotifier {
 
   final AvailabilityRepository _repository;
 
+  /// Guards every [notifyListeners] call — see
+  /// `ProviderDashboardViewModel._disposed`'s doc comment for why.
+  bool _disposed = false;
+
   AvailabilityLoadStatus _status = AvailabilityLoadStatus.loading;
   AvailabilityDisplay? _data;
   String? _errorMessage;
@@ -32,7 +36,7 @@ class AvailabilityViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = AvailabilityLoadStatus.loading;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     try {
       final provider = await _repository.getProvider();
       final availabilities = await _repository.getAvailabilities();
@@ -47,8 +51,14 @@ class AvailabilityViewModel extends ChangeNotifier {
       _errorMessage = exception.message;
       _status = AvailabilityLoadStatus.error;
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> retry() => load();
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 }

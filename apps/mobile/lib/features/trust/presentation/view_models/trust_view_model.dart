@@ -20,6 +20,10 @@ class TrustViewModel extends ChangeNotifier {
 
   final TrustRepository _repository;
 
+  /// Guards every [notifyListeners] call — see
+  /// `ProviderDashboardViewModel._disposed`'s doc comment for why.
+  bool _disposed = false;
+
   TrustLoadStatus _status = TrustLoadStatus.loading;
   TrustDisplay? _data;
   String? _errorMessage;
@@ -30,7 +34,7 @@ class TrustViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = TrustLoadStatus.loading;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     try {
       _data = await TrustMapper.toDisplay(
         repository: _repository,
@@ -41,8 +45,14 @@ class TrustViewModel extends ChangeNotifier {
       _errorMessage = exception.message;
       _status = TrustLoadStatus.error;
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> retry() => load();
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 }

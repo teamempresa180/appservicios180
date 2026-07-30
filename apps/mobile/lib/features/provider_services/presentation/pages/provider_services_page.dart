@@ -11,6 +11,7 @@ import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../../core/ui/widgets/app_snack_bar.dart';
+import '../../../../core/network/http_exceptions.dart';
 import '../../../../service/models/service_status.dart';
 import '../../models/provider_service_display.dart';
 import '../../repositories/provider_services_repository.dart';
@@ -107,19 +108,28 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
     final result = await ServiceFormSheet.show(context, categories: categories);
     if (result == null || !mounted) return;
     if (result.category == null) return;
-    final provider = await _repository.getProvider();
-    await _repository.createService(
-      provider: provider,
-      category: result.category!,
-      name: result.name!,
-      description: result.description!,
-      basePrice: result.basePrice,
-      estimatedDuration: result.estimatedDuration,
-      type: result.type!,
-    );
-    if (!mounted) return;
-    AppSnackBar.show(context, 'Servicio creado.', type: AppSnackBarType.success);
-    await _viewModel.load();
+    try {
+      final provider = await _repository.getProvider();
+      await _repository.createService(
+        provider: provider,
+        category: result.category!,
+        name: result.name!,
+        description: result.description!,
+        basePrice: result.basePrice,
+        estimatedDuration: result.estimatedDuration,
+        type: result.type!,
+      );
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'Servicio creado.',
+        type: AppSnackBarType.success,
+      );
+      await _viewModel.load();
+    } on HttpException catch (exception) {
+      if (!mounted) return;
+      AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    }
   }
 
   Future<void> _edit(ProviderServiceDisplay data) async {
@@ -132,33 +142,43 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
       initialEstimatedDuration: data.service.estimatedDuration,
     );
     if (result == null || !mounted) return;
-    await _repository.updateService(
-      data.service,
-      basePrice: result.basePrice,
-      estimatedDuration: result.estimatedDuration,
-    );
-    if (!mounted) return;
-    AppSnackBar.show(
-      context,
-      'Servicio actualizado.',
-      type: AppSnackBarType.success,
-    );
-    await _viewModel.load();
+    try {
+      await _repository.updateService(
+        data.service,
+        basePrice: result.basePrice,
+        estimatedDuration: result.estimatedDuration,
+      );
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'Servicio actualizado.',
+        type: AppSnackBarType.success,
+      );
+      await _viewModel.load();
+    } on HttpException catch (exception) {
+      if (!mounted) return;
+      AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    }
   }
 
   Future<void> _pause(ProviderServiceDisplay data) async {
     final isPaused = data.service.status == ServiceStatus.inactive;
-    await _repository.updateService(
-      data.service,
-      status: isPaused ? ServiceStatus.active : ServiceStatus.inactive,
-    );
-    if (!mounted) return;
-    AppSnackBar.show(
-      context,
-      isPaused ? 'Servicio reactivado.' : 'Servicio pausado.',
-      type: AppSnackBarType.info,
-    );
-    await _viewModel.load();
+    try {
+      await _repository.updateService(
+        data.service,
+        status: isPaused ? ServiceStatus.active : ServiceStatus.inactive,
+      );
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        isPaused ? 'Servicio reactivado.' : 'Servicio pausado.',
+        type: AppSnackBarType.info,
+      );
+      await _viewModel.load();
+    } on HttpException catch (exception) {
+      if (!mounted) return;
+      AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    }
   }
 
   Future<void> _delete(ProviderServiceDisplay data) async {
@@ -183,10 +203,19 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
       ],
     );
     if (confirmed != true || !mounted) return;
-    await _repository.deleteService(data.service);
-    if (!mounted) return;
-    AppSnackBar.show(context, 'Servicio eliminado.', type: AppSnackBarType.info);
-    await _viewModel.load();
+    try {
+      await _repository.deleteService(data.service);
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'Servicio eliminado.',
+        type: AppSnackBarType.info,
+      );
+      await _viewModel.load();
+    } on HttpException catch (exception) {
+      if (!mounted) return;
+      AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    }
   }
 
   Widget _buildBody() {

@@ -1,5 +1,6 @@
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
+import '../../../core/session/session_manager.dart';
 import '../../../availability/entities/availability.dart';
 import '../../../provider/entities/provider.dart';
 import 'availability_repository.dart';
@@ -23,17 +24,26 @@ import 'availability_repository.dart';
 /// client-side. Adding that query filter is the natural Prompt 76
 /// follow-up once more than a handful of availabilities exist.
 class HttpAvailabilityRepository implements AvailabilityRepository {
-  HttpAvailabilityRepository(this._apiClient);
+  HttpAvailabilityRepository(this._apiClient, this._sessionManager);
 
   final ApiClient _apiClient;
+  final SessionManager _sessionManager;
 
+  /// Matches `identityId` against [SessionManager.currentUserId]
+  /// client-side — same pattern as `HttpTrustRepository.getTrust` —
+  /// instead of blindly taking the first item of the unfiltered
+  /// `GET /providers` list, which was a real session-scoping bug
+  /// (every provider session would see whichever Provider happened to
+  /// be created first in the database).
   Future<Provider> _fetchProvider() async {
     final json = await _apiClient.get('/providers');
     final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
-    if (items.isEmpty) {
-      throw StateError('No providers available for the current session');
+    final identityId = _sessionManager.currentUserId;
+    final match = items.where((item) => item['identityId'] == identityId);
+    if (match.isEmpty) {
+      throw StateError('No provider found for the current session');
     }
-    return ProviderHttpMapper.fromJson(items.first);
+    return ProviderHttpMapper.fromJson(match.first);
   }
 
   @override

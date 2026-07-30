@@ -25,6 +25,10 @@ class PaymentsViewModel extends ChangeNotifier {
   final PaymentsRepository _repository;
   final Order? _presetOrder;
 
+  /// Guards every [notifyListeners] call — see
+  /// `ProviderDashboardViewModel._disposed`'s doc comment for why.
+  bool _disposed = false;
+
   PaymentsLoadStatus _status = PaymentsLoadStatus.loading;
   PaymentDisplay? _data;
   String? _errorMessage;
@@ -35,7 +39,7 @@ class PaymentsViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = PaymentsLoadStatus.loading;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     try {
       final order = _presetOrder ?? await _repository.getOrder();
       final payment = _presetOrder != null
@@ -70,8 +74,14 @@ class PaymentsViewModel extends ChangeNotifier {
       _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
       _status = PaymentsLoadStatus.error;
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> retry() => load();
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 }

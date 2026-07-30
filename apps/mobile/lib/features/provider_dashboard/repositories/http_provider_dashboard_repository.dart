@@ -1,5 +1,6 @@
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
+import '../../../core/session/session_manager.dart';
 import '../../../order/entities/order.dart';
 import '../../../payment/entities/payment.dart';
 import '../../../profiles/entities/profile.dart';
@@ -46,18 +47,31 @@ import 'provider_dashboard_repository.dart';
 /// should work long-term — adding those query filters is the natural
 /// Prompt 76 follow-up once more than a handful of records per provider
 /// exist.
+///
+/// [_fetchProvider] matches `identityId` against
+/// [SessionManager.currentUserId] client-side — same pattern as
+/// `HttpTrustRepository.getTrust`/`HttpVerificationRepository.getProfile`
+/// — instead of blindly taking the first item of the unfiltered
+/// `GET /providers` list. Taking `items.first` was a real
+/// session-scoping bug: with more than one Provider row in the
+/// database (the normal case once a second real pilot account exists)
+/// every provider session would see whichever Provider happened to be
+/// created first, regardless of who is actually logged in.
 class HttpProviderDashboardRepository implements ProviderDashboardRepository {
-  HttpProviderDashboardRepository(this._apiClient);
+  HttpProviderDashboardRepository(this._apiClient, this._sessionManager);
 
   final ApiClient _apiClient;
+  final SessionManager _sessionManager;
 
   Future<Provider> _fetchProvider() async {
     final json = await _apiClient.get('/providers');
     final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
-    if (items.isEmpty) {
-      throw StateError('No providers available for the current session');
+    final identityId = _sessionManager.currentUserId;
+    final match = items.where((item) => item['identityId'] == identityId);
+    if (match.isEmpty) {
+      throw StateError('No provider found for the current session');
     }
-    return ProviderHttpMapper.fromJson(items.first);
+    return ProviderHttpMapper.fromJson(match.first);
   }
 
   @override

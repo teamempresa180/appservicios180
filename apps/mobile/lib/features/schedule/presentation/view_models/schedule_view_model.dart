@@ -16,6 +16,10 @@ class ScheduleViewModel extends ChangeNotifier {
 
   final ScheduleRepository _repository;
 
+  /// Guards every [notifyListeners] call — see
+  /// `ProviderDashboardViewModel._disposed`'s doc comment for why.
+  bool _disposed = false;
+
   ScheduleLoadStatus _status = ScheduleLoadStatus.loading;
   ScheduleDisplay? _data;
   String? _errorMessage;
@@ -26,7 +30,7 @@ class ScheduleViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = ScheduleLoadStatus.loading;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     try {
       final provider = await _repository.getProvider();
       final schedules = await _repository.getSchedules();
@@ -36,8 +40,14 @@ class ScheduleViewModel extends ChangeNotifier {
       _errorMessage = exception.message;
       _status = ScheduleLoadStatus.error;
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> retry() => load();
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 }

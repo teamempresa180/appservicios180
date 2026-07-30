@@ -18,6 +18,13 @@ class ProviderDashboardViewModel extends ChangeNotifier {
 
   final ProviderDashboardRepository _repository;
 
+  /// Guards every [notifyListeners] call below — the page's
+  /// `_onViewModelChanged` listener may still be scheduled after
+  /// `dispose()` runs (e.g. an in-flight `load()` completing after the
+  /// user navigated away), and calling `notifyListeners()` on a
+  /// disposed `ChangeNotifier` throws.
+  bool _disposed = false;
+
   ProviderDashboardLoadStatus _status = ProviderDashboardLoadStatus.loading;
   ProviderDashboardDisplay? _data;
   String? _errorMessage;
@@ -28,7 +35,7 @@ class ProviderDashboardViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = ProviderDashboardLoadStatus.loading;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     try {
       final data = await ProviderDashboardMapper.toDisplay(
         repository: _repository,
@@ -44,8 +51,14 @@ class ProviderDashboardViewModel extends ChangeNotifier {
       _errorMessage = exception.message;
       _status = ProviderDashboardLoadStatus.error;
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> retry() => load();
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 }

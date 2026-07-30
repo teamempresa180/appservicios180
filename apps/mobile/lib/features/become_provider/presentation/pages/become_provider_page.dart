@@ -11,6 +11,7 @@ import '../../../../core/ui/widgets/app_scaffold.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../../../core/ui/widgets/app_snack_bar.dart';
 import '../../../../core/ui/widgets/app_text_field.dart';
+import '../../../../provider/models/provider_status.dart';
 import '../../../../verification/entities/verification.dart';
 import '../../../profile/repositories/profile_repository.dart';
 import '../../models/provider_application.dart';
@@ -30,6 +31,7 @@ enum _Step {
   criminalRecord,
   certification,
   done,
+  existingApplication,
 }
 
 /// The four steps shown in the progress header — [_Step.loadingCategories]
@@ -88,11 +90,12 @@ class _BecomeProviderPageState extends State<BecomeProviderPage> {
   Category? _selectedCategory;
   String? _errorMessage;
   ProviderApplication? _application;
+  ProviderStatus? _existingStatus;
 
   @override
   void initState() {
     super.initState();
-    _loadCategories();
+    _checkExistingApplication();
   }
 
   @override
@@ -104,6 +107,32 @@ class _BecomeProviderPageState extends State<BecomeProviderPage> {
     _departmentController.dispose();
     _coverageController.dispose();
     super.dispose();
+  }
+
+  /// Checked first, before the wizard even starts loading categories —
+  /// a returning applicant (role stuck at Customer until their Provider
+  /// record reaches `active`, see `BecomeProviderRepository
+  /// .getExistingApplication`'s doc comment) must see their current
+  /// status here instead of being able to re-run the whole application
+  /// from scratch.
+  Future<void> _checkExistingApplication() async {
+    try {
+      final existing = await _repository.getExistingApplication();
+      if (!mounted) return;
+      if (existing != null) {
+        setState(() {
+          _existingStatus = existing.status;
+          _step = _Step.existingApplication;
+        });
+        return;
+      }
+    } catch (_) {
+      // No reliable way to tell "no application yet" apart from a
+      // transient error here — fail open into the normal wizard rather
+      // than blocking a first-time applicant on a network hiccup.
+    }
+    if (!mounted) return;
+    await _loadCategories();
   }
 
   Future<void> _loadCategories() async {
@@ -354,6 +383,57 @@ class _BecomeProviderPageState extends State<BecomeProviderPage> {
     );
   }
 
+  /// Shown instead of the wizard for a returning applicant who already
+  /// has a `Provider` record — mirrors `ProviderDashboardPage
+  /// ._buildStatusGate`'s per-status copy so the message is consistent
+  /// wherever the user sees their provider status.
+  Widget _buildExistingApplication() {
+    final (title, description) = switch (_existingStatus!) {
+      ProviderStatus.pending => (
+        'Solicitud enviada',
+        'Tu solicitud para ser proveedor fue recibida. Te avisaremos '
+            'apenas empiece la revisión.',
+      ),
+      ProviderStatus.inReview => (
+        'Tu cuenta está en revisión',
+        'Estamos revisando tus documentos de verificación. Esto puede '
+            'tomar un tiempo — te avisaremos en cuanto termine.',
+      ),
+      ProviderStatus.rejected => (
+        'Solicitud rechazada',
+        'Tu solicitud para ser proveedor no fue aprobada. Contacta a '
+            'soporte para más información.',
+      ),
+      ProviderStatus.suspended => (
+        'Cuenta suspendida',
+        'Tu cuenta de proveedor está suspendida temporalmente. '
+            'Contacta a soporte para más información.',
+      ),
+      ProviderStatus.blocked => (
+        'Cuenta bloqueada',
+        'Tu cuenta de proveedor fue bloqueada. Contacta a soporte para '
+            'más información.',
+      ),
+      ProviderStatus.active => (
+        '¡Ya eres proveedor!',
+        'Tu cuenta ya fue aprobada. Ingresa desde "Panel del '
+            'proveedor" en tu perfil.',
+      ),
+      ProviderStatus.inactive || ProviderStatus.archived => (
+        'Cuenta de proveedor inactiva',
+        'Tu cuenta de proveedor no está activa en este momento. '
+            'Contacta a soporte para más información.',
+      ),
+    };
+    return AppEmptyState(
+      icon: Icons.hourglass_top_outlined,
+      title: title,
+      description: description,
+      actionLabel: 'Volver a mi perfil',
+      onActionPressed: () => Navigator.of(context).pop(),
+    );
+  }
+
   Widget _buildBody() {
     switch (_step) {
       case _Step.loadingCategories:
@@ -369,6 +449,8 @@ class _BecomeProviderPageState extends State<BecomeProviderPage> {
         return _buildCertificationStep();
       case _Step.done:
         return _buildDone();
+      case _Step.existingApplication:
+        return _buildExistingApplication();
     }
   }
 

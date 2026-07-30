@@ -1,6 +1,7 @@
 import '../../../category/entities/category.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
+import '../../../core/session/session_manager.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
 import '../../../service/entities/service.dart';
@@ -34,17 +35,27 @@ import 'provider_services_repository.dart';
 /// `HttpOrdersRepository.getCategoryFor`'s direct-id-lookup methods —
 /// no client-side filtering needed.
 class HttpProviderServicesRepository implements ProviderServicesRepository {
-  HttpProviderServicesRepository(this._apiClient);
+  HttpProviderServicesRepository(this._apiClient, this._sessionManager);
 
   final ApiClient _apiClient;
+  final SessionManager _sessionManager;
 
+  /// Matches `identityId` against [SessionManager.currentUserId]
+  /// client-side — same pattern as
+  /// `HttpTrustRepository.getTrust`/`HttpVerificationRepository
+  /// .getProfile` — instead of blindly taking the first item of the
+  /// unfiltered `GET /providers` list, which was a real session-
+  /// scoping bug (every provider session would see whichever Provider
+  /// happened to be created first in the database).
   Future<Provider> _fetchProvider() async {
     final json = await _apiClient.get('/providers');
     final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
-    if (items.isEmpty) {
-      throw StateError('No providers available for the current session');
+    final identityId = _sessionManager.currentUserId;
+    final match = items.where((item) => item['identityId'] == identityId);
+    if (match.isEmpty) {
+      throw StateError('No provider found for the current session');
     }
-    return ProviderHttpMapper.fromJson(items.first);
+    return ProviderHttpMapper.fromJson(match.first);
   }
 
   @override

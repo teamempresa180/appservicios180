@@ -22,6 +22,10 @@ class VerificationViewModel extends ChangeNotifier {
 
   final VerificationRepository _repository;
 
+  /// Guards every [notifyListeners] call — see
+  /// `ProviderDashboardViewModel._disposed`'s doc comment for why.
+  bool _disposed = false;
+
   VerificationLoadStatus _status = VerificationLoadStatus.loading;
   VerificationDisplay? _data;
   String? _errorMessage;
@@ -32,7 +36,7 @@ class VerificationViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = VerificationLoadStatus.loading;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     try {
       _data = await VerificationMapper.toDisplay(
         repository: _repository,
@@ -47,8 +51,14 @@ class VerificationViewModel extends ChangeNotifier {
       _errorMessage = exception.message;
       _status = VerificationLoadStatus.error;
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> retry() => load();
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 }

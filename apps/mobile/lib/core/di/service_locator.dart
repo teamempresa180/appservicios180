@@ -225,17 +225,17 @@ void setupServiceLocator() {
   locator.registerSingleton<AvailabilityRepository>(
     ApiConfig.useMockBackend
         ? MockAvailabilityRepository()
-        : HttpAvailabilityRepository(apiClient),
+        : HttpAvailabilityRepository(apiClient, sessionManager),
   );
   locator.registerSingleton<ScheduleRepository>(
     ApiConfig.useMockBackend
         ? MockScheduleRepository()
-        : HttpScheduleRepository(apiClient),
+        : HttpScheduleRepository(apiClient, sessionManager),
   );
   locator.registerSingleton<ProviderDashboardRepository>(
     ApiConfig.useMockBackend
         ? MockProviderDashboardRepository()
-        : HttpProviderDashboardRepository(apiClient),
+        : HttpProviderDashboardRepository(apiClient, sessionManager),
   );
   locator.registerSingleton<ProviderProfileRepository>(
     ApiConfig.useMockBackend
@@ -245,7 +245,7 @@ void setupServiceLocator() {
   locator.registerSingleton<ProviderServicesRepository>(
     ApiConfig.useMockBackend
         ? MockProviderServicesRepository()
-        : HttpProviderServicesRepository(apiClient),
+        : HttpProviderServicesRepository(apiClient, sessionManager),
   );
   locator.registerSingleton<ServiceDetailRepository>(
     ApiConfig.useMockBackend
