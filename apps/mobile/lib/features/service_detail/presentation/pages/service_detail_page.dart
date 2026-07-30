@@ -8,7 +8,9 @@ import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../../service/entities/service.dart';
+import '../../../request_service/presentation/pages/request_service_page.dart';
 import '../../repositories/service_detail_repository.dart';
+import '../../models/service_detail_data.dart';
 import '../view_models/service_detail_view_model.dart';
 import '../widgets/provider_information.dart';
 import '../widgets/rating_summary.dart';
@@ -62,6 +64,28 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
 
   void _onViewModelChanged() => setState(() {});
 
+  /// Opens Request Service as a **direct hire** for this exact service's
+  /// provider — mirrors `ProviderActions._openRequestService`'s
+  /// single-service path (this screen already has one concrete
+  /// [Service] in hand, so there is no "pick a service" step here).
+  void _openRequestService(BuildContext context, ServiceDetailData data) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Solicitar servicio')),
+          body: SafeArea(
+            child: RequestServicePage(
+              category: data.category,
+              provider: data.provider,
+              service: data.service,
+              profile: data.profile,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
@@ -97,7 +121,9 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
             const SizedBox(height: AppSpacing.space16),
             SlideIn(child: RatingSummary(data: _viewModel.data!)),
             const SizedBox(height: AppSpacing.space16),
-            const RequestServiceButton(),
+            RequestServiceButton(
+              onPressed: () => _openRequestService(context, _viewModel.data!),
+            ),
           ],
         ),
       ),

@@ -5,12 +5,21 @@ import '../../../../core/ui/widgets/app_button.dart';
 /// to submit the request as a real `Order` via
 /// `RequestServiceRepository.createOrder`.
 class ContinueButton extends StatelessWidget {
-  const ContinueButton({super.key, required this.onPressed});
+  const ContinueButton({
+    super.key,
+    required this.onPressed,
+    this.isLoading = false,
+  });
 
   final VoidCallback onPressed;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
-    return AppButton(label: 'Continuar', onPressed: onPressed);
+    return AppButton(
+      label: 'Continuar',
+      onPressed: onPressed,
+      isLoading: isLoading,
+    );
   }
 }

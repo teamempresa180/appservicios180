@@ -7,9 +7,13 @@ import 'package:mobile/core/network/http_exceptions.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
+import 'package:mobile/features/orders/repositories/mock_orders_repository.dart';
+import 'package:mobile/features/chat/repositories/mock_chat_repository.dart';
 import 'package:mobile/features/provider_dashboard/presentation/pages/provider_dashboard_page.dart';
+import 'package:mobile/features/provider_dashboard/presentation/widgets/active_service_card.dart';
 import 'package:mobile/features/provider_dashboard/presentation/widgets/dashboard_statistics.dart';
 import 'package:mobile/features/provider_dashboard/presentation/widgets/earnings_summary.dart';
+import 'package:mobile/features/provider_dashboard/presentation/widgets/pending_quotes.dart';
 import 'package:mobile/features/provider_dashboard/presentation/widgets/pending_requests.dart';
 import 'package:mobile/features/provider_dashboard/presentation/widgets/provider_performance.dart';
 import 'package:mobile/features/provider_dashboard/presentation/widgets/recent_orders.dart';
@@ -86,6 +90,8 @@ void main() {
       home: Scaffold(
         body: ProviderDashboardPage(
           repository: repository ?? _FakeProviderDashboardRepository(),
+          ordersRepository: MockOrdersRepository(),
+          chatRepository: MockChatRepository(),
         ),
       ),
     );
@@ -135,14 +141,34 @@ void main() {
     expect(find.text('92%'), findsOneWidget);
   });
 
-  testWidgets('shows recent orders and the pending request', (tester) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'shows the active in-progress order front and center, the already-'
+    'quoted pending order as a waiting quote, and a compact history link',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
 
-    expect(find.byType(RecentOrders), findsOneWidget);
-    expect(find.byType(PendingRequests), findsOneWidget);
-    expect(find.text('Instalación de tomacorrientes'), findsWidgets);
-  });
+      // The one InProgress order ("Reparación de fuga de agua")
+      // outranks everything else and becomes the prominent active card.
+      expect(find.byType(ActiveServiceCard), findsOneWidget);
+      expect(find.text('Reparación de fuga de agua'), findsOneWidget);
+
+      // The one Pending order already has a quote from this provider
+      // (see mock_provider_dashboard_data.dart), so it shows up as a
+      // waiting quote, not a new request to act on.
+      expect(find.byType(PendingQuotes), findsOneWidget);
+      expect(find.text('Instalación de tomacorrientes'), findsOneWidget);
+      expect(find.byType(PendingRequests), findsOneWidget);
+      expect(
+        find.text('No tienes solicitudes nuevas por cotizar.'),
+        findsOneWidget,
+      );
+
+      // History is a low-key link, not an inline list of past orders.
+      expect(find.byType(RecentOrders), findsOneWidget);
+      expect(find.text('Ver historial'), findsOneWidget);
+    },
+  );
 
   testWidgets('shows the four quick actions', (tester) async {
     await tester.pumpWidget(buildApp());

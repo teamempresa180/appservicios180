@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../category/entities/category.dart';
+import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_button.dart';
 import '../../../../core/ui/widgets/app_text_field.dart';
@@ -162,7 +163,7 @@ class _ServiceFormSheetState extends State<ServiceFormSheet> {
             children: [
               Text(
                 widget.isEditing ? 'Editar servicio' : 'Nuevo servicio',
-                style: Theme.of(context).textTheme.titleLarge,
+                style: context.textStyles.titleLarge,
               ),
               const SizedBox(height: AppSpacing.space16),
               if (!widget.isEditing) ...[
@@ -195,7 +196,7 @@ class _ServiceFormSheetState extends State<ServiceFormSheet> {
                 else
                   Text(
                     'No tienes categorías disponibles todavía.',
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: context.textStyles.bodySmall,
                   ),
                 const SizedBox(height: AppSpacing.space12),
                 DropdownButtonFormField<ServiceType>(
@@ -230,7 +231,12 @@ class _ServiceFormSheetState extends State<ServiceFormSheet> {
                 validator: _numberValidator,
               ),
               const SizedBox(height: AppSpacing.space20),
-              AppButton(label: 'Guardar', onPressed: _save),
+              AppButton(
+                label: 'Guardar',
+                onPressed: (!widget.isEditing && widget.categories.isEmpty)
+                    ? null
+                    : _save,
+              ),
               const SizedBox(height: AppSpacing.space8),
               AppButton(
                 label: 'Cancelar',

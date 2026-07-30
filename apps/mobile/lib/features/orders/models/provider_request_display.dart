@@ -1,5 +1,7 @@
 import '../../../category/entities/category.dart';
 import '../../../order/entities/order.dart';
+import '../../../order/journey/order_journey_info.dart';
+import '../../../order/journey/provider_order_journey.dart';
 import '../../../order/models/order_status.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../quote/entities/quote.dart';
@@ -26,6 +28,7 @@ class ProviderRequestDisplay {
     required this.clientProfile,
     this.service,
     this.myQuote,
+    this.hasReviewed = false,
   });
 
   final Order order;
@@ -33,6 +36,25 @@ class ProviderRequestDisplay {
   final Profile clientProfile;
   final Service? service;
   final Quote? myQuote;
+
+  /// Whether the client already rated this (necessarily `Completed`)
+  /// order — `false` for every other status, computed by
+  /// `ProviderRequestsViewModel` from `ReviewsRepository.getReviews()`
+  /// (same client-side-filter convention used everywhere else in this
+  /// codebase). Feeds [journey] so a finished job that's still waiting
+  /// on the client's rating reads differently from one that's fully
+  /// done.
+  final bool hasReviewed;
+
+  /// "What's happening and what can I do" for this order, from the
+  /// provider's viewpoint — the single source of truth for the title/
+  /// description/help text and the exact action buttons the card
+  /// should show (see `ProviderOrderJourney`, `order/journey/`).
+  OrderJourneyInfo get journey => ProviderOrderJourney.derive(
+    order: order,
+    myQuote: myQuote,
+    hasReviewed: hasReviewed,
+  );
 
   /// `true` when the client picked this provider directly instead of
   /// posting an open request in this category — see `Order.isDirectHire`.

@@ -19,6 +19,7 @@ class ProviderRequestsList extends StatelessWidget {
     required this.onStart,
     required this.onComplete,
     required this.onReject,
+    this.onOpenChat,
     this.busyOrderId,
     this.busyAction,
   });
@@ -28,6 +29,7 @@ class ProviderRequestsList extends StatelessWidget {
   final ValueChanged<ProviderRequestDisplay> onStart;
   final ValueChanged<ProviderRequestDisplay> onComplete;
   final ValueChanged<ProviderRequestDisplay> onReject;
+  final ValueChanged<ProviderRequestDisplay>? onOpenChat;
   final String? busyOrderId;
   final String? busyAction;
 
@@ -49,6 +51,9 @@ class ProviderRequestsList extends StatelessWidget {
                 onStart: () => onStart(request),
                 onComplete: () => onComplete(request),
                 onReject: () => onReject(request),
+                onOpenChat: onOpenChat == null
+                    ? null
+                    : () => onOpenChat!(request),
               ),
             ),
           ),

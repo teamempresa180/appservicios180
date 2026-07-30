@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/widgets/app_button.dart';
+import '../../../../core/ui/widgets/app_snack_bar.dart';
 import '../../../../payment/models/payment_status.dart';
 import '../../../chat/presentation/pages/chat_page.dart';
 import '../../models/payment_display.dart';
 
 /// The payment's main action button — its label depends on
-/// `Payment.status`. Purely visual and a no-op, **except** for
-/// `completed` ("Ver recibo"), which opens the (visual-only, fixed
-/// mock) Chat screen — the only change authorized in the Chat prompt.
-/// Viewing a receipt is where a client would naturally reach out to the
-/// provider about it; no other status navigates anywhere yet (see the
-/// feature README).
+/// `Payment.status`. Purely visual, **except** for `completed`
+/// ("Ver recibo"), which opens the (visual-only, fixed mock) Chat
+/// screen — the only change authorized in the Chat prompt. Viewing a
+/// receipt is where a client would naturally reach out to the provider
+/// about it; no other status navigates anywhere yet (see the feature
+/// README). The other statuses ("Pagar"/"Intentar nuevamente"/"Ver
+/// información") still don't have a real payment gateway/backend
+/// behind them, but give a visible snackbar instead of silently doing
+/// nothing on tap — same pattern `MessageInput` uses for its no-op
+/// "Enviar" button.
 ///
 /// `Payment.status` (the real domain enum) has no "processing" value —
 /// only `pending`/`completed`/`failed`/`cancelled`. The prompt asked
@@ -48,13 +53,25 @@ class PaymentActions extends StatelessWidget {
     );
   }
 
+  void _showNotYetAvailable(BuildContext context) {
+    AppSnackBar.show(
+      context,
+      'Esta función estará disponible próximamente',
+      type: AppSnackBarType.info,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isCompleted = data.payment.status == PaymentStatus.completed;
 
     return AppButton(
       label: _label,
-      onPressed: onPressed ?? (isCompleted ? () => _openChat(context) : () {}),
+      onPressed:
+          onPressed ??
+          (isCompleted
+              ? () => _openChat(context)
+              : () => _showNotYetAvailable(context)),
     );
   }
 }

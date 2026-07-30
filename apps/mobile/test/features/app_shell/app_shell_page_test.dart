@@ -36,6 +36,10 @@ import 'package:mobile/features/profile/presentation/pages/profile_page.dart';
 import 'package:mobile/features/profile/repositories/mock_profile_repository.dart';
 import 'package:mobile/features/profile/repositories/profile_repository.dart';
 import 'package:mobile/features/orders/presentation/pages/provider_requests_page.dart';
+import 'package:mobile/features/quote/repositories/mock_quote_repository.dart';
+import 'package:mobile/features/quote/repositories/quote_repository.dart';
+import 'package:mobile/features/reviews/repositories/mock_reviews_repository.dart';
+import 'package:mobile/features/reviews/repositories/reviews_repository.dart';
 import 'package:mobile/features/search/repositories/mock_search_repository.dart';
 import 'package:mobile/features/search/repositories/search_repository.dart';
 
@@ -73,6 +77,8 @@ void main() {
     locator.registerSingleton<ProviderRepository>(MockProviderRepository());
     locator.registerSingleton<SearchRepository>(MockSearchRepository());
     locator.registerSingleton<OrdersRepository>(MockOrdersRepository());
+    locator.registerSingleton<QuoteRepository>(MockQuoteRepository());
+    locator.registerSingleton<ReviewsRepository>(MockReviewsRepository());
     locator.registerSingleton<ChatRepository>(MockChatRepository());
     locator.registerSingleton<AppShellNavigationIntent>(
       AppShellNavigationIntent(),

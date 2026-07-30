@@ -45,10 +45,17 @@ class ProviderHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(data.providerName, style: context.textStyles.titleSmall),
+                Text(
+                  data.providerName,
+                  style: context.textStyles.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 Text(
                   data.isOnline ? 'En línea' : data.lastSeen,
                   style: context.textStyles.bodySmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

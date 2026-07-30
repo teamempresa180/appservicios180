@@ -110,4 +110,90 @@ class ProviderDashboardDisplay {
         .reduce((a, b) => a + b);
     return sum / reviews.length;
   }
+
+  /// This provider's own `Quote` for [order], if any — same lookup
+  /// `ProviderRequestDisplay`/`ProviderOrderJourney` need, but done
+  /// against the already-loaded [quotes] list instead of a fresh
+  /// repository call, since the dashboard loads every quote up front.
+  Quote? myQuoteFor(Order order) {
+    for (final quote in quotes) {
+      if (quote.orderId == order.id) return quote;
+    }
+    return null;
+  }
+
+  /// Whether the client already rated [order] — same client-side
+  /// filter used everywhere reviews are matched to an order (see
+  /// `ProviderRequestsViewModel`).
+  bool hasReviewFor(Order order) =>
+      reviews.any((review) => review.orderId == order.id);
+
+  /// Every order this provider is directly hired on and is actively
+  /// working right now — `Accepted` (scheduled, not started) or
+  /// `InProgress` — the pool [activeOrder] picks the single most
+  /// urgent one from.
+  List<Order> get activeOrders => orders
+      .where(
+        (order) =>
+            order.status == OrderStatus.accepted ||
+            order.status == OrderStatus.inProgress,
+      )
+      .toList();
+
+  /// The single most urgent order to show front-and-center on the
+  /// dashboard ("what do I do right now"): an `InProgress` order
+  /// outranks every `Accepted` one (it's already underway), and among
+  /// `Accepted` orders the soonest [Order.scheduledDate] wins. `null`
+  /// when there's nothing currently active.
+  Order? get activeOrder {
+    final candidates = activeOrders;
+    if (candidates.isEmpty) return null;
+
+    Order best = candidates.first;
+    for (final candidate in candidates.skip(1)) {
+      final candidateIsInProgress =
+          candidate.status == OrderStatus.inProgress;
+      final bestIsInProgress = best.status == OrderStatus.inProgress;
+      if (candidateIsInProgress && !bestIsInProgress) {
+        best = candidate;
+        continue;
+      }
+      if (bestIsInProgress && !candidateIsInProgress) continue;
+      if (candidate.scheduledDate.isBefore(best.scheduledDate)) {
+        best = candidate;
+      }
+    }
+    return best;
+  }
+
+  /// Every other currently-active order besides [activeOrder] — backs
+  /// the "Servicios programados" section (and the "ver los N
+  /// restantes" link on the active-service card).
+  List<Order> get otherActiveOrders {
+    final current = activeOrder;
+    if (current == null) return const [];
+    return activeOrders.where((order) => order.id != current.id).toList();
+  }
+
+  /// Still-`Pending` orders this provider hasn't quoted yet — new work
+  /// available to bid on (open requests in their category, or a fresh
+  /// direct hire), distinct from [pendingQuoteOrders] below.
+  List<Order> get newRequestOrders =>
+      pendingOrders.where((order) => myQuoteFor(order) == null).toList();
+
+  /// Still-`Pending` orders this provider already quoted — informational
+  /// only, waiting on the client's decision.
+  List<Order> get pendingQuoteOrders =>
+      pendingOrders.where((order) => myQuoteFor(order) != null).toList();
+
+  /// Everything with nothing left to do — `Completed`, `Cancelled` or
+  /// `Rejected` — backs the least-prominent "historial" link.
+  List<Order> get historyOrders => orders
+      .where(
+        (order) =>
+            order.status == OrderStatus.completed ||
+            order.status == OrderStatus.cancelled ||
+            order.status == OrderStatus.rejected,
+      )
+      .toList();
 }

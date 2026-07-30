@@ -11,10 +11,24 @@ import '../../models/quote_data.dart';
 /// accepting cascades the linked `Order` to `Accepted` on the real
 /// backend (see `QuoteRepository.acceptQuote`'s doc comment).
 class QuoteListItem extends StatelessWidget {
-  const QuoteListItem({super.key, required this.entry, required this.onAccept});
+  const QuoteListItem({
+    super.key,
+    required this.entry,
+    required this.onAccept,
+    this.isAccepting = false,
+    this.isEnabled = true,
+  });
 
   final QuoteEntry entry;
   final VoidCallback onAccept;
+
+  /// Whether this specific quote's "Aceptar" tap is in flight.
+  final bool isAccepting;
+
+  /// Whether this button should accept taps at all — `false` while a
+  /// *different* quote in the same list is being accepted, so the user
+  /// can't fire two `acceptQuote` calls for the same order at once.
+  final bool isEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +77,11 @@ class QuoteListItem extends StatelessWidget {
             Text(entry.notes, style: context.textStyles.bodySmall),
           ],
           const SizedBox(height: AppSpacing.space12),
-          AppButton(label: 'Aceptar cotización', onPressed: onAccept),
+          AppButton(
+            label: 'Aceptar cotización',
+            onPressed: isEnabled ? onAccept : null,
+            isLoading: isAccepting,
+          ),
         ],
       ),
     );

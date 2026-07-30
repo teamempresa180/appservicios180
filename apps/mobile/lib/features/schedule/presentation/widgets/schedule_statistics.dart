@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_section.dart';
 import '../../../../core/ui/widgets/app_stat_grid.dart';
@@ -38,7 +39,7 @@ class ScheduleStatistics extends StatelessWidget {
         const SizedBox(height: AppSpacing.space8),
         Text(
           'Horas abiertas: ${data.totalOpenDuration.inHours}h',
-          style: Theme.of(context).textTheme.bodySmall,
+          style: context.textStyles.bodySmall,
         ),
       ],
     );

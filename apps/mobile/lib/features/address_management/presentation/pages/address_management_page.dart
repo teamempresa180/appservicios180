@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../../core/di/service_locator.dart';
+import '../../../../core/network/http_exceptions.dart';
 import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
-import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../../core/ui/widgets/app_snack_bar.dart';
 import '../../models/address_display.dart';
@@ -17,6 +17,7 @@ import '../widgets/address_card.dart';
 import '../widgets/address_form_sheet.dart';
 import '../widgets/addresses_empty_state.dart';
 import '../widgets/addresses_header.dart';
+import '../widgets/addresses_loading.dart';
 
 /// Address Management screen. Does NOT build its own `Scaffold` — it
 /// is meant to live within the existing navigation flow, the same way
@@ -63,22 +64,27 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
   Future<void> _create() async {
     final result = await AddressFormSheet.show(context);
     if (result == null || !mounted) return;
-    await _repository.createAddress(
-      alias: result.alias,
-      fullAddress: result.fullAddress,
-      city: result.city!,
-      state: result.state!,
-      country: result.country!,
-      postalCode: result.postalCode!,
-      type: result.type!,
-    );
-    if (!mounted) return;
-    AppSnackBar.show(
-      context,
-      'Dirección agregada.',
-      type: AppSnackBarType.success,
-    );
-    await _viewModel.load();
+    try {
+      await _repository.createAddress(
+        alias: result.alias,
+        fullAddress: result.fullAddress,
+        city: result.city!,
+        state: result.state!,
+        country: result.country!,
+        postalCode: result.postalCode!,
+        type: result.type!,
+      );
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'Dirección agregada.',
+        type: AppSnackBarType.success,
+      );
+      await _viewModel.load();
+    } on HttpException catch (exception) {
+      if (!mounted) return;
+      AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    }
   }
 
   Future<void> _edit(AddressDisplay data) async {
@@ -89,18 +95,23 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
       initialFullAddress: data.address.fullAddress,
     );
     if (result == null || !mounted) return;
-    await _repository.updateAddress(
-      data.address,
-      alias: result.alias,
-      fullAddress: result.fullAddress,
-    );
-    if (!mounted) return;
-    AppSnackBar.show(
-      context,
-      'Dirección actualizada.',
-      type: AppSnackBarType.success,
-    );
-    await _viewModel.load();
+    try {
+      await _repository.updateAddress(
+        data.address,
+        alias: result.alias,
+        fullAddress: result.fullAddress,
+      );
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'Dirección actualizada.',
+        type: AppSnackBarType.success,
+      );
+      await _viewModel.load();
+    } on HttpException catch (exception) {
+      if (!mounted) return;
+      AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    }
   }
 
   Future<void> _delete(AddressDisplay data) async {
@@ -122,20 +133,25 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    await _repository.deleteAddress(data.address);
-    if (!mounted) return;
-    AppSnackBar.show(
-      context,
-      'Dirección eliminada.',
-      type: AppSnackBarType.info,
-    );
-    await _viewModel.load();
+    try {
+      await _repository.deleteAddress(data.address);
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'Dirección eliminada.',
+        type: AppSnackBarType.info,
+      );
+      await _viewModel.load();
+    } on HttpException catch (exception) {
+      if (!mounted) return;
+      AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    }
   }
 
   Widget _buildBody() {
     switch (_viewModel.status) {
       case AddressManagementLoadStatus.loading:
-        return const AppLoading(message: 'Cargando direcciones...');
+        return const AddressesLoading();
       case AddressManagementLoadStatus.error:
         return AppEmptyState(
           icon: AppIcons.error,

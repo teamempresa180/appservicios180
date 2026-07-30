@@ -1,75 +1,45 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
-import '../../../../core/ui/widgets/app_card.dart';
-import '../../../../core/ui/widgets/app_section_title.dart';
-import '../../../../order/models/order_status.dart';
+import '../../../../core/ui/widgets/app_button.dart';
 import '../../models/provider_dashboard_display.dart';
 
-/// Recap of the most recent real `Order`s (up to 3). Purely visual —
-/// no lookup by ID, no navigation to order detail yet (see the feature
-/// README).
+/// Priority #5 (least prominent) on the Provider Dashboard: history —
+/// completed/cancelled/rejected orders (`ProviderDashboardDisplay
+/// .historyOrders`). Deliberately just a low-key "ver historial" link
+/// with a count instead of an inline list: the full detail already
+/// lives on the "Servicios" screen's "Historial" tab
+/// (`ProviderRequestsPage`), so repeating it here at equal visual
+/// weight to the actionable sections above would undercut the explicit
+/// "guide the provider to what matters now" priority order.
 class RecentOrders extends StatelessWidget {
-  const RecentOrders({super.key, required this.data});
+  const RecentOrders({super.key, required this.data, this.onViewHistory});
 
   final ProviderDashboardDisplay data;
-
-  String _statusLabel(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return 'Pendiente';
-      case OrderStatus.accepted:
-        return 'Aceptada';
-      case OrderStatus.inProgress:
-        return 'En progreso';
-      case OrderStatus.completed:
-        return 'Finalizada';
-      case OrderStatus.cancelled:
-        return 'Cancelada';
-      case OrderStatus.rejected:
-        return 'Rechazada';
-    }
-  }
+  final VoidCallback? onViewHistory;
 
   @override
   Widget build(BuildContext context) {
-    final recent = data.orders.take(3).toList();
+    final count = data.historyOrders.length;
 
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.space4),
+      child: Row(
         children: [
-          const AppSectionTitle(title: 'Órdenes recientes'),
-          if (recent.isEmpty)
-            Text(
-              'Todavía no tienes órdenes.',
+          Expanded(
+            child: Text(
+              count == 0
+                  ? 'Todavía no tienes historial.'
+                  : 'Tienes $count servicio${count == 1 ? '' : 's'} en tu historial.',
               style: context.textStyles.bodySmall,
-            )
-          else
-            for (final order in recent) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppSpacing.space4,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        order.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.textStyles.bodyMedium,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.space8),
-                    Text(
-                      _statusLabel(order.status),
-                      style: context.textStyles.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
+          ),
+          AppButton(
+            label: 'Ver historial',
+            variant: AppButtonVariant.text,
+            expand: false,
+            onPressed: count == 0 ? null : onViewHistory,
+          ),
         ],
       ),
     );

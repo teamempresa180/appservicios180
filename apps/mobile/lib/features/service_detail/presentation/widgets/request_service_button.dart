@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/widgets/app_button.dart';
 
-/// "Solicitar servicio" call to action. Purely visual — [onPressed] is
-/// a no-op by default; it does not create an Order, Quote or anything
-/// else yet (see the feature README).
+/// "Solicitar servicio" call to action. [ServiceDetailPage] wires
+/// [onPressed] to open Request Service as a direct hire for this
+/// screen's own service/provider — falls back to a no-op only when a
+/// caller (e.g. a test) omits it.
 class RequestServiceButton extends StatelessWidget {
   const RequestServiceButton({super.key, this.onPressed});
 

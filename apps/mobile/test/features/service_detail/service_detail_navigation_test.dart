@@ -13,6 +13,9 @@ import 'package:mobile/features/marketplace/repositories/mock_provider_repositor
 import 'package:mobile/features/marketplace/repositories/mock_service_repository.dart';
 import 'package:mobile/features/marketplace/repositories/provider_repository.dart';
 import 'package:mobile/features/marketplace/repositories/service_repository.dart';
+import 'package:mobile/features/request_service/presentation/pages/request_service_page.dart';
+import 'package:mobile/features/request_service/repositories/mock_request_service_repository.dart';
+import 'package:mobile/features/request_service/repositories/request_service_repository.dart';
 import 'package:mobile/features/search/presentation/pages/search_page.dart';
 import 'package:mobile/features/search/repositories/mock_search_repository.dart';
 import 'package:mobile/features/search/repositories/search_repository.dart';
@@ -39,6 +42,9 @@ void main() {
     locator.registerSingleton<ServiceRepository>(MockServiceRepository());
     locator.registerSingleton<ProviderRepository>(MockProviderRepository());
     locator.registerSingleton<SearchRepository>(MockSearchRepository());
+    locator.registerSingleton<RequestServiceRepository>(
+      MockRequestServiceRepository(),
+    );
     locator.registerSingleton<AppShellNavigationIntent>(
       AppShellNavigationIntent(),
     );
@@ -80,4 +86,25 @@ void main() {
     expect(find.byType(ServiceDetailPage), findsOneWidget);
     expect(find.text('Detalle del servicio'), findsOneWidget);
   });
+
+  testWidgets(
+    'tapping "Solicitar servicio" on Service Detail opens Request Service',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(body: ServiceDetailPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Solicitar servicio'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Solicitar servicio'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RequestServicePage), findsOneWidget);
+      expect(find.text('Solicitar servicio'), findsWidgets);
+    },
+  );
 }

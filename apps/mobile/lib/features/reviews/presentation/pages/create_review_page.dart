@@ -40,6 +40,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
   late final ReviewsRepository _repository =
       widget._repository ?? locator<ReviewsRepository>();
 
+  final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _commentController = TextEditingController();
   int _rating = 5;
@@ -54,6 +55,11 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
 
   Future<void> _submit() async {
     if (_isSubmitting) return;
+    // Blocks an empty comment (see `AppTextField.validator` below) —
+    // the star rating can never be 0 to begin with, since every star
+    // button sets it to 1-5.
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
     setState(() => _isSubmitting = true);
     try {
       final identityId = locator<SessionManager>().currentUserId;
@@ -91,40 +97,53 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.space16),
       child: AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Califica tu experiencia', style: context.textStyles.titleMedium),
-            const SizedBox(height: AppSpacing.space16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (var star = 1; star <= 5; star++)
-                  IconButton(
-                    onPressed: () => setState(() => _rating = star),
-                    icon: Icon(
-                      star <= _rating ? Icons.star : Icons.star_border,
-                      color: context.colors.primary,
-                      size: AppSpacing.space32,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Califica tu experiencia',
+                style: context.textStyles.titleMedium,
+              ),
+              const SizedBox(height: AppSpacing.space4),
+              // Scopes the form to the real order it's rating — so it
+              // never reads as an isolated, context-free screen.
+              Text(widget.order.title, style: context.textStyles.bodyMedium),
+              const SizedBox(height: AppSpacing.space16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (var star = 1; star <= 5; star++)
+                    IconButton(
+                      onPressed: () => setState(() => _rating = star),
+                      icon: Icon(
+                        star <= _rating ? Icons.star : Icons.star_border,
+                        color: context.colors.primary,
+                        size: AppSpacing.space32,
+                      ),
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.space16),
-            AppTextField(controller: _titleController, label: 'Título'),
-            const SizedBox(height: AppSpacing.space12),
-            AppTextField(
-              controller: _commentController,
-              label: 'Comentario',
-              hint: 'Cuéntanos cómo fue el servicio',
-            ),
-            const SizedBox(height: AppSpacing.space20),
-            AppButton(
-              label: 'Enviar reseña',
-              isLoading: _isSubmitting,
-              onPressed: _isSubmitting ? null : _submit,
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: AppSpacing.space16),
+              AppTextField(controller: _titleController, label: 'Título'),
+              const SizedBox(height: AppSpacing.space12),
+              AppTextField(
+                controller: _commentController,
+                label: 'Comentario',
+                hint: 'Cuéntanos cómo fue el servicio',
+                validator: (value) => (value == null || value.trim().isEmpty)
+                    ? 'Cuéntanos brevemente cómo fue el servicio.'
+                    : null,
+              ),
+              const SizedBox(height: AppSpacing.space20),
+              AppButton(
+                label: 'Enviar reseña',
+                isLoading: _isSubmitting,
+                onPressed: _isSubmitting ? null : _submit,
+              ),
+            ],
+          ),
         ),
       ),
     );

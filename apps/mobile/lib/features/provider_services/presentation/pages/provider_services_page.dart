@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../../category/entities/category.dart';
 import '../../../../core/di/service_locator.dart';
+import '../../../categories/repositories/category_repository.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_button.dart';
+import '../../../../core/ui/widgets/app_dialog.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
@@ -30,11 +33,14 @@ class ProviderServicesPage extends StatefulWidget {
   const ProviderServicesPage({
     super.key,
     ProviderServicesRepository? repository,
-  }) : _repository = repository;
+    CategoryRepository? categoryRepository,
+  }) : _repository = repository,
+       _categoryRepository = categoryRepository;
 
   /// Overridable for tests only — production call sites always resolve
   /// the real repository from the service locator.
   final ProviderServicesRepository? _repository;
+  final CategoryRepository? _categoryRepository;
 
   @override
   State<ProviderServicesPage> createState() => _ProviderServicesPageState();
@@ -46,12 +52,33 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
   late final ProviderServicesViewModel _viewModel = ProviderServicesViewModel(
     _repository,
   );
+  late final CategoryRepository _categoryRepository =
+      widget._categoryRepository ?? locator<CategoryRepository>();
+
+  /// The full category catalog, used as the source for "Nuevo servicio"
+  /// so a provider with zero existing services (and therefore no
+  /// [_knownCategories]) can still pick a category — falls back to
+  /// [_knownCategories] if this fails to load (offline, etc.).
+  List<Category> _catalogCategories = const [];
 
   @override
   void initState() {
     super.initState();
     _viewModel.load();
     _viewModel.addListener(_onViewModelChanged);
+    _loadCatalogCategories();
+  }
+
+  Future<void> _loadCatalogCategories() async {
+    try {
+      final categories = await _categoryRepository.getAll();
+      if (!mounted) return;
+      setState(() => _catalogCategories = categories);
+    } catch (_) {
+      // Falls back to _knownCategories in _create(); no user-facing
+      // error needed since this is a background enhancement, not the
+      // primary load.
+    }
   }
 
   void _onViewModelChanged() => setState(() {});
@@ -73,7 +100,10 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
   }
 
   Future<void> _create() async {
-    final categories = _knownCategories;
+    final known = _knownCategories;
+    final categories = _catalogCategories.isNotEmpty
+        ? _catalogCategories
+        : known;
     final result = await ServiceFormSheet.show(context, categories: categories);
     if (result == null || !mounted) return;
     if (result.category == null) return;
@@ -132,24 +162,25 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
   }
 
   Future<void> _delete(ProviderServiceDisplay data) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Eliminar servicio'),
-        content: Text(
-          '¿Eliminar "${data.service.name}"? Esta acción no se puede deshacer.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Eliminar'),
-          ),
-        ],
+    final confirmed = await AppDialog.show<bool>(
+      context,
+      title: 'Eliminar servicio',
+      content: Text(
+        '¿Eliminar "${data.service.name}"? Esta acción no se puede deshacer.',
       ),
+      actions: [
+        AppButton(
+          label: 'Cancelar',
+          variant: AppButtonVariant.text,
+          expand: false,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+        AppButton(
+          label: 'Eliminar',
+          expand: false,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+      ],
     );
     if (confirmed != true || !mounted) return;
     await _repository.deleteService(data.service);

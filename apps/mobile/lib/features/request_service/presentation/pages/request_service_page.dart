@@ -3,6 +3,7 @@ import '../../../../category/entities/category.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
+import '../../../../core/network/http_exceptions.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
@@ -98,8 +99,18 @@ class _RequestServicePageState extends State<RequestServicePage> {
 
   Future<void> _submit() async {
     if (_isSubmitting) return;
-    setState(() => _isSubmitting = true);
     final data = _viewModel.data!;
+    final description = (_problemDescription ?? data.problemDescription).trim();
+    if (description.isEmpty) {
+      AppSnackBar.show(
+        context,
+        'Cuéntanos brevemente qué necesitas antes de continuar.',
+        type: AppSnackBarType.error,
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
     final date = _selectedDate ?? data.selectedDate;
     final time = _selectedTime ?? data.selectedTime;
     final timeParts = time.split(':');
@@ -116,7 +127,7 @@ class _RequestServicePageState extends State<RequestServicePage> {
         providerId: data.provider?.id,
         serviceId: data.service?.id,
         title: data.service?.name ?? data.category.name,
-        description: _problemDescription ?? data.problemDescription,
+        description: description,
         scheduledDate: scheduledDate,
         priority: _priority ?? data.priority,
       );
@@ -133,6 +144,13 @@ class _RequestServicePageState extends State<RequestServicePage> {
             body: SafeArea(child: QuotePage(order: order)),
           ),
         ),
+      );
+    } on HttpException catch (exception) {
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        exception.message,
+        type: AppSnackBarType.error,
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -198,7 +216,7 @@ class _RequestServicePageState extends State<RequestServicePage> {
                 ),
               ),
               const SizedBox(height: AppSpacing.space16),
-              ContinueButton(onPressed: _submit),
+              ContinueButton(onPressed: _submit, isLoading: _isSubmitting),
             ],
           ),
         );

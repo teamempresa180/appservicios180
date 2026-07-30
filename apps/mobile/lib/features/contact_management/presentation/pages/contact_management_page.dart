@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../contact/entities/contact.dart';
 import '../../../../core/di/service_locator.dart';
+import '../../../../core/network/http_exceptions.dart';
 import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
@@ -65,10 +66,15 @@ class _ContactManagementPageState extends State<ContactManagementPage> {
   Future<void> _create() async {
     final result = await ContactFormSheet.show(context);
     if (result == null || !mounted) return;
-    await _repository.createContact(type: result.type!, value: result.value);
-    if (!mounted) return;
-    AppSnackBar.show(context, 'Contacto agregado.', type: AppSnackBarType.success);
-    await _viewModel.load();
+    try {
+      await _repository.createContact(type: result.type!, value: result.value);
+      if (!mounted) return;
+      AppSnackBar.show(context, 'Contacto agregado.', type: AppSnackBarType.success);
+      await _viewModel.load();
+    } on HttpException catch (exception) {
+      if (!mounted) return;
+      AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    }
   }
 
   Future<void> _edit(Contact contact) async {
@@ -79,14 +85,19 @@ class _ContactManagementPageState extends State<ContactManagementPage> {
       initialType: contact.type,
     );
     if (result == null || !mounted) return;
-    await _repository.updateContact(contact, value: result.value);
-    if (!mounted) return;
-    AppSnackBar.show(
-      context,
-      'Contacto actualizado.',
-      type: AppSnackBarType.success,
-    );
-    await _viewModel.load();
+    try {
+      await _repository.updateContact(contact, value: result.value);
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'Contacto actualizado.',
+        type: AppSnackBarType.success,
+      );
+      await _viewModel.load();
+    } on HttpException catch (exception) {
+      if (!mounted) return;
+      AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    }
   }
 
   Future<void> _delete(Contact contact) async {
@@ -108,10 +119,15 @@ class _ContactManagementPageState extends State<ContactManagementPage> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    await _repository.deleteContact(contact);
-    if (!mounted) return;
-    AppSnackBar.show(context, 'Contacto eliminado.', type: AppSnackBarType.info);
-    await _viewModel.load();
+    try {
+      await _repository.deleteContact(contact);
+      if (!mounted) return;
+      AppSnackBar.show(context, 'Contacto eliminado.', type: AppSnackBarType.info);
+      await _viewModel.load();
+    } on HttpException catch (exception) {
+      if (!mounted) return;
+      AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    }
   }
 
   Widget _buildBody() {

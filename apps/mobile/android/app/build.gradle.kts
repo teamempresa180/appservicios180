@@ -14,6 +14,17 @@ if (secretsPropertiesFile.exists()) {
     secretsPropertiesFile.inputStream().use { secretsProperties.load(it) }
 }
 
+// Release signing — see android/key.properties, gitignored, never
+// committed. Keeps the app's signature stable across machines/rebuilds
+// instead of relying on the auto-generated (and easily regenerated)
+// debug keystore, which caused "package conflicts with an existing
+// package" install errors whenever the debug keystore changed.
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
+
 android {
     namespace = "com.serviya.mobile"
     compileSdk = 36
@@ -38,11 +49,26 @@ android {
             secretsProperties.getProperty("mapsApiKey", "")
     }
 
+    signingConfigs {
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = keystoreProperties.getProperty("storeFile")?.let { rootProject.file(it) }
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Falls back to the debug keys only if key.properties/the
+            // keystore haven't been set up on this machine yet.
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }

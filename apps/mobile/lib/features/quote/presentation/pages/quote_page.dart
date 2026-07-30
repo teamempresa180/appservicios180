@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/di/service_locator.dart';
+import '../../../../core/network/http_exceptions.dart';
 import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/icons/app_icons.dart';
@@ -59,7 +60,11 @@ class _QuotePageState extends State<QuotePage> {
     widget.order,
   );
 
-  bool _isAccepting = false;
+  /// id of the quote currently being accepted, or `null` when none is
+  /// in flight. Tracked by id (not a bare bool) so only the tapped
+  /// `QuoteListItem` shows its spinner while every other one in the
+  /// list is disabled instead of silently ignoring taps.
+  Object? _acceptingQuoteId;
 
   @override
   void initState() {
@@ -78,8 +83,8 @@ class _QuotePageState extends State<QuotePage> {
   }
 
   Future<void> _accept(Quote quote, ProviderId providerId) async {
-    if (_isAccepting) return;
-    setState(() => _isAccepting = true);
+    if (_acceptingQuoteId != null) return;
+    setState(() => _acceptingQuoteId = quote.id);
     try {
       await _repository.acceptQuote(quote);
       // Ensures a real Chat exists for this order before navigating in
@@ -101,8 +106,15 @@ class _QuotePageState extends State<QuotePage> {
           ),
         ),
       );
+    } on HttpException catch (exception) {
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        exception.message,
+        type: AppSnackBarType.error,
+      );
     } finally {
-      if (mounted) setState(() => _isAccepting = false);
+      if (mounted) setState(() => _acceptingQuoteId = null);
     }
   }
 
@@ -144,6 +156,8 @@ class _QuotePageState extends State<QuotePage> {
                             entry: entry,
                             onAccept: () =>
                                 _accept(entry.quote, entry.provider.id),
+                            isAccepting: _acceptingQuoteId == entry.quote.id,
+                            isEnabled: _acceptingQuoteId == null,
                           ),
                         ),
                       ),

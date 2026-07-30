@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_button.dart';
 import '../../../../core/ui/widgets/app_text_field.dart';
@@ -109,7 +110,7 @@ class _SubmitQuoteSheetState extends State<SubmitQuoteSheet> {
             children: [
               Text(
                 'Enviar cotización',
-                style: Theme.of(context).textTheme.titleLarge,
+                style: context.textStyles.titleLarge,
               ),
               const SizedBox(height: AppSpacing.space16),
               AppTextField(

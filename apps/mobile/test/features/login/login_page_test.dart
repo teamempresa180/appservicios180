@@ -181,16 +181,34 @@ void main() {
     expect(find.text('Home placeholder'), findsOneWidget);
   });
 
+  testWidgets('"Crear cuenta" navigates to Register', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Crear cuenta'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Register placeholder'), findsOneWidget);
+  });
+
   testWidgets(
-    '"¿Olvidaste tu contraseña?" and "Crear cuenta" navigate to Register',
+    '"¿Olvidaste tu contraseña?" shows an informational dialog instead of '
+    'silently redirecting to Register',
     (tester) async {
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Crear cuenta'));
+      await tester.tap(find.text('¿Olvidaste tu contraseña?'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Register placeholder'), findsOneWidget);
+      expect(find.text('Recuperar contraseña'), findsOneWidget);
+      expect(find.textContaining('soporte@servicios180.com'), findsOneWidget);
+      expect(find.text('Register placeholder'), findsNothing);
+
+      await tester.tap(find.text('Entendido'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Recuperar contraseña'), findsNothing);
     },
   );
 }

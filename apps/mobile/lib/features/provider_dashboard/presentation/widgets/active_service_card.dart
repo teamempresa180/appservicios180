@@ -1,0 +1,137 @@
+import 'package:flutter/material.dart';
+import '../../../../core/ui/extensions/context_theme_extensions.dart';
+import '../../../../core/ui/theme/app_brand_palette.dart';
+import '../../../../core/ui/tokens/app_elevation.dart';
+import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_badge.dart';
+import '../../../../core/ui/widgets/app_button.dart';
+import '../../../../core/ui/widgets/app_card.dart';
+import '../../../../core/ui/widgets/order_progress.dart';
+import '../../../../order/entities/order.dart';
+import '../../../../order/journey/order_journey_action.dart';
+import '../../../../order/journey/order_journey_info.dart';
+import '../../../../order/journey/order_journey_stage.dart';
+
+/// The single most prominent thing on the Provider Dashboard: the one
+/// order this provider is actively working right now (see
+/// `ProviderDashboardDisplay.activeOrder` for how it's picked), with
+/// the full `OrderProgress` timeline plus [journey]'s own title/
+/// description and its primary action button — "the provider should
+/// never have to wonder what to do next" starts here. Higher elevation
+/// and a tinted border set it apart from every other, lower-priority
+/// dashboard section.
+///
+/// [otherActiveCount] surfaces a "ver los N restantes" link when more
+/// than one order is active at once, instead of silently hiding them.
+class ActiveServiceCard extends StatelessWidget {
+  const ActiveServiceCard({
+    super.key,
+    required this.order,
+    required this.journey,
+    this.otherActiveCount = 0,
+    this.onStart,
+    this.onComplete,
+    this.onOpenChat,
+    this.onViewOthers,
+  });
+
+  final Order order;
+  final OrderJourneyInfo journey;
+  final int otherActiveCount;
+  final VoidCallback? onStart;
+  final VoidCallback? onComplete;
+  final VoidCallback? onOpenChat;
+  final VoidCallback? onViewOthers;
+
+  Widget? _primaryActionFor(OrderJourneyAction action) {
+    switch (action.kind) {
+      case OrderJourneyActionKind.startService:
+        return AppButton(label: action.label, onPressed: onStart);
+      case OrderJourneyActionKind.completeService:
+        return AppButton(label: action.label, onPressed: onComplete);
+      default:
+        return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryAction = journey.actions
+        .map(_primaryActionFor)
+        .whereType<Widget>()
+        .toList();
+    final hasChatAction = journey.actions.any(
+      (action) => action.kind == OrderJourneyActionKind.openChat,
+    );
+
+    return AppCard(
+      elevation: AppElevation.level4,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(
+              color: AppBrandPalette.primary600,
+              width: AppSpacing.space4,
+            ),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(left: AppSpacing.space12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  AppBadge(label: 'Servicio activo', tone: AppBadgeTone.info),
+                  const Spacer(),
+                  if (otherActiveCount > 0)
+                    TextButton(
+                      onPressed: onViewOthers,
+                      child: Text('Ver $otherActiveCount más'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.space8),
+              Text(order.title, style: context.textStyles.titleMedium),
+              const SizedBox(height: AppSpacing.space4),
+              Text(journey.title, style: context.textStyles.titleSmall),
+              const SizedBox(height: AppSpacing.space4),
+              Text(journey.description, style: context.textStyles.bodyMedium),
+              if (journey.helpMessage.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.space4),
+                Text(
+                  journey.helpMessage,
+                  style: context.textStyles.bodySmall,
+                ),
+              ],
+              const SizedBox(height: AppSpacing.space16),
+              OrderProgress(
+                stages: OrderJourneyStage.values,
+                current: journey.stage,
+                cancelled: journey.cancelled,
+              ),
+              const SizedBox(height: AppSpacing.space16),
+              Row(
+                children: [
+                  if (hasChatAction) ...[
+                    Expanded(
+                      child: AppButton(
+                        label: 'Abrir chat',
+                        variant: AppButtonVariant.outlined,
+                        onPressed: onOpenChat,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.space12),
+                  ],
+                  for (final button in primaryAction) ...[
+                    Expanded(child: button),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

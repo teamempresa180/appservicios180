@@ -26,11 +26,15 @@ class _FakeContactManagementRepository implements ContactManagementRepository {
     this.neverResolves = false,
     this.forceEmpty = false,
     this.throwsError = false,
+    this.throwsOnWrite = false,
   });
 
   final bool neverResolves;
   final bool forceEmpty;
   final bool throwsError;
+  /// Forces create/update/delete to fail, so tests can assert the page
+  /// surfaces the error instead of silently swallowing it.
+  final bool throwsOnWrite;
   final _delegate = MockContactManagementRepository();
 
   @override
@@ -50,15 +54,28 @@ class _FakeContactManagementRepository implements ContactManagementRepository {
   Future<Contact> createContact({
     required ContactType type,
     required String value,
-  }) => _delegate.createContact(type: type, value: value);
+  }) {
+    if (throwsOnWrite) {
+      return Future.error(const NetworkHttpException('sin conexión'));
+    }
+    return _delegate.createContact(type: type, value: value);
+  }
 
   @override
-  Future<Contact> updateContact(Contact contact, {required String value}) =>
-      _delegate.updateContact(contact, value: value);
+  Future<Contact> updateContact(Contact contact, {required String value}) {
+    if (throwsOnWrite) {
+      return Future.error(const NetworkHttpException('sin conexión'));
+    }
+    return _delegate.updateContact(contact, value: value);
+  }
 
   @override
-  Future<void> deleteContact(Contact contact) =>
-      _delegate.deleteContact(contact);
+  Future<void> deleteContact(Contact contact) {
+    if (throwsOnWrite) {
+      return Future.error(const NetworkHttpException('sin conexión'));
+    }
+    return _delegate.deleteContact(contact);
+  }
 }
 
 void main() {
@@ -233,5 +250,52 @@ void main() {
 
     expect(find.byType(Scaffold), findsOneWidget);
     expect(find.byType(AppBar), findsNothing);
+  });
+
+  testWidgets(
+    'a failed create shows an error snackbar and keeps the list unchanged',
+    (tester) async {
+      await tester.pumpWidget(
+        buildApp(
+          repository: _FakeContactManagementRepository(throwsOnWrite: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Agregar contacto'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Agregar contacto'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Valor'),
+        'nuevo@example.com',
+      );
+      await tester.tap(find.text('Guardar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('sin conexión'), findsOneWidget);
+      expect(find.text('Contacto agregado.'), findsNothing);
+      expect(find.byType(ContactCard), findsNWidgets(5));
+    },
+  );
+
+  testWidgets('a failed delete shows an error snackbar and keeps the contact', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildApp(
+        repository: _FakeContactManagementRepository(throwsOnWrite: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Eliminar').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Eliminar').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('sin conexión'), findsOneWidget);
+    expect(find.byType(ContactCard), findsNWidgets(5));
   });
 }

@@ -8,6 +8,8 @@ import 'package:mobile/core/network/http_exceptions.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
+import 'package:mobile/features/categories/mock/mock_categories_data.dart';
+import 'package:mobile/features/categories/repositories/category_repository.dart';
 import 'package:mobile/features/provider_services/presentation/pages/provider_services_page.dart';
 import 'package:mobile/features/provider_services/presentation/widgets/service_card.dart';
 import 'package:mobile/features/provider_services/presentation/widgets/services_statistics.dart';
@@ -18,6 +20,77 @@ import 'package:mobile/provider/entities/provider.dart';
 import 'package:mobile/service/entities/service.dart';
 import 'package:mobile/service/models/service_status.dart';
 import 'package:mobile/service/models/service_type.dart';
+
+class _FakeCategoryRepository implements CategoryRepository {
+  _FakeCategoryRepository(this._categories);
+
+  final List<Category> _categories;
+
+  @override
+  Future<List<Category>> getAll() => Future.value(_categories);
+}
+
+/// A [ProviderServicesRepository] that genuinely starts with zero
+/// services (unlike [_FakeProviderServicesRepository]'s `forceEmpty`,
+/// which stays empty forever — including after a real create). Used to
+/// prove a brand-new provider can create their very first service.
+class _NewProviderServicesRepository implements ProviderServicesRepository {
+  final _delegate = MockProviderServicesRepository();
+  final List<Service> _services = [];
+
+  @override
+  Future<Provider> getProvider() => _delegate.getProvider();
+
+  @override
+  Future<Profile> getProfile() => _delegate.getProfile();
+
+  @override
+  Future<List<Service>> getServices() =>
+      Future.value(List.unmodifiable(_services));
+
+  @override
+  Future<Category> getCategoryFor(Service service) =>
+      _delegate.getCategoryFor(service);
+
+  @override
+  Future<Service> createService({
+    required Provider provider,
+    required Category category,
+    required String name,
+    required String description,
+    required num basePrice,
+    required int estimatedDuration,
+    required ServiceType type,
+  }) async {
+    final service = await _delegate.createService(
+      provider: provider,
+      category: category,
+      name: name,
+      description: description,
+      basePrice: basePrice,
+      estimatedDuration: estimatedDuration,
+      type: type,
+    );
+    _services.add(service);
+    return service;
+  }
+
+  @override
+  Future<Service> updateService(
+    Service service, {
+    num? basePrice,
+    int? estimatedDuration,
+    ServiceStatus? status,
+  }) => _delegate.updateService(
+    service,
+    basePrice: basePrice,
+    estimatedDuration: estimatedDuration,
+    status: status,
+  );
+
+  @override
+  Future<void> deleteService(Service service) => _delegate.deleteService(service);
+}
 
 /// Wraps [MockProviderServicesRepository] (already `Future`-returning)
 /// so tests can force it to never resolve (loading state) or return an
@@ -93,12 +166,16 @@ class _FakeProviderServicesRepository implements ProviderServicesRepository {
 }
 
 void main() {
-  Widget buildApp({ProviderServicesRepository? repository}) {
+  Widget buildApp({
+    ProviderServicesRepository? repository,
+    CategoryRepository? categoryRepository,
+  }) {
     return MaterialApp(
       theme: AppTheme.light,
       home: Scaffold(
         body: ProviderServicesPage(
           repository: repository ?? _FakeProviderServicesRepository(),
+          categoryRepository: categoryRepository ?? _FakeCategoryRepository(mockCategories),
         ),
       ),
     );
@@ -197,6 +274,59 @@ void main() {
 
       expect(find.byType(ServiceCard), findsNWidgets(5));
       expect(find.text('Destape de tuberías'), findsOneWidget);
+      expect(find.text('Servicio creado.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'a provider with zero existing services can still create their first '
+    'one (regression: category list used to come only from existing '
+    'services, so a brand-new provider had none to pick from)',
+    (tester) async {
+      await tester.pumpWidget(
+        buildApp(repository: _NewProviderServicesRepository()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ServiceCard), findsNothing);
+
+      await tester.tap(find.text('Nuevo servicio'));
+      await tester.pumpAndSettle();
+
+      // The category dropdown must offer real options — not the
+      // "No tienes categorías disponibles todavía." dead end.
+      expect(find.text('No tienes categorías disponibles todavía.'), findsNothing);
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Nombre del servicio'),
+        'Primer servicio',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Descripción'),
+        'Mi primer servicio publicado.',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Precio base'),
+        '30',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Duración estimada (minutos)'),
+        '45',
+      );
+
+      final saveButton = tester.widget<FilledButton>(
+        find.ancestor(
+          of: find.text('Guardar'),
+          matching: find.byType(FilledButton),
+        ),
+      );
+      expect(saveButton.onPressed, isNotNull);
+
+      await tester.tap(find.text('Guardar'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ServiceCard), findsOneWidget);
+      expect(find.text('Primer servicio'), findsOneWidget);
       expect(find.text('Servicio creado.'), findsOneWidget);
     },
   );

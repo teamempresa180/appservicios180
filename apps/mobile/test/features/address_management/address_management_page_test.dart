@@ -27,11 +27,15 @@ class _FakeAddressManagementRepository implements AddressManagementRepository {
     this.neverResolves = false,
     this.forceEmpty = false,
     this.throwsError = false,
+    this.throwsOnWrite = false,
   });
 
   final bool neverResolves;
   final bool forceEmpty;
   final bool throwsError;
+  /// Forces create/update/delete to fail, so tests can assert the page
+  /// surfaces the error instead of silently swallowing it.
+  final bool throwsOnWrite;
   final _delegate = MockAddressManagementRepository();
 
   @override
@@ -60,26 +64,40 @@ class _FakeAddressManagementRepository implements AddressManagementRepository {
     required String country,
     required String postalCode,
     required AddressType type,
-  }) => _delegate.createAddress(
-    alias: alias,
-    fullAddress: fullAddress,
-    city: city,
-    state: state,
-    country: country,
-    postalCode: postalCode,
-    type: type,
-  );
+  }) {
+    if (throwsOnWrite) {
+      return Future.error(const NetworkHttpException('sin conexión'));
+    }
+    return _delegate.createAddress(
+      alias: alias,
+      fullAddress: fullAddress,
+      city: city,
+      state: state,
+      country: country,
+      postalCode: postalCode,
+      type: type,
+    );
+  }
 
   @override
   Future<Address> updateAddress(
     Address address, {
     required String alias,
     required String fullAddress,
-  }) => _delegate.updateAddress(address, alias: alias, fullAddress: fullAddress);
+  }) {
+    if (throwsOnWrite) {
+      return Future.error(const NetworkHttpException('sin conexión'));
+    }
+    return _delegate.updateAddress(address, alias: alias, fullAddress: fullAddress);
+  }
 
   @override
-  Future<void> deleteAddress(Address address) =>
-      _delegate.deleteAddress(address);
+  Future<void> deleteAddress(Address address) {
+    if (throwsOnWrite) {
+      return Future.error(const NetworkHttpException('sin conexión'));
+    }
+    return _delegate.deleteAddress(address);
+  }
 }
 
 void main() {
@@ -293,5 +311,73 @@ void main() {
 
     expect(find.byType(Scaffold), findsOneWidget);
     expect(find.byType(AppBar), findsNothing);
+  });
+
+  testWidgets(
+    'a failed create shows an error snackbar and keeps the list unchanged',
+    (tester) async {
+      await tester.pumpWidget(
+        buildApp(
+          repository: _FakeAddressManagementRepository(throwsOnWrite: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Agregar dirección'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Agregar dirección'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Alias (Casa, Trabajo...)'),
+        'Finca',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Dirección completa'),
+        'Km 5 vía La Vega',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Ciudad'),
+        'La Vega',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Departamento/Estado'),
+        'Cundinamarca',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'País'),
+        'Colombia',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Código postal'),
+        '250040',
+      );
+
+      await tester.tap(find.text('Guardar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('sin conexión'), findsOneWidget);
+      expect(find.text('Dirección agregada.'), findsNothing);
+      expect(find.byType(AddressCard), findsNWidgets(3));
+    },
+  );
+
+  testWidgets('a failed delete shows an error snackbar and keeps the address', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildApp(
+        repository: _FakeAddressManagementRepository(throwsOnWrite: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Eliminar').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Eliminar').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('sin conexión'), findsOneWidget);
+    expect(find.byType(AddressCard), findsNWidgets(3));
   });
 }

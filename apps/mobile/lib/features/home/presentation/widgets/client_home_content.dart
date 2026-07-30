@@ -3,6 +3,7 @@ import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/session/user_role.dart';
+import '../view_models/client_home_orders_view_model.dart';
 import 'home_floating_panel.dart';
 import 'home_map_background.dart';
 import 'home_map_greeting_pill.dart';
@@ -14,15 +15,46 @@ import 'home_map_greeting_pill.dart';
 /// doesn't get in the way) and slides back in once the map settles. All
 /// data is still mock (see [MockHomeData]) — no backend, no real search
 /// or ordering, and no live "my location" tracking yet.
+///
+/// Also owns the one real network call this screen makes:
+/// [ClientHomeOrdersViewModel], which decides whether the floating
+/// panel leads with the client's most important active order or falls
+/// back to the categories/quick-actions it always showed before (see
+/// that view model's own doc for the "active" derivation and priority
+/// order).
 class ClientHomeContent extends StatefulWidget {
-  const ClientHomeContent({super.key});
+  const ClientHomeContent({super.key, ClientHomeOrdersViewModel? ordersViewModel})
+    : _ordersViewModel = ordersViewModel;
+
+  /// Overridable for tests only — production call sites always let this
+  /// resolve its own repositories from the service locator.
+  final ClientHomeOrdersViewModel? _ordersViewModel;
 
   @override
   State<ClientHomeContent> createState() => _ClientHomeContentState();
 }
 
 class _ClientHomeContentState extends State<ClientHomeContent> {
+  late final ClientHomeOrdersViewModel _ordersViewModel =
+      widget._ordersViewModel ?? ClientHomeOrdersViewModel();
+
   bool _isPanelVisible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _ordersViewModel.load();
+    _ordersViewModel.addListener(_onOrdersChanged);
+  }
+
+  void _onOrdersChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _ordersViewModel.removeListener(_onOrdersChanged);
+    _ordersViewModel.dispose();
+    super.dispose();
+  }
 
   void _onMapMoveStarted() {
     if (!_isPanelVisible) return;
@@ -65,7 +97,10 @@ class _ClientHomeContentState extends State<ClientHomeContent> {
                 child: AnimatedOpacity(
                   duration: AppDurations.medium,
                   opacity: _isPanelVisible ? 1 : 0,
-                  child: const HomeFloatingPanel(role: UserRole.client),
+                  child: HomeFloatingPanel(
+                    role: UserRole.client,
+                    ordersViewModel: _ordersViewModel,
+                  ),
                 ),
               ),
             ),

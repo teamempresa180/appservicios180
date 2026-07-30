@@ -31,6 +31,9 @@ class ChatListViewModel extends ChangeNotifier {
     } on HttpException catch (exception) {
       _errorMessage = exception.message;
       _status = ChatListLoadStatus.error;
+    } catch (_) {
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = ChatListLoadStatus.error;
     }
     notifyListeners();
   }

@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mobile/address/entities/address.dart';
+import 'package:mobile/category/models/category_id.dart';
 import 'package:mobile/core/di/service_locator.dart';
+import 'package:mobile/core/network/http_exceptions.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_chip.dart';
 import 'package:mobile/features/quote/repositories/mock_quote_repository.dart';
 import 'package:mobile/features/quote/repositories/quote_repository.dart';
 import 'package:mobile/features/request_service/mock/mock_request_service_data.dart';
 import 'package:mobile/features/request_service/presentation/pages/request_service_page.dart';
+import 'package:mobile/features/request_service/presentation/widgets/continue_button.dart';
 import 'package:mobile/features/request_service/repositories/mock_request_service_repository.dart';
+import 'package:mobile/features/request_service/repositories/request_service_repository.dart';
+import 'package:mobile/features/request_service/models/request_priority.dart';
 import 'package:mobile/features/request_service/presentation/widgets/address_summary.dart';
 import 'package:mobile/features/request_service/presentation/widgets/attachments_section.dart';
 import 'package:mobile/features/request_service/presentation/widgets/priority_selector.dart';
@@ -16,6 +22,33 @@ import 'package:mobile/features/request_service/presentation/widgets/problem_des
 import 'package:mobile/features/request_service/presentation/widgets/provider_summary.dart';
 import 'package:mobile/features/request_service/presentation/widgets/schedule_selector.dart';
 import 'package:mobile/features/request_service/presentation/widgets/service_summary.dart';
+import 'package:mobile/order/entities/order.dart';
+import 'package:mobile/provider/models/provider_id.dart';
+import 'package:mobile/service/models/service_id.dart';
+
+/// Repository whose `createOrder` always fails — used to verify the
+/// page surfaces the failure instead of crashing with an unhandled
+/// exception (see `RequestServicePage._submit`).
+class _FailingRequestServiceRepository implements RequestServiceRepository {
+  @override
+  Future<Address> getAddress() => Future.value(mockRequestServiceAddress);
+
+  @override
+  Future<Order> createOrder({
+    required CategoryId categoryId,
+    ProviderId? providerId,
+    ServiceId? serviceId,
+    required String title,
+    required String description,
+    required DateTime scheduledDate,
+    required RequestPriority priority,
+  }) {
+    throw const ServerHttpException(
+      'No se pudo crear la solicitud.',
+      statusCode: 500,
+    );
+  }
+}
 
 void main() {
   Widget buildApp() {
@@ -154,6 +187,66 @@ void main() {
     expect(find.byType(ServiceSummary), findsNothing);
     expect(find.byType(ProviderSummary), findsNothing);
   });
+
+  testWidgets(
+    'shows an error snackbar and re-enables the button when createOrder fails',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: Scaffold(
+            body: RequestServicePage(
+              category: mockRequestServiceCategory,
+              provider: mockRequestServiceProvider,
+              service: mockRequestServiceService,
+              profile: mockRequestServiceProfile,
+              repository: _FailingRequestServiceRepository(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Continuar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Continuar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No se pudo crear la solicitud.'), findsOneWidget);
+      expect(find.text('Cotización'), findsNothing);
+      final button = tester.widget<ContinueButton>(
+        find.byType(ContinueButton),
+      );
+      expect(button.isLoading, isFalse);
+    },
+  );
+
+  testWidgets(
+    'blocks submit and shows a validation snackbar when the description is empty',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byType(ProblemDescription));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Descripción'),
+        '   ',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Continuar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Continuar'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Cuéntanos brevemente qué necesitas antes de continuar.'),
+        findsOneWidget,
+      );
+      expect(find.text('Cotización'), findsNothing);
+    },
+  );
 
   testWidgets('does not build its own Scaffold', (tester) async {
     await tester.pumpWidget(buildApp());

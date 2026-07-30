@@ -5,31 +5,37 @@ import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../models/provider_dashboard_display.dart';
 
-/// List of the real, correctly-scoped `Order`s still `Pending`
-/// (`ProviderDashboardDisplay.pendingOrders`, derived from `orders` —
-/// see the feature README), now including open requests in this
-/// provider's own category since `orders` comes from
+/// Priority #3 on the Provider Dashboard: still-`Pending` orders this
+/// provider hasn't quoted yet (`ProviderDashboardDisplay
+/// .newRequestOrders`) — new work available to bid on, including open
+/// requests in this provider's own category since `orders` comes from
 /// `GET /orders/relevant-for-provider` (see
 /// `HttpProviderDashboardRepository.getOrders`). Purely visual — no
 /// action here; submitting a Quote for one of these lives on the
-/// "Servicios" screen (`ProviderRequestsPage`).
+/// "Servicios" screen (`ProviderRequestsPage`), reached via
+/// [onViewAll].
 class PendingRequests extends StatelessWidget {
-  const PendingRequests({super.key, required this.data});
+  const PendingRequests({super.key, required this.data, this.onViewAll});
 
   final ProviderDashboardDisplay data;
+  final VoidCallback? onViewAll;
 
   @override
   Widget build(BuildContext context) {
-    final pending = data.pendingOrders;
+    final pending = data.newRequestOrders;
 
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AppSectionTitle(title: 'Solicitudes pendientes'),
+          AppSectionTitle(
+            title: 'Nuevas solicitudes',
+            actionLabel: pending.isEmpty ? null : 'Ver todas',
+            onActionTap: pending.isEmpty ? null : onViewAll,
+          ),
           if (pending.isEmpty)
             Text(
-              'No tienes solicitudes pendientes.',
+              'No tienes solicitudes nuevas por cotizar.',
               style: context.textStyles.bodySmall,
             )
           else

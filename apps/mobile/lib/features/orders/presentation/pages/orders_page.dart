@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
+import '../../../quote/repositories/quote_repository.dart';
+import '../../../reviews/repositories/reviews_repository.dart';
 import '../../repositories/orders_repository.dart';
 import '../view_models/orders_view_model.dart';
 import '../widgets/order_empty_state.dart';
@@ -17,12 +19,20 @@ import '../../../../core/ui/widgets/app_page_body.dart';
 /// [OrdersViewModel] (resolved from the service locator — see
 /// `core/di/service_locator.dart`).
 class OrdersPage extends StatefulWidget {
-  const OrdersPage({super.key, OrdersRepository? repository})
-    : _repository = repository;
+  const OrdersPage({
+    super.key,
+    OrdersRepository? repository,
+    QuoteRepository? quoteRepository,
+    ReviewsRepository? reviewsRepository,
+  }) : _repository = repository,
+       _quoteRepository = quoteRepository,
+       _reviewsRepository = reviewsRepository;
 
   /// Overridable for tests only — production call sites always resolve
-  /// the real repository from the service locator.
+  /// the real repositories from the service locator.
   final OrdersRepository? _repository;
+  final QuoteRepository? _quoteRepository;
+  final ReviewsRepository? _reviewsRepository;
 
   @override
   State<OrdersPage> createState() => _OrdersPageState();
@@ -31,6 +41,9 @@ class OrdersPage extends StatefulWidget {
 class _OrdersPageState extends State<OrdersPage> {
   late final OrdersViewModel _viewModel = OrdersViewModel(
     widget._repository ?? locator<OrdersRepository>(),
+    quoteRepository: widget._quoteRepository ?? locator<QuoteRepository>(),
+    reviewsRepository:
+        widget._reviewsRepository ?? locator<ReviewsRepository>(),
   );
 
   @override
@@ -64,7 +77,11 @@ class _OrdersPageState extends State<OrdersPage> {
       case OrdersLoadStatus.success:
         return _viewModel.orders.isEmpty
             ? const OrderEmptyState()
-            : OrdersList(orders: _viewModel.orders);
+            : OrdersList(
+                orders: _viewModel.orders,
+                journeyFor: _viewModel.journeyFor,
+                onOrderChanged: _viewModel.retry,
+              );
     }
   }
 

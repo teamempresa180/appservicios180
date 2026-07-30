@@ -4,6 +4,8 @@ import '../../../../order/entities/order.dart';
 import '../../../../order/models/order_status.dart';
 import '../../../../provider/entities/provider.dart';
 import '../../../../quote/models/quote_type.dart';
+import '../../../../review/entities/review.dart';
+import '../../../reviews/repositories/reviews_repository.dart';
 import '../../models/provider_request_display.dart';
 import '../../repositories/orders_repository.dart';
 
@@ -29,9 +31,11 @@ enum ProviderRequestsLoadStatus { loading, success, error }
 /// so the provider always sees the same "next relevant order" section
 /// the real backend would return on any other refresh.
 class ProviderRequestsViewModel extends ChangeNotifier {
-  ProviderRequestsViewModel(this._repository);
+  ProviderRequestsViewModel(this._repository, {required ReviewsRepository reviewsRepository})
+    : _reviewsRepository = reviewsRepository;
 
   final OrdersRepository _repository;
+  final ReviewsRepository _reviewsRepository;
 
   ProviderRequestsLoadStatus _status = ProviderRequestsLoadStatus.loading;
   List<ProviderRequestDisplay> _requests = const [];
@@ -71,7 +75,10 @@ class ProviderRequestsViewModel extends ChangeNotifier {
     try {
       _provider = await _repository.getCurrentProvider();
       final orders = await _repository.getRelevantOrders();
-      _requests = await Future.wait(orders.map(_buildDisplay));
+      final reviews = await _reviewsRepository.getReviews();
+      _requests = await Future.wait(
+        orders.map((order) => _buildDisplay(order, reviews)),
+      );
       _status = ProviderRequestsLoadStatus.success;
     } on HttpException catch (exception) {
       _errorMessage = exception.message;
@@ -80,7 +87,10 @@ class ProviderRequestsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<ProviderRequestDisplay> _buildDisplay(Order order) async {
+  Future<ProviderRequestDisplay> _buildDisplay(
+    Order order,
+    List<Review> reviews,
+  ) async {
     final category = await _repository.getCategoryFor(order);
     final clientProfile = await _repository.getClientProfileFor(order);
     final service = order.isDirectHire
@@ -90,12 +100,14 @@ class ProviderRequestsViewModel extends ChangeNotifier {
     final myQuote = provider == null
         ? null
         : await _repository.getMyQuoteFor(order, provider);
+    final hasReviewed = reviews.any((review) => review.orderId == order.id);
     return ProviderRequestDisplay(
       order: order,
       category: category,
       clientProfile: clientProfile,
       service: service,
       myQuote: myQuote,
+      hasReviewed: hasReviewed,
     );
   }
 

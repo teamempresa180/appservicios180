@@ -1,3 +1,7 @@
+import '../../../address/entities/address.dart';
+import '../../../contact/entities/contact.dart';
+import '../../../identity/entities/identity.dart';
+import '../../../profiles/entities/profile.dart';
 import '../models/profile_display.dart';
 import '../repositories/profile_repository.dart';
 
@@ -13,10 +17,16 @@ abstract final class ProfileMapper {
     required int completionPercentage,
     required List<String> profileCompletionItems,
   }) async {
-    final profile = await repository.getProfile();
-    final identity = await repository.getIdentity();
-    final contacts = await repository.getContacts();
-    final address = await repository.getAddress();
+    final results = await Future.wait([
+      repository.getProfile(),
+      repository.getIdentity(),
+      repository.getContacts(),
+      repository.getAddress(),
+    ]);
+    final profile = results[0] as Profile;
+    final identity = results[1] as Identity;
+    final contacts = results[2] as List<Contact>;
+    final address = results[3] as Address;
     return ProfileDisplay(
       profile: profile,
       identity: identity,

@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/orders/presentation/pages/orders_page.dart';
 import 'package:mobile/features/orders/repositories/mock_orders_repository.dart';
+import 'package:mobile/features/quote/repositories/mock_quote_repository.dart';
+import 'package:mobile/features/reviews/repositories/mock_reviews_repository.dart';
 
 void main() {
   const widths = [320.0, 360.0, 390.0, 412.0, 768.0, 1024.0, 1440.0];
@@ -25,7 +27,13 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
-          home: Scaffold(body: OrdersPage(repository: MockOrdersRepository())),
+          home: Scaffold(
+            body: OrdersPage(
+              repository: MockOrdersRepository(),
+              quoteRepository: MockQuoteRepository(),
+              reviewsRepository: MockReviewsRepository(),
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();

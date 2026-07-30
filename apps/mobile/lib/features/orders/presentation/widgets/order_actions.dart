@@ -1,140 +1,216 @@
 import 'package:flutter/material.dart';
 import '../../../../core/di/service_locator.dart';
-import '../../../../core/session/session_manager.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_button.dart';
-import '../../../../order/models/order_status.dart';
-import '../../../payments/presentation/pages/payments_page.dart';
+import '../../../../core/ui/widgets/app_dialog.dart';
+import '../../../../core/ui/widgets/app_snack_bar.dart';
+import '../../../../order/journey/order_journey_action.dart';
+import '../../../../order/journey/order_journey_info.dart';
+import '../../../chat/presentation/pages/chat_page.dart';
+import '../../../chat/repositories/chat_repository.dart';
 import '../../../quote/presentation/pages/quote_page.dart';
 import '../../../reviews/presentation/pages/create_review_page.dart';
-import '../../../tracking/presentation/pages/order_tracking_page.dart';
 import '../../models/order_display.dart';
+import '../../repositories/orders_repository.dart';
 
-/// The order's main action button — its label depends on
-/// `Order.status`. Purely visual — [onPressed] is a no-op by default,
-/// **except** for:
-/// - `accepted`/`inProgress` ("Ver detalle"), which opens Payments for
-///   this order's own real payment (not a fixed mock preview), plus a
-///   secondary "Rastrear" button opening the live-tracking screen (see
-///   `OrderTrackingPage` — simulated movement today, no live-location
-///   backend yet).
-/// - `completed` ("Calificar"), which opens the Reviews screen.
+/// Renders exactly the buttons [journey] says are valid for this order
+/// right now (see `ClientOrderJourney`, the single source of truth for
+/// which `OrderJourneyAction`s apply) — never a fixed, status-only
+/// button as before, and never a button that doesn't correspond to one
+/// of [journey]'s own actions, per the explicit "no buttons that can't
+/// be used" requirement.
 ///
-/// No other status navigates anywhere yet (see the feature README).
-class OrderActions extends StatelessWidget {
-  const OrderActions({super.key, required this.data, this.onPressed});
+/// Wires each [OrderJourneyActionKind] to its real behavior:
+/// - `viewQuotes` → the order-scoped `QuotePage`.
+/// - `cancelOrder` → `OrdersRepository.cancelOrder`, behind a
+///   confirmation dialog (destructive, can't be undone).
+/// - `openChat` → `ChatRepository.createOrGetForOrder`, then `ChatPage`
+///   (same create-or-get pattern already used from `QuotePage` when a
+///   quote is accepted).
+/// - `rateProvider` → the order/provider-scoped `CreateReviewPage`.
+///
+/// Every other kind (`acceptQuote`/`startService`/`completeService`/
+/// `submitQuote`) is provider-facing — `ClientOrderJourney` never emits
+/// them, but the switch stays exhaustive and simply renders nothing for
+/// one rather than crashing, in case that ever changes.
+class OrderActions extends StatefulWidget {
+  const OrderActions({
+    super.key,
+    required this.data,
+    required this.journey,
+    this.onChanged,
+    OrdersRepository? ordersRepository,
+    ChatRepository? chatRepository,
+  }) : _ordersRepository = ordersRepository,
+       _chatRepository = chatRepository;
 
   final OrderDisplay data;
-  final VoidCallback? onPressed;
+  final OrderJourneyInfo journey;
 
-  String get _label {
-    switch (data.order.status) {
-      case OrderStatus.pending:
-        return 'Ver cotización';
-      case OrderStatus.accepted:
-      case OrderStatus.inProgress:
-        return 'Ver detalle';
-      case OrderStatus.completed:
-        return 'Calificar';
-      case OrderStatus.cancelled:
-      case OrderStatus.rejected:
-        return 'Ver información';
+  /// Called after a state-changing action (cancelling) completes
+  /// successfully, so the caller can reload the order list.
+  final VoidCallback? onChanged;
+
+  /// Overridable for tests only — production call sites always resolve
+  /// the real repositories from the service locator.
+  final OrdersRepository? _ordersRepository;
+  final ChatRepository? _chatRepository;
+
+  @override
+  State<OrderActions> createState() => _OrderActionsState();
+}
+
+class _OrderActionsState extends State<OrderActions> {
+  late final OrdersRepository _ordersRepository =
+      widget._ordersRepository ?? locator<OrdersRepository>();
+  late final ChatRepository _chatRepository =
+      widget._chatRepository ?? locator<ChatRepository>();
+
+  /// Which action kind is currently in flight, if any — drives both
+  /// which button shows its loading spinner and which buttons are
+  /// disabled while it runs.
+  OrderJourneyActionKind? _busyKind;
+
+  void _openQuotes() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Cotizaciones')),
+          body: SafeArea(child: QuotePage(order: widget.data.order)),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _cancelOrder() async {
+    final confirmed = await AppDialog.show<bool>(
+      context,
+      title: 'Cancelar solicitud',
+      content: const Text(
+        '¿Seguro que quieres cancelar esta solicitud? Esta acción no se '
+        'puede deshacer.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('No'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Sí, cancelar'),
+        ),
+      ],
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busyKind = OrderJourneyActionKind.cancelOrder);
+    try {
+      await _ordersRepository.cancelOrder(widget.data.order);
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'Solicitud cancelada.',
+        type: AppSnackBarType.success,
+      );
+      widget.onChanged?.call();
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo cancelar la solicitud. Intenta de nuevo.',
+        type: AppSnackBarType.error,
+      );
+    } finally {
+      if (mounted) setState(() => _busyKind = null);
     }
   }
 
-  void _openPayments(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: const Text('Pago')),
-          body: SafeArea(child: PaymentsPage(order: data.order)),
+  Future<void> _openChat() async {
+    final providerId = widget.data.order.providerId;
+    if (providerId == null) return;
+
+    setState(() => _busyKind = OrderJourneyActionKind.openChat);
+    try {
+      await _chatRepository.createOrGetForOrder(widget.data.order, providerId);
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => Scaffold(
+            appBar: AppBar(title: const Text('Conversación')),
+            body: const SafeArea(child: ChatPage()),
+          ),
         ),
-      ),
-    );
+      );
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo abrir el chat. Intenta de nuevo.',
+        type: AppSnackBarType.error,
+      );
+    } finally {
+      if (mounted) setState(() => _busyKind = null);
+    }
   }
 
-  void _openQuote(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: const Text('Cotización')),
-          body: SafeArea(child: QuotePage(order: data.order)),
-        ),
-      ),
-    );
-  }
-
-  void _openCreateReview(BuildContext context) {
-    final providerId = data.provider?.id;
+  void _openCreateReview() {
+    final providerId = widget.data.provider?.id ?? widget.data.order.providerId;
     if (providerId == null) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => Scaffold(
           appBar: AppBar(title: const Text('Calificar')),
           body: SafeArea(
-            child: CreateReviewPage(order: data.order, providerId: providerId),
+            child: CreateReviewPage(
+              order: widget.data.order,
+              providerId: providerId,
+            ),
           ),
         ),
       ),
     );
   }
 
-  /// `OrderDisplay` always joins the *provider's* profile regardless of
-  /// which role is viewing the card (see `HttpOrdersRepository.getProfileFor`
-  /// — it's built from `getProviderFor`, not the client's identity), so
-  /// a real name for "the other party" is only available when the
-  /// current account is the client. When the current account is the
-  /// provider, there is no client name joined into this display model
-  /// yet — a generic label is used instead of fabricating one.
-  void _openTracking(BuildContext context) {
-    final isProvider = locator<SessionManager>().currentRole == 'PROVIDER';
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => OrderTrackingPage(
-          order: data.order,
-          otherPartyLabel: isProvider ? 'Tu cliente' : 'Tu proveedor',
-          otherPartyName: isProvider ? 'Cliente' : data.providerName,
-        ),
-      ),
-    );
+  VoidCallback? _handlerFor(OrderJourneyActionKind kind) {
+    switch (kind) {
+      case OrderJourneyActionKind.viewQuotes:
+        return _openQuotes;
+      case OrderJourneyActionKind.cancelOrder:
+        return _cancelOrder;
+      case OrderJourneyActionKind.openChat:
+        return _openChat;
+      case OrderJourneyActionKind.rateProvider:
+        return _openCreateReview;
+      case OrderJourneyActionKind.acceptQuote:
+      case OrderJourneyActionKind.startService:
+      case OrderJourneyActionKind.completeService:
+      case OrderJourneyActionKind.submitQuote:
+        return null;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isPending = data.order.status == OrderStatus.pending;
-    final isDetail =
-        data.order.status == OrderStatus.accepted ||
-        data.order.status == OrderStatus.inProgress;
-    final isCompleted = data.order.status == OrderStatus.completed;
+    final actions = widget.journey.actions;
+    if (actions.isEmpty) return const SizedBox.shrink();
 
-    VoidCallback? defaultOnPressed;
-    if (isPending) {
-      defaultOnPressed = () => _openQuote(context);
-    } else if (isDetail) {
-      defaultOnPressed = () => _openPayments(context);
-    } else if (isCompleted) {
-      defaultOnPressed = () => _openCreateReview(context);
-    } else {
-      defaultOnPressed = () {};
-    }
-
-    final primaryButton = AppButton(
-      label: _label,
-      onPressed: onPressed ?? defaultOnPressed,
-    );
-    if (!isDetail) return primaryButton;
+    final isBusy = _busyKind != null;
 
     return Row(
       children: [
-        Expanded(
-          child: AppButton(
-            label: 'Rastrear',
-            variant: AppButtonVariant.outlined,
-            onPressed: () => _openTracking(context),
+        for (final (index, action) in actions.indexed) ...[
+          if (index > 0) const SizedBox(width: AppSpacing.space12),
+          Expanded(
+            child: AppButton(
+              label: action.label,
+              variant: index == 0
+                  ? AppButtonVariant.filled
+                  : AppButtonVariant.outlined,
+              isLoading: _busyKind == action.kind,
+              onPressed: isBusy ? null : _handlerFor(action.kind),
+            ),
           ),
-        ),
-        const SizedBox(width: AppSpacing.space12),
-        Expanded(child: primaryButton),
+        ],
       ],
     );
   }

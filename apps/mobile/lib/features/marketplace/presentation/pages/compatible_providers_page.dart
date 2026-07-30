@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../category/entities/category.dart';
 import '../../../../core/di/service_locator.dart';
+import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
@@ -107,7 +108,7 @@ class _CompatibleProvidersPageState extends State<CompatibleProvidersPage> {
         children: [
           Text(
             widget.category.name,
-            style: Theme.of(context).textTheme.titleLarge,
+            style: context.textStyles.titleLarge,
           ),
           const SizedBox(height: AppSpacing.space12),
           AppTextField(

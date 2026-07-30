@@ -7,7 +7,9 @@ import '../../../../core/session/session_manager.dart';
 import '../../../../core/ui/animations/fade_in.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_button.dart';
 import '../../../../core/ui/widgets/app_card.dart';
+import '../../../../core/ui/widgets/app_dialog.dart';
 import '../../../../core/ui/widgets/app_divider.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_scaffold.dart';
@@ -56,6 +58,31 @@ class _LoginPageState extends State<LoginPage> {
 
   void _goToRegister() => context.go(AppRoutes.register);
 
+  /// There's no password-recovery screen yet — rather than silently
+  /// dropping the user onto Register (confusing: they asked to recover
+  /// access, not create a new account), this explains the limitation
+  /// and points them at support, same contact used in Help/Support.
+  Future<void> _showForgotPasswordInfo() {
+    return AppDialog.show<void>(
+      context,
+      title: 'Recuperar contraseña',
+      content: Text(
+        'La recuperación de contraseña dentro de la app aún no está '
+        'disponible. Escríbenos a soporte@servicios180.com y te '
+        'ayudaremos a recuperar el acceso a tu cuenta.',
+        style: context.textStyles.bodyMedium,
+      ),
+      actions: [
+        AppButton(
+          label: 'Entendido',
+          variant: AppButtonVariant.text,
+          expand: false,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
@@ -84,7 +111,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const AppDivider(),
                 LoginFooter(
-                  onForgotPassword: _goToRegister,
+                  onForgotPassword: _showForgotPasswordInfo,
                   onCreateAccount: _goToRegister,
                 ),
               ],

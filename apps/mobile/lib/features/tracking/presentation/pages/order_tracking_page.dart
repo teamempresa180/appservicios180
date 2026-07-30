@@ -4,6 +4,7 @@ import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../order/entities/order.dart';
+import '../../../../order/journey/order_journey_info.dart';
 import '../../models/tracking_update.dart';
 import '../../repositories/tracking_repository.dart';
 import '../widgets/tracking_info_panel.dart';
@@ -21,18 +22,27 @@ import '../widgets/tracking_map.dart';
 /// `Profile` for that), so `OrderActions` (which already has an
 /// `OrderDisplay`) passes it straight through instead of this page
 /// re-deriving it.
+///
+/// [journey] is the same `OrderJourneyInfo` every other order-facing
+/// screen derives via `ClientOrderJourney`/`ProviderOrderJourney` (see
+/// `order/journey/`) — the caller computes it exactly like
+/// `HomeActiveOrderCard`/`OrdersPage` already do, so this screen's
+/// `OrderProgress` timeline stays consistent with the rest of the app
+/// instead of this page inventing its own status readout.
 class OrderTrackingPage extends StatefulWidget {
   const OrderTrackingPage({
     super.key,
     required this.order,
     required this.otherPartyName,
     required this.otherPartyLabel,
+    required this.journey,
     TrackingRepository? repository,
   }) : _repository = repository;
 
   final Order order;
   final String otherPartyName;
   final String otherPartyLabel;
+  final OrderJourneyInfo journey;
 
   /// Overridable for tests only — production call sites always resolve
   /// the real repository from the service locator.
@@ -80,6 +90,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                     update: update,
                     otherPartyName: widget.otherPartyName,
                     otherPartyLabel: widget.otherPartyLabel,
+                    journey: widget.journey,
                   ),
                 ),
               ),
