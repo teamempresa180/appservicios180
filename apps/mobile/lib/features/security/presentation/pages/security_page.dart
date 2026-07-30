@@ -8,6 +8,7 @@ import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_dialog.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../../core/ui/widgets/app_snack_bar.dart';
@@ -98,24 +99,22 @@ class _SecurityPageState extends State<SecurityPage> {
   }
 
   Future<void> _deleteAuthMethod(Authentication authMethod) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Eliminar método'),
-        content: const Text(
-          '¿Eliminar este método de autenticación? Esta acción no se puede deshacer.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Eliminar'),
-          ),
-        ],
+    final confirmed = await AppDialog.show<bool>(
+      context,
+      title: 'Eliminar método',
+      content: const Text(
+        '¿Eliminar este método de autenticación? Esta acción no se puede deshacer.',
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Eliminar'),
+        ),
+      ],
     );
     if (confirmed != true || !mounted) return;
     await _repository.deleteAuthMethod(authMethod);

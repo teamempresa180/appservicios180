@@ -50,6 +50,9 @@ class NotificationsViewModel extends ChangeNotifier {
     } on HttpException catch (exception) {
       _errorMessage = exception.message;
       _status = NotificationsLoadStatus.error;
+    } catch (_) {
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = NotificationsLoadStatus.error;
     }
     _notifyListenersIfMounted();
   }

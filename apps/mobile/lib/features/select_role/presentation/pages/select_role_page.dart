@@ -37,7 +37,7 @@ class SelectRolePage extends StatelessWidget {
               children: [
                 FadeIn(
                   child: const AppSectionTitle(
-                    title: '¿Cómo deseas usar AppServicios?',
+                    title: '¿Cómo deseas usar SERVICIOS 180°?',
                   ),
                 ),
                 const SizedBox(height: AppSpacing.space16),

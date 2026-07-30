@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -12,6 +13,7 @@ import 'package:mobile/features/orders/presentation/pages/provider_requests_page
 import 'package:mobile/features/orders/presentation/widgets/provider_request_card.dart';
 import 'package:mobile/features/orders/repositories/mock_orders_repository.dart';
 import 'package:mobile/features/orders/repositories/orders_repository.dart';
+import 'package:mobile/features/reviews/repositories/mock_reviews_repository.dart';
 import 'package:mobile/order/entities/order.dart';
 import 'package:mobile/profiles/entities/profile.dart';
 import 'package:mobile/provider/entities/provider.dart';
@@ -38,24 +40,28 @@ class _FakeOrdersRepository implements OrdersRepository {
   }
 
   @override
-  Future<List<Order>> getOrders() => _delegate.getOrders();
+  Future<List<Order>> getOrders({CancelToken? cancelToken}) =>
+      _delegate.getOrders(cancelToken: cancelToken);
 
   @override
-  Future<Category> getCategoryFor(Order order) =>
-      _delegate.getCategoryFor(order);
+  Future<Category> getCategoryFor(Order order, {CancelToken? cancelToken}) =>
+      _delegate.getCategoryFor(order, cancelToken: cancelToken);
 
   @override
-  Future<Service> getServiceFor(Order order) => _delegate.getServiceFor(order);
+  Future<Service> getServiceFor(Order order, {CancelToken? cancelToken}) =>
+      _delegate.getServiceFor(order, cancelToken: cancelToken);
 
   @override
-  Future<Provider> getProviderFor(Order order) =>
-      _delegate.getProviderFor(order);
+  Future<Provider> getProviderFor(Order order, {CancelToken? cancelToken}) =>
+      _delegate.getProviderFor(order, cancelToken: cancelToken);
 
   @override
-  Future<Profile> getProfileFor(Order order) => _delegate.getProfileFor(order);
+  Future<Profile> getProfileFor(Order order, {CancelToken? cancelToken}) =>
+      _delegate.getProfileFor(order, cancelToken: cancelToken);
 
   @override
-  Future<Quote> getQuoteFor(Order order) => _delegate.getQuoteFor(order);
+  Future<Quote> getQuoteFor(Order order, {CancelToken? cancelToken}) =>
+      _delegate.getQuoteFor(order, cancelToken: cancelToken);
 
   @override
   Future<Profile> getClientProfileFor(Order order) =>
@@ -105,6 +111,7 @@ void main() {
       home: Scaffold(
         body: ProviderRequestsPage(
           repository: repository ?? MockOrdersRepository(),
+          reviewsRepository: MockReviewsRepository(),
         ),
       ),
     );
@@ -188,16 +195,16 @@ void main() {
   });
 
   testWidgets(
-    'tapping "Comenzar servicio" then "Marcar como finalizado" advances '
+    'tapping "Iniciar servicio" then "Marcar como finalizado" advances '
     'the order out of Activas',
     (tester) async {
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
 
-      expect(find.text('Comenzar servicio'), findsOneWidget);
-      await tester.ensureVisible(find.text('Comenzar servicio'));
+      expect(find.text('Iniciar servicio'), findsOneWidget);
+      await tester.ensureVisible(find.text('Iniciar servicio'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Comenzar servicio'));
+      await tester.tap(find.text('Iniciar servicio'));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Comenzaste el servicio'), findsOneWidget);
@@ -211,6 +218,12 @@ void main() {
       await tester.ensureVisible(find.text('Marcar como finalizado').first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Marcar como finalizado').first);
+      await tester.pumpAndSettle();
+
+      // "Marcar como finalizado" now asks for confirmation first.
+      final confirmButton = find.text('Finalizar');
+      await tester.pumpAndSettle();
+      await tester.tap(confirmButton);
       await tester.pumpAndSettle();
 
       expect(

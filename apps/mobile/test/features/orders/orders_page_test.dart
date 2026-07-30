@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -8,11 +9,14 @@ import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/app_chip.dart';
 import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
+import 'package:mobile/core/ui/widgets/order_progress.dart';
 import 'package:mobile/features/orders/presentation/pages/orders_page.dart';
 import 'package:mobile/features/orders/presentation/widgets/order_card.dart';
 import 'package:mobile/features/orders/presentation/widgets/order_status_tabs.dart';
 import 'package:mobile/features/orders/repositories/mock_orders_repository.dart';
 import 'package:mobile/features/orders/repositories/orders_repository.dart';
+import 'package:mobile/features/quote/repositories/mock_quote_repository.dart';
+import 'package:mobile/features/reviews/repositories/mock_reviews_repository.dart';
 import 'package:mobile/order/entities/order.dart';
 import 'package:mobile/profiles/entities/profile.dart';
 import 'package:mobile/provider/entities/provider.dart';
@@ -31,28 +35,31 @@ class _FakeOrdersRepository implements OrdersRepository {
   final _delegate = MockOrdersRepository();
 
   @override
-  Future<List<Order>> getOrders() {
+  Future<List<Order>> getOrders({CancelToken? cancelToken}) {
     if (neverResolves) return Completer<List<Order>>().future;
     if (forceEmpty) return Future.value(const []);
-    return _delegate.getOrders();
+    return _delegate.getOrders(cancelToken: cancelToken);
   }
 
   @override
-  Future<Service> getServiceFor(Order order) => _delegate.getServiceFor(order);
+  Future<Service> getServiceFor(Order order, {CancelToken? cancelToken}) =>
+      _delegate.getServiceFor(order, cancelToken: cancelToken);
 
   @override
-  Future<Provider> getProviderFor(Order order) =>
-      _delegate.getProviderFor(order);
+  Future<Provider> getProviderFor(Order order, {CancelToken? cancelToken}) =>
+      _delegate.getProviderFor(order, cancelToken: cancelToken);
 
   @override
-  Future<Profile> getProfileFor(Order order) => _delegate.getProfileFor(order);
+  Future<Profile> getProfileFor(Order order, {CancelToken? cancelToken}) =>
+      _delegate.getProfileFor(order, cancelToken: cancelToken);
 
   @override
-  Future<Category> getCategoryFor(Order order) =>
-      _delegate.getCategoryFor(order);
+  Future<Category> getCategoryFor(Order order, {CancelToken? cancelToken}) =>
+      _delegate.getCategoryFor(order, cancelToken: cancelToken);
 
   @override
-  Future<Quote> getQuoteFor(Order order) => _delegate.getQuoteFor(order);
+  Future<Quote> getQuoteFor(Order order, {CancelToken? cancelToken}) =>
+      _delegate.getQuoteFor(order, cancelToken: cancelToken);
 
   @override
   Future<Profile> getClientProfileFor(Order order) =>
@@ -102,7 +109,19 @@ void main() {
   Widget buildApp({OrdersRepository? repository}) {
     return MaterialApp(
       theme: AppTheme.light,
-      home: Scaffold(body: OrdersPage(repository: repository ?? _FakeOrdersRepository())),
+      home: Scaffold(
+        body: OrdersPage(
+          repository: repository ?? _FakeOrdersRepository(),
+          // `MockOrdersRepository`'s fixed orders (`orders-order-*`) share
+          // no ids with either mock's own fixtures (`quote-order-1`,
+          // `reviews-order-*`) — a deliberate, documented pattern in this
+          // codebase (each feature's mock data is independent) that also
+          // makes each order's derived `ClientOrderJourney` deterministic
+          // here: no quotes are ever found, no review is ever found.
+          quoteRepository: MockQuoteRepository(),
+          reviewsRepository: MockReviewsRepository(),
+        ),
+      ),
     );
   }
 
@@ -159,16 +178,39 @@ void main() {
     expect(find.text('Cancelada'), findsOneWidget);
   });
 
-  testWidgets('shows the status-dependent main action per order', (
+  testWidgets(
+    'shows the ClientOrderJourney-derived action per order, never a fixed '
+    'status-only one',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      // Pending, no quotes yet (per the deterministic cross-feature mock
+      // data — see `buildApp`) → awaitingQuotes → only "Cancelar
+      // solicitud".
+      expect(find.text('Cancelar solicitud'), findsOneWidget);
+      // inProgress → only "Abrir chat".
+      expect(find.text('Abrir chat'), findsOneWidget);
+      // Completed, not yet reviewed → "Calificar proveedor".
+      expect(find.text('Calificar proveedor'), findsOneWidget);
+      // Cancelled → `ClientOrderJourney` derives zero actions — no button
+      // at all for that card, per "no buttons that can't be used".
+      expect(find.text('Ver información'), findsNothing);
+
+      // None of the old, fixed-per-status labels this replaced remain.
+      expect(find.text('Ver cotización'), findsNothing);
+      expect(find.text('Ver detalle'), findsNothing);
+      expect(find.text('Calificar'), findsNothing);
+    },
+  );
+
+  testWidgets('shows the OrderProgress timeline on every card', (
     tester,
   ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Ver cotización'), findsOneWidget);
-    expect(find.text('Ver detalle'), findsOneWidget);
-    expect(find.text('Calificar'), findsOneWidget);
-    expect(find.text('Ver información'), findsOneWidget);
+    expect(find.byType(OrderProgress), findsNWidgets(4));
   });
 
   testWidgets('loading state shows AppLoading instead of the list', (

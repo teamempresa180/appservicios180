@@ -9,6 +9,7 @@ import '../session/mock_auth_repository.dart';
 import '../session/provider_availability_controller.dart';
 import '../session/provider_availability_storage.dart';
 import '../session/session_manager.dart';
+import '../session/user_role.dart';
 import '../session/user_role_controller.dart';
 import '../session/user_role_storage.dart';
 import '../storage/secure_token_storage.dart';
@@ -148,6 +149,23 @@ void setupServiceLocator() {
   );
   tokenProviderHolder.attach(sessionManager);
   locator.registerSingleton<SessionManager>(sessionManager);
+
+  // Keeps the App Shell's role toggle (`UserRoleController`, which
+  // drives which navigation/dashboard is shown) in sync with the real
+  // role the backend returned on login/session-restore — without this,
+  // a real Provider account could log in and still see the Cliente
+  // shell (or vice versa) if the device's last locally-stored toggle
+  // state didn't match. Only fires on login/restore (`SessionManager`
+  // doesn't notify on token refresh), so it never fights the manual
+  // "cambiar a prestador" toggle mid-session.
+  sessionManager.addListener(() {
+    switch (sessionManager.currentRole) {
+      case 'PROVIDER':
+        locator<UserRoleController>().setRole(UserRole.provider);
+      case 'CUSTOMER':
+        locator<UserRoleController>().setRole(UserRole.client);
+    }
+  });
 
   // Pilot modules (Prompt 75).
   locator.registerSingleton<CategoryRepository>(

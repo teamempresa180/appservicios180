@@ -30,7 +30,7 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('¿Cómo deseas usar AppServicios?'), findsOneWidget);
+    expect(find.text('¿Cómo deseas usar SERVICIOS 180°?'), findsOneWidget);
     expect(find.text('Cliente'), findsOneWidget);
     expect(find.text('Proveedor'), findsOneWidget);
     expect(find.text('Continuar como Cliente'), findsOneWidget);

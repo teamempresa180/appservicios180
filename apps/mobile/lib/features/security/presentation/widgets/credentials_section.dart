@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_section.dart';
 import '../../models/security_display.dart';
@@ -22,7 +23,7 @@ class CredentialsSection extends StatelessWidget {
           '${data.activeCredentialsCount} activas · '
           '${data.expiredCredentialsCount} expiradas · '
           '${data.revokedCredentialsCount} revocadas',
-          style: Theme.of(context).textTheme.bodySmall,
+          style: context.textStyles.bodySmall,
         ),
         const SizedBox(height: AppSpacing.space8),
         for (final credential in data.credentials)
