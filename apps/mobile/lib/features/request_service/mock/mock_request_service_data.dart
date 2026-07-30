@@ -113,14 +113,19 @@ final Address mockRequestServiceAddress = Address(
 
 /// Simulated content not modeled by any domain entity — see
 /// `RequestServiceData` and the feature README for why each exists.
-final DateTime mockRequestServiceSelectedDate = DateTime(2026, 1, 10);
+///
+/// [defaultRequestServiceScheduledDate] used to be a fixed calendar date
+/// (2026-01-10) baked into this file — since that's now in the past for
+/// any real pilot run, a client who never touched the date picker would
+/// silently submit an order scheduled *before* they even created it.
+/// Computed fresh (relative to "now") instead, so the default the form
+/// opens with is always tomorrow.
+DateTime defaultRequestServiceScheduledDate() {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+}
 
 const String mockRequestServiceSelectedTime = '10:00';
-
-const String mockRequestServiceProblemDescription =
-    'Hay una fuga debajo del lavaplatos de la cocina que moja el mueble '
-    'inferior. Necesito que revisen la tubería y reemplacen lo que esté '
-    'dañado.';
 
 const List<String> mockRequestServiceAttachments = [
   'Foto de la fuga',

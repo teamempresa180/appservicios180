@@ -100,7 +100,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ScheduleSelector), findsOneWidget);
-    expect(find.text('10/01/2026'), findsOneWidget);
+    // The default date is always "tomorrow" (see
+    // `defaultRequestServiceScheduledDate` — a fixed past calendar date
+    // used to be submittable as-is), so this can't be a fixed literal.
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    final expectedDate =
+        '${tomorrow.day.toString().padLeft(2, '0')}/'
+        '${tomorrow.month.toString().padLeft(2, '0')}/'
+        '${tomorrow.year}';
+    expect(find.text(expectedDate), findsOneWidget);
     expect(find.text('10:00'), findsOneWidget);
   });
 
@@ -113,13 +121,19 @@ void main() {
     expect(find.textContaining('Calle 45'), findsOneWidget);
   });
 
-  testWidgets('shows the problem description field prefilled', (tester) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'shows the problem description field empty (not a canned example)',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
 
-    expect(find.byType(ProblemDescription), findsOneWidget);
-    expect(find.textContaining('fuga debajo del lavaplatos'), findsOneWidget);
-  });
+      expect(find.byType(ProblemDescription), findsOneWidget);
+      final field = tester.widget<TextFormField>(
+        find.widgetWithText(TextFormField, 'Descripción'),
+      );
+      expect(field.controller!.text, isEmpty);
+    },
+  );
 
   testWidgets('shows the attachments section with every attachment', (
     tester,
@@ -156,6 +170,17 @@ void main() {
       locator.registerSingleton<QuoteRepository>(MockQuoteRepository());
       addTearDown(locator.reset);
       await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      // The description field starts empty (no canned prefill — see
+      // `RequestServiceViewModel.load`), so a real value is required
+      // before "Continuar" allows the submit through.
+      await tester.ensureVisible(find.byType(ProblemDescription));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Descripción'),
+        'Hay una fuga en la cocina.',
+      );
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('Continuar'));
@@ -204,6 +229,14 @@ void main() {
             ),
           ),
         ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byType(ProblemDescription));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Descripción'),
+        'Hay una fuga en la cocina.',
       );
       await tester.pumpAndSettle();
 

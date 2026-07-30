@@ -30,14 +30,25 @@ class ServiceDetailViewModel extends ChangeNotifier {
   ServiceDetailLoadStatus _status = ServiceDetailLoadStatus.loading;
   ServiceDetailData? _data;
   String? _errorMessage;
+  bool _disposed = false;
 
   ServiceDetailLoadStatus get status => _status;
   ServiceDetailData? get data => _data;
   String? get errorMessage => _errorMessage;
 
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  void _notifyIfActive() {
+    if (!_disposed) notifyListeners();
+  }
+
   Future<void> load() async {
     _status = ServiceDetailLoadStatus.loading;
-    notifyListeners();
+    _notifyIfActive();
     try {
       final service = _presetService ?? await _repository.getService();
 
@@ -59,6 +70,7 @@ class ServiceDetailViewModel extends ChangeNotifier {
                     .reduce((a, b) => a + b) /
                 reviews.length;
 
+      if (_disposed) return;
       _data = ServiceDetailData(
         service: service,
         provider: provider,
@@ -72,10 +84,11 @@ class ServiceDetailViewModel extends ChangeNotifier {
       );
       _status = ServiceDetailLoadStatus.success;
     } on HttpException catch (exception) {
+      if (_disposed) return;
       _errorMessage = exception.message;
       _status = ServiceDetailLoadStatus.error;
     }
-    notifyListeners();
+    _notifyIfActive();
   }
 
   Future<void> retry() => load();

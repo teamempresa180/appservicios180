@@ -71,6 +71,17 @@ class ClientHomeOrdersViewModel extends ChangeNotifier {
   OrderJourneyInfo? _topJourney;
   OrderDisplay? _topDisplay;
   int _activeCount = 0;
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  void _notifyIfActive() {
+    if (!_disposed) notifyListeners();
+  }
 
   ClientHomeOrdersStatus get status => _status;
   Order? get topOrder => _topOrder;
@@ -115,7 +126,7 @@ class ClientHomeOrdersViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = ClientHomeOrdersStatus.loading;
-    notifyListeners();
+    _notifyIfActive();
     try {
       final ordersRepository = _ordersRepositoryOverride ?? locator<OrdersRepository>();
       final quoteRepository = _quoteRepositoryOverride ?? locator<QuoteRepository>();
@@ -137,13 +148,15 @@ class ClientHomeOrdersViewModel extends ChangeNotifier {
         }
       }
 
+      if (_disposed) return;
+
       if (active.isEmpty) {
         _status = ClientHomeOrdersStatus.empty;
         _topOrder = null;
         _topJourney = null;
         _topDisplay = null;
         _activeCount = 0;
-        notifyListeners();
+        _notifyIfActive();
         return;
       }
 
@@ -156,20 +169,24 @@ class ClientHomeOrdersViewModel extends ChangeNotifier {
       });
 
       final top = active.first;
+      final topDisplay = await OrderDisplayLoader.load(top.$1, ordersRepository);
+      if (_disposed) return;
+
       _topOrder = top.$1;
       _topJourney = top.$2;
       _activeCount = active.length;
-      _topDisplay = await OrderDisplayLoader.load(top.$1, ordersRepository);
+      _topDisplay = topDisplay;
 
       _status = ClientHomeOrdersStatus.active;
     } catch (_) {
+      if (_disposed) return;
       _status = ClientHomeOrdersStatus.empty;
       _topOrder = null;
       _topJourney = null;
       _topDisplay = null;
       _activeCount = 0;
     }
-    notifyListeners();
+    _notifyIfActive();
   }
 
   Future<void> retry() => load();

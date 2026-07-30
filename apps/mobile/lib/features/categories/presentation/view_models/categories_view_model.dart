@@ -20,16 +20,28 @@ class CategoriesViewModel extends ChangeNotifier {
   CategoriesLoadStatus _status = CategoriesLoadStatus.loading;
   List<CategoryDisplay> _categories = const [];
   String? _errorMessage;
+  bool _disposed = false;
 
   CategoriesLoadStatus get status => _status;
   List<CategoryDisplay> get categories => _categories;
   String? get errorMessage => _errorMessage;
 
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  void _notifyIfActive() {
+    if (!_disposed) notifyListeners();
+  }
+
   Future<void> load() async {
     _status = CategoriesLoadStatus.loading;
-    notifyListeners();
+    _notifyIfActive();
     try {
       final categories = await _repository.getAll();
+      if (_disposed) return;
       _categories = [
         for (final category in categories)
           CategoryDisplay(
@@ -39,10 +51,11 @@ class CategoriesViewModel extends ChangeNotifier {
       ];
       _status = CategoriesLoadStatus.success;
     } on HttpException catch (exception) {
+      if (_disposed) return;
       _errorMessage = exception.message;
       _status = CategoriesLoadStatus.error;
     }
-    notifyListeners();
+    _notifyIfActive();
   }
 
   Future<void> retry() => load();

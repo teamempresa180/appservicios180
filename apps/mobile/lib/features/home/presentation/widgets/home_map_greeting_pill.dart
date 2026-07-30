@@ -3,13 +3,18 @@ import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_radius.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_avatar.dart';
-import '../mock/mock_home_data.dart';
 import '../../../../core/session/user_role.dart';
 
 /// Compact greeting card floating over [HomeMapBackground] — the
 /// map-layout replacement for [HomeHeader], which needed a solid
 /// background to read as a full-width row and doesn't work floating
 /// over map tiles.
+///
+/// Deliberately a generic "Hola" with no name: the backend's
+/// `GET /authentications/me` (`CurrentUser`, see `core/session`) only
+/// returns `id`/`role` today — there is no real display name to show
+/// here yet, so this no longer invents one (it used to always read
+/// "Hola, María" regardless of who was actually logged in).
 class HomeMapGreetingPill extends StatelessWidget {
   const HomeMapGreetingPill({super.key, required this.role});
 
@@ -40,7 +45,7 @@ class HomeMapGreetingPill extends StatelessWidget {
           const SizedBox(width: AppSpacing.space8),
           Flexible(
             child: Text(
-              'Hola, ${MockHomeData.displayName(role)}',
+              'Hola',
               style: context.textStyles.labelLarge,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

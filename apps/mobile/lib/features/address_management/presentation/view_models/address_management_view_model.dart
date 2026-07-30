@@ -25,26 +25,40 @@ class AddressManagementViewModel extends ChangeNotifier {
   AddressManagementLoadStatus _status = AddressManagementLoadStatus.loading;
   List<AddressDisplay> _addresses = const [];
   String? _errorMessage;
+  bool _disposed = false;
 
   AddressManagementLoadStatus get status => _status;
   List<AddressDisplay> get addresses => _addresses;
   String? get errorMessage => _errorMessage;
 
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  void _notifyIfActive() {
+    if (!_disposed) notifyListeners();
+  }
+
   Future<void> load() async {
     _status = AddressManagementLoadStatus.loading;
-    notifyListeners();
+    _notifyIfActive();
     try {
       final addresses = await _repository.getAddresses();
       final profile = await _repository.getProfile();
-      _addresses = await Future.wait(
+      final displays = await Future.wait(
         addresses.map((address) => _buildDisplay(address, profile)),
       );
+      if (_disposed) return;
+      _addresses = displays;
       _status = AddressManagementLoadStatus.success;
     } on HttpException catch (exception) {
+      if (_disposed) return;
       _errorMessage = exception.message;
       _status = AddressManagementLoadStatus.error;
     }
-    notifyListeners();
+    _notifyIfActive();
   }
 
   Future<AddressDisplay> _buildDisplay(Address address, Profile profile) async {

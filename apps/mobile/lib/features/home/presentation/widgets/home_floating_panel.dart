@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../category/entities/category.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_radius.dart';
@@ -6,7 +7,6 @@ import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../../app_shell/navigation_intent.dart';
 import '../../../orders/presentation/pages/orders_page.dart';
-import '../mock/mock_home_data.dart';
 import '../view_models/client_home_orders_view_model.dart';
 import '../../../../core/session/user_role.dart';
 import 'home_active_order_card.dart';
@@ -28,6 +28,7 @@ class HomeFloatingPanel extends StatelessWidget {
     super.key,
     required this.role,
     this.ordersViewModel,
+    this.quickCategories = const [],
   });
 
   final UserRole role;
@@ -35,6 +36,12 @@ class HomeFloatingPanel extends StatelessWidget {
   /// Only meaningful for [UserRole.client] — `null` for Proveedor Home
   /// (which never instantiates this with one).
   final ClientHomeOrdersViewModel? ordersViewModel;
+
+  /// Real categories (see `ClientHomeContent`, which loads these from
+  /// the same `CategoryRepository` Marketplace/Buscar uses) to show in
+  /// the quick-categories row below. Empty while still loading (or on
+  /// failure) — the row simply doesn't render then, see [build].
+  final List<Category> quickCategories;
 
   void _openOrders(BuildContext context) {
     Navigator.of(context).push(
@@ -132,22 +139,24 @@ class HomeFloatingPanel extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (showActiveOrder) _buildActiveOrderSection(context, vm),
-                  const AppSectionTitle(title: '¿Qué servicio necesitas hoy?'),
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      bottom: AppSpacing.space16,
+                  if (quickCategories.isNotEmpty) ...[
+                    const AppSectionTitle(title: '¿Qué servicio necesitas hoy?'),
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: AppSpacing.space16,
+                      ),
+                      child: Text(
+                        'Elige una categoría para empezar a buscar.',
+                        style: context.textStyles.bodyMedium,
+                      ),
                     ),
-                    child: Text(
-                      'Elige una categoría para empezar a buscar.',
-                      style: context.textStyles.bodyMedium,
+                    QuickCategories(
+                      categories: quickCategories,
+                      onCategoryTap: (category) =>
+                          locator<AppShellNavigationIntent>()
+                              .goToBuscarWithCategory(category.name),
                     ),
-                  ),
-                  QuickCategories(
-                    categories: MockHomeData.quickCategories,
-                    onCategoryTap: (category) =>
-                        locator<AppShellNavigationIntent>()
-                            .goToBuscarWithCategory(category),
-                  ),
+                  ],
                 ],
               ),
             ),

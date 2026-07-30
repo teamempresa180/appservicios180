@@ -22,23 +22,37 @@ class SearchViewModel extends ChangeNotifier {
   SearchLoadStatus _status = SearchLoadStatus.loading;
   List<SearchResult> _results = const [];
   String? _errorMessage;
+  bool _disposed = false;
 
   SearchLoadStatus get status => _status;
   List<SearchResult> get results => _results;
   String? get errorMessage => _errorMessage;
 
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  void _notifyIfActive() {
+    if (!_disposed) notifyListeners();
+  }
+
   Future<void> load() async {
     _status = SearchLoadStatus.loading;
-    notifyListeners();
+    _notifyIfActive();
     try {
       final services = await _repository.getAll();
-      _results = await Future.wait(services.map(_buildResult));
+      final results = await Future.wait(services.map(_buildResult));
+      if (_disposed) return;
+      _results = results;
       _status = SearchLoadStatus.success;
     } on HttpException catch (exception) {
+      if (_disposed) return;
       _errorMessage = exception.message;
       _status = SearchLoadStatus.error;
     }
-    notifyListeners();
+    _notifyIfActive();
   }
 
   Future<SearchResult> _buildResult(Service service) async {

@@ -41,35 +41,65 @@ class RequestServiceViewModel extends ChangeNotifier {
   RequestServiceLoadStatus _status = RequestServiceLoadStatus.loading;
   RequestServiceData? _data;
   String? _errorMessage;
+  bool _disposed = false;
 
   RequestServiceLoadStatus get status => _status;
   RequestServiceData? get data => _data;
   String? get errorMessage => _errorMessage;
 
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  void _notifyIfActive() {
+    if (!_disposed) notifyListeners();
+  }
+
   Future<void> load() async {
     _status = RequestServiceLoadStatus.loading;
-    notifyListeners();
+    _notifyIfActive();
     try {
       final address = await _repository.getAddress();
+      if (_disposed) return;
       _data = RequestServiceData(
         category: category,
         provider: provider,
         service: service,
         profile: profile,
         address: address,
-        selectedDate: mockRequestServiceSelectedDate,
+        selectedDate: defaultRequestServiceScheduledDate(),
         selectedTime: mockRequestServiceSelectedTime,
-        problemDescription: mockRequestServiceProblemDescription,
+        // Empty, not a canned example description — a real client must
+        // type their own before "Continuar" is allowed (see
+        // `RequestServicePage._submit`'s non-empty check); a prefilled
+        // fake description used to be silently submittable as-is.
+        problemDescription: '',
         attachments: mockRequestServiceAttachments,
         priority: mockRequestServicePriority,
         simulatedLocationLabel: mockRequestServiceLocationLabel,
       );
       _status = RequestServiceLoadStatus.success;
     } on HttpException catch (exception) {
+      if (_disposed) return;
       _errorMessage = exception.message;
       _status = RequestServiceLoadStatus.error;
+    } catch (_) {
+      // `getAddress()` throws a plain `StateError` (not an
+      // `HttpException`) when the current session has no saved address
+      // at all — a real possibility for a brand-new pilot account that
+      // hasn't visited Direcciones yet. Uncaught, that used to leave
+      // this screen stuck on "Cargando solicitud..." forever (the
+      // exception never reached this view model's error state). Now it
+      // surfaces as a normal, retryable error instead.
+      if (_disposed) return;
+      _errorMessage =
+          'No tienes una dirección guardada. Agrega una dirección en '
+          'tu perfil antes de continuar.';
+      _status = RequestServiceLoadStatus.error;
     }
-    notifyListeners();
+    _notifyIfActive();
   }
 
   Future<void> retry() => load();

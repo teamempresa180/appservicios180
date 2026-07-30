@@ -44,11 +44,18 @@ class _ScheduleSelectorState extends State<ScheduleSelector> {
   }
 
   Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    // A service request can't be scheduled in the past — clamp both the
+    // picker's lower bound and its initial selection to today, in case
+    // [_date] (e.g. a stale default) is already behind "now".
+    final firstDate = today;
+    final initialDate = _date.isBefore(firstDate) ? firstDate : _date;
     final picked = await showDatePicker(
       context: context,
-      initialDate: _date,
-      firstDate: DateTime(_date.year - 1),
-      lastDate: DateTime(_date.year + 1),
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: DateTime(today.year + 1),
     );
     if (picked != null) {
       setState(() => _date = picked);

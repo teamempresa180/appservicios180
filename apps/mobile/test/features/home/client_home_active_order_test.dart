@@ -6,6 +6,7 @@ import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/features/home/presentation/view_models/client_home_orders_view_model.dart';
 import 'package:mobile/features/home/presentation/widgets/client_home_content.dart';
 import 'package:mobile/features/home/presentation/widgets/home_active_order_card.dart';
+import 'package:mobile/features/marketplace/repositories/mock_category_repository.dart';
 import 'package:mobile/features/orders/repositories/mock_orders_repository.dart';
 import 'package:mobile/features/quote/repositories/mock_quote_repository.dart';
 import 'package:mobile/features/reviews/repositories/mock_reviews_repository.dart';
@@ -34,6 +35,7 @@ void main() {
             quoteRepository: MockQuoteRepository(),
             reviewsRepository: MockReviewsRepository(),
           ),
+          categoryRepository: MockCategoryRepository(),
         ),
       ),
     );
@@ -87,6 +89,7 @@ void main() {
                 quoteRepository: MockQuoteRepository(),
                 reviewsRepository: MockReviewsRepository(),
               ),
+              categoryRepository: MockCategoryRepository(),
             ),
           ),
         ),

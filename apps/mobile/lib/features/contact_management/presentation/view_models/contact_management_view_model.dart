@@ -18,24 +18,37 @@ class ContactManagementViewModel extends ChangeNotifier {
   ContactManagementLoadStatus _status = ContactManagementLoadStatus.loading;
   ContactManagementDisplay? _data;
   String? _errorMessage;
+  bool _disposed = false;
 
   ContactManagementLoadStatus get status => _status;
   ContactManagementDisplay? get data => _data;
   String? get errorMessage => _errorMessage;
 
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  void _notifyIfActive() {
+    if (!_disposed) notifyListeners();
+  }
+
   Future<void> load() async {
     _status = ContactManagementLoadStatus.loading;
-    notifyListeners();
+    _notifyIfActive();
     try {
       final profile = await _repository.getProfile();
       final contacts = await _repository.getContacts();
+      if (_disposed) return;
       _data = ContactManagementDisplay(profile: profile, contacts: contacts);
       _status = ContactManagementLoadStatus.success;
     } on HttpException catch (exception) {
+      if (_disposed) return;
       _errorMessage = exception.message;
       _status = ContactManagementLoadStatus.error;
     }
-    notifyListeners();
+    _notifyIfActive();
   }
 
   Future<void> retry() => load();
