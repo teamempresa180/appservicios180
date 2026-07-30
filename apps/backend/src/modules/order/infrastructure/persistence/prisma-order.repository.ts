@@ -79,15 +79,14 @@ export class PrismaOrderRepository implements OrderRepository {
 
   async search(term: string): Promise<Order[]> {
     const rows = await this.prisma.orderModel.findMany({
+      where: {
+        OR: [
+          { title: { contains: term } },
+          { description: { contains: term } },
+        ],
+      },
       orderBy: { createdAt: 'desc' },
     });
-    const lower = term.toLowerCase();
-    return rows
-      .filter(
-        (row) =>
-          row.title.toLowerCase().includes(lower) ||
-          row.description.toLowerCase().includes(lower),
-      )
-      .map((row) => OrderPrismaMapper.toDomain(row));
+    return rows.map((row) => OrderPrismaMapper.toDomain(row));
   }
 }

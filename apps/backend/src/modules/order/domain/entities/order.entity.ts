@@ -63,4 +63,27 @@ export class Order extends Entity<OrderId> {
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
   }
+
+  /**
+   * Returns a new `Order` with the same id, copying every current
+   * property except those overridden. Used by use cases that
+   * transition status or patch mutable fields without repeating the
+   * full property list at each call site.
+   */
+  public with(overrides: Partial<OrderProps>): Order {
+    return new Order(this.id, {
+      identityId: this.identityId,
+      providerId: this.providerId,
+      serviceId: this.serviceId,
+      categoryId: this.categoryId,
+      title: this.title,
+      description: this.description,
+      scheduledDate: this.scheduledDate,
+      status: this.status,
+      priority: this.priority,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+      ...overrides,
+    });
+  }
 }

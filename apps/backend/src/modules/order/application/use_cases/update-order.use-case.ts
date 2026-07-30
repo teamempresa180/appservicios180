@@ -1,5 +1,4 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
-import { Order } from '../../domain/entities/order.entity';
 import { OrderRepository } from '../../domain/interfaces/order-repository.interface';
 import { OrderId } from '../../domain/value-objects/order-id.value-object';
 import { UpdateOrderCommand } from '../commands/update-order.command';
@@ -28,17 +27,11 @@ export class UpdateOrderUseCase {
       throw new NotFoundException(`Order ${command.id} not found`);
     }
 
-    const updated = new Order(existing.id, {
-      identityId: existing.identityId,
-      providerId: existing.providerId,
-      serviceId: existing.serviceId,
-      categoryId: existing.categoryId,
+    const updated = existing.with({
       title: command.title ?? existing.title,
       description: command.description ?? existing.description,
       scheduledDate: command.scheduledDate ?? existing.scheduledDate,
-      status: existing.status,
       priority: command.priority ?? existing.priority,
-      createdAt: existing.createdAt,
       updatedAt: new Date(),
     });
 

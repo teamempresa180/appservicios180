@@ -1,6 +1,5 @@
 import { Logger } from '@nestjs/common';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
-import { Order } from '../../domain/entities/order.entity';
 import { OrderRepository } from '../../domain/interfaces/order-repository.interface';
 import { OrderId } from '../../domain/value-objects/order-id.value-object';
 import { OrderStatus } from '../../domain/value-objects/order-status.value-object';
@@ -26,17 +25,8 @@ export class CancelOrderUseCase {
       throw new NotFoundException(`Order ${command.id} not found`);
     }
 
-    const cancelled = new Order(existing.id, {
-      identityId: existing.identityId,
-      providerId: existing.providerId,
-      serviceId: existing.serviceId,
-      categoryId: existing.categoryId,
-      title: existing.title,
-      description: existing.description,
-      scheduledDate: existing.scheduledDate,
+    const cancelled = existing.with({
       status: OrderStatus.Cancelled,
-      priority: existing.priority,
-      createdAt: existing.createdAt,
       updatedAt: new Date(),
     });
 
