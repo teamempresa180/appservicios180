@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
 import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
@@ -29,6 +30,8 @@ import { OrderValidator } from '../validators/order.validator';
  * `ProviderRepository`/`ServiceRepository` only for a direct hire.
  */
 export class CreateOrderUseCase {
+  private readonly logger = new Logger(CreateOrderUseCase.name);
+
   constructor(
     private readonly orderRepository: OrderRepository,
     private readonly identityRepository: IdentityRepository,
@@ -89,6 +92,9 @@ export class CreateOrderUseCase {
     });
 
     await this.orderRepository.save(order);
+    this.logger.log(
+      `Order created id=${order.id.value} identityId=${command.identityId} status=${order.status}`,
+    );
     return OrderMapper.toDto(order);
   }
 }

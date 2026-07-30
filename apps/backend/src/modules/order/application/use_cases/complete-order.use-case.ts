@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
 import { Order } from '../../domain/entities/order.entity';
@@ -17,6 +18,8 @@ import { OrderMapper } from '../mappers/order.mapper';
  * `Payment`/`Review` are their own bounded contexts).
  */
 export class CompleteOrderUseCase {
+  private readonly logger = new Logger(CompleteOrderUseCase.name);
+
   constructor(private readonly orderRepository: OrderRepository) {}
 
   async execute(command: CompleteOrderCommand): Promise<OrderDto> {
@@ -46,6 +49,7 @@ export class CompleteOrderUseCase {
     });
 
     await this.orderRepository.save(completed);
+    this.logger.log(`Order completed (service finished) id=${completed.id.value}`);
     return OrderMapper.toDto(completed);
   }
 }

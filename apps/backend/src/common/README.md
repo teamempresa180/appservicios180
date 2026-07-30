@@ -9,10 +9,18 @@ common/
   logger/
     app-logger.service.ts   — envuelve el Logger de Nest, inyectable, reutilizable
     logger.module.ts        — @Global(), expone AppLogger
+  observability/
+    observability.port.ts             — ObservabilityPort (interfaz) + token OBSERVABILITY_PORT
+    logger-observability.adapter.ts    — implementación por defecto, delega en AppLogger
+    observability.module.ts           — @Global(), expone OBSERVABILITY_PORT
+    (seam para un futuro Sentry/OpenTelemetry sin tocar los call sites;
+    ninguna dependencia nueva instalada)
   filters/
     error-response.ts           — forma única de toda respuesta de error
     domain-exception.filter.ts  — DomainException → HTTP (404/400/422)
     all-exceptions.filter.ts    — fallback: HttpException de Nest + errores inesperados → 500
+    (los 500 nunca reenvían el mensaje/stack real al cliente — solo
+    "Internal server error"; el detalle real se loguea server-side)
   interceptors/
     logging.interceptor.ts  — loguea método/ruta/duración de cada request
   pipes/       (reservado — ver README propio)

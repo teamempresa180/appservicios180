@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { Order } from '../../domain/entities/order.entity';
 import { OrderRepository } from '../../domain/interfaces/order-repository.interface';
@@ -14,6 +15,8 @@ import { OrderMapper } from '../mappers/order.mapper';
  * any found entity.
  */
 export class CancelOrderUseCase {
+  private readonly logger = new Logger(CancelOrderUseCase.name);
+
   constructor(private readonly orderRepository: OrderRepository) {}
 
   async execute(command: CancelOrderCommand): Promise<OrderDto> {
@@ -38,6 +41,7 @@ export class CancelOrderUseCase {
     });
 
     await this.orderRepository.save(cancelled);
+    this.logger.log(`Order cancelled id=${cancelled.id.value}`);
     return OrderMapper.toDto(cancelled);
   }
 }

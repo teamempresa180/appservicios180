@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from './config/config.module';
 import { LoggerModule } from './common/logger/logger.module';
+import { ObservabilityModule } from './common/observability/observability.module';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { IdentityPresentationModule } from './modules/identity/presentation/identity.module';
 import { ProfilesPresentationModule } from './modules/profiles/presentation/profile.module';
@@ -39,6 +40,7 @@ import { AuditPresentationModule } from './modules/audit/presentation/audit.modu
     // refresh token is the realistic threat, not general API abuse.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     LoggerModule,
+    ObservabilityModule,
     PrismaModule,
     IdentityPresentationModule,
     ProfilesPresentationModule,
