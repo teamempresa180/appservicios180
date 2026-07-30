@@ -66,8 +66,8 @@ export class PrismaIdentityRepository implements IdentityRepository {
     const rows = await this.prisma.identityModel.findMany({
       where: {
         OR: [
-          { fullName: { contains: term, mode: 'insensitive' } },
-          { documentNumber: { contains: term, mode: 'insensitive' } },
+          { fullName: { contains: term } },
+          { documentNumber: { contains: term } },
         ],
       },
       orderBy: { createdAt: 'desc' },

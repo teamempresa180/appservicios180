@@ -68,9 +68,9 @@ export class PrismaAddressRepository implements AddressRepository {
     const rows = await this.prisma.addressModel.findMany({
       where: {
         OR: [
-          { alias: { contains: term, mode: 'insensitive' } },
-          { fullAddress: { contains: term, mode: 'insensitive' } },
-          { city: { contains: term, mode: 'insensitive' } },
+          { alias: { contains: term } },
+          { fullAddress: { contains: term } },
+          { city: { contains: term } },
         ],
       },
       orderBy: { createdAt: 'desc' },

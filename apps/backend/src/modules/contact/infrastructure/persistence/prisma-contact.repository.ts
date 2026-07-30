@@ -66,7 +66,7 @@ export class PrismaContactRepository implements ContactRepository {
 
   async search(term: string): Promise<Contact[]> {
     const rows = await this.prisma.contactModel.findMany({
-      where: { value: { contains: term, mode: 'insensitive' } },
+      where: { value: { contains: term } },
       orderBy: { createdAt: 'desc' },
     });
     return rows.map((row) => ContactPrismaMapper.toDomain(row));
