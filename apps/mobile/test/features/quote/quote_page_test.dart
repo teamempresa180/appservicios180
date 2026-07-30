@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -32,15 +33,18 @@ class _FailingAcceptQuoteRepository implements QuoteRepository {
   final QuoteRepository _delegate = MockQuoteRepository();
 
   @override
-  Future<List<Quote>> getQuotesForOrder(OrderId orderId) =>
-      _delegate.getQuotesForOrder(orderId);
+  Future<List<Quote>> getQuotesForOrder(
+    OrderId orderId, {
+    CancelToken? cancelToken,
+  }) => _delegate.getQuotesForOrder(orderId, cancelToken: cancelToken);
 
   @override
-  Future<Provider> getProviderFor(Quote quote) =>
-      _delegate.getProviderFor(quote);
+  Future<Provider> getProviderFor(Quote quote, {CancelToken? cancelToken}) =>
+      _delegate.getProviderFor(quote, cancelToken: cancelToken);
 
   @override
-  Future<Profile> getProfileFor(Quote quote) => _delegate.getProfileFor(quote);
+  Future<Profile> getProfileFor(Quote quote, {CancelToken? cancelToken}) =>
+      _delegate.getProfileFor(quote, cancelToken: cancelToken);
 
   @override
   Future<Quote> createQuote({
@@ -140,6 +144,10 @@ void main() {
       await tester.tap(find.text('Aceptar cotización').first);
       await tester.pumpAndSettle();
 
+      // Confirmation dialog — accepting a quote is irreversible.
+      await tester.tap(find.widgetWithText(AppButton, 'Aceptar').last);
+      await tester.pumpAndSettle();
+
       expect(find.text('Cotización aceptada.'), findsOneWidget);
       expect(find.text('Conversación'), findsWidgets);
     },
@@ -164,6 +172,10 @@ void main() {
       await tester.ensureVisible(find.text('Aceptar cotización').first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Aceptar cotización').first);
+      await tester.pumpAndSettle();
+
+      // Confirmation dialog — accepting a quote is irreversible.
+      await tester.tap(find.widgetWithText(AppButton, 'Aceptar').last);
       await tester.pumpAndSettle();
 
       expect(find.text('No se pudo aceptar la cotización.'), findsOneWidget);

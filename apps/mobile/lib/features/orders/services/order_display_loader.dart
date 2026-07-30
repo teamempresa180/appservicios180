@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../order/entities/order.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
@@ -17,17 +19,25 @@ import '../repositories/orders_repository.dart';
 abstract final class OrderDisplayLoader {
   static Future<OrderDisplay> load(
     Order order,
-    OrdersRepository repository,
-  ) async {
-    final category = await repository.getCategoryFor(order);
-    final service = await _orNull<Service>(() => repository.getServiceFor(order));
+    OrdersRepository repository, {
+    CancelToken? cancelToken,
+  }) async {
+    final category = await repository.getCategoryFor(
+      order,
+      cancelToken: cancelToken,
+    );
+    final service = await _orNull<Service>(
+      () => repository.getServiceFor(order, cancelToken: cancelToken),
+    );
     final provider = await _orNull<Provider>(
-      () => repository.getProviderFor(order),
+      () => repository.getProviderFor(order, cancelToken: cancelToken),
     );
     final profile = await _orNull<Profile>(
-      () => repository.getProfileFor(order),
+      () => repository.getProfileFor(order, cancelToken: cancelToken),
     );
-    final quote = await _orNull<Quote>(() => repository.getQuoteFor(order));
+    final quote = await _orNull<Quote>(
+      () => repository.getQuoteFor(order, cancelToken: cancelToken),
+    );
     return OrderDisplay(
       order: order,
       service: service,

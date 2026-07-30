@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../order/entities/order.dart';
 import '../../../order/journey/client_order_journey.dart';
 import '../../../order/journey/order_journey_info.dart';
@@ -18,9 +20,13 @@ abstract final class OrderJourneyLoader {
     required Order order,
     required QuoteRepository quoteRepository,
     required List<Review> reviews,
+    CancelToken? cancelToken,
   }) async {
     final quotes = order.status == OrderStatus.pending
-        ? await quoteRepository.getQuotesForOrder(order.id)
+        ? await quoteRepository.getQuotesForOrder(
+            order.id,
+            cancelToken: cancelToken,
+          )
         : const <Quote>[];
     final hasReviewed = reviews.any((review) => review.orderId == order.id);
     return ClientOrderJourney.derive(

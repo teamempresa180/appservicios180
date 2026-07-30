@@ -3,8 +3,13 @@ import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../notifications/presentation/pages/notifications_page.dart';
 
-/// Secondary chat actions (view order, more options). Purely visual —
-/// [onViewOrder] is a no-op by default. "Más opciones" opens the
+/// Secondary chat actions (view order, more options). [onViewOrder]
+/// defaults to popping this screen — every call site pushes `ChatPage`
+/// as a route from the order/quote-scoped screen it belongs to (see
+/// `OrderActions`, `ProviderRequestsPage`, `QuotePage`), so "Ver orden"
+/// returning there via `Navigator.pop` is a real, working action
+/// instead of the previous no-op (a dead button whose icon suggested
+/// it should navigate somewhere). "Más opciones" opens the
 /// (visual-only, fixed mock) Notifications screen — the only change
 /// authorized in the Notifications prompt, since an overflow/"more"
 /// menu is a natural place to reach the notification center. See the
@@ -31,7 +36,13 @@ class ChatActions extends StatelessWidget {
     return Row(
       children: [
         IconButton(
-          onPressed: onViewOrder ?? () {},
+          onPressed:
+              onViewOrder ??
+              () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              },
           icon: Icon(
             Icons.receipt_long_outlined,
             color: context.colors.primary,

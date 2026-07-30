@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -33,26 +34,27 @@ class _FakeReviewsRepository implements ReviewsRepository {
   final _delegate = MockReviewsRepository();
 
   @override
-  Future<List<Review>> getReviews() {
+  Future<List<Review>> getReviews({CancelToken? cancelToken}) {
     if (neverResolves) return Completer<List<Review>>().future;
     if (forceEmpty) return Future.value(const []);
-    return _delegate.getReviews();
+    return _delegate.getReviews(cancelToken: cancelToken);
   }
 
   @override
-  Future<Provider> getProviderFor(Review review) =>
-      _delegate.getProviderFor(review);
+  Future<Provider> getProviderFor(Review review, {CancelToken? cancelToken}) =>
+      _delegate.getProviderFor(review, cancelToken: cancelToken);
 
   @override
-  Future<Profile> getProfileFor(Review review) =>
-      _delegate.getProfileFor(review);
+  Future<Profile> getProfileFor(Review review, {CancelToken? cancelToken}) =>
+      _delegate.getProfileFor(review, cancelToken: cancelToken);
 
   @override
-  Future<Order> getOrderFor(Review review) => _delegate.getOrderFor(review);
+  Future<Order> getOrderFor(Review review, {CancelToken? cancelToken}) =>
+      _delegate.getOrderFor(review, cancelToken: cancelToken);
 
   @override
-  Future<Service> getServiceFor(Review review) =>
-      _delegate.getServiceFor(review);
+  Future<Service> getServiceFor(Review review, {CancelToken? cancelToken}) =>
+      _delegate.getServiceFor(review, cancelToken: cancelToken);
 
   @override
   Future<Review> createReview({

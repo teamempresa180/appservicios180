@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import '../../../../core/network/http_exceptions.dart';
+import '../../../../core/presentation/cancellable_view_model.dart';
 import '../../../../order/entities/order.dart';
 import '../../../../order/models/order_status.dart';
 import '../../../../provider/entities/provider.dart';
@@ -30,7 +30,7 @@ enum ProviderRequestsLoadStatus { loading, success, error }
 /// reloads the full list afterwards rather than patching local state,
 /// so the provider always sees the same "next relevant order" section
 /// the real backend would return on any other refresh.
-class ProviderRequestsViewModel extends ChangeNotifier {
+class ProviderRequestsViewModel extends CancellableViewModel {
   ProviderRequestsViewModel(this._repository, {required ReviewsRepository reviewsRepository})
     : _reviewsRepository = reviewsRepository;
 
@@ -71,30 +71,36 @@ class ProviderRequestsViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = ProviderRequestsLoadStatus.loading;
-    notifyListeners();
+    notifySafely();
     try {
       _provider = await _repository.getCurrentProvider();
       final orders = await _repository.getRelevantOrders();
-      final reviews = await _reviewsRepository.getReviews();
+      final reviews = await _reviewsRepository.getReviews(
+        cancelToken: cancelToken,
+      );
       _requests = await Future.wait(
         orders.map((order) => _buildDisplay(order, reviews)),
       );
       _status = ProviderRequestsLoadStatus.success;
     } on HttpException catch (exception) {
+      if (exception is CancelledHttpException) return;
       _errorMessage = exception.message;
       _status = ProviderRequestsLoadStatus.error;
     }
-    notifyListeners();
+    notifySafely();
   }
 
   Future<ProviderRequestDisplay> _buildDisplay(
     Order order,
     List<Review> reviews,
   ) async {
-    final category = await _repository.getCategoryFor(order);
+    final category = await _repository.getCategoryFor(
+      order,
+      cancelToken: cancelToken,
+    );
     final clientProfile = await _repository.getClientProfileFor(order);
     final service = order.isDirectHire
-        ? await _repository.getServiceFor(order)
+        ? await _repository.getServiceFor(order, cancelToken: cancelToken)
         : null;
     final provider = _provider;
     final myQuote = provider == null

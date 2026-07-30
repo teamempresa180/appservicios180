@@ -71,7 +71,12 @@ class _ChatPageState extends State<ChatPage> {
         );
       case ChatLoadStatus.success:
         final data = _viewModel.data!;
-        if (data.messages.isEmpty) return const ChatEmptyState();
+        // A brand-new conversation (e.g. right after a Quote was just
+        // accepted) has zero messages — it must still show the header
+        // and, critically, the composer, so the client/provider can
+        // send the *first* message. Previously this returned only
+        // `ChatEmptyState` and hid `MessageInput` entirely, a dead end
+        // with no way to start the conversation.
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -84,7 +89,10 @@ class _ChatPageState extends State<ChatPage> {
               ],
             ),
             const SizedBox(height: AppSpacing.space16),
-            SlideIn(child: ChatMessages(data: data)),
+            if (data.messages.isEmpty)
+              const ChatEmptyState()
+            else
+              SlideIn(child: ChatMessages(data: data)),
             if (data.isTyping) ...[
               const SizedBox(height: AppSpacing.space8),
               const TypingIndicator(),

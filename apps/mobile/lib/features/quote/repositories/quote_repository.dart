@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
 import '../../../quote/entities/quote.dart';
@@ -16,10 +18,17 @@ import '../../../provider/models/provider_id.dart';
 /// (real backend).
 abstract class QuoteRepository {
   /// Every `Quote` submitted for [orderId], newest first.
-  Future<List<Quote>> getQuotesForOrder(OrderId orderId);
+  ///
+  /// [cancelToken] lets a caller (typically a
+  /// `CancellableViewModel`-based view model — see
+  /// `core/presentation/cancellable_view_model.dart`) abort this
+  /// request if it's torn down before the response arrives. Optional
+  /// and `null` by default so existing call sites keep compiling
+  /// unchanged.
+  Future<List<Quote>> getQuotesForOrder(OrderId orderId, {CancelToken? cancelToken});
 
-  Future<Provider> getProviderFor(Quote quote);
-  Future<Profile> getProfileFor(Quote quote);
+  Future<Provider> getProviderFor(Quote quote, {CancelToken? cancelToken});
+  Future<Profile> getProfileFor(Quote quote, {CancelToken? cancelToken});
 
   /// Submits a new `Quote` a provider offers for an order — used by the
   /// provider-side flow (out of scope for this pass, kept here so the

@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../identity/models/identity_id.dart';
 import '../../../order/entities/order.dart';
 import '../../../order/models/order_id.dart';
@@ -17,11 +19,17 @@ import '../../../service/entities/service.dart';
 /// **list** of reviews (not a single fixed record) — but still no
 /// id-based lookup for a single review's own detail page.
 abstract class ReviewsRepository {
-  Future<List<Review>> getReviews();
-  Future<Provider> getProviderFor(Review review);
-  Future<Profile> getProfileFor(Review review);
-  Future<Order> getOrderFor(Review review);
-  Future<Service> getServiceFor(Review review);
+  /// [cancelToken] lets a caller (typically a
+  /// `CancellableViewModel`-based view model — see
+  /// `core/presentation/cancellable_view_model.dart`) abort this
+  /// request if it's torn down before the response arrives. Optional
+  /// and `null` by default so existing call sites keep compiling
+  /// unchanged.
+  Future<List<Review>> getReviews({CancelToken? cancelToken});
+  Future<Provider> getProviderFor(Review review, {CancelToken? cancelToken});
+  Future<Profile> getProfileFor(Review review, {CancelToken? cancelToken});
+  Future<Order> getOrderFor(Review review, {CancelToken? cancelToken});
+  Future<Service> getServiceFor(Review review, {CancelToken? cancelToken});
 
   /// Submits a real rating for a completed order (`POST /reviews` on the
   /// real backend) — backs the "Calificar" action once an order is
