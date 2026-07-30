@@ -65,11 +65,9 @@ export class PrismaQuoteRepository implements QuoteRepository {
 
   async search(term: string): Promise<Quote[]> {
     const rows = await this.prisma.quoteModel.findMany({
+      where: { notes: { contains: term } },
       orderBy: { createdAt: 'desc' },
     });
-    const lower = term.toLowerCase();
-    return rows
-      .filter((row) => row.notes.toLowerCase().includes(lower))
-      .map((row) => QuotePrismaMapper.toDomain(row));
+    return rows.map((row) => QuotePrismaMapper.toDomain(row));
   }
 }

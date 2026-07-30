@@ -1,9 +1,7 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
-import { Order } from '../../../order/domain/entities/order.entity';
 import { OrderRepository } from '../../../order/domain/interfaces/order-repository.interface';
 import { OrderStatus } from '../../../order/domain/value-objects/order-status.value-object';
-import { Quote } from '../../domain/entities/quote.entity';
 import { QuoteRepository } from '../../domain/interfaces/quote-repository.interface';
 import { QuoteId } from '../../domain/value-objects/quote-id.value-object';
 import { QuoteStatus } from '../../domain/value-objects/quote-status.value-object';
@@ -59,32 +57,17 @@ export class AcceptQuoteUseCase {
             `Order ${order.id.value} is a direct hire for a different Provider`,
           );
         }
-        const acceptedOrder = new Order(order.id, {
-          identityId: order.identityId,
+        const acceptedOrder = order.with({
           providerId: order.providerId ?? existing.providerId,
-          serviceId: order.serviceId,
-          categoryId: order.categoryId,
-          title: order.title,
-          description: order.description,
-          scheduledDate: order.scheduledDate,
           status: OrderStatus.Accepted,
-          priority: order.priority,
-          createdAt: order.createdAt,
           updatedAt: new Date(),
         });
         await this.orderRepository.save(acceptedOrder);
       }
     }
 
-    const accepted = new Quote(existing.id, {
-      orderId: existing.orderId,
-      providerId: existing.providerId,
-      proposedPrice: existing.proposedPrice,
-      estimatedDuration: existing.estimatedDuration,
-      notes: existing.notes,
+    const accepted = existing.with({
       status: QuoteStatus.Accepted,
-      type: existing.type,
-      createdAt: existing.createdAt,
       updatedAt: new Date(),
     });
 

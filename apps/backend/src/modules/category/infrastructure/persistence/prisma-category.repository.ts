@@ -66,8 +66,8 @@ export class PrismaCategoryRepository implements CategoryRepository {
     const rows = await this.prisma.categoryModel.findMany({
       where: {
         OR: [
-          { name: { contains: term, mode: 'insensitive' } },
-          { description: { contains: term, mode: 'insensitive' } },
+          { name: { contains: term } },
+          { description: { contains: term } },
         ],
       },
       orderBy: { name: 'asc' },

@@ -1,6 +1,5 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
-import { Order } from '../../domain/entities/order.entity';
 import { OrderRepository } from '../../domain/interfaces/order-repository.interface';
 import { OrderId } from '../../domain/value-objects/order-id.value-object';
 import { OrderStatus } from '../../domain/value-objects/order-status.value-object';
@@ -31,17 +30,8 @@ export class StartOrderUseCase {
       );
     }
 
-    const started = new Order(existing.id, {
-      identityId: existing.identityId,
-      providerId: existing.providerId,
-      serviceId: existing.serviceId,
-      categoryId: existing.categoryId,
-      title: existing.title,
-      description: existing.description,
-      scheduledDate: existing.scheduledDate,
+    const started = existing.with({
       status: OrderStatus.InProgress,
-      priority: existing.priority,
-      createdAt: existing.createdAt,
       updatedAt: new Date(),
     });
 

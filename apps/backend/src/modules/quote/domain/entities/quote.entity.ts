@@ -45,4 +45,25 @@ export class Quote extends Entity<QuoteId> {
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
   }
+
+  /**
+   * Returns a new `Quote` with the same id, copying every current
+   * property except those overridden. Used by use cases that
+   * transition status or patch mutable fields without repeating the
+   * full property list at each call site.
+   */
+  public with(overrides: Partial<QuoteProps>): Quote {
+    return new Quote(this.id, {
+      orderId: this.orderId,
+      providerId: this.providerId,
+      proposedPrice: this.proposedPrice,
+      estimatedDuration: this.estimatedDuration,
+      notes: this.notes,
+      status: this.status,
+      type: this.type,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+      ...overrides,
+    });
+  }
 }

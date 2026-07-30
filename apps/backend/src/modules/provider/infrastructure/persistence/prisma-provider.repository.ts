@@ -93,7 +93,6 @@ export class PrismaProviderRepository implements ProviderRepository {
           ? {
               specialization: {
                 contains: specialization,
-                mode: 'insensitive',
               },
             }
           : {}),

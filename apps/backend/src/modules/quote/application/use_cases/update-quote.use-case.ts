@@ -1,5 +1,4 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
-import { Quote } from '../../domain/entities/quote.entity';
 import { QuoteRepository } from '../../domain/interfaces/quote-repository.interface';
 import { QuoteId } from '../../domain/value-objects/quote-id.value-object';
 import { UpdateQuoteCommand } from '../commands/update-quote.command';
@@ -25,16 +24,11 @@ export class UpdateQuoteUseCase {
       throw new NotFoundException(`Quote ${command.id} not found`);
     }
 
-    const updated = new Quote(existing.id, {
-      orderId: existing.orderId,
-      providerId: existing.providerId,
+    const updated = existing.with({
       proposedPrice: command.proposedPrice ?? existing.proposedPrice,
       estimatedDuration:
         command.estimatedDuration ?? existing.estimatedDuration,
       notes: command.notes ?? existing.notes,
-      status: existing.status,
-      type: existing.type,
-      createdAt: existing.createdAt,
       updatedAt: new Date(),
     });
 
