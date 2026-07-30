@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../category/entities/category.dart';
 import '../../../order/entities/order.dart';
 import '../../../profiles/entities/profile.dart';
@@ -31,12 +33,18 @@ import '../../../service/entities/service.dart';
 /// `Order` directly (see `GET /orders/relevant-for-provider` on the
 /// real backend).
 abstract class OrdersRepository {
-  Future<List<Order>> getOrders();
-  Future<Category> getCategoryFor(Order order);
-  Future<Service> getServiceFor(Order order);
-  Future<Provider> getProviderFor(Order order);
-  Future<Profile> getProfileFor(Order order);
-  Future<Quote> getQuoteFor(Order order);
+  /// [cancelToken] lets a caller (typically a
+  /// `CancellableViewModel`-based view model — see
+  /// `core/presentation/cancellable_view_model.dart`) abort this
+  /// request if it's torn down before the response arrives. Optional
+  /// and `null` by default so existing call sites keep compiling
+  /// unchanged.
+  Future<List<Order>> getOrders({CancelToken? cancelToken});
+  Future<Category> getCategoryFor(Order order, {CancelToken? cancelToken});
+  Future<Service> getServiceFor(Order order, {CancelToken? cancelToken});
+  Future<Provider> getProviderFor(Order order, {CancelToken? cancelToken});
+  Future<Profile> getProfileFor(Order order, {CancelToken? cancelToken});
+  Future<Quote> getQuoteFor(Order order, {CancelToken? cancelToken});
 
   /// The client who placed [order] — distinct from [getProfileFor],
   /// which returns the *provider's* profile. Backs the provider-facing

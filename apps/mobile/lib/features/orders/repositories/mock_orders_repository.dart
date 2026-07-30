@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../category/entities/category.dart';
 import '../../../order/entities/order.dart';
 import '../../../order/models/order_status.dart';
@@ -27,31 +29,36 @@ class MockOrdersRepository implements OrdersRepository {
   final List<Quote> _providerQuotes = List.of(mockProviderRequestQuotes);
 
   @override
-  Future<List<Order>> getOrders() => Future.value(List.unmodifiable(_orders));
+  Future<List<Order>> getOrders({CancelToken? cancelToken}) =>
+      Future.value(List.unmodifiable(_orders));
 
   @override
-  Future<Service> getServiceFor(Order order) => Future.value(
-    mockOrderServices[order.id] ?? mockProviderRequestServices[order.id]!,
-  );
+  Future<Service> getServiceFor(Order order, {CancelToken? cancelToken}) =>
+      Future.value(
+        mockOrderServices[order.id] ?? mockProviderRequestServices[order.id]!,
+      );
 
   @override
-  Future<Provider> getProviderFor(Order order) =>
+  Future<Provider> getProviderFor(Order order, {CancelToken? cancelToken}) =>
       Future.value(mockOrderProviders[order.id] ?? mockOrdersProvider);
 
   @override
-  Future<Profile> getProfileFor(Order order) =>
+  Future<Profile> getProfileFor(Order order, {CancelToken? cancelToken}) =>
       Future.value(mockOrderProfiles[order.id] ?? mockOrdersProfile);
 
   @override
-  Future<Category> getCategoryFor(Order order) => Future.value(
-    mockOrderCategories[order.id] ?? mockProviderRequestCategories[order.id]!,
-  );
+  Future<Category> getCategoryFor(Order order, {CancelToken? cancelToken}) =>
+      Future.value(
+        mockOrderCategories[order.id] ??
+            mockProviderRequestCategories[order.id]!,
+      );
 
   @override
-  Future<Quote> getQuoteFor(Order order) => Future.value(
-    mockOrderQuotes[order.id] ??
-        _providerQuotes.firstWhere((quote) => quote.orderId == order.id),
-  );
+  Future<Quote> getQuoteFor(Order order, {CancelToken? cancelToken}) =>
+      Future.value(
+        mockOrderQuotes[order.id] ??
+            _providerQuotes.firstWhere((quote) => quote.orderId == order.id),
+      );
 
   @override
   Future<Profile> getClientProfileFor(Order order) => Future.value(

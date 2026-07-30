@@ -6,8 +6,27 @@ import 'package:dio/dio.dart';
 /// request today, which is safe for the read-heavy pilot modules; a
 /// non-idempotent write endpoint that needs different behavior can opt
 /// out via `extra['noRetry'] = true` on the request options.
+///
+/// Retries are replayed through [requestDio] — the same fully-configured
+/// [Dio] instance this interceptor is itself attached to (see
+/// `ApiClient`'s constructor, which passes itself in) — never a bare
+/// `Dio()`. A brand-new bare instance has no interceptors attached, so a
+/// retried request would silently skip `AuthInterceptor` (could resend
+/// with a stale/missing bearer token), `LoggingInterceptor` (retries
+/// become invisible in logs) and `RefreshInterceptor` (a `401` hit
+/// during a retry would never trigger a token refresh) — exactly the
+/// bug this class used to have.
 class RetryInterceptor extends Interceptor {
-  RetryInterceptor({this.maxRetries = 2, this.delay = const Duration(milliseconds: 300)});
+  RetryInterceptor(
+    this.requestDio, {
+    this.maxRetries = 2,
+    this.delay = const Duration(milliseconds: 300),
+  });
+
+  /// The fully-configured [Dio] client (auth + retry + refresh +
+  /// logging interceptors attached) to replay retried requests
+  /// through.
+  final Dio requestDio;
 
   final int maxRetries;
   final Duration delay;
@@ -37,7 +56,7 @@ class RetryInterceptor extends Interceptor {
     options.extra['retryAttempt'] = attempt + 1;
 
     try {
-      final response = await Dio().fetch<dynamic>(options);
+      final response = await requestDio.fetch<dynamic>(options);
       handler.resolve(response);
     } on DioException catch (retryError) {
       handler.next(retryError);

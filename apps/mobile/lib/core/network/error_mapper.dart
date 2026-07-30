@@ -20,6 +20,14 @@ abstract final class ErrorMapper {
 
     final response = exception.response;
     if (response == null) {
+      // Anything else with no response at all — most commonly
+      // `DioExceptionType.unknown` wrapping a raw `SocketException`
+      // (DNS lookup failure, connection refused, airplane mode) that
+      // didn't get bucketed into `connectionError` above by this Dio
+      // version/platform. Never surfaced as a generic "request failed"
+      // — a real phone on flaky WiFi/mobile data hits this constantly
+      // during the pilot, and it must read as "no internet", not as a
+      // server-side failure.
       return NetworkHttpException(
         exception.message ?? 'Could not reach the server',
       );

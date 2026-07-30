@@ -18,7 +18,10 @@ class ApiClient {
   ApiClient(TokenProvider tokenProvider) : _dio = Dio(_baseOptions) {
     _dio.interceptors.addAll([
       AuthInterceptor(tokenProvider),
-      RetryInterceptor(),
+      // Retries replay through `_dio` itself (see `RetryInterceptor`'s
+      // own doc comment) so a retried request still goes through auth,
+      // refresh and logging — not a bare, interceptor-less `Dio()`.
+      RetryInterceptor(_dio),
       RefreshInterceptor(tokenProvider, _dio),
       LoggingInterceptor(),
     ]);

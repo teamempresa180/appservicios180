@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../category/entities/category.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
@@ -39,8 +41,11 @@ class HttpOrdersRepository implements OrdersRepository {
   final SessionManager _sessionManager;
 
   @override
-  Future<List<Order>> getOrders() async {
-    final items = await _apiClient.getList('/orders/mine');
+  Future<List<Order>> getOrders({CancelToken? cancelToken}) async {
+    final items = await _apiClient.getList(
+      '/orders/mine',
+      cancelToken: cancelToken,
+    );
     return items
         .cast<Map<String, dynamic>>()
         .map(OrderHttpMapper.fromJson)
@@ -48,45 +53,59 @@ class HttpOrdersRepository implements OrdersRepository {
   }
 
   @override
-  Future<Service> getServiceFor(Order order) async {
+  Future<Service> getServiceFor(Order order, {CancelToken? cancelToken}) async {
     final serviceId = order.serviceId;
     if (serviceId == null) {
       throw StateError('Order ${order.id.value} has no service assigned yet');
     }
-    final json = await _apiClient.get('/services/${serviceId.value}');
+    final json = await _apiClient.get(
+      '/services/${serviceId.value}',
+      cancelToken: cancelToken,
+    );
     return ServiceHttpMapper.fromJson(json);
   }
 
   @override
-  Future<Provider> getProviderFor(Order order) async {
+  Future<Provider> getProviderFor(
+    Order order, {
+    CancelToken? cancelToken,
+  }) async {
     final providerId = order.providerId;
     if (providerId == null) {
       throw StateError('Order ${order.id.value} has no provider assigned yet');
     }
-    final json = await _apiClient.get('/providers/${providerId.value}');
+    final json = await _apiClient.get(
+      '/providers/${providerId.value}',
+      cancelToken: cancelToken,
+    );
     return ProviderHttpMapper.fromJson(json);
   }
 
   @override
-  Future<Profile> getProfileFor(Order order) async {
-    final provider = await getProviderFor(order);
+  Future<Profile> getProfileFor(Order order, {CancelToken? cancelToken}) async {
+    final provider = await getProviderFor(order, cancelToken: cancelToken);
     final json = await _apiClient.get(
       '/profiles/${provider.providerProfileId.value}',
+      cancelToken: cancelToken,
     );
     return ProfileHttpMapper.fromJson(json);
   }
 
   @override
-  Future<Category> getCategoryFor(Order order) async {
+  Future<Category> getCategoryFor(
+    Order order, {
+    CancelToken? cancelToken,
+  }) async {
     final json = await _apiClient.get(
       '/categories/${order.categoryId.value}',
+      cancelToken: cancelToken,
     );
     return CategoryHttpMapper.fromJson(json);
   }
 
   @override
-  Future<Quote> getQuoteFor(Order order) async {
-    final json = await _apiClient.get('/quotes');
+  Future<Quote> getQuoteFor(Order order, {CancelToken? cancelToken}) async {
+    final json = await _apiClient.get('/quotes', cancelToken: cancelToken);
     final items = json['items'] as List<dynamic>;
     final matches = items
         .cast<Map<String, dynamic>>()

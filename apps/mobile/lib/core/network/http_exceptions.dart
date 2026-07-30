@@ -22,6 +22,14 @@ abstract class HttpException extends DomainException {
 
   /// The request path the backend recorded the error against.
   final String? path;
+
+  /// `true` for the "no internet / can't reach the server" family
+  /// (timeout, DNS failure, no connectivity) — the case a "reconectando…"
+  /// UI should react to, as opposed to a real response the server sent
+  /// back (validation error, 401, 5xx). Only [NetworkHttpException]
+  /// overrides this to `true`; every other subtype represents a
+  /// response that *did* reach the client.
+  bool get isConnectivityIssue => false;
 }
 
 /// 400 — malformed/invalid input (`ValidationException` on the backend).
@@ -69,9 +77,15 @@ class ServerHttpException extends HttpException {
 }
 
 /// The request never reached the server or never got a response in time
-/// (no connectivity, DNS failure, connect/receive/send timeout).
+/// (no connectivity, DNS failure, connect/receive/send timeout). This is
+/// the "reconectando…" case — genuinely expected on a pilot running over
+/// real WiFi/mobile data — as opposed to any other [HttpException]
+/// subtype, which means a response *did* come back (even an error one).
 class NetworkHttpException extends HttpException {
   const NetworkHttpException(super.message) : super(statusCode: null);
+
+  @override
+  bool get isConnectivityIssue => true;
 }
 
 /// The request was cancelled via its `CancelToken` (e.g. the caller
