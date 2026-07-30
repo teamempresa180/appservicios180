@@ -62,6 +62,9 @@ export class PrismaVerificationRepository implements VerificationRepository {
   }
 
   async search(term: string): Promise<Verification[]> {
+    // `type`/`status` are Prisma enum columns — enum filters only support
+    // `equals`/`in`, not `contains`, so a substring match across both
+    // fields has to happen in application code after the fetch.
     const rows = await this.prisma.verificationModel.findMany({
       orderBy: { createdAt: 'desc' },
     });

@@ -72,11 +72,9 @@ export class PrismaMessageRepository implements MessageRepository {
 
   async search(term: string): Promise<Message[]> {
     const rows = await this.prisma.messageModel.findMany({
+      where: { content: { contains: term } },
       orderBy: { sentAt: 'desc' },
     });
-    const lower = term.toLowerCase();
-    return rows
-      .filter((row) => row.content.toLowerCase().includes(lower))
-      .map((row) => MessagePrismaMapper.toDomain(row));
+    return rows.map((row) => MessagePrismaMapper.toDomain(row));
   }
 }

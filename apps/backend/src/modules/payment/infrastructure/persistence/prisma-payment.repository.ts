@@ -83,6 +83,9 @@ export class PrismaPaymentRepository implements PaymentRepository {
   }
 
   async search(term: string): Promise<Payment[]> {
+    // `method` is a Prisma enum column — enum filters only support
+    // `equals`/`in`, not `contains`, so the substring match has to
+    // happen in application code after the fetch.
     const rows = await this.prisma.paymentModel.findMany({
       orderBy: { createdAt: 'desc' },
     });

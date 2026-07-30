@@ -72,6 +72,9 @@ export class PrismaChatRepository implements ChatRepository {
   }
 
   async search(term: string): Promise<Chat[]> {
+    // `type` is a Prisma enum column — enum filters only support
+    // `equals`/`in`, not `contains`, so the substring match has to
+    // happen in application code after the fetch.
     const rows = await this.prisma.chatModel.findMany({
       orderBy: { createdAt: 'desc' },
     });

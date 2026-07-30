@@ -77,15 +77,11 @@ export class PrismaReviewRepository implements ReviewRepository {
 
   async search(term: string): Promise<Review[]> {
     const rows = await this.prisma.reviewModel.findMany({
+      where: {
+        OR: [{ title: { contains: term } }, { comment: { contains: term } }],
+      },
       orderBy: { createdAt: 'desc' },
     });
-    const lower = term.toLowerCase();
-    return rows
-      .filter(
-        (row) =>
-          row.title.toLowerCase().includes(lower) ||
-          row.comment.toLowerCase().includes(lower),
-      )
-      .map((row) => ReviewPrismaMapper.toDomain(row));
+    return rows.map((row) => ReviewPrismaMapper.toDomain(row));
   }
 }
