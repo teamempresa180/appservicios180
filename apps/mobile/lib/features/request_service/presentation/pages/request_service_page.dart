@@ -135,6 +135,7 @@ class _RequestServicePageState extends State<RequestServicePage> {
         categoryId: data.category.id,
         providerId: data.provider?.id,
         serviceId: data.service?.id,
+        addressId: data.address.id,
         title: data.service?.name ?? data.category.name,
         description: description,
         scheduledDate: scheduledDate,

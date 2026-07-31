@@ -1,4 +1,5 @@
 import '../../../address/entities/address.dart';
+import '../../../address/models/address_id.dart';
 import '../../../category/models/category_id.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/mappers/domain_http_mappers.dart';
@@ -41,6 +42,7 @@ class HttpRequestServiceRepository implements RequestServiceRepository {
     required CategoryId categoryId,
     ProviderId? providerId,
     ServiceId? serviceId,
+    AddressId? addressId,
     required String title,
     required String description,
     required DateTime scheduledDate,
@@ -53,6 +55,7 @@ class HttpRequestServiceRepository implements RequestServiceRepository {
         'categoryId': categoryId.value,
         if (providerId != null) 'providerId': providerId.value,
         if (serviceId != null) 'serviceId': serviceId.value,
+        if (addressId != null) 'addressId': addressId.value,
         'title': title,
         'description': description,
         'scheduledDate': scheduledDate.toIso8601String(),

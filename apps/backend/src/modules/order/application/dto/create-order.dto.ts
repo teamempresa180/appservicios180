@@ -7,6 +7,7 @@ export class CreateOrderDto {
   identityId!: string;
   providerId!: string;
   serviceId!: string;
+  addressId?: string;
   title!: string;
   description!: string;
   scheduledDate!: Date;

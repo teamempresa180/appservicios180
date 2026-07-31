@@ -1,3 +1,4 @@
+import '../../../address/models/address_id.dart';
 import '../../../category/models/category_id.dart';
 import '../../../identity/models/identity_id.dart';
 import '../../../order/entities/order.dart';
@@ -31,6 +32,15 @@ final DateTime _seedTimestamp = DateTime(2026, 1, 1);
 
 final IdentityId _clientIdentityId = IdentityId.fromString(
   'provider-dashboard-identity-client',
+);
+
+/// Address for every mock order below — reuses the Address Management
+/// feature's own "Casa" mock id (`address-management-address-home`) so
+/// `MockAddressManagementRepository.getAddresses()` actually resolves
+/// it, letting the "Iniciar navegación" button always have a real
+/// destination in this feature's mock/offline mode.
+final AddressId mockDashboardAddressId = AddressId.fromString(
+  'address-management-address-home',
 );
 
 /// Fixed, deterministic mock domain entities for the Provider Dashboard
@@ -71,6 +81,7 @@ final Order _orderPending = Order(
   categoryId: CategoryId.fromString('provider-dashboard-category-electrical'),
   providerId: mockDashboardProvider.id,
   serviceId: ServiceId.fromString('provider-dashboard-service-outlet'),
+  addressId: mockDashboardAddressId,
   title: 'Instalación de tomacorrientes',
   description: 'Instalación de 3 tomacorrientes nuevos en la sala.',
   scheduledDate: DateTime(2026, 1, 12, 15, 0),
@@ -86,6 +97,7 @@ final Order _orderInProgress = Order(
   categoryId: CategoryId.fromString('provider-dashboard-category-plumbing'),
   providerId: mockDashboardProvider.id,
   serviceId: ServiceId.fromString('provider-dashboard-service-leak-repair'),
+  addressId: mockDashboardAddressId,
   title: 'Reparación de fuga de agua',
   description: 'Fuga debajo del lavaplatos de la cocina.',
   scheduledDate: DateTime(2026, 1, 10, 10, 0),
@@ -101,6 +113,7 @@ final Order _orderCompleted1 = Order(
   categoryId: CategoryId.fromString('provider-dashboard-category-plumbing'),
   providerId: mockDashboardProvider.id,
   serviceId: ServiceId.fromString('provider-dashboard-service-pipe-install'),
+  addressId: mockDashboardAddressId,
   title: 'Instalación de tuberías',
   description: 'Instalación completa de tuberías nuevas en el baño.',
   scheduledDate: DateTime(2026, 1, 8, 9, 0),
@@ -116,6 +129,7 @@ final Order _orderCompleted2 = Order(
   categoryId: CategoryId.fromString('provider-dashboard-category-plumbing'),
   providerId: mockDashboardProvider.id,
   serviceId: ServiceId.fromString('provider-dashboard-service-faucet'),
+  addressId: mockDashboardAddressId,
   title: 'Instalación de grifería',
   description: 'Instalación de grifos nuevos en la cocina.',
   scheduledDate: DateTime(2026, 1, 5, 16, 0),

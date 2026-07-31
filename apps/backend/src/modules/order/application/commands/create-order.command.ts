@@ -19,5 +19,6 @@ export class CreateOrderCommand {
     public readonly priority: OrderPriority,
     public readonly providerId?: string,
     public readonly serviceId?: string,
+    public readonly addressId?: string,
   ) {}
 }

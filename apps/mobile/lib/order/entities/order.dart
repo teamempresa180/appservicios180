@@ -1,3 +1,4 @@
+import '../../address/models/address_id.dart';
 import '../../core/base/entity.dart';
 import '../../category/models/category_id.dart';
 import '../../identity/models/identity_id.dart';
@@ -27,6 +28,7 @@ class Order extends Entity<OrderId> {
     required this.categoryId,
     required this.providerId,
     required this.serviceId,
+    required this.addressId,
     required this.title,
     required this.description,
     required this.scheduledDate,
@@ -40,6 +42,7 @@ class Order extends Entity<OrderId> {
   final CategoryId categoryId;
   final ProviderId? providerId;
   final ServiceId? serviceId;
+  final AddressId? addressId;
   final String title;
   final String description;
   final DateTime scheduledDate;
@@ -52,13 +55,18 @@ class Order extends Entity<OrderId> {
   /// service) instead of just a category — see the class doc.
   bool get isDirectHire => providerId != null && serviceId != null;
 
-  Order copyWith({OrderStatus? status, ProviderId? providerId}) {
+  Order copyWith({
+    OrderStatus? status,
+    ProviderId? providerId,
+    AddressId? addressId,
+  }) {
     return Order(
       id: id,
       identityId: identityId,
       categoryId: categoryId,
       providerId: providerId ?? this.providerId,
       serviceId: serviceId,
+      addressId: addressId ?? this.addressId,
       title: title,
       description: description,
       scheduledDate: scheduledDate,

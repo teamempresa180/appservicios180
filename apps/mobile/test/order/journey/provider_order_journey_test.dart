@@ -29,6 +29,7 @@ void main() {
       categoryId: CategoryId.create(),
       providerId: providerId,
       serviceId: serviceId,
+      addressId: null,
       title: 'Fix the sink',
       description: 'desc',
       scheduledDate: DateTime(2026, 2, 1, 15),

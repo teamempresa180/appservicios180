@@ -1,3 +1,4 @@
+import '../../../address/models/address_id.dart';
 import '../../../category/entities/category.dart';
 import '../../../category/models/category_id.dart';
 import '../../../category/models/category_status.dart';
@@ -26,6 +27,15 @@ import '../../../service/models/service_status.dart';
 import '../../../service/models/service_type.dart';
 
 final DateTime _seedTimestamp = DateTime(2026, 1, 1);
+
+/// Address for every mock order below — reuses the Address Management
+/// feature's own "Casa" mock id (`address-management-address-home`) so
+/// `MockAddressManagementRepository.getAddresses()` actually resolves
+/// it, letting the "Iniciar navegación" button always have a real
+/// destination in this feature's mock/offline mode.
+final AddressId mockOrdersAddressId = AddressId.fromString(
+  'address-management-address-home',
+);
 
 /// Fixed, deterministic mock domain entities for the Orders feature.
 /// Intentionally its own set — independent of every other feature's
@@ -96,6 +106,7 @@ final Order mockOrderPending = Order(
   categoryId: mockOrdersCategoryPlumbing.id,
   providerId: mockOrdersProvider.id,
   serviceId: ServiceId.fromString('orders-service-leak-repair'),
+  addressId: mockOrdersAddressId,
   title: 'Reparación de fuga de agua',
   description: 'Fuga debajo del lavaplatos de la cocina.',
   scheduledDate: DateTime(2026, 1, 10, 10, 0),
@@ -111,6 +122,7 @@ final Order mockOrderInProgress = Order(
   categoryId: mockOrdersCategoryElectrical.id,
   providerId: mockOrdersProvider.id,
   serviceId: ServiceId.fromString('orders-service-outlet-install'),
+  addressId: mockOrdersAddressId,
   title: 'Instalación de tomacorrientes',
   description: 'Instalación de 3 tomacorrientes nuevos en la sala.',
   scheduledDate: DateTime(2026, 1, 8, 14, 30),
@@ -126,6 +138,7 @@ final Order mockOrderCompleted = Order(
   categoryId: mockOrdersCategoryPlumbing.id,
   providerId: mockOrdersProvider.id,
   serviceId: ServiceId.fromString('orders-service-pipe-install'),
+  addressId: mockOrdersAddressId,
   title: 'Instalación de tuberías',
   description: 'Instalación completa de tuberías nuevas en el baño.',
   scheduledDate: DateTime(2026, 1, 2, 9, 0),
@@ -141,6 +154,7 @@ final Order mockOrderCancelled = Order(
   categoryId: mockOrdersCategoryPlumbing.id,
   providerId: mockOrdersProvider.id,
   serviceId: ServiceId.fromString('orders-service-faucet-install'),
+  addressId: mockOrdersAddressId,
   title: 'Instalación de grifería',
   description: 'Instalación de grifos nuevos en la cocina.',
   scheduledDate: DateTime(2026, 1, 5, 16, 0),

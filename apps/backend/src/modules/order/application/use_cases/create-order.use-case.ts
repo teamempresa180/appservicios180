@@ -9,6 +9,7 @@ import { ServiceRepository } from '../../../service/domain/interfaces/service-re
 import { ServiceId } from '../../../service/domain/value-objects/service-id.value-object';
 import { CategoryRepository } from '../../../category/domain/interfaces/category-repository.interface';
 import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
+import { AddressId } from '../../../address/domain/value-objects/address-id.value-object';
 import { Order } from '../../domain/entities/order.entity';
 import { OrderRepository } from '../../domain/interfaces/order-repository.interface';
 import { OrderId } from '../../domain/value-objects/order-id.value-object';
@@ -76,12 +77,17 @@ export class CreateOrderUseCase {
       }
     }
 
+    const addressId = command.addressId
+      ? AddressId.fromString(command.addressId)
+      : null;
+
     const now = new Date();
     const order = new Order(OrderId.create(), {
       identityId,
       providerId,
       serviceId,
       categoryId,
+      addressId,
       title: command.title,
       description: command.description,
       scheduledDate: command.scheduledDate,

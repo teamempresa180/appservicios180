@@ -38,6 +38,13 @@ export class CreateOrderRequestDto {
   })
   serviceId?: string;
 
+  @ApiPropertyOptional({
+    example: 'address-id-123',
+    description:
+      "The id of the client's Address where the service will take place, used to build navigation directions for the Provider.",
+  })
+  addressId?: string;
+
   @ApiProperty({ example: 'Fix leaking kitchen faucet' })
   title!: string;
 

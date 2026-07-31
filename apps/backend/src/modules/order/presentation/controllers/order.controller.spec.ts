@@ -43,6 +43,7 @@ describe('OrderController', () => {
     providerId: 'provider-1',
     serviceId: 'service-1',
     categoryId: 'category-1',
+    addressId: null,
     title: 'Fix leaking kitchen faucet',
     description:
       'The faucet under the kitchen sink has been leaking for a week.',

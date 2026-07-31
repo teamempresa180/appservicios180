@@ -33,6 +33,7 @@ class ActiveServiceCard extends StatelessWidget {
     this.onComplete,
     this.onOpenChat,
     this.onViewOthers,
+    this.onNavigate,
   });
 
   final Order order;
@@ -42,6 +43,14 @@ class ActiveServiceCard extends StatelessWidget {
   final VoidCallback? onComplete;
   final VoidCallback? onOpenChat;
   final VoidCallback? onViewOthers;
+
+  /// Opens the Google Maps/Waze chooser for this order's client
+  /// address — resolved (and any failure handled with an
+  /// `AppSnackBar`) by the caller, since only it holds the
+  /// `AddressManagementRepository`. Only shown when [order.addressId]
+  /// is non-null — an order created before this field existed, or one
+  /// that otherwise never got an address, has nothing to navigate to.
+  final VoidCallback? onNavigate;
 
   Widget? _primaryActionFor(OrderJourneyAction action) {
     switch (action.kind) {
@@ -63,6 +72,7 @@ class ActiveServiceCard extends StatelessWidget {
     final hasChatAction = journey.actions.any(
       (action) => action.kind == OrderJourneyActionKind.openChat,
     );
+    final canNavigate = order.addressId != null;
 
     return AppCard(
       elevation: AppElevation.level4,
@@ -110,6 +120,14 @@ class ActiveServiceCard extends StatelessWidget {
                 current: journey.stage,
                 cancelled: journey.cancelled,
               ),
+              if (canNavigate) ...[
+                const SizedBox(height: AppSpacing.space16),
+                AppButton(
+                  label: 'Iniciar navegación',
+                  variant: AppButtonVariant.outlined,
+                  onPressed: onNavigate,
+                ),
+              ],
               const SizedBox(height: AppSpacing.space16),
               Row(
                 children: [

@@ -117,6 +117,7 @@ describe('Quote use cases', () => {
       providerId: provider.id,
       serviceId: service.id,
       categoryId: service.categoryId,
+      addressId: null,
       title: 'Fix the sink',
       description: 'The kitchen sink is leaking',
       scheduledDate: new Date('2026-01-01T08:00:00Z'),

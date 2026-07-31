@@ -3,6 +3,7 @@ import { IdentityId } from '../../../identity/domain/value-objects/identity-id.v
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
 import { ServiceId } from '../../../service/domain/value-objects/service-id.value-object';
 import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
+import { AddressId } from '../../../address/domain/value-objects/address-id.value-object';
 import { Order } from '../../domain/entities/order.entity';
 import { OrderId } from '../../domain/value-objects/order-id.value-object';
 import { OrderPriority } from '../../domain/value-objects/order-priority.value-object';
@@ -21,6 +22,7 @@ export class OrderPrismaMapper {
       providerId: row.providerId ? ProviderId.fromString(row.providerId) : null,
       serviceId: row.serviceId ? ServiceId.fromString(row.serviceId) : null,
       categoryId: CategoryId.fromString(row.categoryId),
+      addressId: row.addressId ? AddressId.fromString(row.addressId) : null,
       title: row.title,
       description: row.description,
       scheduledDate: row.scheduledDate,
@@ -38,6 +40,7 @@ export class OrderPrismaMapper {
       providerId: order.providerId?.value ?? null,
       serviceId: order.serviceId?.value ?? null,
       categoryId: order.categoryId.value,
+      addressId: order.addressId?.value ?? null,
       title: order.title,
       description: order.description,
       scheduledDate: order.scheduledDate,

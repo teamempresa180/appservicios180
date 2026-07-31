@@ -94,6 +94,9 @@ class OrderHttpMapper {
     serviceId: json['serviceId'] == null
         ? null
         : ServiceId.fromString(json['serviceId'] as String),
+    addressId: json['addressId'] == null
+        ? null
+        : AddressId.fromString(json['addressId'] as String),
     title: json['title'] as String,
     description: json['description'] as String,
     scheduledDate: DateTime.parse(json['scheduledDate'] as String),

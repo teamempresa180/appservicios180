@@ -1,4 +1,5 @@
 import '../../../address/entities/address.dart';
+import '../../../address/models/address_id.dart';
 import '../../../category/models/category_id.dart';
 import '../../../order/entities/order.dart';
 import '../../../order/models/order_id.dart';
@@ -20,6 +21,7 @@ class MockRequestServiceRepository implements RequestServiceRepository {
     required CategoryId categoryId,
     ProviderId? providerId,
     ServiceId? serviceId,
+    AddressId? addressId,
     required String title,
     required String description,
     required DateTime scheduledDate,
@@ -32,6 +34,7 @@ class MockRequestServiceRepository implements RequestServiceRepository {
       categoryId: categoryId,
       providerId: providerId,
       serviceId: serviceId,
+      addressId: addressId ?? mockRequestServiceAddress.id,
       title: title,
       description: description,
       scheduledDate: scheduledDate,

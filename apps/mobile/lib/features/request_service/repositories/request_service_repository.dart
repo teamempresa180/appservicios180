@@ -1,4 +1,5 @@
 import '../../../address/entities/address.dart';
+import '../../../address/models/address_id.dart';
 import '../../../category/models/category_id.dart';
 import '../../../order/entities/order.dart';
 import '../../../provider/models/provider_id.dart';
@@ -29,6 +30,7 @@ abstract class RequestServiceRepository {
     required CategoryId categoryId,
     ProviderId? providerId,
     ServiceId? serviceId,
+    AddressId? addressId,
     required String title,
     required String description,
     required DateTime scheduledDate,

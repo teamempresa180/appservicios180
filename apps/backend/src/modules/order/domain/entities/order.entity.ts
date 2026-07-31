@@ -3,6 +3,7 @@ import { IdentityId } from '../../../identity/domain/value-objects/identity-id.v
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
 import { ServiceId } from '../../../service/domain/value-objects/service-id.value-object';
 import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
+import { AddressId } from '../../../address/domain/value-objects/address-id.value-object';
 import { OrderId } from '../value-objects/order-id.value-object';
 import { OrderStatus } from '../value-objects/order-status.value-object';
 import { OrderPriority } from '../value-objects/order-priority.value-object';
@@ -12,6 +13,7 @@ export interface OrderProps {
   providerId: ProviderId | null;
   serviceId: ServiceId | null;
   categoryId: CategoryId;
+  addressId: AddressId | null;
   title: string;
   description: string;
   scheduledDate: Date;
@@ -41,6 +43,7 @@ export class Order extends Entity<OrderId> {
   public readonly providerId: ProviderId | null;
   public readonly serviceId: ServiceId | null;
   public readonly categoryId: CategoryId;
+  public readonly addressId: AddressId | null;
   public readonly title: string;
   public readonly description: string;
   public readonly scheduledDate: Date;
@@ -55,6 +58,7 @@ export class Order extends Entity<OrderId> {
     this.providerId = props.providerId;
     this.serviceId = props.serviceId;
     this.categoryId = props.categoryId;
+    this.addressId = props.addressId;
     this.title = props.title;
     this.description = props.description;
     this.scheduledDate = props.scheduledDate;
@@ -76,6 +80,7 @@ export class Order extends Entity<OrderId> {
       providerId: this.providerId,
       serviceId: this.serviceId,
       categoryId: this.categoryId,
+      addressId: this.addressId,
       title: this.title,
       description: this.description,
       scheduledDate: this.scheduledDate,

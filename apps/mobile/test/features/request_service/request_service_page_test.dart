@@ -22,6 +22,7 @@ import 'package:mobile/features/request_service/presentation/widgets/problem_des
 import 'package:mobile/features/request_service/presentation/widgets/provider_summary.dart';
 import 'package:mobile/features/request_service/presentation/widgets/schedule_selector.dart';
 import 'package:mobile/features/request_service/presentation/widgets/service_summary.dart';
+import 'package:mobile/address/models/address_id.dart';
 import 'package:mobile/order/entities/order.dart';
 import 'package:mobile/provider/models/provider_id.dart';
 import 'package:mobile/service/models/service_id.dart';
@@ -38,6 +39,7 @@ class _FailingRequestServiceRepository implements RequestServiceRepository {
     required CategoryId categoryId,
     ProviderId? providerId,
     ServiceId? serviceId,
+    AddressId? addressId,
     required String title,
     required String description,
     required DateTime scheduledDate,

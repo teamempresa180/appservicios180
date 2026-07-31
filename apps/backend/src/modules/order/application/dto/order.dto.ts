@@ -10,6 +10,7 @@ export class OrderDto {
   providerId!: string | null;
   serviceId!: string | null;
   categoryId!: string;
+  addressId!: string | null;
   title!: string;
   description!: string;
   scheduledDate!: Date;

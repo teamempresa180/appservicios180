@@ -67,6 +67,11 @@ dependencies:
   # Device GPS position for the "my location" map marker.
   geolocator: ^13.0.2
 
+  # Launches Google Maps/Waze turn-by-turn directions for a Provider's
+  # "Iniciar navegación" action (Etapa 12) — the official Flutter-team
+  # package for opening external apps/URLs.
+  url_launcher: ^6.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
