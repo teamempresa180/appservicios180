@@ -5,7 +5,10 @@ import '../models/address_type.dart';
 import '../models/address_status.dart';
 
 /// Represents a physical address associated with an Identity.
-/// Pure data holder — no geolocation, no maps, no validation, no behavior.
+/// Pure data holder — no maps rendering, no validation, no behavior.
+/// [latitude]/[longitude] are an optional geolocation pin dropped by
+/// the client on `AddressMapPicker` (both present or both `null`) —
+/// on top of the required text fields.
 class Address extends Entity<AddressId> {
   const Address({
     required AddressId id,
@@ -20,6 +23,8 @@ class Address extends Entity<AddressId> {
     required this.status,
     required this.createdAt,
     required this.updatedAt,
+    this.latitude,
+    this.longitude,
   }) : super(id);
 
   final IdentityId identityId;
@@ -29,12 +34,23 @@ class Address extends Entity<AddressId> {
   final String state;
   final String country;
   final String postalCode;
+  final double? latitude;
+  final double? longitude;
   final AddressType type;
   final AddressStatus status;
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  Address copyWith({String? alias, String? fullAddress}) {
+  /// [clearLocation] explicitly clears the map pin (sets both
+  /// [latitude]/[longitude] to `null`) — plain `latitude`/`longitude`
+  /// arguments update the pin, and omitting all three keeps it as-is.
+  Address copyWith({
+    String? alias,
+    String? fullAddress,
+    double? latitude,
+    double? longitude,
+    bool clearLocation = false,
+  }) {
     return Address(
       id: id,
       identityId: identityId,
@@ -44,6 +60,8 @@ class Address extends Entity<AddressId> {
       state: state,
       country: country,
       postalCode: postalCode,
+      latitude: clearLocation ? null : (latitude ?? this.latitude),
+      longitude: clearLocation ? null : (longitude ?? this.longitude),
       type: type,
       status: status,
       createdAt: createdAt,

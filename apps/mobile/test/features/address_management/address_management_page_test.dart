@@ -64,6 +64,8 @@ class _FakeAddressManagementRepository implements AddressManagementRepository {
     required String country,
     required String postalCode,
     required AddressType type,
+    double? latitude,
+    double? longitude,
   }) {
     if (throwsOnWrite) {
       return Future.error(const NetworkHttpException('sin conexión'));
@@ -76,6 +78,8 @@ class _FakeAddressManagementRepository implements AddressManagementRepository {
       country: country,
       postalCode: postalCode,
       type: type,
+      latitude: latitude,
+      longitude: longitude,
     );
   }
 
@@ -84,11 +88,19 @@ class _FakeAddressManagementRepository implements AddressManagementRepository {
     Address address, {
     required String alias,
     required String fullAddress,
+    double? latitude,
+    double? longitude,
   }) {
     if (throwsOnWrite) {
       return Future.error(const NetworkHttpException('sin conexión'));
     }
-    return _delegate.updateAddress(address, alias: alias, fullAddress: fullAddress);
+    return _delegate.updateAddress(
+      address,
+      alias: alias,
+      fullAddress: fullAddress,
+      latitude: latitude,
+      longitude: longitude,
+    );
   }
 
   @override
@@ -200,6 +212,8 @@ void main() {
         '250040',
       );
 
+      await tester.ensureVisible(find.text('Guardar'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Guardar'));
       await tester.pumpAndSettle();
 
@@ -353,6 +367,8 @@ void main() {
         '250040',
       );
 
+      await tester.ensureVisible(find.text('Guardar'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Guardar'));
       await tester.pumpAndSettle();
 

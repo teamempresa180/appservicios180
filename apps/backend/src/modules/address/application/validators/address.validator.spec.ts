@@ -16,6 +16,8 @@ describe('AddressValidator', () => {
       country: string;
       postalCode: string;
       type: AddressType;
+      latitude: number;
+      longitude: number;
     }> = {},
   ): CreateAddressCommand {
     return new CreateAddressCommand(
@@ -27,6 +29,8 @@ describe('AddressValidator', () => {
       overrides.country ?? 'Colombia',
       overrides.postalCode ?? '110111',
       overrides.type ?? AddressType.Home,
+      overrides.latitude,
+      overrides.longitude,
     );
   }
 
@@ -86,6 +90,50 @@ describe('AddressValidator', () => {
         ),
       ).toThrow(ValidationException);
     });
+
+    it('passes when both latitude and longitude are provided', () => {
+      expect(() =>
+        AddressValidator.validateCreate(
+          validCommand({ latitude: 4.710989, longitude: -74.072092 }),
+        ),
+      ).not.toThrow();
+    });
+
+    it('passes when both latitude and longitude are omitted', () => {
+      expect(() =>
+        AddressValidator.validateCreate(validCommand()),
+      ).not.toThrow();
+    });
+
+    it('rejects latitude without longitude', () => {
+      expect(() =>
+        AddressValidator.validateCreate(validCommand({ latitude: 4.710989 })),
+      ).toThrow(ValidationException);
+    });
+
+    it('rejects longitude without latitude', () => {
+      expect(() =>
+        AddressValidator.validateCreate(
+          validCommand({ longitude: -74.072092 }),
+        ),
+      ).toThrow(ValidationException);
+    });
+
+    it('rejects a latitude out of range', () => {
+      expect(() =>
+        AddressValidator.validateCreate(
+          validCommand({ latitude: 91, longitude: 0 }),
+        ),
+      ).toThrow(ValidationException);
+    });
+
+    it('rejects a longitude out of range', () => {
+      expect(() =>
+        AddressValidator.validateCreate(
+          validCommand({ latitude: 0, longitude: -181 }),
+        ),
+      ).toThrow(ValidationException);
+    });
   });
 
   describe('validateUpdate', () => {
@@ -130,6 +178,87 @@ describe('AddressValidator', () => {
             undefined,
             undefined,
             'INVALID' as AddressStatus,
+          ),
+        ),
+      ).toThrow(ValidationException);
+    });
+
+    it('passes when latitude/longitude are both omitted (pin untouched)', () => {
+      expect(() =>
+        AddressValidator.validateUpdate(new UpdateAddressCommand('id-1')),
+      ).not.toThrow();
+    });
+
+    it('passes when both latitude and longitude are provided', () => {
+      expect(() =>
+        AddressValidator.validateUpdate(
+          new UpdateAddressCommand(
+            'id-1',
+            undefined,
+            undefined,
+            undefined,
+            4.710989,
+            -74.072092,
+          ),
+        ),
+      ).not.toThrow();
+    });
+
+    it('passes when both latitude and longitude are explicitly null (pin cleared)', () => {
+      expect(() =>
+        AddressValidator.validateUpdate(
+          new UpdateAddressCommand(
+            'id-1',
+            undefined,
+            undefined,
+            undefined,
+            null,
+            null,
+          ),
+        ),
+      ).not.toThrow();
+    });
+
+    it('rejects latitude provided without longitude', () => {
+      expect(() =>
+        AddressValidator.validateUpdate(
+          new UpdateAddressCommand(
+            'id-1',
+            undefined,
+            undefined,
+            undefined,
+            4.710989,
+            undefined,
+          ),
+        ),
+      ).toThrow(ValidationException);
+    });
+
+    it('rejects latitude as a number while longitude is explicitly null', () => {
+      expect(() =>
+        AddressValidator.validateUpdate(
+          new UpdateAddressCommand(
+            'id-1',
+            undefined,
+            undefined,
+            undefined,
+            4.710989,
+            null,
+          ),
+        ),
+      ).toThrow(ValidationException);
+    });
+
+    it('rejects an out-of-range longitude', () => {
+      expect(() =>
+        AddressValidator.validateUpdate(
+          new UpdateAddressCommand(
+            'id-1',
+            undefined,
+            undefined,
+            undefined,
+            0,
+            200,
           ),
         ),
       ).toThrow(ValidationException);

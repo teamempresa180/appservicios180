@@ -75,6 +75,8 @@ class HttpAddressManagementRepository implements AddressManagementRepository {
     required String country,
     required String postalCode,
     required AddressType type,
+    double? latitude,
+    double? longitude,
   }) async {
     final json = await _apiClient.post(
       '/addresses',
@@ -87,6 +89,8 @@ class HttpAddressManagementRepository implements AddressManagementRepository {
         'country': country,
         'postalCode': postalCode,
         'type': type.name.toUpperCase(),
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
       },
     );
     return AddressHttpMapper.fromJson(json);
@@ -97,10 +101,22 @@ class HttpAddressManagementRepository implements AddressManagementRepository {
     Address address, {
     required String alias,
     required String fullAddress,
+    double? latitude,
+    double? longitude,
   }) async {
     final json = await _apiClient.put(
       '/addresses/${address.id.value}',
-      data: {'alias': alias, 'fullAddress': fullAddress},
+      // `latitude`/`longitude` are always sent explicitly (even as
+      // `null`) — unlike `alias`/`fullAddress`, the mobile form always
+      // resolves the pin's final state (kept, changed or cleared)
+      // before saving, so there's no "leave untouched" case to
+      // preserve by omitting the keys.
+      data: {
+        'alias': alias,
+        'fullAddress': fullAddress,
+        'latitude': latitude,
+        'longitude': longitude,
+      },
     );
     return AddressHttpMapper.fromJson(json);
   }

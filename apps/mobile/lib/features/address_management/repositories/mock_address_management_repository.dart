@@ -35,6 +35,8 @@ class MockAddressManagementRepository implements AddressManagementRepository {
     required String country,
     required String postalCode,
     required AddressType type,
+    double? latitude,
+    double? longitude,
   }) async {
     final address = Address(
       id: AddressId.create(),
@@ -45,6 +47,8 @@ class MockAddressManagementRepository implements AddressManagementRepository {
       state: state,
       country: country,
       postalCode: postalCode,
+      latitude: latitude,
+      longitude: longitude,
       type: type,
       status: AddressStatus.active,
       createdAt: DateTime.now(),
@@ -59,8 +63,16 @@ class MockAddressManagementRepository implements AddressManagementRepository {
     Address address, {
     required String alias,
     required String fullAddress,
+    double? latitude,
+    double? longitude,
   }) async {
-    final updated = address.copyWith(alias: alias, fullAddress: fullAddress);
+    final updated = address.copyWith(
+      alias: alias,
+      fullAddress: fullAddress,
+      latitude: latitude,
+      longitude: longitude,
+      clearLocation: latitude == null && longitude == null,
+    );
     final index = _addresses.indexWhere((a) => a.id == address.id);
     if (index != -1) _addresses[index] = updated;
     return updated;

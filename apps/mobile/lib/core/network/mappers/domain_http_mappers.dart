@@ -240,6 +240,8 @@ class AddressHttpMapper {
     state: json['state'] as String,
     country: json['country'] as String,
     postalCode: json['postalCode'] as String,
+    latitude: (json['latitude'] as num?)?.toDouble(),
+    longitude: (json['longitude'] as num?)?.toDouble(),
     type: AddressType.values.byName(enumFromJson(json['type'] as String)),
     status: AddressStatus.values.byName(
       enumFromJson(json['status'] as String),

@@ -11,5 +11,7 @@ export class CreateAddressDto {
   state!: string;
   country!: string;
   postalCode!: string;
+  latitude?: number;
+  longitude?: number;
   type!: AddressType;
 }

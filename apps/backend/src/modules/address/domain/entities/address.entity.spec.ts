@@ -17,6 +17,8 @@ describe('Address', () => {
       state: 'Cundinamarca',
       country: 'Colombia',
       postalCode: '110111',
+      latitude: 4.710989,
+      longitude: -74.072092,
       type: AddressType.Home,
       status: AddressStatus.Active,
       createdAt: now,
@@ -28,6 +30,32 @@ describe('Address', () => {
     expect(address.alias).toBe('Casa');
     expect(address.type).toBe(AddressType.Home);
     expect(address.status).toBe(AddressStatus.Active);
+    expect(address.latitude).toBe(4.710989);
+    expect(address.longitude).toBe(-74.072092);
+  });
+
+  it('accepts a null latitude/longitude when no pin was dropped', () => {
+    const id = AddressId.create();
+    const identityId = IdentityId.create();
+    const now = new Date();
+    const address = new Address(id, {
+      identityId,
+      alias: 'Casa',
+      fullAddress: 'Calle 123 #45-67',
+      city: 'Bogotá',
+      state: 'Cundinamarca',
+      country: 'Colombia',
+      postalCode: '110111',
+      latitude: null,
+      longitude: null,
+      type: AddressType.Home,
+      status: AddressStatus.Active,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    expect(address.latitude).toBeNull();
+    expect(address.longitude).toBeNull();
   });
 
   it('is equal to another address with the same id', () => {
@@ -42,6 +70,8 @@ describe('Address', () => {
       state: 'Cundinamarca',
       country: 'Colombia',
       postalCode: '110111',
+      latitude: null,
+      longitude: null,
       type: AddressType.Home,
       status: AddressStatus.Active,
       createdAt: now,

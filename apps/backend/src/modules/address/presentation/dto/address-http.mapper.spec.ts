@@ -49,6 +49,8 @@ describe('AddressHttpMapper', () => {
       state: 'Cundinamarca',
       country: 'Colombia',
       postalCode: '110111',
+      latitude: 4.710989,
+      longitude: -74.072092,
       type: AddressType.Home,
       status: AddressStatus.Active,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -59,6 +61,37 @@ describe('AddressHttpMapper', () => {
 
     expect(response.createdAt).toBe('2026-01-01T00:00:00.000Z');
     expect(response.updatedAt).toBe('2026-01-02T00:00:00.000Z');
+    expect(response.latitude).toBe(4.710989);
+    expect(response.longitude).toBe(-74.072092);
+  });
+
+  it('toCreateCommand() carries an optional latitude/longitude pin through', () => {
+    const dto: CreateAddressRequestDto = {
+      identityId: 'identity-1',
+      alias: 'Home',
+      fullAddress: 'Calle 123 #45-67',
+      city: 'Bogotá',
+      state: 'Cundinamarca',
+      country: 'Colombia',
+      postalCode: '110111',
+      type: AddressType.Home,
+      latitude: 4.710989,
+      longitude: -74.072092,
+    };
+
+    const command = AddressHttpMapper.toCreateCommand(dto);
+
+    expect(command.latitude).toBe(4.710989);
+    expect(command.longitude).toBe(-74.072092);
+  });
+
+  it('toUpdateCommand() carries latitude/longitude through, including explicit null to clear the pin', () => {
+    const dto: UpdateAddressRequestDto = { latitude: null, longitude: null };
+
+    const command = AddressHttpMapper.toUpdateCommand('id-1', dto);
+
+    expect(command.latitude).toBeNull();
+    expect(command.longitude).toBeNull();
   });
 
   it('toListResponse() maps each item and carries pagination metadata through', () => {
@@ -71,6 +104,8 @@ describe('AddressHttpMapper', () => {
       state: 'Cundinamarca',
       country: 'Colombia',
       postalCode: '110111',
+      latitude: 4.710989,
+      longitude: -74.072092,
       type: AddressType.Home,
       status: AddressStatus.Active,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),

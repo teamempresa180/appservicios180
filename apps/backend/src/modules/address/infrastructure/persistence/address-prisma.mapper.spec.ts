@@ -16,6 +16,8 @@ describe('AddressPrismaMapper', () => {
     state: 'Cundinamarca',
     country: 'Colombia',
     postalCode: '110111',
+    latitude: 4.710989,
+    longitude: -74.072092,
     type: 'HOME',
     status: 'ACTIVE',
     createdAt: new Date('2024-01-01'),
@@ -30,6 +32,8 @@ describe('AddressPrismaMapper', () => {
     expect(address.alias).toBe('Home');
     expect(address.type).toBe(AddressType.Home);
     expect(address.status).toBe(AddressStatus.Active);
+    expect(address.latitude).toBe(4.710989);
+    expect(address.longitude).toBe(-74.072092);
   });
 
   it('maps a domain entity back to the Prisma row shape', () => {
@@ -41,6 +45,8 @@ describe('AddressPrismaMapper', () => {
       state: 'Cundinamarca',
       country: 'Colombia',
       postalCode: '110111',
+      latitude: 4.710989,
+      longitude: -74.072092,
       type: AddressType.Home,
       status: AddressStatus.Active,
       createdAt: new Date('2024-01-01'),
