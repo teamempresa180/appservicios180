@@ -589,6 +589,7 @@ model AddressModel {
   updatedAt   DateTime      @map("updated_at")
 
   identity IdentityModel @relation(fields: [identityId], references: [id])
+  orders   OrderModel[]
 
   @@index([identityId])
   @@map("addresses")
@@ -746,6 +747,7 @@ model OrderModel {
   providerId    String?       @map("provider_id")
   serviceId     String?       @map("service_id")
   categoryId    String        @map("category_id")
+  addressId     String?       @map("address_id")
   title         String
   description   String
   scheduledDate DateTime      @map("scheduled_date")
@@ -758,6 +760,7 @@ model OrderModel {
   provider ProviderModel? @relation(fields: [providerId], references: [id])
   service  ServiceModel?  @relation(fields: [serviceId], references: [id])
   category CategoryModel  @relation(fields: [categoryId], references: [id])
+  address  AddressModel?  @relation(fields: [addressId], references: [id])
   quotes   QuoteModel[]
   payments PaymentModel[]
   reviews  ReviewModel[]
@@ -767,6 +770,7 @@ model OrderModel {
   @@index([categoryId])
   @@index([providerId])
   @@index([serviceId])
+  @@index([addressId])
   @@map("orders")
 }
 
