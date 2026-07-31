@@ -37,16 +37,14 @@ class TrackingInfoPanel extends StatelessWidget {
 
   String get _statusText {
     if (update.hasArrived) return 'Ha llegado al destino';
-    if (update.etaMinutes <= 1) return 'Está por llegar';
-    return 'Llega en ${update.etaMinutes} min';
+    final minutes = update.eta.minutesRemaining;
+    if (minutes <= 1) return 'Está por llegar';
+    return 'Llega en $minutes min';
   }
 
   String get _distanceText {
     if (update.hasArrived) return '';
-    if (update.distanceMeters >= 1000) {
-      return '${(update.distanceMeters / 1000).toStringAsFixed(1)} km';
-    }
-    return '${update.distanceMeters.round()} m';
+    return update.distanceRemaining.formatted;
   }
 
   @override

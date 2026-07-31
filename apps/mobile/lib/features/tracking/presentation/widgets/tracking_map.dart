@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../home/presentation/widgets/home_map_background.dart';
+import '../../entities/route_point.dart';
 import '../../models/tracking_update.dart';
 
 /// The live map for `OrderTrackingPage`: a marker for the provider's
-/// current (simulated) position, a marker for the destination, and a
-/// straight polyline between them — redrawn on every [update]. Reuses
-/// `HomeMapBackground`'s light/dark style strings so the tracking map
-/// matches the rest of the app instead of Google's default look.
+/// current (simulated) position, a marker for the destination, and the
+/// decoded [TrackingUpdate.route] polyline between them — redrawn on
+/// every [update]. Reuses `HomeMapBackground`'s light/dark style
+/// strings so the tracking map matches the rest of the app instead of
+/// Google's default look.
+///
+/// This is the only place in the tracking feature that converts the
+/// pure domain entities (`CurrentLocation`/`RoutePoint`) into
+/// `google_maps_flutter`'s `LatLng` — the domain layer itself
+/// (`../../entities/`) has no Google Maps dependency.
 class TrackingMap extends StatefulWidget {
   const TrackingMap({super.key, required this.update, required this.isDark});
 
@@ -21,9 +28,20 @@ class TrackingMap extends StatefulWidget {
 class _TrackingMapState extends State<TrackingMap> {
   GoogleMapController? _controller;
 
+  LatLng _providerLatLng(TrackingUpdate update) => LatLng(
+    update.providerLocation.latitude,
+    update.providerLocation.longitude,
+  );
+
+  LatLng _destinationLatLng(TrackingUpdate update) =>
+      LatLng(update.destination.latitude, update.destination.longitude);
+
+  LatLng _routePointLatLng(RoutePoint point) =>
+      LatLng(point.latitude, point.longitude);
+
   LatLngBounds _boundsFor(TrackingUpdate update) {
-    final provider = update.providerPosition;
-    final destination = update.destination;
+    final provider = _providerLatLng(update);
+    final destination = _destinationLatLng(update);
     return LatLngBounds(
       southwest: LatLng(
         provider.latitude < destination.latitude
@@ -55,7 +73,7 @@ class _TrackingMapState extends State<TrackingMap> {
   @override
   void didUpdateWidget(covariant TrackingMap oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.update.providerPosition != widget.update.providerPosition) {
+    if (oldWidget.update.providerLocation != widget.update.providerLocation) {
       _fitBounds(widget.update);
     }
   }
@@ -85,7 +103,8 @@ class _TrackingMapState extends State<TrackingMap> {
       markers: {
         Marker(
           markerId: const MarkerId('provider'),
-          position: update.providerPosition,
+          position: _providerLatLng(update),
+          rotation: update.providerLocation.headingDegrees ?? 0,
           icon: BitmapDescriptor.defaultMarkerWithHue(
             BitmapDescriptor.hueAzure,
           ),
@@ -93,7 +112,7 @@ class _TrackingMapState extends State<TrackingMap> {
         ),
         Marker(
           markerId: const MarkerId('destination'),
-          position: update.destination,
+          position: _destinationLatLng(update),
           icon: BitmapDescriptor.defaultMarkerWithHue(
             BitmapDescriptor.hueRed,
           ),
@@ -102,7 +121,7 @@ class _TrackingMapState extends State<TrackingMap> {
       polylines: {
         Polyline(
           polylineId: const PolylineId('route'),
-          points: [update.providerPosition, update.destination],
+          points: update.route.waypoints.map(_routePointLatLng).toList(),
           color: Theme.of(context).colorScheme.primary,
           width: 4,
         ),
