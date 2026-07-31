@@ -57,6 +57,10 @@ class AddressManagementViewModel extends ChangeNotifier {
       if (_disposed) return;
       _errorMessage = exception.message;
       _status = AddressManagementLoadStatus.error;
+    } catch (_) {
+      if (_disposed) return;
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = AddressManagementLoadStatus.error;
     }
     _notifyIfActive();
   }

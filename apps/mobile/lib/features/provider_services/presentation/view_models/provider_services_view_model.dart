@@ -46,6 +46,9 @@ class ProviderServicesViewModel extends ChangeNotifier {
     } on HttpException catch (exception) {
       _errorMessage = exception.message;
       _status = ProviderServicesLoadStatus.error;
+    } catch (_) {
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = ProviderServicesLoadStatus.error;
     }
     if (!_disposed) notifyListeners();
   }

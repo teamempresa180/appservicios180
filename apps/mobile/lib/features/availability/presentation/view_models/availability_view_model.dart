@@ -50,6 +50,9 @@ class AvailabilityViewModel extends ChangeNotifier {
     } on HttpException catch (exception) {
       _errorMessage = exception.message;
       _status = AvailabilityLoadStatus.error;
+    } catch (_) {
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = AvailabilityLoadStatus.error;
     }
     if (!_disposed) notifyListeners();
   }

@@ -54,6 +54,10 @@ class CategoriesViewModel extends ChangeNotifier {
       if (_disposed) return;
       _errorMessage = exception.message;
       _status = CategoriesLoadStatus.error;
+    } catch (_) {
+      if (_disposed) return;
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = CategoriesLoadStatus.error;
     }
     _notifyIfActive();
   }

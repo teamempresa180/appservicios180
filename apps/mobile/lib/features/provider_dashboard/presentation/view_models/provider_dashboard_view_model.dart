@@ -50,6 +50,9 @@ class ProviderDashboardViewModel extends ChangeNotifier {
     } on HttpException catch (exception) {
       _errorMessage = exception.message;
       _status = ProviderDashboardLoadStatus.error;
+    } catch (_) {
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = ProviderDashboardLoadStatus.error;
     }
     if (!_disposed) notifyListeners();
   }

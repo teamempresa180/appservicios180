@@ -32,6 +32,9 @@ class SecurityViewModel extends ChangeNotifier {
     } on HttpException catch (exception) {
       _errorMessage = exception.message;
       _status = SecurityLoadStatus.error;
+    } catch (_) {
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = SecurityLoadStatus.error;
     }
     _notifyListenersIfMounted();
   }

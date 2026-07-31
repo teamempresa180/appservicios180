@@ -50,6 +50,9 @@ class VerificationViewModel extends ChangeNotifier {
     } on HttpException catch (exception) {
       _errorMessage = exception.message;
       _status = VerificationLoadStatus.error;
+    } catch (_) {
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = VerificationLoadStatus.error;
     }
     if (!_disposed) notifyListeners();
   }

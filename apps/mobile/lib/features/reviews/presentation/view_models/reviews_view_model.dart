@@ -37,6 +37,9 @@ class ReviewsViewModel extends CancellableViewModel {
       if (exception is CancelledHttpException) return;
       _errorMessage = exception.message;
       _status = ReviewsLoadStatus.error;
+    } catch (_) {
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = ReviewsLoadStatus.error;
     }
     notifySafely();
   }

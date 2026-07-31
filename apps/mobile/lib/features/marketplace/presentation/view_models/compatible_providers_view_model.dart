@@ -57,6 +57,10 @@ class CompatibleProvidersViewModel extends ChangeNotifier {
       if (_disposed) return;
       _errorMessage = exception.message;
       _status = CompatibleProvidersLoadStatus.error;
+    } catch (_) {
+      if (_disposed) return;
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = CompatibleProvidersLoadStatus.error;
     }
     _notifyIfActive();
   }

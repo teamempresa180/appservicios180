@@ -44,6 +44,9 @@ class TrustViewModel extends ChangeNotifier {
     } on HttpException catch (exception) {
       _errorMessage = exception.message;
       _status = TrustLoadStatus.error;
+    } catch (_) {
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = TrustLoadStatus.error;
     }
     if (!_disposed) notifyListeners();
   }

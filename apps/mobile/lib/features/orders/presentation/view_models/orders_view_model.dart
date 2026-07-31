@@ -103,6 +103,9 @@ class OrdersViewModel extends CancellableViewModel {
       if (exception is CancelledHttpException) return;
       _errorMessage = exception.message;
       _status = OrdersLoadStatus.error;
+    } catch (_) {
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = OrdersLoadStatus.error;
     }
     notifySafely();
   }

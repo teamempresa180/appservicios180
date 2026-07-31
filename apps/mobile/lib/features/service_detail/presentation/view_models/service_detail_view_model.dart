@@ -87,6 +87,10 @@ class ServiceDetailViewModel extends ChangeNotifier {
       if (_disposed) return;
       _errorMessage = exception.message;
       _status = ServiceDetailLoadStatus.error;
+    } catch (_) {
+      if (_disposed) return;
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = ServiceDetailLoadStatus.error;
     }
     _notifyIfActive();
   }

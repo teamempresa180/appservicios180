@@ -51,6 +51,10 @@ class SearchViewModel extends ChangeNotifier {
       if (_disposed) return;
       _errorMessage = exception.message;
       _status = SearchLoadStatus.error;
+    } catch (_) {
+      if (_disposed) return;
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = SearchLoadStatus.error;
     }
     _notifyIfActive();
   }

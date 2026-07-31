@@ -86,6 +86,10 @@ class MarketplaceViewModel extends ChangeNotifier {
       if (_disposed) return;
       _errorMessage = exception.message;
       _status = MarketplaceLoadStatus.error;
+    } catch (_) {
+      if (_disposed) return;
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = MarketplaceLoadStatus.error;
     }
     _notifyIfActive();
   }

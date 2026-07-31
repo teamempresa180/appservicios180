@@ -86,6 +86,9 @@ class ProviderRequestsViewModel extends CancellableViewModel {
       if (exception is CancelledHttpException) return;
       _errorMessage = exception.message;
       _status = ProviderRequestsLoadStatus.error;
+    } catch (_) {
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = ProviderRequestsLoadStatus.error;
     }
     notifySafely();
   }

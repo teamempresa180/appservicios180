@@ -47,6 +47,10 @@ class ContactManagementViewModel extends ChangeNotifier {
       if (_disposed) return;
       _errorMessage = exception.message;
       _status = ContactManagementLoadStatus.error;
+    } catch (_) {
+      if (_disposed) return;
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = ContactManagementLoadStatus.error;
     }
     _notifyIfActive();
   }

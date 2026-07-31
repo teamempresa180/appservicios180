@@ -40,6 +40,9 @@ class QuoteViewModel extends CancellableViewModel {
       if (exception is CancelledHttpException) return;
       _errorMessage = exception.message;
       _status = QuoteLoadStatus.error;
+    } catch (_) {
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = QuoteLoadStatus.error;
     }
     notifySafely();
   }

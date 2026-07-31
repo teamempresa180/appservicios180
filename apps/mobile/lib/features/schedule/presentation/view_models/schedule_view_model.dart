@@ -39,6 +39,9 @@ class ScheduleViewModel extends ChangeNotifier {
     } on HttpException catch (exception) {
       _errorMessage = exception.message;
       _status = ScheduleLoadStatus.error;
+    } catch (_) {
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = ScheduleLoadStatus.error;
     }
     if (!_disposed) notifyListeners();
   }
