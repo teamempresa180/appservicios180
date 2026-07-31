@@ -11,6 +11,6 @@ export class UpdateProviderCommand {
     public readonly experience?: ProviderExperience,
     public readonly status?: ProviderStatus,
     public readonly categoryId?: string,
-    public readonly specialization?: string,
+    public readonly specializationId?: string,
   ) {}
 }

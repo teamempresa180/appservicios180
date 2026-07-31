@@ -14,6 +14,10 @@ import {
   CATEGORY_REPOSITORY,
   CategoryRepository,
 } from '../../category/domain/interfaces/category-repository.interface';
+import {
+  CATEGORY_SPECIALIZATION_REPOSITORY,
+  CategorySpecializationRepository,
+} from '../../category/domain/interfaces/category-specialization-repository.interface';
 import { ProviderController } from './controllers/provider.controller';
 import { CreateProviderUseCase } from '../application/use_cases/create-provider.use-case';
 import { UpdateProviderUseCase } from '../application/use_cases/update-provider.use-case';
@@ -53,24 +57,30 @@ import { PrismaProviderRepository } from '../infrastructure/persistence/prisma-p
         identityRepo: IdentityRepository,
         profileRepo: ProfileRepository,
         categoryRepo: CategoryRepository,
+        specializationRepo: CategorySpecializationRepository,
       ) =>
         new CreateProviderUseCase(
           providerRepo,
           identityRepo,
           profileRepo,
           categoryRepo,
+          specializationRepo,
         ),
       inject: [
         PROVIDER_REPOSITORY,
         IDENTITY_REPOSITORY,
         PROFILE_REPOSITORY,
         CATEGORY_REPOSITORY,
+        CATEGORY_SPECIALIZATION_REPOSITORY,
       ],
     },
     {
       provide: UpdateProviderUseCase,
-      useFactory: (repo: ProviderRepository) => new UpdateProviderUseCase(repo),
-      inject: [PROVIDER_REPOSITORY],
+      useFactory: (
+        repo: ProviderRepository,
+        specializationRepo: CategorySpecializationRepository,
+      ) => new UpdateProviderUseCase(repo, specializationRepo),
+      inject: [PROVIDER_REPOSITORY, CATEGORY_SPECIALIZATION_REPOSITORY],
     },
     {
       provide: DeleteProviderUseCase,

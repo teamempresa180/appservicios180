@@ -14,7 +14,7 @@ describe('ProviderPrismaMapper', () => {
     identityId: 'identity-1',
     providerProfileId: 'profile-1',
     categoryId: null,
-    specialization: null,
+    specializationId: null,
     status: 'ACTIVE',
     type: 'INDEPENDENT',
     experience: 'INTERMEDIATE',

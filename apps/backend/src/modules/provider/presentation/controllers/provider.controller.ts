@@ -182,7 +182,11 @@ export class ProviderController {
   @Get(ProviderRoutes.compatible)
   @ApiOperation(ProviderSwagger.compatible)
   @ApiQuery({ name: 'categoryId', required: true, example: 'category-id-123' })
-  @ApiQuery({ name: 'specialization', required: false, example: 'Residential' })
+  @ApiQuery({
+    name: 'specializationId',
+    required: false,
+    example: 'specialization-id-123',
+  })
   @ApiResponse({
     status: 200,
     description: 'Active Providers compatible with the given Category.',
@@ -190,10 +194,10 @@ export class ProviderController {
   })
   async compatible(
     @Query('categoryId') categoryId: string,
-    @Query('specialization') specialization?: string,
+    @Query('specializationId') specializationId?: string,
   ): Promise<ProviderResponseDto[]> {
     const providers = await this.findCompatibleProvidersUseCase.execute(
-      new FindCompatibleProvidersQuery(categoryId, specialization),
+      new FindCompatibleProvidersQuery(categoryId, specializationId),
     );
     return providers.map((provider) => ProviderHttpMapper.toResponse(provider));
   }

@@ -31,4 +31,9 @@ export const CategorySwagger = {
     summary: 'Search Categories',
     description: 'Free-text search over name/description.',
   },
+  specializations: {
+    summary: 'List a Category\'s Specializations',
+    description:
+      'Lists the real Specializations that belong to a Category (e.g. Electricidad -> Residencial/Comercial/Industrial/Domótica/Redes/Paneles solares).',
+  },
 } as const;

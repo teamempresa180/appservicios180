@@ -5,13 +5,16 @@ import { DeleteCategoryUseCase } from '../../application/use_cases/delete-catego
 import { GetCategoryUseCase } from '../../application/use_cases/get-category.use-case';
 import { ListCategoryUseCase } from '../../application/use_cases/list-category.use-case';
 import { SearchCategoryUseCase } from '../../application/use_cases/search-category.use-case';
+import { ListCategorySpecializationsUseCase } from '../../application/use_cases/list-category-specializations.use-case';
 import { CreateCategoryCommand } from '../../application/commands/create-category.command';
 import { UpdateCategoryCommand } from '../../application/commands/update-category.command';
 import { DeleteCategoryCommand } from '../../application/commands/delete-category.command';
 import { GetCategoryQuery } from '../../application/queries/get-category.query';
 import { ListCategoryQuery } from '../../application/queries/list-category.query';
 import { SearchCategoryQuery } from '../../application/queries/search-category.query';
+import { ListCategorySpecializationsQuery } from '../../application/queries/list-category-specializations.query';
 import { CategoryDto } from '../../application/dto/category.dto';
+import { CategorySpecializationDto } from '../../application/dto/category-specialization.dto';
 import { CategoryType } from '../../domain/value-objects/category-type.value-object';
 import { CategoryStatus } from '../../domain/value-objects/category-status.value-object';
 import { CreateCategoryRequestDto } from '../dto/create-category.request.dto';
@@ -25,6 +28,7 @@ describe('CategoryController', () => {
   let getUseCase: { execute: jest.Mock };
   let listUseCase: { execute: jest.Mock };
   let searchUseCase: { execute: jest.Mock };
+  let specializationsUseCase: { execute: jest.Mock };
 
   const categoryDto: CategoryDto = {
     id: 'id-1',
@@ -34,6 +38,14 @@ describe('CategoryController', () => {
     color: '#0088CC',
     status: CategoryStatus.Active,
     type: CategoryType.Standard,
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+  };
+
+  const specializationDto: CategorySpecializationDto = {
+    id: 'specialization-1',
+    categoryId: 'id-1',
+    name: 'Residencial',
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
   };
@@ -52,6 +64,9 @@ describe('CategoryController', () => {
       }),
     };
     searchUseCase = { execute: jest.fn().mockResolvedValue([categoryDto]) };
+    specializationsUseCase = {
+      execute: jest.fn().mockResolvedValue([specializationDto]),
+    };
 
     controller = new CategoryController(
       createUseCase as unknown as CreateCategoryUseCase,
@@ -60,6 +75,7 @@ describe('CategoryController', () => {
       getUseCase as unknown as GetCategoryUseCase,
       listUseCase as unknown as ListCategoryUseCase,
       searchUseCase as unknown as SearchCategoryUseCase,
+      specializationsUseCase as unknown as ListCategorySpecializationsUseCase,
     );
   });
 
@@ -132,5 +148,15 @@ describe('CategoryController', () => {
       new GetCategoryQuery('id-1'),
     );
     expect(response.name).toBe('Plumbing');
+  });
+
+  it('specializations() maps the categoryId param and the Application DTOs to response DTOs', async () => {
+    const response = await controller.specializations('id-1');
+
+    expect(specializationsUseCase.execute).toHaveBeenCalledWith(
+      new ListCategorySpecializationsQuery('id-1'),
+    );
+    expect(response).toHaveLength(1);
+    expect(response[0].name).toBe('Residencial');
   });
 });

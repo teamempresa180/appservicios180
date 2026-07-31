@@ -6,6 +6,8 @@ import { ProfileRepository } from '../../../profiles/domain/interfaces/profile-r
 import { ProfileId } from '../../../profiles/domain/value-objects/profile-id.value-object';
 import { CategoryRepository } from '../../../category/domain/interfaces/category-repository.interface';
 import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
+import { CategorySpecializationRepository } from '../../../category/domain/interfaces/category-specialization-repository.interface';
+import { SpecializationId } from '../../../category/domain/value-objects/specialization-id.value-object';
 import { Provider } from '../../domain/entities/provider.entity';
 import { ProviderRepository } from '../../domain/interfaces/provider-repository.interface';
 import { ProviderId } from '../../domain/value-objects/provider-id.value-object';
@@ -33,6 +35,12 @@ import { ProviderValidator } from '../validators/provider.validator';
  * `Provider | null` (not an array, same shape as `Trust`): **at most
  * one Provider record per Identity** — throws `BusinessRuleException`
  * if one already exists.
+ *
+ * When `specializationId` is provided (`ProviderValidator` already
+ * requires `categoryId` alongside it), also verifies the referenced
+ * `CategorySpecialization` exists and actually belongs to the
+ * referenced Category — a real business rule (a Provider cannot claim
+ * "Paneles solares" under "Plomería"), not just type-safety.
  */
 export class CreateProviderUseCase {
   constructor(
@@ -40,6 +48,7 @@ export class CreateProviderUseCase {
     private readonly identityRepository: IdentityRepository,
     private readonly profileRepository: ProfileRepository,
     private readonly categoryRepository?: CategoryRepository,
+    private readonly categorySpecializationRepository?: CategorySpecializationRepository,
   ) {}
 
   async execute(command: CreateProviderCommand): Promise<ProviderDto> {
@@ -79,12 +88,32 @@ export class CreateProviderUseCase {
       }
     }
 
+    let specializationId: SpecializationId | null = null;
+    if (command.specializationId) {
+      specializationId = SpecializationId.fromString(command.specializationId);
+      if (this.categorySpecializationRepository && categoryId) {
+        const specialization = await this.categorySpecializationRepository.findById(
+          specializationId,
+        );
+        if (!specialization) {
+          throw new NotFoundException(
+            `Specialization ${command.specializationId} not found`,
+          );
+        }
+        if (!specialization.categoryId.equals(categoryId)) {
+          throw new BusinessRuleException(
+            `Specialization ${command.specializationId} does not belong to Category ${command.categoryId}`,
+          );
+        }
+      }
+    }
+
     const now = new Date();
     const provider = new Provider(ProviderId.create(), {
       identityId,
       providerProfileId,
       categoryId,
-      specialization: command.specialization?.trim() || null,
+      specializationId,
       status: ProviderStatus.Pending,
       type: command.type,
       experience: command.experience,

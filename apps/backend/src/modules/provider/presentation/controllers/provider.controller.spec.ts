@@ -35,7 +35,7 @@ describe('ProviderController', () => {
     identityId: 'identity-1',
     providerProfileId: 'profile-1',
     categoryId: null,
-    specialization: null,
+    specializationId: null,
     status: ProviderStatus.Active,
     type: ProviderType.Independent,
     experience: ProviderExperience.Intermediate,
@@ -136,11 +136,11 @@ describe('ProviderController', () => {
     expect(response[0].biography).toBe('Plumber with 10 years of experience.');
   });
 
-  it('compatible() maps categoryId/specialization query params', async () => {
-    const response = await controller.compatible('category-1', 'Residential');
+  it('compatible() maps categoryId/specializationId query params', async () => {
+    const response = await controller.compatible('category-1', 'specialization-1');
 
     expect(compatibleUseCase.execute).toHaveBeenCalledWith(
-      new FindCompatibleProvidersQuery('category-1', 'Residential'),
+      new FindCompatibleProvidersQuery('category-1', 'specialization-1'),
     );
     expect(response).toHaveLength(1);
   });

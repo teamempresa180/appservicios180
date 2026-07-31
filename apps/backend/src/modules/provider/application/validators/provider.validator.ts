@@ -41,6 +41,11 @@ export class ProviderValidator {
         'yearsOfExperience must be a non-negative number',
       );
     }
+    if (command.specializationId?.trim() && !command.categoryId?.trim()) {
+      throw new ValidationException(
+        'categoryId is required when specializationId is provided',
+      );
+    }
   }
 
   static validateUpdate(command: UpdateProviderCommand): void {
@@ -64,6 +69,11 @@ export class ProviderValidator {
     ) {
       throw new ValidationException(
         `status must be one of: ${Object.values(ProviderStatus).join(', ')}`,
+      );
+    }
+    if (command.specializationId?.trim() && !command.categoryId?.trim()) {
+      throw new ValidationException(
+        'categoryId is required when specializationId is provided',
       );
     }
   }

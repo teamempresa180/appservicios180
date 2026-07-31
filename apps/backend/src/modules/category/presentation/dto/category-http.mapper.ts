@@ -2,10 +2,12 @@ import { PaginatedResult } from '../../../core/application/paginated-result';
 import { CreateCategoryCommand } from '../../application/commands/create-category.command';
 import { UpdateCategoryCommand } from '../../application/commands/update-category.command';
 import { CategoryDto } from '../../application/dto/category.dto';
+import { CategorySpecializationDto } from '../../application/dto/category-specialization.dto';
 import { CreateCategoryRequestDto } from './create-category.request.dto';
 import { UpdateCategoryRequestDto } from './update-category.request.dto';
 import { CategoryResponseDto } from './category.response.dto';
 import { CategoryListResponseDto } from './category-list.response.dto';
+import { CategorySpecializationResponseDto } from './category-specialization.response.dto';
 
 /**
  * Translates between the HTTP-facing DTOs (this folder) and the
@@ -55,6 +57,18 @@ export class CategoryHttpMapper {
     response.total = result.total;
     response.page = result.page;
     response.pageSize = result.pageSize;
+    return response;
+  }
+
+  static toSpecializationResponse(
+    dto: CategorySpecializationDto,
+  ): CategorySpecializationResponseDto {
+    const response = new CategorySpecializationResponseDto();
+    response.id = dto.id;
+    response.categoryId = dto.categoryId;
+    response.name = dto.name;
+    response.createdAt = dto.createdAt.toISOString();
+    response.updatedAt = dto.updatedAt.toISOString();
     return response;
   }
 }
