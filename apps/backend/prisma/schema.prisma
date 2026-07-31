@@ -583,6 +583,8 @@ model AddressModel {
   state       String
   country     String
   postalCode  String        @map("postal_code")
+  latitude    Float?
+  longitude   Float?
   type        AddressType
   status      AddressStatus
   createdAt   DateTime      @map("created_at")
@@ -652,8 +654,23 @@ model CategoryModel {
   services ServiceModel[]
   providers ProviderModel[]
   orders    OrderModel[]
+  specializations CategorySpecializationModel[]
 
   @@map("categories")
+}
+
+model CategorySpecializationModel {
+  id         String   @id
+  categoryId String   @map("category_id")
+  name       String
+  createdAt  DateTime @map("created_at")
+  updatedAt  DateTime @map("updated_at")
+
+  category  CategoryModel    @relation(fields: [categoryId], references: [id])
+  providers ProviderModel[]
+
+  @@index([categoryId])
+  @@map("category_specializations")
 }
 
 model ServiceModel {
@@ -683,7 +700,7 @@ model ProviderModel {
   identityId        String             @unique @map("identity_id")
   providerProfileId String             @map("provider_profile_id")
   categoryId        String?            @map("category_id")
-  specialization    String?
+  specializationId  String?            @map("specialization_id")
   status            ProviderStatus
   type              ProviderType
   experience        ProviderExperience
@@ -695,6 +712,7 @@ model ProviderModel {
   identity      IdentityModel        @relation(fields: [identityId], references: [id])
   profile       ProfileModel         @relation(fields: [providerProfileId], references: [id])
   category      CategoryModel?       @relation(fields: [categoryId], references: [id])
+  specializationRef CategorySpecializationModel? @relation(fields: [specializationId], references: [id])
   services      ServiceModel[]
   availabilities AvailabilityModel[]
   schedules     ScheduleModel[]
