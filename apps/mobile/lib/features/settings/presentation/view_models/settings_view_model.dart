@@ -35,6 +35,9 @@ class SettingsViewModel extends ChangeNotifier {
     } on HttpException catch (exception) {
       _errorMessage = exception.message;
       _status = SettingsLoadStatus.error;
+    } catch (_) {
+      _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
+      _status = SettingsLoadStatus.error;
     }
     _notifyListenersIfMounted();
   }

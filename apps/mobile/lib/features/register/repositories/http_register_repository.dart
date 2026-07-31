@@ -4,7 +4,7 @@ import '../../../identity/models/document_type.dart';
 import 'register_repository.dart';
 
 /// [RegisterRepository] backed by [ApiClient] — creates a real account
-/// via three sequential, unauthenticated backend calls (in this exact
+/// via four sequential, unauthenticated backend calls (in this exact
 /// order, each depending on the previous one's id):
 ///
 /// 1. `POST /identities` — creates the `Identity`, returns its id.
@@ -17,6 +17,12 @@ import 'register_repository.dart';
 ///    without it self-registration would be impossible, since
 ///    `LoginUseCase` refuses to even check the password unless an
 ///    *active* `Password` `Authentication` record already exists.
+/// 4. `POST /profiles` (`visibility: PUBLIC`, `displayName: fullName`)
+///    — without this, every screen that reads the account's Profile
+///    (Perfil, Configuración, Home's greeting) has nothing to load: a
+///    real account with zero Profile record is a dead end, not a
+///    valid empty state, since a Profile is 1:1 with an Identity and
+///    nothing else ever creates one.
 ///
 /// Does not log the new user in — `RegisterPage` calls
 /// `SessionManager.login` itself right after this succeeds.
@@ -56,6 +62,15 @@ class HttpRegisterRepository implements RegisterRepository {
     await _apiClient.post(
       '/authentications',
       data: {'identityId': identityId, 'methodType': 'PASSWORD'},
+    );
+
+    await _apiClient.post(
+      '/profiles',
+      data: {
+        'identityId': identityId,
+        'displayName': fullName,
+        'visibility': 'PUBLIC',
+      },
     );
   }
 }
