@@ -5,6 +5,6 @@
 export class FindCompatibleProvidersQuery {
   constructor(
     public readonly categoryId: string,
-    public readonly specialization?: string,
+    public readonly specializationId?: string,
   ) {}
 }

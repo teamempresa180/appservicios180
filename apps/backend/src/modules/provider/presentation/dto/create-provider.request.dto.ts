@@ -43,6 +43,10 @@ export class CreateProviderRequestDto {
   })
   categoryId?: string;
 
-  @ApiPropertyOptional({ example: 'Residential plumbing repairs' })
-  specialization?: string;
+  @ApiPropertyOptional({
+    example: 'specialization-id-123',
+    description:
+      'The real Specialization within `categoryId` this Provider offers (see GET /categories/:categoryId/specializations). Requires categoryId.',
+  })
+  specializationId?: string;
 }

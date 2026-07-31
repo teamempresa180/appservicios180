@@ -2,6 +2,7 @@ import { Entity } from '../../../core/domain/base/entity.base';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { ProfileId } from '../../../profiles/domain/value-objects/profile-id.value-object';
 import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
+import { SpecializationId } from '../../../category/domain/value-objects/specialization-id.value-object';
 import { ProviderId } from '../value-objects/provider-id.value-object';
 import { ProviderStatus } from '../value-objects/provider-status.value-object';
 import { ProviderType } from '../value-objects/provider-type.value-object';
@@ -11,7 +12,7 @@ export interface ProviderProps {
   identityId: IdentityId;
   providerProfileId: ProfileId;
   categoryId?: CategoryId | null;
-  specialization?: string | null;
+  specializationId?: SpecializationId | null;
   status: ProviderStatus;
   type: ProviderType;
   experience: ProviderExperience;
@@ -23,16 +24,21 @@ export interface ProviderProps {
 
 /**
  * Represents the professional profile of a person as a service provider.
- * `categoryId`/`specialization` are optional (nullable) so existing
+ * `categoryId`/`specializationId` are optional (nullable) so existing
  * providers created before this field existed — and any future flow
  * that doesn't collect a category — remain valid; no behavior beyond
- * plain data, no persistence, no business rules.
+ * plain data, no persistence, no business rules. `specializationId`
+ * references a real `CategorySpecialization` row (e.g. Electricidad ->
+ * Residencial/Comercial/Industrial/Domótica/Redes/Paneles solares) —
+ * never a free-form string — and, when present, must belong to
+ * `categoryId`; enforced by `ProviderValidator`/`CreateProviderUseCase`
+ * /`UpdateProviderUseCase`, not here.
  */
 export class Provider extends Entity<ProviderId> {
   public readonly identityId: IdentityId;
   public readonly providerProfileId: ProfileId;
   public readonly categoryId: CategoryId | null;
-  public readonly specialization: string | null;
+  public readonly specializationId: SpecializationId | null;
   public readonly status: ProviderStatus;
   public readonly type: ProviderType;
   public readonly experience: ProviderExperience;
@@ -46,7 +52,7 @@ export class Provider extends Entity<ProviderId> {
     this.identityId = props.identityId;
     this.providerProfileId = props.providerProfileId;
     this.categoryId = props.categoryId ?? null;
-    this.specialization = props.specialization ?? null;
+    this.specializationId = props.specializationId ?? null;
     this.status = props.status;
     this.type = props.type;
     this.experience = props.experience;

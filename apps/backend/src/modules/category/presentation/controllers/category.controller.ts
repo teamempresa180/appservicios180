@@ -27,14 +27,17 @@ import { DeleteCategoryUseCase } from '../../application/use_cases/delete-catego
 import { GetCategoryUseCase } from '../../application/use_cases/get-category.use-case';
 import { ListCategoryUseCase } from '../../application/use_cases/list-category.use-case';
 import { SearchCategoryUseCase } from '../../application/use_cases/search-category.use-case';
+import { ListCategorySpecializationsUseCase } from '../../application/use_cases/list-category-specializations.use-case';
 import { DeleteCategoryCommand } from '../../application/commands/delete-category.command';
 import { GetCategoryQuery } from '../../application/queries/get-category.query';
 import { ListCategoryQuery } from '../../application/queries/list-category.query';
 import { SearchCategoryQuery } from '../../application/queries/search-category.query';
+import { ListCategorySpecializationsQuery } from '../../application/queries/list-category-specializations.query';
 import { CreateCategoryRequestDto } from '../dto/create-category.request.dto';
 import { UpdateCategoryRequestDto } from '../dto/update-category.request.dto';
 import { CategoryResponseDto } from '../dto/category.response.dto';
 import { CategoryListResponseDto } from '../dto/category-list.response.dto';
+import { CategorySpecializationResponseDto } from '../dto/category-specialization.response.dto';
 import { CategoryHttpMapper } from '../dto/category-http.mapper';
 
 /**
@@ -64,6 +67,7 @@ export class CategoryController {
     private readonly getCategoryUseCase: GetCategoryUseCase,
     private readonly listCategoryUseCase: ListCategoryUseCase,
     private readonly searchCategoryUseCase: SearchCategoryUseCase,
+    private readonly listCategorySpecializationsUseCase: ListCategorySpecializationsUseCase,
   ) {}
 
   @Post()
@@ -163,6 +167,30 @@ export class CategoryController {
     );
     return categories.map((category) =>
       CategoryHttpMapper.toResponse(category),
+    );
+  }
+
+  @Get(CategoryRoutes.specializationsByCategory)
+  @ApiOperation(CategorySwagger.specializations)
+  @ApiParam({ name: 'categoryId', description: 'Category id' })
+  @ApiResponse({
+    status: 200,
+    description: "The Category's Specializations.",
+    type: [CategorySpecializationResponseDto],
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Category not found.',
+    type: ErrorResponseDto,
+  })
+  async specializations(
+    @Param('categoryId') categoryId: string,
+  ): Promise<CategorySpecializationResponseDto[]> {
+    const specializations = await this.listCategorySpecializationsUseCase.execute(
+      new ListCategorySpecializationsQuery(categoryId),
+    );
+    return specializations.map((specialization) =>
+      CategoryHttpMapper.toSpecializationResponse(specialization),
     );
   }
 

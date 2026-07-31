@@ -1,6 +1,7 @@
 import { PaginatedResult } from '../../../../core/application/paginated-result';
 import { IdentityId } from '../../../../identity/domain/value-objects/identity-id.value-object';
 import { CategoryId } from '../../../../category/domain/value-objects/category-id.value-object';
+import { SpecializationId } from '../../../../category/domain/value-objects/specialization-id.value-object';
 import { Provider } from '../../../domain/entities/provider.entity';
 import { ProviderRepository } from '../../../domain/interfaces/provider-repository.interface';
 import { ProviderId } from '../../../domain/value-objects/provider-id.value-object';
@@ -60,15 +61,15 @@ export class InMemoryProviderRepository implements ProviderRepository {
 
   findCompatible(
     categoryId: CategoryId,
-    specialization?: string,
+    specializationId?: SpecializationId,
   ): Promise<Provider[]> {
-    const lower = specialization?.toLowerCase();
     return Promise.resolve(
       [...this.rows.values()].filter(
         (row) =>
           row.categoryId?.equals(categoryId) &&
           row.status === ProviderStatus.Active &&
-          (!lower || (row.specialization?.toLowerCase().includes(lower) ?? false)),
+          (!specializationId ||
+            (row.specializationId?.equals(specializationId) ?? false)),
       ),
     );
   }

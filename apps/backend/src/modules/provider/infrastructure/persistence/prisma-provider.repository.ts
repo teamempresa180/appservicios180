@@ -3,6 +3,7 @@ import { PrismaService } from '../../../../infrastructure/prisma/prisma.service'
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
+import { SpecializationId } from '../../../category/domain/value-objects/specialization-id.value-object';
 import { Provider } from '../../domain/entities/provider.entity';
 import { ProviderRepository } from '../../domain/interfaces/provider-repository.interface';
 import { ProviderId } from '../../domain/value-objects/provider-id.value-object';
@@ -83,19 +84,13 @@ export class PrismaProviderRepository implements ProviderRepository {
 
   async findCompatible(
     categoryId: CategoryId,
-    specialization?: string,
+    specializationId?: SpecializationId,
   ): Promise<Provider[]> {
     const rows = await this.prisma.providerModel.findMany({
       where: {
         categoryId: categoryId.value,
         status: ProviderStatus.Active,
-        ...(specialization
-          ? {
-              specialization: {
-                contains: specialization,
-              },
-            }
-          : {}),
+        ...(specializationId ? { specializationId: specializationId.value } : {}),
       },
       orderBy: { createdAt: 'desc' },
     });

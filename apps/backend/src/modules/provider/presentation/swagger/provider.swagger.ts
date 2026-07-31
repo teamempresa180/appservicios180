@@ -35,6 +35,6 @@ export const ProviderSwagger = {
   compatible: {
     summary: 'Find compatible Providers',
     description:
-      'Lists active Providers in a Category, optionally narrowed by specialization — powers the client marketplace search.',
+      'Lists active Providers in a Category, optionally narrowed by specializationId — powers the client marketplace search.',
   },
 } as const;
