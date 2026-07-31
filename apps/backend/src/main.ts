@@ -30,6 +30,16 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
 
+  // Behind Railway's (or any PaaS) reverse proxy, every request arrives
+  // from the proxy's own IP unless Express is told to trust its
+  // `X-Forwarded-For` header — without this, `ThrottlerGuard` (and any
+  // future per-IP logic) would rate-limit the proxy, not real callers.
+  // `1` trusts exactly one hop (the platform's edge), which matches how
+  // Railway/Render/Fly.io front a single app instance.
+  if (config.isProduction) {
+    app.set('trust proxy', 1);
+  }
+
   // Order matters for readability, not matching: Nest already picks the
   // most specific @Catch() filter for a given exception regardless of
   // registration order — DomainExceptionFilter only ever sees

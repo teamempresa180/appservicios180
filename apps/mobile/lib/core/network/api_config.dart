@@ -1,7 +1,22 @@
-/// Centralized backend connection settings. The base URL is provided at
-/// build/run time via `--dart-define=API_BASE_URL=...` — this default only
-/// covers local development against the backend started per
-/// `apps/backend/README.md` (`npm run start:dev`, port 3000).
+/// Centralized backend connection settings. The base URL is never
+/// hardcoded here — it's provided at build time via
+/// `--dart-define=API_BASE_URL=...`, so switching between environments
+/// never requires touching source code, only the build command:
+///
+/// - **Dev** (default, no flag needed): `http://localhost:3000` — a
+///   backend started locally per `apps/backend/README.md`
+///   (`npm run start:dev`).
+/// - **Alpha** (real pilot, public backend):
+///   `--dart-define=API_BASE_URL=https://<railway-app>.up.railway.app
+///   --dart-define=USE_MOCK_BACKEND=false`
+/// - **Production** (future): same mechanism, pointed at the
+///   production backend's own URL once one exists.
+///
+/// Flutter's `--dart-define` is resolved at *compile* time (there is no
+/// runtime `.env` for a shipped APK) — this is Flutter's standard,
+/// documented mechanism for exactly this kind of per-build
+/// configuration, so a URL change still means a rebuild, just never a
+/// source-code change.
 abstract final class ApiConfig {
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
