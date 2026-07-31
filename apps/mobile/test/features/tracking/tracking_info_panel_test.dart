@@ -1,21 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:mobile/core/ui/theme/app_theme.dart';
 import 'package:mobile/core/ui/widgets/order_progress.dart';
+import 'package:mobile/features/tracking/entities/arrival_state.dart';
+import 'package:mobile/features/tracking/entities/current_location.dart';
+import 'package:mobile/features/tracking/entities/distance_remaining.dart';
+import 'package:mobile/features/tracking/entities/eta.dart';
+import 'package:mobile/features/tracking/entities/route_point.dart';
+import 'package:mobile/features/tracking/entities/tracking_route.dart';
+import 'package:mobile/features/tracking/entities/tracking_session.dart';
+import 'package:mobile/features/tracking/models/tracking_session_id.dart';
+import 'package:mobile/features/tracking/models/tracking_session_status.dart';
 import 'package:mobile/features/tracking/models/tracking_update.dart';
 import 'package:mobile/features/tracking/presentation/widgets/tracking_info_panel.dart';
 import 'package:mobile/order/journey/order_journey_info.dart';
 import 'package:mobile/order/journey/order_journey_stage.dart';
+import 'package:mobile/order/models/order_id.dart';
+import 'package:mobile/provider/models/provider_id.dart';
 
 void main() {
-  const update = TrackingUpdate(
-    providerPosition: LatLng(4.710, -74.072),
-    destination: LatLng(4.711, -74.070),
-    etaMinutes: 5,
-    distanceMeters: 850,
-    hasArrived: false,
+  final now = DateTime(2026, 1, 1, 12);
+  final session = TrackingSession(
+    id: TrackingSessionId.fromString('session-1'),
+    orderId: OrderId.fromString('order-1'),
+    providerId: ProviderId.fromString('provider-1'),
+    status: TrackingSessionStatus.active,
+    startedAt: now,
+  );
+  final destination = const RoutePoint(latitude: 4.711, longitude: -74.070);
+  final update = TrackingUpdate(
+    session: session,
+    providerLocation: CurrentLocation(
+      latitude: 4.710,
+      longitude: -74.072,
+      recordedAt: now,
+    ),
+    destination: destination,
+    route: TrackingRoute.fromPoints([
+      const RoutePoint(latitude: 4.710, longitude: -74.072),
+      destination,
+    ]),
+    eta: ETA(arrivalTime: now.add(const Duration(minutes: 5)), calculatedAt: now),
+    distanceRemaining: const DistanceRemaining(850),
+    arrivalState: ArrivalState.enRoute,
   );
 
   const journey = OrderJourneyInfo(
