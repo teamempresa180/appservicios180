@@ -79,6 +79,7 @@ final Order mockPaymentOrder = Order(
   categoryId: mockPaymentService.categoryId,
   providerId: mockPaymentProvider.id,
   serviceId: mockPaymentService.id,
+  addressId: null,
   title: mockPaymentService.name,
   description: 'Fuga debajo del lavaplatos de la cocina.',
   scheduledDate: DateTime(2026, 1, 10, 10, 0),

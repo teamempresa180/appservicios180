@@ -3,6 +3,7 @@ import { IdentityId } from '../../../identity/domain/value-objects/identity-id.v
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
 import { ServiceId } from '../../../service/domain/value-objects/service-id.value-object';
 import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
+import { AddressId } from '../../../address/domain/value-objects/address-id.value-object';
 import { Order } from '../../domain/entities/order.entity';
 import { OrderId } from '../../domain/value-objects/order-id.value-object';
 import { OrderPriority } from '../../domain/value-objects/order-priority.value-object';
@@ -16,6 +17,7 @@ describe('OrderPrismaMapper', () => {
     providerId: 'provider-1',
     serviceId: 'service-1',
     categoryId: 'category-1',
+    addressId: 'address-1',
     title: 'Fix the sink',
     description: 'The kitchen sink is leaking',
     scheduledDate: new Date('2026-01-01T08:00:00Z'),
@@ -33,6 +35,7 @@ describe('OrderPrismaMapper', () => {
     expect(order.providerId?.value).toBe('provider-1');
     expect(order.serviceId?.value).toBe('service-1');
     expect(order.categoryId.value).toBe('category-1');
+    expect(order.addressId?.value).toBe('address-1');
     expect(order.status).toBe(OrderStatus.Pending);
     expect(order.priority).toBe(OrderPriority.Medium);
   });
@@ -43,6 +46,7 @@ describe('OrderPrismaMapper', () => {
       providerId: ProviderId.fromString('provider-1'),
       serviceId: ServiceId.fromString('service-1'),
       categoryId: CategoryId.fromString('category-1'),
+      addressId: AddressId.fromString('address-1'),
       title: 'Fix the sink',
       description: 'The kitchen sink is leaking',
       scheduledDate: new Date('2026-01-01T08:00:00Z'),

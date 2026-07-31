@@ -6,6 +6,7 @@ import { IdentityId } from '../../../identity/domain/value-objects/identity-id.v
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
 import { ServiceId } from '../../../service/domain/value-objects/service-id.value-object';
 import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
+import { AddressId } from '../../../address/domain/value-objects/address-id.value-object';
 
 describe('Order', () => {
   it('holds all the assigned properties', () => {
@@ -14,12 +15,14 @@ describe('Order', () => {
     const providerId = ProviderId.create();
     const serviceId = ServiceId.create();
     const categoryId = CategoryId.create();
+    const addressId = AddressId.create();
     const now = new Date();
     const order = new Order(id, {
       identityId,
       providerId,
       serviceId,
       categoryId,
+      addressId,
       title: 'Destape urgente',
       description: 'Tubería obstruida en la cocina',
       scheduledDate: new Date('2026-02-01'),
@@ -33,6 +36,7 @@ describe('Order', () => {
     expect(order.identityId).toBe(identityId);
     expect(order.providerId).toBe(providerId);
     expect(order.serviceId).toBe(serviceId);
+    expect(order.addressId).toBe(addressId);
     expect(order.title).toBe('Destape urgente');
     expect(order.status).toBe(OrderStatus.Pending);
     expect(order.priority).toBe(OrderPriority.Urgent);
@@ -44,12 +48,14 @@ describe('Order', () => {
     const providerId = ProviderId.create();
     const serviceId = ServiceId.create();
     const categoryId = CategoryId.create();
+    const addressId = AddressId.create();
     const now = new Date();
     const props = {
       identityId,
       providerId,
       serviceId,
       categoryId,
+      addressId,
       title: 'Servicio',
       description: 'Desc',
       scheduledDate: now,

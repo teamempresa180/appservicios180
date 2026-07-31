@@ -109,6 +109,7 @@ describe('PaymentController (e2e)', () => {
       providerId: ProviderId.create(),
       serviceId: ServiceId.create(),
       categoryId: CategoryId.create(),
+      addressId: null,
       title: 'Fix leaking kitchen faucet',
       description: 'Description.',
       scheduledDate: now,

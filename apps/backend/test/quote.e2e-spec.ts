@@ -70,6 +70,7 @@ describe('QuoteController (e2e)', () => {
       providerId: null,
       serviceId: null,
       categoryId: CategoryId.create(),
+      addressId: null,
       title: 'Fix leaking kitchen faucet',
       description: 'Description.',
       scheduledDate: now,

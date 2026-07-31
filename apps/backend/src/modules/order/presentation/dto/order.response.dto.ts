@@ -23,6 +23,9 @@ export class OrderResponseDto {
   @ApiProperty()
   categoryId!: string;
 
+  @ApiProperty({ nullable: true })
+  addressId!: string | null;
+
   @ApiProperty({ example: 'Fix leaking kitchen faucet' })
   title!: string;
 

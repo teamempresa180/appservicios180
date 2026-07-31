@@ -28,6 +28,7 @@ export class OrderHttpMapper {
       dto.priority,
       dto.providerId,
       dto.serviceId,
+      dto.addressId,
     );
   }
 
@@ -51,6 +52,7 @@ export class OrderHttpMapper {
     response.providerId = dto.providerId;
     response.serviceId = dto.serviceId;
     response.categoryId = dto.categoryId;
+    response.addressId = dto.addressId;
     response.title = dto.title;
     response.description = dto.description;
     response.scheduledDate = dto.scheduledDate.toISOString();

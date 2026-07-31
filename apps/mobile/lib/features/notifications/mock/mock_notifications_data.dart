@@ -47,6 +47,7 @@ final Order _order = Order(
   categoryId: CategoryId.fromString('notifications-category-plumbing'),
   providerId: _providerId,
   serviceId: ServiceId.fromString('notifications-service-1'),
+  addressId: null,
   title: 'Reparación de fuga de agua',
   description: 'Fuga debajo del lavaplatos de la cocina.',
   scheduledDate: DateTime(2026, 1, 10, 10, 0),

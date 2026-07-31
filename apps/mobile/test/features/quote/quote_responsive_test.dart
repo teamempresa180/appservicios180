@@ -20,6 +20,7 @@ void main() {
     categoryId: CategoryId.create(),
     providerId: null,
     serviceId: null,
+    addressId: null,
     title: 'Reparación de fuga de agua',
     description: 'Fuga debajo del lavaplatos',
     scheduledDate: DateTime(2026, 1, 10, 10, 0),

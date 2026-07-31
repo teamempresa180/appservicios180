@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/address/models/address_id.dart';
 import 'package:mobile/order/entities/order.dart';
 import 'package:mobile/order/models/order_id.dart';
 import 'package:mobile/order/models/order_status.dart';
@@ -14,6 +15,7 @@ void main() {
     final identityId = IdentityId.create();
     final providerId = ProviderId.create();
     final serviceId = ServiceId.create();
+    final addressId = AddressId.create();
     final now = DateTime(2026, 1, 1);
     final order = Order(
       id: id,
@@ -21,6 +23,7 @@ void main() {
       categoryId: CategoryId.create(),
       providerId: providerId,
       serviceId: serviceId,
+      addressId: addressId,
       title: 'Destape urgente',
       description: 'Tubería obstruida en la cocina',
       scheduledDate: DateTime(2026, 2, 1),
@@ -34,6 +37,7 @@ void main() {
     expect(order.identityId, identityId);
     expect(order.providerId, providerId);
     expect(order.serviceId, serviceId);
+    expect(order.addressId, addressId);
     expect(order.title, 'Destape urgente');
     expect(order.status, OrderStatus.pending);
     expect(order.priority, OrderPriority.urgent);
@@ -44,6 +48,7 @@ void main() {
     final identityId = IdentityId.create();
     final providerId = ProviderId.create();
     final serviceId = ServiceId.create();
+    final addressId = AddressId.create();
     final now = DateTime(2026, 1, 1);
     Order build() => Order(
       id: id,
@@ -51,6 +56,7 @@ void main() {
       categoryId: CategoryId.create(),
       providerId: providerId,
       serviceId: serviceId,
+      addressId: addressId,
       title: 'Servicio',
       description: 'Desc',
       scheduledDate: now,

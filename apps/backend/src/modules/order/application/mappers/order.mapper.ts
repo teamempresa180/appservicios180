@@ -13,6 +13,7 @@ export class OrderMapper {
     dto.providerId = order.providerId?.value ?? null;
     dto.serviceId = order.serviceId?.value ?? null;
     dto.categoryId = order.categoryId.value;
+    dto.addressId = order.addressId?.value ?? null;
     dto.title = order.title;
     dto.description = order.description;
     dto.scheduledDate = order.scheduledDate;

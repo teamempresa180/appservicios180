@@ -1,5 +1,7 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/di/service_locator.dart';
+import '../../../../core/navigation_external/external_navigation_launcher.dart';
 import '../../../../core/network/http_exceptions.dart';
 import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
@@ -14,6 +16,7 @@ import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../../../core/ui/widgets/app_snack_bar.dart';
 import '../../../../order/entities/order.dart';
 import '../../../../order/journey/provider_order_journey.dart';
+import '../../../address_management/repositories/address_management_repository.dart';
 import '../../../availability/presentation/pages/availability_page.dart';
 import '../../../chat/presentation/pages/chat_page.dart';
 import '../../../chat/repositories/chat_repository.dart';
@@ -65,15 +68,18 @@ class ProviderDashboardPage extends StatefulWidget {
     ProviderDashboardRepository? repository,
     OrdersRepository? ordersRepository,
     ChatRepository? chatRepository,
+    AddressManagementRepository? addressManagementRepository,
   }) : _repository = repository,
        _ordersRepository = ordersRepository,
-       _chatRepository = chatRepository;
+       _chatRepository = chatRepository,
+       _addressManagementRepository = addressManagementRepository;
 
   /// Overridable for tests only — production call sites always resolve
   /// the real repositories from the service locator.
   final ProviderDashboardRepository? _repository;
   final OrdersRepository? _ordersRepository;
   final ChatRepository? _chatRepository;
+  final AddressManagementRepository? _addressManagementRepository;
 
   @override
   State<ProviderDashboardPage> createState() => _ProviderDashboardPageState();
@@ -87,6 +93,9 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
       widget._ordersRepository ?? locator<OrdersRepository>();
   late final ChatRepository _chatRepository =
       widget._chatRepository ?? locator<ChatRepository>();
+  late final AddressManagementRepository _addressManagementRepository =
+      widget._addressManagementRepository ??
+      locator<AddressManagementRepository>();
 
   @override
   void initState() {
@@ -240,6 +249,43 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
     }
   }
 
+  /// Resolves [order]'s `addressId` to a real `Address` (the backend
+  /// has no `GET /addresses/:id`, so this lists every address for the
+  /// current session and matches client-side — same shape already used
+  /// by `getClientProfileFor`/`getCurrentProvider` elsewhere in this
+  /// codebase) and hands the assembled address text off to
+  /// [ExternalNavigationLauncher]. Any failure — no addresses at all,
+  /// no match for this id, or a `HttpException` from the fetch itself
+  /// — surfaces as an `AppSnackBar` instead of crashing the dashboard.
+  Future<void> _startNavigation(Order order) async {
+    final addressId = order.addressId;
+    if (addressId == null) return;
+    try {
+      final addresses = await _addressManagementRepository.getAddresses();
+      final address = addresses.where((a) => a.id == addressId).firstOrNull;
+      if (address == null) {
+        throw StateError('No se encontró la dirección de este servicio.');
+      }
+      if (!mounted) return;
+      await ExternalNavigationLauncher.start(
+        context,
+        destinationAddress:
+            '${address.fullAddress}, ${address.city}, ${address.state}, '
+            '${address.country}',
+      );
+    } on HttpException catch (exception) {
+      if (!mounted) return;
+      AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo iniciar la navegación. Intenta de nuevo.',
+        type: AppSnackBarType.error,
+      );
+    }
+  }
+
   Widget _buildBody(BuildContext context, ProviderDashboardDisplay data) {
     final activeOrder = data.activeOrder;
     final otherActiveCount = data.otherActiveOrders.length;
@@ -261,6 +307,7 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
               onComplete: () => _completeOrder(activeOrder),
               onOpenChat: () => _openChat(activeOrder),
               onViewOthers: () => _openProviderRequests(context),
+              onNavigate: () => _startNavigation(activeOrder),
             ),
           ),
           const SizedBox(height: AppSpacing.space16),
