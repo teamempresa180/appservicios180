@@ -52,25 +52,35 @@ class SessionManager extends ChangeNotifier implements TokenProvider {
   /// access token alone has expired but the refresh token hasn't).
   /// Called once, before the router picks an initial route.
   Future<void> restore() async {
-    final storedAccess = await _tokenStorage.readAccessToken();
-    final storedRefresh = await _tokenStorage.readRefreshToken();
-    if (storedAccess == null || storedRefresh == null) {
+    // Every failure mode here — a corrupted secure-storage entry after
+    // a reinstall, a network error that isn't an `HttpException` for
+    // some unforeseen reason, anything — must still end with
+    // `_isRestoring = false` and a listener notification. Splash has no
+    // fallback timeout of its own: if this method throws anything
+    // uncaught, the app is stuck on "Inicializando..." forever, which
+    // is exactly what a real device hit after a fresh reinstall.
+    try {
+      final storedAccess = await _tokenStorage.readAccessToken();
+      final storedRefresh = await _tokenStorage.readRefreshToken();
+      if (storedAccess == null || storedRefresh == null) {
+        return;
+      }
+
+      _accessToken = storedAccess;
+      _refreshToken = storedRefresh;
+      try {
+        final user = await _authRepository.me();
+        _currentUserId = user.id;
+        _currentRole = user.role;
+      } on HttpException {
+        await _clear();
+      }
+    } catch (_) {
+      await _clear();
+    } finally {
       _isRestoring = false;
       notifyListeners();
-      return;
     }
-
-    _accessToken = storedAccess;
-    _refreshToken = storedRefresh;
-    try {
-      final user = await _authRepository.me();
-      _currentUserId = user.id;
-      _currentRole = user.role;
-    } on HttpException {
-      await _clear();
-    }
-    _isRestoring = false;
-    notifyListeners();
   }
 
   Future<void> login({

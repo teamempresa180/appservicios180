@@ -34,11 +34,18 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _restoreSession() async {
     final sessionManager = widget._sessionManager ?? locator<SessionManager>();
-    await sessionManager.restore();
+    var isAuthenticated = false;
+    try {
+      await sessionManager.restore();
+      isAuthenticated = sessionManager.isAuthenticated;
+    } catch (_) {
+      // `SessionManager.restore()` already guards its own failures, but
+      // this is the last line of defense: Splash has no other fallback,
+      // so an uncaught error here must never leave the user staring at
+      // "Inicializando..." forever — fall back to a logged-out state.
+    }
     if (!mounted) return;
-    context.go(
-      sessionManager.isAuthenticated ? AppRoutes.home : AppRoutes.onboarding,
-    );
+    context.go(isAuthenticated ? AppRoutes.home : AppRoutes.onboarding);
   }
 
   @override
