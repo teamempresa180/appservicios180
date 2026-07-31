@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AddressType } from '../../domain/value-objects/address-type.value-object';
 
 /**
@@ -32,6 +32,20 @@ export class CreateAddressRequestDto {
 
   @ApiProperty({ example: '110111' })
   postalCode!: string;
+
+  @ApiPropertyOptional({
+    example: 4.710989,
+    description:
+      'Latitude of the pin dropped on the map picker (-90..90). Must be provided together with `longitude`, or omitted entirely.',
+  })
+  latitude?: number;
+
+  @ApiPropertyOptional({
+    example: -74.072092,
+    description:
+      'Longitude of the pin dropped on the map picker (-180..180). Must be provided together with `latitude`, or omitted entirely.',
+  })
+  longitude?: number;
 
   @ApiProperty({ enum: AddressType, example: AddressType.Home })
   type!: AddressType;

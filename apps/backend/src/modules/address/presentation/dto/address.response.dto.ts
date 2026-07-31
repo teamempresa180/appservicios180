@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AddressType } from '../../domain/value-objects/address-type.value-object';
 import { AddressStatus } from '../../domain/value-objects/address-status.value-object';
 
@@ -31,6 +31,12 @@ export class AddressResponseDto {
 
   @ApiProperty({ example: '110111' })
   postalCode!: string;
+
+  @ApiPropertyOptional({ example: 4.710989, nullable: true })
+  latitude!: number | null;
+
+  @ApiPropertyOptional({ example: -74.072092, nullable: true })
+  longitude!: number | null;
 
   @ApiProperty({ enum: AddressType })
   type!: AddressType;

@@ -45,7 +45,11 @@ describe('Address use cases', () => {
   });
 
   function createCommand(
-    overrides: Partial<{ alias: string }> = {},
+    overrides: Partial<{
+      alias: string;
+      latitude: number;
+      longitude: number;
+    }> = {},
   ): CreateAddressCommand {
     return new CreateAddressCommand(
       identityId,
@@ -56,6 +60,8 @@ describe('Address use cases', () => {
       'Colombia',
       '110111',
       AddressType.Home,
+      overrides.latitude,
+      overrides.longitude,
     );
   }
 
@@ -67,6 +73,34 @@ describe('Address use cases', () => {
       expect(dto.identityId).toBe(identityId);
       expect(dto.alias).toBe('Home');
       expect(dto.status).toBe(AddressStatus.Active);
+      expect(dto.latitude).toBeNull();
+      expect(dto.longitude).toBeNull();
+    });
+
+    it('creates an Address with a map pin when latitude/longitude are provided', async () => {
+      const useCase = new CreateAddressUseCase(repository, identityRepository);
+      const dto = await useCase.execute(
+        createCommand({ latitude: 4.710989, longitude: -74.072092 }),
+      );
+
+      expect(dto.latitude).toBe(4.710989);
+      expect(dto.longitude).toBe(-74.072092);
+    });
+
+    it('rejects a latitude provided without a longitude', async () => {
+      const useCase = new CreateAddressUseCase(repository, identityRepository);
+      await expect(
+        useCase.execute(createCommand({ latitude: 4.710989 })),
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it('rejects an out-of-range latitude', async () => {
+      const useCase = new CreateAddressUseCase(repository, identityRepository);
+      await expect(
+        useCase.execute(
+          createCommand({ latitude: 200, longitude: -74.072092 }),
+        ),
+      ).rejects.toThrow(ValidationException);
     });
 
     it('throws NotFoundException when the Identity does not exist', async () => {
@@ -150,6 +184,86 @@ describe('Address use cases', () => {
           new UpdateAddressCommand('unknown-id', 'Work'),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('sets the map pin when latitude/longitude are provided', async () => {
+      const created = await new CreateAddressUseCase(
+        repository,
+        identityRepository,
+      ).execute(createCommand());
+
+      const updated = await new UpdateAddressUseCase(repository).execute(
+        new UpdateAddressCommand(
+          created.id,
+          undefined,
+          undefined,
+          undefined,
+          4.710989,
+          -74.072092,
+        ),
+      );
+
+      expect(updated.latitude).toBe(4.710989);
+      expect(updated.longitude).toBe(-74.072092);
+    });
+
+    it('leaves the map pin untouched when latitude/longitude are omitted', async () => {
+      const created = await new CreateAddressUseCase(
+        repository,
+        identityRepository,
+      ).execute(
+        createCommand({ latitude: 4.710989, longitude: -74.072092 }),
+      );
+
+      const updated = await new UpdateAddressUseCase(repository).execute(
+        new UpdateAddressCommand(created.id, 'Work'),
+      );
+
+      expect(updated.latitude).toBe(4.710989);
+      expect(updated.longitude).toBe(-74.072092);
+    });
+
+    it('clears the map pin when latitude/longitude are explicitly null', async () => {
+      const created = await new CreateAddressUseCase(
+        repository,
+        identityRepository,
+      ).execute(
+        createCommand({ latitude: 4.710989, longitude: -74.072092 }),
+      );
+
+      const updated = await new UpdateAddressUseCase(repository).execute(
+        new UpdateAddressCommand(
+          created.id,
+          undefined,
+          undefined,
+          undefined,
+          null,
+          null,
+        ),
+      );
+
+      expect(updated.latitude).toBeNull();
+      expect(updated.longitude).toBeNull();
+    });
+
+    it('rejects providing only latitude on update', async () => {
+      const created = await new CreateAddressUseCase(
+        repository,
+        identityRepository,
+      ).execute(createCommand());
+
+      await expect(
+        new UpdateAddressUseCase(repository).execute(
+          new UpdateAddressCommand(
+            created.id,
+            undefined,
+            undefined,
+            undefined,
+            4.710989,
+            undefined,
+          ),
+        ),
+      ).rejects.toThrow(ValidationException);
     });
   });
 

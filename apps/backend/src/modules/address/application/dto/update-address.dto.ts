@@ -10,5 +10,7 @@ export class UpdateAddressDto {
   state?: string;
   country?: string;
   postalCode?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   status?: AddressStatus;
 }

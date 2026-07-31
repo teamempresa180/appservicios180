@@ -9,5 +9,7 @@ export class UpdateAddressCommand {
     public readonly alias?: string,
     public readonly fullAddress?: string,
     public readonly status?: AddressStatus,
+    public readonly latitude?: number | null,
+    public readonly longitude?: number | null,
   ) {}
 }

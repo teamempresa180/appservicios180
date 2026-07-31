@@ -15,6 +15,8 @@ abstract class AddressManagementRepository {
   Future<Contact> getContactFor(Address address);
 
   /// Creates a new [Address] for the current session's identity.
+  /// [latitude]/[longitude] are an optional map pin — both provided
+  /// together, or both omitted (never just one).
   Future<Address> createAddress({
     required String alias,
     required String fullAddress,
@@ -23,15 +25,22 @@ abstract class AddressManagementRepository {
     required String country,
     required String postalCode,
     required AddressType type,
+    double? latitude,
+    double? longitude,
   });
 
-  /// Only `alias`/`fullAddress` are updatable — matches the backend's
-  /// `UpdateAddressRequestDto` contract (city/state/country/postalCode
-  /// aren't).
+  /// Only `alias`/`fullAddress`/`latitude`/`longitude` are updatable —
+  /// matches the backend's `UpdateAddressRequestDto` contract
+  /// (city/state/country/postalCode aren't). Pass both `latitude`/
+  /// `longitude` as `null` to explicitly clear an existing pin, both
+  /// as numbers to set/move it, or both `null` (the default) when the
+  /// address never had one.
   Future<Address> updateAddress(
     Address address, {
     required String alias,
     required String fullAddress,
+    double? latitude,
+    double? longitude,
   });
 
   Future<void> deleteAddress(Address address);

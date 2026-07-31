@@ -35,6 +35,8 @@ describe('AddressController', () => {
     state: 'Cundinamarca',
     country: 'Colombia',
     postalCode: '110111',
+    latitude: 4.710989,
+    longitude: -74.072092,
     type: AddressType.Home,
     status: AddressStatus.Active,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -90,6 +92,8 @@ describe('AddressController', () => {
         'Colombia',
         '110111',
         AddressType.Home,
+        undefined,
+        undefined,
       ),
     );
     expect(response.id).toBe('id-1');
@@ -101,7 +105,14 @@ describe('AddressController', () => {
     const response = await controller.update('id-1', dto);
 
     expect(updateUseCase.execute).toHaveBeenCalledWith(
-      new UpdateAddressCommand('id-1', 'New Alias', undefined, undefined),
+      new UpdateAddressCommand(
+        'id-1',
+        'New Alias',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      ),
     );
     expect(response.id).toBe('id-1');
   });

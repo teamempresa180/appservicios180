@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../../../address/models/address_type.dart';
+import '../../../../core/ui/tokens/app_radius.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_button.dart';
 import '../../../../core/ui/widgets/app_text_field.dart';
+import 'address_map_picker.dart';
 
 /// The fields this sheet collects. In edit mode only [alias]/
-/// [fullAddress] are actually sent (see `updateAddress`'s doc comment
-/// on why city/state/country/postalCode/type aren't updatable) — the
-/// other fields are still shown, read-only, for context.
+/// [fullAddress]/[latitude]/[longitude] are actually sent (see
+/// `updateAddress`'s doc comment on why city/state/country/postalCode/
+/// type aren't updatable) — the other fields are still shown,
+/// read-only, for context. [latitude]/[longitude] are always a pair —
+/// both set or both `null` — never just one.
 class AddressFormResult {
   const AddressFormResult({
     required this.alias,
@@ -17,6 +21,8 @@ class AddressFormResult {
     this.country,
     this.postalCode,
     this.type,
+    this.latitude,
+    this.longitude,
   });
 
   final String alias;
@@ -26,6 +32,8 @@ class AddressFormResult {
   final String? country;
   final String? postalCode;
   final AddressType? type;
+  final double? latitude;
+  final double? longitude;
 }
 
 String addressTypeLabel(AddressType type) {
@@ -61,6 +69,8 @@ class AddressFormSheet extends StatefulWidget {
     this.initialCountry = '',
     this.initialPostalCode = '',
     this.initialType = AddressType.home,
+    this.initialLatitude,
+    this.initialLongitude,
   });
 
   final bool isEditing;
@@ -71,6 +81,8 @@ class AddressFormSheet extends StatefulWidget {
   final String initialCountry;
   final String initialPostalCode;
   final AddressType initialType;
+  final double? initialLatitude;
+  final double? initialLongitude;
 
   static Future<AddressFormResult?> show(
     BuildContext context, {
@@ -82,6 +94,8 @@ class AddressFormSheet extends StatefulWidget {
     String initialCountry = '',
     String initialPostalCode = '',
     AddressType initialType = AddressType.home,
+    double? initialLatitude,
+    double? initialLongitude,
   }) {
     return showModalBottomSheet<AddressFormResult>(
       context: context,
@@ -95,6 +109,8 @@ class AddressFormSheet extends StatefulWidget {
         initialCountry: initialCountry,
         initialPostalCode: initialPostalCode,
         initialType: initialType,
+        initialLatitude: initialLatitude,
+        initialLongitude: initialLongitude,
       ),
     );
   }
@@ -117,6 +133,8 @@ class _AddressFormSheetState extends State<AddressFormSheet> {
     text: widget.initialPostalCode,
   );
   late AddressType _type = widget.initialType;
+  late double? _latitude = widget.initialLatitude;
+  late double? _longitude = widget.initialLongitude;
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -144,8 +162,30 @@ class _AddressFormSheetState extends State<AddressFormSheet> {
         country: widget.isEditing ? null : _countryController.text.trim(),
         postalCode: widget.isEditing ? null : _postalCodeController.text.trim(),
         type: widget.isEditing ? null : _type,
+        latitude: _latitude,
+        longitude: _longitude,
       ),
     );
+  }
+
+  Future<void> _pickLocation() async {
+    final result = await AddressMapPicker.show(
+      context,
+      initialLatitude: _latitude,
+      initialLongitude: _longitude,
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _latitude = result.latitude;
+      _longitude = result.longitude;
+    });
+  }
+
+  void _clearLocation() {
+    setState(() {
+      _latitude = null;
+      _longitude = null;
+    });
   }
 
   @override
@@ -224,11 +264,88 @@ class _AddressFormSheetState extends State<AddressFormSheet> {
                   },
                 ),
               ],
+              const SizedBox(height: AppSpacing.space16),
+              _LocationSection(
+                latitude: _latitude,
+                longitude: _longitude,
+                onPick: _pickLocation,
+                onClear: _clearLocation,
+              ),
               const SizedBox(height: AppSpacing.space20),
               AppButton(label: 'Guardar', onPressed: _save),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// "Ubicar en el mapa" section — an optional step, never required to
+/// save the address (map permission/GPS/network problems must never
+/// block saving via the text fields alone, see `AddressMapPicker`'s
+/// doc comment). Shows a compact summary once a pin is set, or an
+/// invitation to pick one otherwise.
+class _LocationSection extends StatelessWidget {
+  const _LocationSection({
+    required this.latitude,
+    required this.longitude,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  final double? latitude;
+  final double? longitude;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hasPin = latitude != null && longitude != null;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.space12),
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(AppRadius.radius12),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            hasPin ? Icons.location_on : Icons.location_on_outlined,
+            color: hasPin ? theme.colorScheme.primary : theme.colorScheme.outline,
+          ),
+          const SizedBox(width: AppSpacing.space12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Ubicar en el mapa', style: theme.textTheme.bodyMedium),
+                if (hasPin)
+                  Text(
+                    '${latitude!.toStringAsFixed(5)}, ${longitude!.toStringAsFixed(5)}',
+                    style: theme.textTheme.bodySmall,
+                  )
+                else
+                  Text(
+                    'Opcional: marca el punto exacto en el mapa.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+              ],
+            ),
+          ),
+          if (hasPin)
+            IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: 'Quitar ubicación',
+              onPressed: onClear,
+            ),
+          TextButton(
+            onPressed: onPick,
+            child: Text(hasPin ? 'Cambiar' : 'Ubicar'),
+          ),
+        ],
       ),
     );
   }

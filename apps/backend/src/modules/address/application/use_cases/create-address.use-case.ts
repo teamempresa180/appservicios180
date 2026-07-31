@@ -41,6 +41,8 @@ export class CreateAddressUseCase {
       state: command.state,
       country: command.country,
       postalCode: command.postalCode,
+      latitude: command.latitude ?? null,
+      longitude: command.longitude ?? null,
       type: command.type,
       status: AddressStatus.Active,
       createdAt: now,

@@ -24,6 +24,8 @@ export class AddressHttpMapper {
       dto.country,
       dto.postalCode,
       dto.type,
+      dto.latitude,
+      dto.longitude,
     );
   }
 
@@ -31,7 +33,14 @@ export class AddressHttpMapper {
     id: string,
     dto: UpdateAddressRequestDto,
   ): UpdateAddressCommand {
-    return new UpdateAddressCommand(id, dto.alias, dto.fullAddress, dto.status);
+    return new UpdateAddressCommand(
+      id,
+      dto.alias,
+      dto.fullAddress,
+      dto.status,
+      dto.latitude,
+      dto.longitude,
+    );
   }
 
   static toResponse(dto: AddressDto): AddressResponseDto {
@@ -44,6 +53,8 @@ export class AddressHttpMapper {
     response.state = dto.state;
     response.country = dto.country;
     response.postalCode = dto.postalCode;
+    response.latitude = dto.latitude;
+    response.longitude = dto.longitude;
     response.type = dto.type;
     response.status = dto.status;
     response.createdAt = dto.createdAt.toISOString();

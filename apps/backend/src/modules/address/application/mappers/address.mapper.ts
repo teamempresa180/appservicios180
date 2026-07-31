@@ -16,6 +16,8 @@ export class AddressMapper {
     dto.state = address.state;
     dto.country = address.country;
     dto.postalCode = address.postalCode;
+    dto.latitude = address.latitude;
+    dto.longitude = address.longitude;
     dto.type = address.type;
     dto.status = address.status;
     dto.createdAt = address.createdAt;

@@ -13,6 +13,8 @@ export class AddressDto {
   state!: string;
   country!: string;
   postalCode!: string;
+  latitude!: number | null;
+  longitude!: number | null;
   type!: AddressType;
   status!: AddressStatus;
   createdAt!: Date;

@@ -73,6 +73,8 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
         country: result.country!,
         postalCode: result.postalCode!,
         type: result.type!,
+        latitude: result.latitude,
+        longitude: result.longitude,
       );
       if (!mounted) return;
       AppSnackBar.show(
@@ -93,6 +95,8 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
       isEditing: true,
       initialAlias: data.address.alias,
       initialFullAddress: data.address.fullAddress,
+      initialLatitude: data.address.latitude,
+      initialLongitude: data.address.longitude,
     );
     if (result == null || !mounted) return;
     try {
@@ -100,6 +104,8 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
         data.address,
         alias: result.alias,
         fullAddress: result.fullAddress,
+        latitude: result.latitude,
+        longitude: result.longitude,
       );
       if (!mounted) return;
       AppSnackBar.show(

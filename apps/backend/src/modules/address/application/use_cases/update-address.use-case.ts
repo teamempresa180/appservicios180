@@ -9,11 +9,14 @@ import { AddressValidator } from '../validators/address.validator';
 
 /**
  * Updates the mutable fields of an existing Address (`alias`,
- * `fullAddress`, `status`) — `city`/`state`/`country`/`postalCode`/
- * `type` are not offered by `UpdateAddressCommand` (only by
- * `UpdateAddressDto`, unused by any command), so they stay untouched,
- * same pattern as `UpdateProfileUseCase` leaving `avatarUrl`/`bio`
- * alone.
+ * `fullAddress`, `status`, `latitude`/`longitude`) —
+ * `city`/`state`/`country`/`postalCode`/`type` are not offered by
+ * `UpdateAddressCommand` (only by `UpdateAddressDto`, unused by any
+ * command), so they stay untouched, same pattern as
+ * `UpdateProfileUseCase` leaving `avatarUrl`/`bio` alone.
+ * `latitude`/`longitude` are `undefined` when the caller doesn't touch
+ * the pin (existing value kept) and `null` when the caller explicitly
+ * clears it — see `AddressValidator.validateUpdate`.
  */
 export class UpdateAddressUseCase {
   constructor(private readonly addressRepository: AddressRepository) {}
@@ -35,6 +38,8 @@ export class UpdateAddressUseCase {
       state: existing.state,
       country: existing.country,
       postalCode: existing.postalCode,
+      latitude: command.latitude !== undefined ? command.latitude : existing.latitude,
+      longitude: command.longitude !== undefined ? command.longitude : existing.longitude,
       type: existing.type,
       status: command.status ?? existing.status,
       createdAt: existing.createdAt,

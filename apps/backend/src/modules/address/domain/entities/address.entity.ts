@@ -12,6 +12,9 @@ export interface AddressProps {
   state: string;
   country: string;
   postalCode: string;
+  /** Pin location dropped by the client on the map picker. Both present or both absent. */
+  latitude: number | null;
+  longitude: number | null;
   type: AddressType;
   status: AddressStatus;
   createdAt: Date;
@@ -20,7 +23,10 @@ export interface AddressProps {
 
 /**
  * Represents a physical address associated with an Identity.
- * Pure data holder — no geolocation, no maps, no validation, no behavior.
+ * Pure data holder — no maps rendering, no validation, no behavior.
+ * `latitude`/`longitude` are an optional geolocation pin (both present
+ * or both `null`) captured by the client's map picker, on top of the
+ * required text fields.
  */
 export class Address extends Entity<AddressId> {
   public readonly identityId: IdentityId;
@@ -30,6 +36,8 @@ export class Address extends Entity<AddressId> {
   public readonly state: string;
   public readonly country: string;
   public readonly postalCode: string;
+  public readonly latitude: number | null;
+  public readonly longitude: number | null;
   public readonly type: AddressType;
   public readonly status: AddressStatus;
   public readonly createdAt: Date;
@@ -44,6 +52,8 @@ export class Address extends Entity<AddressId> {
     this.state = props.state;
     this.country = props.country;
     this.postalCode = props.postalCode;
+    this.latitude = props.latitude;
+    this.longitude = props.longitude;
     this.type = props.type;
     this.status = props.status;
     this.createdAt = props.createdAt;

@@ -13,5 +13,7 @@ export class CreateAddressCommand {
     public readonly country: string,
     public readonly postalCode: string,
     public readonly type: AddressType,
+    public readonly latitude?: number,
+    public readonly longitude?: number,
   ) {}
 }

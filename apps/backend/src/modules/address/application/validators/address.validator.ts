@@ -4,13 +4,23 @@ import { AddressStatus } from '../../domain/value-objects/address-status.value-o
 import { CreateAddressCommand } from '../commands/create-address.command';
 import { UpdateAddressCommand } from '../commands/update-address.command';
 
+const MIN_LATITUDE = -90;
+const MAX_LATITUDE = 90;
+const MIN_LONGITUDE = -180;
+const MAX_LONGITUDE = 180;
+
 /**
  * Structural validation for Address commands — required fields,
- * well-formed values. No business rules (e.g. no geolocation/postal
- * code format validation — nothing in `address/domain` documents
- * either as a real invariant, and no uniqueness-per-Identity check —
- * the repository contract's `findByIdentityId` returns `Address[]`,
- * so multiple addresses per Identity are allowed).
+ * well-formed values. No business rules (e.g. no postal code format
+ * validation — nothing in `address/domain` documents either as a real
+ * invariant, and no uniqueness-per-Identity check — the repository
+ * contract's `findByIdentityId` returns `Address[]`, so multiple
+ * addresses per Identity are allowed).
+ *
+ * `latitude`/`longitude` follow the same "both or neither" pattern as
+ * `providerId`/`serviceId` in `order.validator.ts` (direct hire vs.
+ * open request): a map pin is optional, but a partial pin (only one
+ * coordinate) is never valid.
  */
 export class AddressValidator {
   static validateCreate(command: CreateAddressCommand): void {
@@ -40,6 +50,10 @@ export class AddressValidator {
         `type must be one of: ${Object.values(AddressType).join(', ')}`,
       );
     }
+    AddressValidator.validateCoordinates(
+      command.latitude,
+      command.longitude,
+    );
   }
 
   static validateUpdate(command: UpdateAddressCommand): void {
@@ -59,6 +73,66 @@ export class AddressValidator {
       throw new ValidationException(
         `status must be one of: ${Object.values(AddressStatus).join(', ')}`,
       );
+    }
+    AddressValidator.validateCoordinates(
+      command.latitude,
+      command.longitude,
+      // Update commands may explicitly clear the pin with `null` —
+      // undefined means "leave untouched", so only treat the pair as
+      // present when strictly not undefined.
+      true,
+    );
+  }
+
+  /**
+   * Both coordinates must be present or both absent — never just one.
+   * When `allowNull` is set (update flow), a pin may also be cleared
+   * by passing `null` for both.
+   */
+  private static validateCoordinates(
+    latitude: number | null | undefined,
+    longitude: number | null | undefined,
+    allowNull = false,
+  ): void {
+    const hasLatitude = allowNull
+      ? latitude !== undefined
+      : latitude !== undefined && latitude !== null;
+    const hasLongitude = allowNull
+      ? longitude !== undefined
+      : longitude !== undefined && longitude !== null;
+
+    if (hasLatitude !== hasLongitude) {
+      throw new ValidationException(
+        'latitude and longitude must both be present or both be absent',
+      );
+    }
+
+    if (allowNull && latitude !== undefined && longitude !== undefined) {
+      if ((latitude === null) !== (longitude === null)) {
+        throw new ValidationException(
+          'latitude and longitude must both be present or both be absent',
+        );
+      }
+    }
+
+    if (typeof latitude === 'number') {
+      if (Number.isNaN(latitude) || latitude < MIN_LATITUDE || latitude > MAX_LATITUDE) {
+        throw new ValidationException(
+          `latitude must be between ${MIN_LATITUDE} and ${MAX_LATITUDE}`,
+        );
+      }
+    }
+
+    if (typeof longitude === 'number') {
+      if (
+        Number.isNaN(longitude) ||
+        longitude < MIN_LONGITUDE ||
+        longitude > MAX_LONGITUDE
+      ) {
+        throw new ValidationException(
+          `longitude must be between ${MIN_LONGITUDE} and ${MAX_LONGITUDE}`,
+        );
+      }
     }
   }
 }
