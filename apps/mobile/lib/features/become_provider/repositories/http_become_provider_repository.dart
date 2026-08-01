@@ -12,32 +12,47 @@ import '../../../provider/models/provider_experience.dart';
 import '../../../verification/entities/verification.dart';
 import '../../../verification/models/verification_type.dart';
 import '../../categories/repositories/category_repository.dart';
-import '../models/provider_application.dart';
+import '../models/required_provider_documents.dart';
 import 'become_provider_repository.dart';
 
 /// [BecomeProviderRepository] backed by [ApiClient].
 ///
-/// `Provider` now has dedicated `categoryId`/`specialization` columns
-/// on the backend (see `apps/backend` migration
-/// `provider_category_and_review_states`), so both are sent as real
-/// fields on `POST /providers` instead of being folded into
-/// `biography` as a text prefix (the previous, interim approach).
+/// `Provider` has dedicated `categoryId`/`specialization` columns on
+/// the backend (see `apps/backend` migration
+/// `provider_category_and_review_states`), sent as real fields on
+/// `POST /providers`. `specialization` is sent as the chosen
+/// specialization's display name (see `SpecializationPicker`) under
+/// the same field name the backend already accepts — a parallel
+/// backend effort is replacing that column with `specializationId`;
+/// this call site is the natural, self-contained place to switch the
+/// field once that lands (see Prompt 13's notes), not something this
+/// repository needs to guess at today.
 ///
-/// - `city`/`department`/`coverage` still become a real `Address`
-///   (`type: SERVICE`) for the identity, reusing the existing Address
-///   module rather than inventing a new "coverage area" concept.
+/// Photo, address and phone are handled entirely by `ProfileRepository`
+/// / `AddressManagementRepository` / `ContactManagementRepository` in
+/// Paso 1 — this repository never touches `/addresses` or `/contacts`.
 ///
-/// `type` (independent/freelancer/company) isn't asked in this form —
-/// defaults to `independent`. `experience` (the qualitative level
+/// `type` is independent/company based on the applicant's own toggle
+/// (Paso 3, "¿independiente?"). `experience` (the qualitative level
 /// `Provider` requires) is derived from `yearsOfExperience` via a
 /// simple threshold, since asking for both a level *and* years would
 /// be redundant.
 ///
 /// The created `Provider` starts in `ProviderStatus.pending` — set by
 /// the backend's `CreateProviderUseCase`, not this repository — until
-/// both uploaded documents are reviewed and approved (today: manually,
+/// the uploaded documents are reviewed and approved (today: manually,
 /// via the existing `PUT /providers/:id` endpoint — there is no
 /// admin/staff role model in this backend yet).
+///
+/// [ensureDocumentVerifications] has one known limitation: `GET
+/// /verifications` has no `?identityId=` query filter on the backend
+/// (same interim shape as `HttpOrdersRepository.getQuoteFor`), so it
+/// lists a page and matches `identityId`/`type` client-side. If an
+/// identity ever has more verifications than fit on one page, an
+/// already-created record could be missed and a duplicate created —
+/// harmless (the applicant just re-uploads against the new one) but
+/// worth a real `?identityId=` filter as a follow-up, same as the
+/// other Http repositories with this shape.
 class HttpBecomeProviderRepository implements BecomeProviderRepository {
   HttpBecomeProviderRepository(
     this._apiClient,
@@ -96,91 +111,35 @@ class HttpBecomeProviderRepository implements BecomeProviderRepository {
     return ProfileHttpMapper.fromJson(created);
   }
 
-  Future<void> _saveCoverageAddress({
-    required String city,
-    required String department,
-    required String coverage,
-  }) async {
-    final json = await _apiClient.get('/addresses');
-    final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
-    final match = items.where(
-      (item) => item['identityId'] == _identityId && item['type'] == 'SERVICE',
-    );
-    if (match.isNotEmpty) {
-      await _apiClient.put(
-        '/addresses/${match.first['id']}',
-        data: {'alias': 'Zona de cobertura', 'fullAddress': coverage},
-      );
-      return;
-    }
-    await _apiClient.post(
-      '/addresses',
-      data: {
-        'identityId': _identityId,
-        'alias': 'Zona de cobertura',
-        'fullAddress': coverage,
-        'city': city,
-        'state': department,
-        'country': 'Colombia',
-        'postalCode': '—',
-        'type': 'SERVICE',
-      },
-    );
-  }
-
   @override
-  Future<ProviderApplication> apply({
-    required Category category,
-    required String specialization,
-    required int yearsOfExperience,
-    required String biography,
-    required String city,
-    required String department,
-    required String coverage,
-  }) async {
-    final identity = await _fetchIdentity();
-    final profile = await _ensureProfile(identity.fullName);
-    await _saveCoverageAddress(
-      city: city,
-      department: department,
-      coverage: coverage,
+  Future<List<Verification>> ensureDocumentVerifications() async {
+    final json = await _apiClient.get(
+      '/verifications',
+      queryParameters: {'pageSize': 200},
     );
+    final items = (json['items'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final existingByType = <VerificationType, Map<String, dynamic>>{
+      for (final item in items)
+        if (item['identityId'] == _identityId)
+          VerificationType.values.byName(
+            enumFromJson(item['type'] as String),
+          ): item,
+    };
 
-    final providerJson = await _apiClient.post(
-      '/providers',
-      data: {
-        'identityId': _identityId,
-        'providerProfileId': profile.id.value,
-        'type': 'INDEPENDENT',
-        'experience': enumToJson(_experienceFor(yearsOfExperience).name),
-        'biography': biography,
-        'yearsOfExperience': yearsOfExperience,
-        'categoryId': category.id.value,
-        'specialization': specialization,
-      },
-    );
-    final provider = ProviderHttpMapper.fromJson(providerJson);
-
-    Future<Verification> createVerification(VerificationType type) async {
-      final json = await _apiClient.post(
+    final result = <Verification>[];
+    for (final type in requiredProviderDocuments) {
+      final existing = existingByType[type];
+      if (existing != null) {
+        result.add(VerificationHttpMapper.fromJson(existing));
+        continue;
+      }
+      final created = await _apiClient.post(
         '/verifications',
         data: {'identityId': _identityId, 'type': enumToJson(type.name)},
       );
-      return VerificationHttpMapper.fromJson(json);
+      result.add(VerificationHttpMapper.fromJson(created));
     }
-
-    final criminalRecordVerification = await createVerification(
-      VerificationType.criminalRecord,
-    );
-    final certificationVerification = await createVerification(
-      VerificationType.certification,
-    );
-
-    return ProviderApplication(
-      provider: provider,
-      criminalRecordVerification: criminalRecordVerification,
-      certificationVerification: certificationVerification,
-    );
+    return result;
   }
 
   @override
@@ -201,5 +160,62 @@ class HttpBecomeProviderRepository implements BecomeProviderRepository {
       },
     );
     return VerificationHttpMapper.fromJson(json);
+  }
+
+  @override
+  Future<Provider> apply({
+    required Category category,
+    required String specializationName,
+    required int yearsOfExperience,
+    String? previousCompany,
+    required bool isIndependent,
+    required String biography,
+  }) async {
+    final identity = await _fetchIdentity();
+    final profile = await _ensureProfile(identity.fullName);
+
+    // `Provider` has no dedicated "previous company" column (unlike
+    // `categoryId`/`specialization`, which do) — same honest,
+    // no-silent-drop approach the old doc comment on this method used
+    // to describe for category/specialization before those got real
+    // columns: fold it into `biography` as a labeled line rather than
+    // inventing a field or discarding what the applicant typed. Worth
+    // a real column as a backend follow-up.
+    final effectiveBiography = (previousCompany == null || previousCompany.isEmpty)
+        ? biography
+        : '$biography\n\nEmpresa anterior: $previousCompany';
+
+    final providerJson = await _apiClient.post(
+      '/providers',
+      data: {
+        'identityId': _identityId,
+        'providerProfileId': profile.id.value,
+        'type': isIndependent ? 'INDEPENDENT' : 'COMPANY',
+        'experience': enumToJson(_experienceFor(yearsOfExperience).name),
+        'biography': effectiveBiography,
+        'yearsOfExperience': yearsOfExperience,
+        'categoryId': category.id.value,
+        'specialization': specializationName,
+      },
+    );
+    return ProviderHttpMapper.fromJson(providerJson);
+  }
+
+  @override
+  Future<Verification> resetVerificationStatus(Verification verification) async {
+    final json = await _apiClient.put(
+      '/verifications/${verification.id.value}',
+      data: {'status': 'PENDING'},
+    );
+    return VerificationHttpMapper.fromJson(json);
+  }
+
+  @override
+  Future<Provider> resetProviderStatus(Provider provider) async {
+    final json = await _apiClient.put(
+      '/providers/${provider.id.value}',
+      data: {'status': 'PENDING'},
+    );
+    return ProviderHttpMapper.fromJson(json);
   }
 }

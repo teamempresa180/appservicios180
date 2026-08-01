@@ -1,12 +1,17 @@
 import '../../../category/entities/category.dart';
 import '../../../provider/entities/provider.dart';
 import '../../../verification/entities/verification.dart';
-import '../models/provider_application.dart';
 
 /// Contract for the "become a provider" application flow — reachable
 /// from Profile ("Quiero convertirme en proveedor"), independent of
-/// Register: the applicant is already a logged-in Customer and only
-/// fills in professional information (no personal data re-entry).
+/// Register: the applicant is already a logged-in Customer. Personal
+/// data already captured at registration (identity document) or that
+/// belongs to other features (photo → `ProfileRepository`, address →
+/// `AddressManagementRepository`, phone → `ContactManagementRepository`)
+/// is *not* re-collected here — this repository only covers what's
+/// specific to becoming a provider: the category/specialization,
+/// professional experience, the 7 required verification documents, and
+/// the final `Provider` record itself.
 ///
 /// Implemented by `MockBecomeProviderRepository` and
 /// `HttpBecomeProviderRepository` (the real backend calls).
@@ -25,22 +30,16 @@ abstract class BecomeProviderRepository {
 
   Future<List<Category>> getCategories();
 
-  /// Creates the real `Provider` record (backend default status:
-  /// `PENDING`, until the two uploaded documents are reviewed) and
-  /// the two `Verification` records the caller must then upload a
-  /// document against via [uploadDocument]. [category]/[specialization]
-  /// have no dedicated field on `Provider` — see
-  /// `HttpBecomeProviderRepository`'s doc comment for how they're
-  /// honestly represented instead of silently dropped.
-  Future<ProviderApplication> apply({
-    required Category category,
-    required String specialization,
-    required int yearsOfExperience,
-    required String biography,
-    required String city,
-    required String department,
-    required String coverage,
-  });
+  /// Returns the real `Verification` records the document upload step
+  /// (Paso 4) needs — one per type in `requiredProviderDocuments`,
+  /// creating any that don't exist yet for the current identity.
+  /// Always returns exactly `requiredProviderDocuments.length` records,
+  /// in that same order. Safe to call again (e.g. the applicant
+  /// reopens the wizard mid-upload): already-created records for a
+  /// type are reused rather than duplicated — see
+  /// `HttpBecomeProviderRepository`'s doc comment for the one caveat
+  /// on how "already created" is detected today.
+  Future<List<Verification>> ensureDocumentVerifications();
 
   /// Uploads [fileBytes] (named [fileName], `application/pdf` or
   /// `image/png`/`image/jpeg`) against [verification] via
@@ -54,4 +53,34 @@ abstract class BecomeProviderRepository {
     required String fileName,
     void Function(double progress)? onProgress,
   });
+
+  /// Creates the real `Provider` record (backend default status:
+  /// `PENDING`, until the uploaded documents are reviewed) — the
+  /// wizard's one irreversible action, called only after the applicant
+  /// confirms Paso 5 ("Resumen"). By this point the photo, address,
+  /// phone and all 7 documents have already been saved/uploaded
+  /// directly through their own repositories — this call only carries
+  /// the fields that are specific to the `Provider` record itself.
+  Future<Provider> apply({
+    required Category category,
+    required String specializationName,
+    required int yearsOfExperience,
+    String? previousCompany,
+    required bool isIndependent,
+    required String biography,
+  });
+
+  /// Resets a rejected [verification] back to `pending` after the
+  /// applicant re-uploads its document — part of "volver a enviar"
+  /// (see `RejectedApplicationView`). Uses the real, already-existing
+  /// `PUT /verifications/:id` endpoint (`status` is one of its
+  /// updatable fields); no backend change needed.
+  Future<Verification> resetVerificationStatus(Verification verification);
+
+  /// Resets a rejected [provider] back to `pending` once every
+  /// rejected document has been re-uploaded — the last step of
+  /// "volver a enviar". Uses the real, already-existing
+  /// `PUT /providers/:id` endpoint (`status` is one of its updatable
+  /// fields); no backend change needed.
+  Future<Provider> resetProviderStatus(Provider provider);
 }
