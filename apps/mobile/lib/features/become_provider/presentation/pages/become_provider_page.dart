@@ -12,6 +12,7 @@ import '../../../../provider/entities/provider.dart';
 import '../../../../provider/models/provider_status.dart';
 import '../../local/become_provider_draft.dart';
 import '../../local/become_provider_draft_storage.dart';
+import '../../models/required_provider_documents.dart';
 import '../../repositories/become_provider_repository.dart';
 import '../../specialization/models/specialization.dart';
 import '../widgets/documentation_step.dart';
@@ -387,8 +388,8 @@ class _BecomeProviderPageState extends State<BecomeProviderPage> {
               : _draft.previousCompany,
           isIndependent: _draft.isIndependent,
           biography: _draft.biography ?? '',
-          documentsUploadedCount: 7,
-          documentsRequiredCount: 7,
+          documentsUploadedCount: requiredProviderDocuments.length,
+          documentsRequiredCount: requiredProviderDocuments.length,
           isSubmitting: _submitting,
           onSubmit: _onSubmit,
         );

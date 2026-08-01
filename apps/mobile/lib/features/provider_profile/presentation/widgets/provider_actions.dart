@@ -3,6 +3,7 @@ import '../../../../category/entities/category.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_button.dart';
 import '../../../../core/ui/widgets/app_dialog.dart';
+import '../../../../core/ui/widgets/app_snack_bar.dart';
 import '../../../../service/entities/service.dart';
 import '../../../request_service/presentation/pages/request_service_page.dart';
 import '../../../trust/presentation/pages/trust_page.dart';
@@ -25,8 +26,9 @@ import '../../models/provider_profile_data.dart';
 ///
 /// "Verificación" opens the (visual-only, fixed mock) Verification
 /// screen. "Confianza" opens the (visual-only, fixed mock) Trust
-/// screen. "Chat" remains a no-op — there is no conversation to open
-/// before an order exists yet (see the feature README).
+/// screen. "Chat" has no conversation to open before an order exists
+/// yet (see the feature README), so it honestly says so instead of
+/// silently doing nothing.
 class ProviderActions extends StatelessWidget {
   const ProviderActions({
     super.key,
@@ -126,6 +128,19 @@ class ProviderActions extends StatelessWidget {
     }
   }
 
+  /// "Chat" has no conversation to open until a real order exists
+  /// between this client and the provider (see the feature README) —
+  /// a silent no-op still reads as a broken button to whoever taps it,
+  /// so it now honestly says so instead of doing nothing.
+  void _chatUnavailable(BuildContext context) {
+    AppSnackBar.show(
+      context,
+      'El chat estará disponible una vez tengas una solicitud con '
+      'este proveedor.',
+      type: AppSnackBarType.info,
+    );
+  }
+
   void _openVerification(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -163,7 +178,10 @@ class ProviderActions extends StatelessWidget {
           onPressed: () => _publishOpenRequest(context),
         ),
         const SizedBox(height: AppSpacing.space8),
-        AppButton(label: 'Chat', onPressed: onChat ?? () {}),
+        AppButton(
+          label: 'Chat',
+          onPressed: onChat ?? () => _chatUnavailable(context),
+        ),
         const SizedBox(height: AppSpacing.space8),
         AppButton(
           label: 'Verificación',

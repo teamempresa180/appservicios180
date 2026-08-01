@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_card.dart';
+import '../../../../service/models/service_status.dart';
 import '../../models/provider_service_display.dart';
 import 'service_actions.dart';
 import 'service_status_badge.dart';
@@ -80,7 +81,12 @@ class ServiceCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.space4),
           Text(data.lastUpdatedLabel, style: context.textStyles.bodySmall),
           const SizedBox(height: AppSpacing.space12),
-          ServiceActions(onEdit: onEdit, onPause: onPause, onDelete: onDelete),
+          ServiceActions(
+            onEdit: onEdit,
+            onPause: onPause,
+            onDelete: onDelete,
+            isPaused: service.status == ServiceStatus.inactive,
+          ),
         ],
       ),
     );
