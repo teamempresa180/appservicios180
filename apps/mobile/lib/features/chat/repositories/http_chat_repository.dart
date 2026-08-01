@@ -180,4 +180,23 @@ class HttpChatRepository implements ChatRepository {
     );
     return ChatHttpMapper.fromJson(created);
   }
+
+  @override
+  Future<Message> sendMessage(String content) async {
+    final chat = await _fetchChat();
+    final senderIdentityId = _sessionManager.currentUserId;
+    if (senderIdentityId == null) {
+      throw StateError('No authenticated session to send this Message from');
+    }
+    final created = await _apiClient.post(
+      '/messages',
+      data: {
+        'chatId': chat.id.value,
+        'senderIdentityId': senderIdentityId,
+        'content': content,
+        'type': enumToJson('text'),
+      },
+    );
+    return MessageHttpMapper.fromJson(created);
+  }
 }

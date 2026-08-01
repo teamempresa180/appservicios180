@@ -98,7 +98,7 @@ class _ChatPageState extends State<ChatPage> {
               const TypingIndicator(),
             ],
             const SizedBox(height: AppSpacing.space16),
-            const MessageInput(),
+            MessageInput(onSend: _viewModel.sendMessage),
           ],
         );
     }
