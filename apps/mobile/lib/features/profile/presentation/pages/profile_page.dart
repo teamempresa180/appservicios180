@@ -12,6 +12,8 @@ import '../../../../core/ui/animations/scale_in.dart';
 import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_button.dart';
+import '../../../../core/ui/widgets/app_dialog.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
@@ -165,7 +167,34 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _logout() => _sessionManager.logout();
+  /// Confirms before ending the session — "Cerrar sesión" is the one
+  /// destructive, hard-to-undo action on this screen (the user has to
+  /// log back in), so an accidental tap shouldn't act immediately.
+  Future<void> _logout(BuildContext context) async {
+    final confirmed = await AppDialog.show<bool>(
+      context,
+      title: 'Cerrar sesión',
+      content: const Text('¿Seguro que quieres cerrar sesión?'),
+      actions: [
+        AppButton(
+          label: 'Cancelar',
+          variant: AppButtonVariant.text,
+          expand: false,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+        AppButton(
+          label: 'Cerrar sesión',
+          expand: false,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+      ],
+    );
+    if (confirmed != true) return;
+    await _sessionManager.logout();
+    // No explicit navigation: `AppRouteGuard` (wired to `SessionManager`
+    // via `GoRouter.refreshListenable`) redirects to Login on its own
+    // the moment the session clears.
+  }
 
   Widget _buildBody() {
     switch (_viewModel.status) {
@@ -199,7 +228,7 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: AppSpacing.space16),
             ProfileActions(
               onEditProfile: () => _editProfile(context),
-              onLogout: _logout,
+              onLogout: () => _logout(context),
               showProviderDashboard: _sessionManager.currentRole == 'PROVIDER',
               showBecomeProvider: _sessionManager.currentRole != 'PROVIDER',
               onBecomeProvider: () => context.push(AppRoutes.becomeProvider),

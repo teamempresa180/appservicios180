@@ -33,7 +33,13 @@ class SettingsViewModel extends ChangeNotifier {
       _data = await SettingsMapper.toDisplay(_repository);
       _status = SettingsLoadStatus.success;
     } on HttpException catch (exception) {
-      _errorMessage = exception.message;
+      // A lost-connectivity failure never got a response, so its
+      // `message` is Dio's raw, English, technical exception text —
+      // not something to show verbatim in a Spanish-language app (see
+      // `HttpException.isConnectivityIssue`).
+      _errorMessage = exception.isConnectivityIssue
+          ? 'No hay conexión a internet. Verifica tu conexión e intenta de nuevo.'
+          : exception.message;
       _status = SettingsLoadStatus.error;
     } catch (_) {
       _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';

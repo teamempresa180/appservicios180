@@ -41,7 +41,13 @@ class ProfileViewModel extends ChangeNotifier {
       );
       _status = ProfileLoadStatus.success;
     } on HttpException catch (exception) {
-      _errorMessage = exception.message;
+      // A lost-connectivity failure never got a response, so its
+      // `message` is Dio's raw, English, technical exception text —
+      // not something to show verbatim in a Spanish-language app (see
+      // `HttpException.isConnectivityIssue`).
+      _errorMessage = exception.isConnectivityIssue
+          ? 'No hay conexión a internet. Verifica tu conexión e intenta de nuevo.'
+          : exception.message;
       _status = ProfileLoadStatus.error;
     } catch (_) {
       _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';

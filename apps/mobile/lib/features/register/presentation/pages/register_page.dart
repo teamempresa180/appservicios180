@@ -66,9 +66,24 @@ class _RegisterPageState extends State<RegisterPage> {
     } on HttpException catch (exception) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+      AppSnackBar.show(
+        context,
+        _messageFor(exception),
+        type: AppSnackBarType.error,
+      );
     }
   }
+
+  /// A lost-connectivity failure (no internet, DNS failure, timeout —
+  /// see `HttpException.isConnectivityIssue`) never got a response
+  /// from the server, so its `message` is Dio's raw, English,
+  /// technical exception text — not something to show verbatim in a
+  /// Spanish-language app. Every other `HttpException` subtype means a
+  /// real response came back, so its `message` is already the
+  /// backend's own (Spanish) validation/error text.
+  String _messageFor(HttpException exception) => exception.isConnectivityIssue
+      ? 'No hay conexión a internet. Verifica tu conexión e intenta de nuevo.'
+      : exception.message;
 
   void _goToLogin() => context.go(AppRoutes.login);
 

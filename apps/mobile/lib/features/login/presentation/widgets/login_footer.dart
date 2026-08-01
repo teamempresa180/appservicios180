@@ -6,6 +6,11 @@ import '../../../../core/ui/widgets/app_button.dart';
 /// Bottom links of the Login screen: "forgot password" and "create
 /// account". Both currently route to Register — password recovery has no
 /// screen of its own yet (see the feature README).
+///
+/// The "create account" line uses a [Wrap] instead of a [Row] so it
+/// degrades gracefully (wraps to a second line) on narrow screens
+/// instead of overflowing — same fix already applied to
+/// `RegisterFooter`.
 class LoginFooter extends StatelessWidget {
   const LoginFooter({
     super.key,
@@ -27,10 +32,12 @@ class LoginFooter extends StatelessWidget {
           expand: false,
         ),
         const SizedBox(height: AppSpacing.space8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: AppSpacing.space4,
           children: [
-            Text('¿No tienes cuenta? ', style: context.textStyles.bodyMedium),
+            Text('¿No tienes cuenta?', style: context.textStyles.bodyMedium),
             AppButton(
               label: 'Crear cuenta',
               onPressed: onCreateAccount,

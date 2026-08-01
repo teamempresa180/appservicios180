@@ -70,32 +70,50 @@ class _SecurityPageState extends State<SecurityPage> {
     final methodType = await AuthMethodTypeSheet.show(context);
     if (methodType == null || !mounted) return;
     final identity = _viewModel.data!.identity;
-    await _repository.createAuthMethod(
-      identity: identity,
-      methodType: methodType,
-    );
-    if (!mounted) return;
-    AppSnackBar.show(
-      context,
-      'Método de autenticación agregado.',
-      type: AppSnackBarType.success,
-    );
-    await _viewModel.load();
+    try {
+      await _repository.createAuthMethod(
+        identity: identity,
+        methodType: methodType,
+      );
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'Método de autenticación agregado.',
+        type: AppSnackBarType.success,
+      );
+      await _viewModel.load();
+    } on Exception {
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo agregar el método de autenticación.',
+        type: AppSnackBarType.error,
+      );
+    }
   }
 
   Future<void> _toggleStatus(Authentication authMethod) async {
     final isActive = authMethod.status == AuthenticationStatus.active;
-    await _repository.updateAuthMethodStatus(
-      authMethod,
-      isActive ? AuthenticationStatus.inactive : AuthenticationStatus.active,
-    );
-    if (!mounted) return;
-    AppSnackBar.show(
-      context,
-      isActive ? 'Método desactivado.' : 'Método activado.',
-      type: AppSnackBarType.info,
-    );
-    await _viewModel.load();
+    try {
+      await _repository.updateAuthMethodStatus(
+        authMethod,
+        isActive ? AuthenticationStatus.inactive : AuthenticationStatus.active,
+      );
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        isActive ? 'Método desactivado.' : 'Método activado.',
+        type: AppSnackBarType.info,
+      );
+      await _viewModel.load();
+    } on Exception {
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo actualizar el método de autenticación.',
+        type: AppSnackBarType.error,
+      );
+    }
   }
 
   Future<void> _deleteAuthMethod(Authentication authMethod) async {
@@ -117,10 +135,19 @@ class _SecurityPageState extends State<SecurityPage> {
       ],
     );
     if (confirmed != true || !mounted) return;
-    await _repository.deleteAuthMethod(authMethod);
-    if (!mounted) return;
-    AppSnackBar.show(context, 'Método eliminado.', type: AppSnackBarType.info);
-    await _viewModel.load();
+    try {
+      await _repository.deleteAuthMethod(authMethod);
+      if (!mounted) return;
+      AppSnackBar.show(context, 'Método eliminado.', type: AppSnackBarType.info);
+      await _viewModel.load();
+    } on Exception {
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo eliminar el método de autenticación.',
+        type: AppSnackBarType.error,
+      );
+    }
   }
 
   Widget _buildBody() {

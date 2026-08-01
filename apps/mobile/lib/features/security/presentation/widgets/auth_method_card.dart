@@ -70,7 +70,11 @@ class AuthMethodCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.space12),
-          AuthMethodActions(onDisable: onDisable, onDelete: onDelete),
+          AuthMethodActions(
+            isActive: authMethod.status == AuthenticationStatus.active,
+            onDisable: onDisable,
+            onDelete: onDelete,
+          ),
         ],
       ),
     );

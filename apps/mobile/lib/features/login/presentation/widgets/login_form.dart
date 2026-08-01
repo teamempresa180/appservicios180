@@ -63,6 +63,7 @@ class _LoginFormState extends State<LoginForm> {
               hint: 'Ingresa tu número de documento',
               keyboardType: TextInputType.text,
               enabled: !widget.isSubmitting,
+              maxLength: LoginValidators.maxDocumentNumberLength,
               validator: LoginValidators.documentNumber,
             ),
           ),
