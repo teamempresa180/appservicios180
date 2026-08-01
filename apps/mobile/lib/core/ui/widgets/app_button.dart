@@ -89,7 +89,15 @@ class AppButton extends StatelessWidget {
               key: ValueKey('loading'),
               height: AppSpacing.space20,
               width: AppSpacing.space20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              // `strokeCap: round` matches `AppLoadingIndicator`'s
+              // Material 3 look — every other spinner in the app
+              // (`AppLoading`, inline usages) uses round caps, so the
+              // button's own spinner should read the same way instead of
+              // showing squared-off line ends.
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                strokeCap: StrokeCap.round,
+              ),
             )
           : Text(label, key: const ValueKey('label')),
     );

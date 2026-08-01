@@ -8,11 +8,13 @@ exclusivamente el Design System existente (`AppCard`, `AppDivider`,
 visual propia: sin logo, sin colores de marca, sin ilustraciones —
 título temporal "AppServicios" en texto plano y solo Material Icons.
 
-**Actualización (feature `profile`, Prompt 38)**: el slot "Perfil"
-(índice 4) ya no muestra `ShellPlaceholder` — ahora aloja `ProfilePage`
-directamente, el único cambio autorizado en ese prompt. "Órdenes" y
-"Mensajes" siguen mostrando `ShellPlaceholder` hasta que sus propios
-prompts los conecten de la misma forma.
+**Actualización (Etapa 15 — Beta Readiness)**: los 5 destinos de cada
+rol (Cliente e Prestador) ya alojan sus pantallas reales
+(`HomePage`, `MarketplacePage`/`ProviderRequestsPage`, `OrdersPage`,
+`ChatListPage`) — `ShellPlaceholder` quedó sin ningún uso una vez que
+el último destino fue conectado y se eliminó junto con esta nota.
+Perfil y Notificaciones ya no son destinos del `IndexedStack`: viven
+en el drawer (`AppDrawer`), abierto desde el destino "Menú".
 
 ## Arquitectura del feature
 
@@ -25,7 +27,7 @@ presentation/
     app_bottom_navigation.dart   NavigationBar (Material 3) para móvil
     app_navigation_rail.dart     NavigationRail para tablet/desktop
     navigation_destination_item.dart  Resuelve icon/selectedIcon, compartido por ambas
-    shell_placeholder.dart       Placeholder configurable (icon/title/description)
+    app_drawer.dart               Drawer: Perfil, Notificaciones, cambio de rol, Configuración, legal, logout
   models/
     shell_navigation_item.dart   Dato plano {icon, selectedIcon, label, index}
 ```
@@ -34,9 +36,7 @@ presentation/
 `AppScaffold` de `core/ui`): `AppScaffold` no expone un slot para
 `bottomNavigationBar` ni soporta un layout de `Row` con `NavigationRail`
 — no fue diseñado para alojar una navegación persistente. No se modificó
-`core/ui` para agregarle ese soporte. Todo el **contenido** que vive
-dentro del Shell (`ShellPlaceholder`) sí reutiliza `AppCard`,
-`AppDivider`, `AppSectionTitle` y `AppSpacing` como se pidió.
+`core/ui` para agregarle ese soporte.
 
 ## Motivo del uso de IndexedStack
 

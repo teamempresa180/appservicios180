@@ -32,9 +32,13 @@ class AppCard extends StatelessWidget {
 
     if (onTap == null) return card;
 
+    // Matches `AppTheme`'s `cardTheme.shape` radius (`radius20`) exactly —
+    // using a different radius here (previously `radius12`) clips the
+    // ink ripple to a tighter rectangle than the card's own rounded
+    // border, so the ripple visibly overshoots the corners on tap.
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.radius12),
+      borderRadius: BorderRadius.circular(AppRadius.radius20),
       child: card,
     );
   }
