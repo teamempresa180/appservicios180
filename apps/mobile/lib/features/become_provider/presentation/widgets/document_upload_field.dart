@@ -21,10 +21,18 @@ class DocumentUploadField extends StatefulWidget {
     required this.description,
     required this.onUpload,
     required this.onUploaded,
+    this.initiallyUploaded = false,
   });
 
   final String title;
   final String description;
+
+  /// Set when the backing `Verification` already has a `documentPath`
+  /// (e.g. the applicant reopened the wizard after uploading this
+  /// document in a previous session) — the card starts in the
+  /// "uploaded" state instead of asking the applicant to upload again,
+  /// while still allowing "Reemplazar" if they want to change it.
+  final bool initiallyUploaded;
 
   /// Uploads the picked file. Should call [onProgress] with values in
   /// `[0, 1]` and throw on failure (caught here to drive the retry
@@ -46,7 +54,9 @@ class DocumentUploadField extends StatefulWidget {
 }
 
 class _DocumentUploadFieldState extends State<DocumentUploadField> {
-  _UploadStatus _status = _UploadStatus.none;
+  late _UploadStatus _status = widget.initiallyUploaded
+      ? _UploadStatus.success
+      : _UploadStatus.none;
   String? _fileName;
   List<int>? _fileBytes;
   double _progress = 0;
@@ -133,8 +143,11 @@ class _DocumentUploadFieldState extends State<DocumentUploadField> {
                   child: Text(
                     _fileName ?? 'Documento subido',
                     style: context.textStyles.bodyMedium,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
+                TextButton(onPressed: _pickFile, child: const Text('Reemplazar')),
               ],
             ),
           ] else ...[

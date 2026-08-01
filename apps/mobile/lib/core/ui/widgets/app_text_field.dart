@@ -20,6 +20,8 @@ class AppTextField extends StatelessWidget {
     this.validator,
     this.prefixIcon,
     this.suffixIcon,
+    this.maxLines = 1,
+    this.maxLength,
   });
 
   final TextEditingController? controller;
@@ -37,6 +39,17 @@ class AppTextField extends StatelessWidget {
   /// Optional trailing widget (e.g. a show/hide password `IconButton`).
   final Widget? suffixIcon;
 
+  /// Defaults to `1` (a single-line field, every existing call site's
+  /// behavior). Set higher for a multi-line field (e.g. a
+  /// professional description) — Flutter's `TextFormField` grows to
+  /// fit up to this many lines rather than scrolling internally.
+  final int maxLines;
+
+  /// Optional live character counter + hard cap, shown under the field
+  /// by Flutter's own `TextFormField` — `null` (the default) shows no
+  /// counter and no cap.
+  final int? maxLength;
+
   @override
   Widget build(BuildContext context) {
     return TextFormField(
@@ -46,6 +59,8 @@ class AppTextField extends StatelessWidget {
       keyboardType: keyboardType,
       onChanged: onChanged,
       validator: validator,
+      maxLines: maxLines,
+      maxLength: maxLength,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,

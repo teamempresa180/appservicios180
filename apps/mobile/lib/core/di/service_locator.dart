@@ -24,6 +24,8 @@ import '../../features/availability/repositories/mock_availability_repository.da
 import '../../features/become_provider/repositories/become_provider_repository.dart';
 import '../../features/become_provider/repositories/http_become_provider_repository.dart';
 import '../../features/become_provider/repositories/mock_become_provider_repository.dart';
+import '../../features/become_provider/specialization/repositories/mock_specialization_repository.dart';
+import '../../features/become_provider/specialization/repositories/specialization_repository.dart';
 import '../../features/categories/repositories/category_repository.dart';
 import '../../features/categories/repositories/http_category_repository.dart';
 import '../../features/categories/repositories/mock_category_repository.dart';
@@ -320,4 +322,13 @@ void setupServiceLocator() {
   // WebSocket backend, not built yet). See `TrackingRepository`'s doc
   // comment.
   locator.registerSingleton<TrackingRepository>(MockTrackingRepository());
+  // Always Mock — the real `GET /categories/:categoryId/specializations`
+  // endpoint is being built by a parallel backend effort (see
+  // `MockSpecializationRepository`'s doc comment). Swapping in a real
+  // `HttpSpecializationRepository` here is the natural follow-up once
+  // that endpoint lands — same one-line swap as every other
+  // `ApiConfig.useMockBackend` entry above.
+  locator.registerSingleton<SpecializationRepository>(
+    MockSpecializationRepository(),
+  );
 }
