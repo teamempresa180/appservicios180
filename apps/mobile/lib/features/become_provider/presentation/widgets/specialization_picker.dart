@@ -10,10 +10,10 @@ import '../../specialization/repositories/specialization_repository.dart';
 /// Paso 2's specialization picker: loads the [Specialization] list for
 /// [categoryId] via [SpecializationRepository.getByCategory] and lets
 /// the applicant choose one, returning `(id, name)` through
-/// [onSelected]. Backed today by `MockSpecializationRepository` only
-/// (see the repository's doc comment) — this widget doesn't know or
-/// care that it's a mock; swapping in a real
-/// `HttpSpecializationRepository` later requires no change here.
+/// [onSelected]. Backed by the real `HttpSpecializationRepository`
+/// (`GET /categories/:categoryId/specializations`) in production, or
+/// `MockSpecializationRepository` in offline/mock mode — this widget
+/// doesn't know or care which one it's talking to.
 ///
 /// Reloads automatically when [categoryId] changes (the applicant
 /// picking a different category in Paso 2) and clears any selection

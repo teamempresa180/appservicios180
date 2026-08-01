@@ -125,9 +125,27 @@ class _ServiceFormSheetState extends State<ServiceFormSheet> {
   String? _requiredValidator(String? value) =>
       (value == null || value.trim().isEmpty) ? 'Este campo es obligatorio' : null;
 
-  String? _numberValidator(String? value) {
+  /// Base price: any positive amount, capped at a sane upper bound to
+  /// catch accidental extra digits (e.g. typing "1000000000" instead
+  /// of "100000").
+  String? _priceValidator(String? value) {
     if (value == null || value.trim().isEmpty) return 'Este campo es obligatorio';
-    return num.tryParse(value.trim()) == null ? 'Ingresa un número válido' : null;
+    final parsed = num.tryParse(value.trim());
+    if (parsed == null) return 'Ingresa un número válido';
+    if (parsed <= 0) return 'El precio debe ser mayor a 0';
+    if (parsed > 100000000) return 'El precio ingresado es demasiado alto';
+    return null;
+  }
+
+  /// Estimated duration in minutes: positive, capped at 24 hours — a
+  /// single service block shouldn't span more than a day.
+  String? _durationValidator(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Este campo es obligatorio';
+    final parsed = int.tryParse(value.trim());
+    if (parsed == null) return 'Ingresa un número entero válido';
+    if (parsed <= 0) return 'La duración debe ser mayor a 0';
+    if (parsed > 1440) return 'La duración no puede superar 24 horas (1440 min)';
+    return null;
   }
 
   void _save() {
@@ -171,12 +189,14 @@ class _ServiceFormSheetState extends State<ServiceFormSheet> {
                   controller: _nameController,
                   label: 'Nombre del servicio',
                   prefixIcon: Icons.design_services_outlined,
+                  maxLength: 80,
                   validator: _requiredValidator,
                 ),
                 const SizedBox(height: AppSpacing.space12),
                 AppTextField(
                   controller: _descriptionController,
                   label: 'Descripción',
+                  maxLength: 500,
                   validator: _requiredValidator,
                 ),
                 const SizedBox(height: AppSpacing.space12),
@@ -220,7 +240,7 @@ class _ServiceFormSheetState extends State<ServiceFormSheet> {
                 label: 'Precio base',
                 keyboardType: TextInputType.number,
                 prefixIcon: Icons.attach_money,
-                validator: _numberValidator,
+                validator: _priceValidator,
               ),
               const SizedBox(height: AppSpacing.space12),
               AppTextField(
@@ -228,7 +248,7 @@ class _ServiceFormSheetState extends State<ServiceFormSheet> {
                 label: 'Duración estimada (minutos)',
                 keyboardType: TextInputType.number,
                 prefixIcon: Icons.timer_outlined,
-                validator: _numberValidator,
+                validator: _durationValidator,
               ),
               const SizedBox(height: AppSpacing.space20),
               AppButton(

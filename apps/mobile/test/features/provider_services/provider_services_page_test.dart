@@ -235,7 +235,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Editar'), findsNWidgets(4));
-    expect(find.text('Pausar'), findsNWidgets(4));
+    // The already-paused mock service shows "Reactivar" instead of
+    // "Pausar" — the toggle button's label must reflect current state,
+    // not always read "Pausar" even while tapping it would reactivate.
+    expect(find.text('Pausar'), findsNWidgets(3));
+    expect(find.text('Reactivar'), findsOneWidget);
     expect(find.text('Eliminar'), findsNWidgets(4));
   });
 
@@ -269,6 +273,8 @@ void main() {
         '50',
       );
 
+      await tester.ensureVisible(find.text('Guardar'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Guardar'));
       await tester.pumpAndSettle();
 
@@ -322,6 +328,8 @@ void main() {
       );
       expect(saveButton.onPressed, isNotNull);
 
+      await tester.ensureVisible(find.text('Guardar'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Guardar'));
       await tester.pumpAndSettle();
 
