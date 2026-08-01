@@ -4,6 +4,9 @@ import '../../../chat/models/chat_id.dart';
 import '../../../chat/models/chat_status.dart';
 import '../../../chat/models/chat_type.dart';
 import '../../../message/entities/message.dart';
+import '../../../message/models/message_id.dart';
+import '../../../message/models/message_status.dart';
+import '../../../message/models/message_type.dart';
 import '../../../order/entities/order.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
@@ -15,6 +18,11 @@ import 'chat_repository.dart';
 /// In-memory `ChatRepository` backed by fixed mock data. No backend,
 /// no sockets, no Firebase, no HTTP — see the feature README.
 class MockChatRepository implements ChatRepository {
+  /// Per-instance copy of [mockChatMessages] — [sendMessage] appends to
+  /// this, not the shared top-level list, so one repository instance
+  /// (e.g. in one test) never leaks state into another.
+  final List<Message> _messages = List.of(mockChatMessages);
+
   @override
   Future<Chat> getChat() => Future.value(mockChat);
 
@@ -29,7 +37,7 @@ class MockChatRepository implements ChatRepository {
 
   @override
   Future<List<Message>> getMessages() =>
-      Future.value(List.unmodifiable(mockChatMessages));
+      Future.value(List.unmodifiable(_messages));
 
   @override
   Future<List<Attachment>> getAttachments() =>
@@ -53,5 +61,21 @@ class MockChatRepository implements ChatRepository {
       createdAt: now,
       updatedAt: now,
     );
+  }
+
+  @override
+  Future<Message> sendMessage(String content) async {
+    final message = Message(
+      id: MessageId.create(),
+      chatId: mockChat.id,
+      senderIdentityId: mockChat.clientIdentityId,
+      content: content,
+      type: MessageType.text,
+      status: MessageStatus.sent,
+      sentAt: DateTime.now(),
+      readAt: null,
+    );
+    _messages.add(message);
+    return message;
   }
 }

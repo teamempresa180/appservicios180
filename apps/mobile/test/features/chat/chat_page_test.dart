@@ -64,6 +64,10 @@ class _FakeChatRepository implements ChatRepository {
   @override
   Future<Chat> createOrGetForOrder(Order order, ProviderId providerId) =>
       _delegate.createOrGetForOrder(order, providerId);
+
+  @override
+  Future<Message> sendMessage(String content) =>
+      _delegate.sendMessage(content);
 }
 
 void main() {
@@ -124,7 +128,7 @@ void main() {
     expect(find.byType(TypingIndicator), findsNothing);
   });
 
-  testWidgets('shows a functional-looking message input with a no-op send', (
+  testWidgets('sending a message appends a new bubble and clears the field', (
     tester,
   ) async {
     await tester.pumpWidget(buildApp());
@@ -140,8 +144,29 @@ void main() {
     await tester.tap(find.byIcon(Icons.send_outlined));
     await tester.pumpAndSettle();
 
-    // Sending is a no-op — no new bubble is added, and the typed text
-    // is not cleared or sent anywhere.
+    // Sending now goes through ChatRepository.sendMessage for real — a
+    // new bubble is appended (with the sent content) and the composer
+    // clears itself.
+    expect(find.byType(MessageBubble), findsNWidgets(5));
+    expect(find.text('Hola'), findsOneWidget); // now inside the new bubble
+    final textField = tester.widget<TextField>(find.byType(TextField));
+    expect(textField.controller!.text, isEmpty);
+  });
+
+  testWidgets('sending a whitespace-only message does nothing', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '   ');
+    await tester.pump();
+
+    await tester.ensureVisible(find.byIcon(Icons.send_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.send_outlined));
+    await tester.pumpAndSettle();
+
     expect(find.byType(MessageBubble), findsNWidgets(4));
   });
 

@@ -37,4 +37,12 @@ abstract class ChatRepository {
   /// (needed for open requests, where `order.providerId` may not have
   /// propagated into the caller's in-memory `Order` yet).
   Future<Chat> createOrGetForOrder(Order order, ProviderId providerId);
+
+  /// Sends [content] as a new `Message` in the current fixed
+  /// conversation (`POST /messages` on the real backend — chatId and
+  /// senderIdentityId are both resolved internally, matching every
+  /// other id-implicit method on this interface). Returns the created
+  /// `Message` so the caller can append it to the visible list without
+  /// a full reload.
+  Future<Message> sendMessage(String content);
 }

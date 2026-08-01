@@ -80,6 +80,10 @@ class _FakeChatRepository implements ChatRepository {
   @override
   Future<Chat> createOrGetForOrder(Order order, ProviderId providerId) =>
       _delegate.createOrGetForOrder(order, providerId);
+
+  @override
+  Future<Message> sendMessage(String content) =>
+      _delegate.sendMessage(content);
 }
 
 void main() {

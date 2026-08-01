@@ -67,18 +67,18 @@ class _SubmitQuoteSheetState extends State<SubmitQuoteSheet> {
     if (value == null || value.trim().isEmpty) {
       return 'Este campo es obligatorio';
     }
-    return num.tryParse(value.trim()) == null
-        ? 'Ingresa un número válido'
-        : null;
+    final parsed = num.tryParse(value.trim());
+    if (parsed == null) return 'Ingresa un número válido';
+    return parsed <= 0 ? 'Ingresa un precio mayor a cero' : null;
   }
 
   String? _durationValidator(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Este campo es obligatorio';
     }
-    return int.tryParse(value.trim()) == null
-        ? 'Ingresa un número entero de minutos'
-        : null;
+    final parsed = int.tryParse(value.trim());
+    if (parsed == null) return 'Ingresa un número entero de minutos';
+    return parsed <= 0 ? 'Ingresa una duración mayor a cero' : null;
   }
 
   void _submit() {

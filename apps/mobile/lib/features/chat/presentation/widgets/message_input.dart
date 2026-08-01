@@ -3,16 +3,22 @@ import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_snack_bar.dart';
 import '../../../../core/ui/widgets/app_text_field.dart';
 
-/// Message composer. The text field accepts typing; "Enviar" clears
-/// the field and gives visible feedback — it still doesn't persist
-/// anywhere (no backend endpoint to send a Message exists yet, see the
-/// feature README), but tapping it always does something instead of
-/// silently doing nothing. [onSend], if given, is called with the
-/// typed text before the field is cleared.
+/// Longest message the composer accepts — matches the field's visible
+/// counter/hard cap below. Keeps a single stray tap from producing a
+/// message so long it would break the bubble layout or the backend's
+/// own column size for `Message.content`.
+const int kMessageMaxLength = 1000;
+
+/// Message composer. [onSend], if given, is called with the typed,
+/// trimmed text and awaited — it should return `true` on a successful
+/// send and `false` otherwise (matching `ChatViewModel.sendMessage`).
+/// The field only clears and disables itself while a send is in
+/// flight; on failure the typed text stays so nothing is lost and the
+/// user can just retry.
 class MessageInput extends StatefulWidget {
   const MessageInput({super.key, this.onSend});
 
-  final ValueChanged<String>? onSend;
+  final Future<bool> Function(String text)? onSend;
 
   @override
   State<MessageInput> createState() => _MessageInputState();
@@ -20,6 +26,7 @@ class MessageInput extends StatefulWidget {
 
 class _MessageInputState extends State<MessageInput> {
   final _controller = TextEditingController();
+  bool _isSending = false;
 
   @override
   void dispose() {
@@ -27,12 +34,26 @@ class _MessageInputState extends State<MessageInput> {
     super.dispose();
   }
 
-  void _send() {
+  Future<void> _send() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
-    widget.onSend?.call(text);
-    _controller.clear();
-    AppSnackBar.show(context, 'Mensaje enviado', type: AppSnackBarType.success);
+    if (text.isEmpty || _isSending) return;
+
+    if (widget.onSend == null) return;
+
+    setState(() => _isSending = true);
+    final success = await widget.onSend!(text);
+    if (!mounted) return;
+    setState(() => _isSending = false);
+
+    if (success) {
+      _controller.clear();
+    } else {
+      AppSnackBar.show(
+        context,
+        'No se pudo enviar el mensaje. Intenta de nuevo.',
+        type: AppSnackBarType.error,
+      );
+    }
   }
 
   @override
@@ -44,12 +65,21 @@ class _MessageInputState extends State<MessageInput> {
           child: AppTextField(
             controller: _controller,
             hint: 'Escribe un mensaje...',
+            enabled: !_isSending,
+            maxLines: 4,
+            maxLength: kMessageMaxLength,
           ),
         ),
         const SizedBox(width: AppSpacing.space8),
         IconButton.filled(
-          onPressed: _send,
-          icon: const Icon(Icons.send_outlined),
+          onPressed: _isSending ? null : _send,
+          icon: _isSending
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.send_outlined),
           tooltip: 'Enviar',
         ),
       ],
