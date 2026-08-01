@@ -88,7 +88,7 @@ class MockBecomeProviderRepository implements BecomeProviderRepository {
   @override
   Future<Provider> apply({
     required Category category,
-    required String specializationName,
+    required String specializationId,
     required int yearsOfExperience,
     String? previousCompany,
     required bool isIndependent,

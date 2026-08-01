@@ -121,9 +121,7 @@ class HttpBecomeProviderRepository implements BecomeProviderRepository {
     final existingByType = <VerificationType, Map<String, dynamic>>{
       for (final item in items)
         if (item['identityId'] == _identityId)
-          VerificationType.values.byName(
-            enumFromJson(item['type'] as String),
-          ): item,
+          _wireTypeToLocal(item['type'] as String): item,
     };
 
     final result = <Verification>[];
@@ -135,12 +133,38 @@ class HttpBecomeProviderRepository implements BecomeProviderRepository {
       }
       final created = await _apiClient.post(
         '/verifications',
-        data: {'identityId': _identityId, 'type': enumToJson(type.name)},
+        data: {'identityId': _identityId, 'type': _localTypeToWire(type)},
       );
       result.add(VerificationHttpMapper.fromJson(created));
     }
     return result;
   }
+
+  /// The backend's `VerificationType` enum doesn't have a distinct
+  /// value for every one of this wizard's 7 fine-grained document
+  /// slots — `identityDocument` and `educationCertificate` reuse the
+  /// backend's existing `DOCUMENT`/`CERTIFICATION` values rather than
+  /// needing new ones (see the mobile `VerificationType` doc comment).
+  /// Every other value round-trips through the generic
+  /// `enumToJson`/`enumFromJson` helpers unchanged.
+  static String _localTypeToWire(VerificationType type) => switch (type) {
+    VerificationType.identityDocument => 'DOCUMENT',
+    VerificationType.educationCertificate => 'CERTIFICATION',
+    _ => enumToJson(type.name),
+  };
+
+  /// Inverse of [_localTypeToWire] — scoped to this method's own
+  /// concern (matching one of the 7 required documents), so `DOCUMENT`
+  /// resolves to `identityDocument` and `CERTIFICATION` to
+  /// `educationCertificate` here specifically, not to the older coarse
+  /// `document`/`certification` values that a different, legacy flow
+  /// uses.
+  static VerificationType _wireTypeToLocal(String wireType) =>
+      switch (wireType) {
+        'DOCUMENT' => VerificationType.identityDocument,
+        'CERTIFICATION' => VerificationType.educationCertificate,
+        _ => VerificationType.values.byName(enumFromJson(wireType)),
+      };
 
   @override
   Future<Verification> uploadDocument({
@@ -165,7 +189,7 @@ class HttpBecomeProviderRepository implements BecomeProviderRepository {
   @override
   Future<Provider> apply({
     required Category category,
-    required String specializationName,
+    required String specializationId,
     required int yearsOfExperience,
     String? previousCompany,
     required bool isIndependent,
@@ -195,7 +219,7 @@ class HttpBecomeProviderRepository implements BecomeProviderRepository {
         'biography': effectiveBiography,
         'yearsOfExperience': yearsOfExperience,
         'categoryId': category.id.value,
-        'specialization': specializationName,
+        'specializationId': specializationId,
       },
     );
     return ProviderHttpMapper.fromJson(providerJson);

@@ -233,7 +233,7 @@ class _BecomeProviderPageState extends State<BecomeProviderPage> {
     try {
       await _repository.apply(
         category: category,
-        specializationName: specialization.name,
+        specializationId: specialization.id,
         yearsOfExperience: _draft.yearsOfExperience ?? 0,
         previousCompany: (_draft.previousCompany?.isEmpty ?? true)
             ? null

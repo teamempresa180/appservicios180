@@ -63,7 +63,7 @@ abstract class BecomeProviderRepository {
   /// the fields that are specific to the `Provider` record itself.
   Future<Provider> apply({
     required Category category,
-    required String specializationName,
+    required String specializationId,
     required int yearsOfExperience,
     String? previousCompany,
     required bool isIndependent,
