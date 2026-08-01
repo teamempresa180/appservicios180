@@ -10,15 +10,22 @@ import '../../models/provider_display.dart';
 /// simulated services count. Tapping it opens Provider Profile for
 /// this card's own [Provider]/[Profile] — different cards now open
 /// different providers.
+///
+/// [width] fixes the card's width for horizontal-scroller call sites
+/// (e.g. `RecommendedProviders`) — pass `null` (the default) when the
+/// parent already constrains the size, such as a `GridView` cell (e.g.
+/// `CompatibleProvidersPage`), otherwise a fixed 160 could overflow a
+/// narrower cell on small screens.
 class ProviderCard extends StatelessWidget {
-  const ProviderCard({super.key, required this.display});
+  const ProviderCard({super.key, required this.display, this.width});
 
   final ProviderDisplay display;
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 160,
+      width: width,
       child: AppCard(
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(

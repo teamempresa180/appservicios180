@@ -13,6 +13,7 @@ import '../../../../core/ui/widgets/app_snack_bar.dart';
 import '../../../../profiles/entities/profile.dart';
 import '../../../../provider/entities/provider.dart';
 import '../../../../service/entities/service.dart';
+import '../../../address_management/presentation/pages/address_management_page.dart';
 import '../../../quote/presentation/pages/quote_page.dart';
 import '../../models/request_priority.dart';
 import '../../repositories/request_service_repository.dart';
@@ -89,6 +90,24 @@ class _RequestServicePageState extends State<RequestServicePage> {
   }
 
   void _onViewModelChanged() => setState(() {});
+
+  /// Opens Direcciones so the client can add their first address, then
+  /// retries the load on return — covers the brand-new-account dead end
+  /// where [RequestServiceViewModel.hasNoSavedAddress] would otherwise
+  /// leave the user stuck behind a "Reintentar" that fails the same way
+  /// forever.
+  Future<void> _addAddress() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Direcciones')),
+          body: const SafeArea(child: AddressManagementPage()),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    _viewModel.retry();
+  }
 
   @override
   void dispose() {
@@ -175,13 +194,16 @@ class _RequestServicePageState extends State<RequestServicePage> {
           body: AppLoading(message: 'Cargando solicitud...'),
         );
       case RequestServiceLoadStatus.error:
+        final noAddress = _viewModel.hasNoSavedAddress;
         return AppPageBody(
           body: AppEmptyState(
             icon: AppIcons.error,
-            title: 'No se pudo cargar la solicitud',
+            title: noAddress
+                ? 'No tienes una dirección guardada'
+                : 'No se pudo cargar la solicitud',
             description: _viewModel.errorMessage,
-            actionLabel: 'Reintentar',
-            onActionPressed: _viewModel.retry,
+            actionLabel: noAddress ? 'Agregar dirección' : 'Reintentar',
+            onActionPressed: noAddress ? _addAddress : _viewModel.retry,
           ),
         );
       case RequestServiceLoadStatus.success:

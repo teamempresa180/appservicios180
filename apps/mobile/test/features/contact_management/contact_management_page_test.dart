@@ -152,7 +152,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Valor'),
+        find.widgetWithText(TextFormField, 'Correo electrónico'),
         'nuevo@example.com',
       );
       await tester.tap(find.text('Guardar'));
@@ -174,7 +174,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Valor'),
+      find.widgetWithText(TextFormField, 'Correo electrónico'),
       'actualizado@example.com',
     );
     await tester.tap(find.text('Guardar'));
@@ -268,7 +268,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Valor'),
+        find.widgetWithText(TextFormField, 'Correo electrónico'),
         'nuevo@example.com',
       );
       await tester.tap(find.text('Guardar'));

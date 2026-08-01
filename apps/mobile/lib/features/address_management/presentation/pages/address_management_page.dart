@@ -168,7 +168,20 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
         );
       case AddressManagementLoadStatus.success:
         final addresses = _viewModel.addresses;
-        if (addresses.isEmpty) return const AddressesEmptyState();
+        if (addresses.isEmpty) {
+          // Still offer "Agregar dirección" here — without it, a
+          // brand-new account with zero saved addresses had no way to
+          // add its first one at all (the button only rendered in the
+          // non-empty branch below).
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const AddressesEmptyState(),
+              const SizedBox(height: AppSpacing.space16),
+              AddAddressButton(onPressed: _create),
+            ],
+          );
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

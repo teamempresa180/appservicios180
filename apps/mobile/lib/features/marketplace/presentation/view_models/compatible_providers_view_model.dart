@@ -26,6 +26,12 @@ class CompatibleProvidersViewModel extends ChangeNotifier {
   String _specialization = '';
   bool _disposed = false;
 
+  /// Bumped on every [search] call and captured locally so a slow, stale
+  /// response (e.g. the request for "a" resolving after the request for
+  /// "ab" already did) can never overwrite newer results — only the
+  /// request matching the current [_requestId] is allowed to apply.
+  int _requestId = 0;
+
   CompatibleProvidersLoadStatus get status => _status;
   List<ProviderDisplay> get providers => _providers;
   String? get errorMessage => _errorMessage;
@@ -42,6 +48,7 @@ class CompatibleProvidersViewModel extends ChangeNotifier {
 
   Future<void> search([String specialization = '']) async {
     _specialization = specialization;
+    final requestId = ++_requestId;
     _status = CompatibleProvidersLoadStatus.loading;
     _notifyIfActive();
     try {
@@ -50,15 +57,15 @@ class CompatibleProvidersViewModel extends ChangeNotifier {
         specialization: specialization.isEmpty ? null : specialization,
       );
       final displays = await Future.wait(providers.map(_buildDisplay));
-      if (_disposed) return;
+      if (_disposed || requestId != _requestId) return;
       _providers = displays;
       _status = CompatibleProvidersLoadStatus.success;
     } on HttpException catch (exception) {
-      if (_disposed) return;
+      if (_disposed || requestId != _requestId) return;
       _errorMessage = exception.message;
       _status = CompatibleProvidersLoadStatus.error;
     } catch (_) {
-      if (_disposed) return;
+      if (_disposed || requestId != _requestId) return;
       _errorMessage = 'Ocurrió un problema inesperado. Intenta de nuevo.';
       _status = CompatibleProvidersLoadStatus.error;
     }

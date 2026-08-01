@@ -25,7 +25,7 @@ class RecommendedProviders extends StatelessWidget {
             separatorBuilder: (context, index) =>
                 const SizedBox(width: AppSpacing.space12),
             itemBuilder: (context, index) =>
-                ProviderCard(display: providers[index]),
+                ProviderCard(display: providers[index], width: 160),
           ),
         ),
       ],

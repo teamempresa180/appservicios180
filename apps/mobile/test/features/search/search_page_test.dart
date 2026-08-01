@@ -71,7 +71,10 @@ void main() {
     );
 
     await tester.enterText(find.byType(TextFormField), 'plomería');
-    await tester.pump();
+    // Typing now drives real client-side filtering (see
+    // `SearchViewModel.search`), which re-renders the results list with
+    // fresh staggered `FadeIn`s — settle those before the test ends.
+    await tester.pumpAndSettle();
 
     expect(find.text('plomería'), findsOneWidget);
   });

@@ -41,11 +41,18 @@ class RequestServiceViewModel extends ChangeNotifier {
   RequestServiceLoadStatus _status = RequestServiceLoadStatus.loading;
   RequestServiceData? _data;
   String? _errorMessage;
+  bool _hasNoSavedAddress = false;
   bool _disposed = false;
 
   RequestServiceLoadStatus get status => _status;
   RequestServiceData? get data => _data;
   String? get errorMessage => _errorMessage;
+
+  /// True when the load failed specifically because the client has no
+  /// saved address at all (as opposed to a network/server error) — lets
+  /// [RequestServicePage] offer a direct "Agregar dirección" action
+  /// instead of a "Reintentar" that would just fail the same way again.
+  bool get hasNoSavedAddress => _hasNoSavedAddress;
 
   @override
   void dispose() {
@@ -59,6 +66,7 @@ class RequestServiceViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _status = RequestServiceLoadStatus.loading;
+    _hasNoSavedAddress = false;
     _notifyIfActive();
     try {
       final address = await _repository.getAddress();
@@ -97,6 +105,7 @@ class RequestServiceViewModel extends ChangeNotifier {
       _errorMessage =
           'No tienes una dirección guardada. Agrega una dirección en '
           'tu perfil antes de continuar.';
+      _hasNoSavedAddress = true;
       _status = RequestServiceLoadStatus.error;
     }
     _notifyIfActive();

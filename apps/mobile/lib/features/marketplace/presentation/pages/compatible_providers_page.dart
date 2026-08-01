@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../../../category/entities/category.dart';
 import '../../../../core/di/service_locator.dart';
@@ -45,6 +47,7 @@ class _CompatibleProvidersPageState extends State<CompatibleProvidersPage> {
       );
   final TextEditingController _specializationController =
       TextEditingController();
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -55,8 +58,21 @@ class _CompatibleProvidersPageState extends State<CompatibleProvidersPage> {
 
   void _onViewModelChanged() => setState(() {});
 
+  /// Waits for a short pause in typing before actually searching —
+  /// without this, every keystroke fired its own request and flashed
+  /// the whole grid to a loading state, which looked broken/flickery
+  /// even though each individual request was fine.
+  void _onSpecializationChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(
+      const Duration(milliseconds: 400),
+      () => _viewModel.search(value),
+    );
+  }
+
   @override
   void dispose() {
+    _debounce?.cancel();
     _viewModel.removeListener(_onViewModelChanged);
     _viewModel.dispose();
     _specializationController.dispose();
@@ -116,7 +132,7 @@ class _CompatibleProvidersPageState extends State<CompatibleProvidersPage> {
             label: 'Especialidad (opcional)',
             hint: 'Ej. instalaciones eléctricas',
             prefixIcon: AppIcons.search,
-            onChanged: (value) => _viewModel.search(value),
+            onChanged: _onSpecializationChanged,
           ),
           const SizedBox(height: AppSpacing.space16),
           Expanded(child: _buildBody()),
