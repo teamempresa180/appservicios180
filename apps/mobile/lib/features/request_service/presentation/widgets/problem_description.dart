@@ -50,6 +50,12 @@ class _ProblemDescriptionState extends State<ProblemDescription> {
             controller: _controller,
             label: 'Descripción',
             hint: 'Cuéntanos qué necesitas',
+            // A single-line field forced a client describing a real
+            // problem to scroll horizontally inside a tiny box — bumped
+            // to a proper multi-line field with a hard cap so the
+            // description stays reasonable without silently truncating.
+            maxLines: 4,
+            maxLength: 500,
           ),
         ],
       ),

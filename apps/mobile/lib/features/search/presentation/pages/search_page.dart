@@ -18,9 +18,9 @@ import '../widgets/search_results.dart';
 /// real backend via [SearchViewModel] (resolved from the service
 /// locator — see `core/di/service_locator.dart`).
 ///
-/// There is still no real free-text search tied to [SearchInputBar]'s
-/// typing (`onChanged` stays a no-op) — only the initial full-list load
-/// is real now (see the feature README).
+/// [SearchInputBar]'s typing filters the already-loaded results
+/// client-side (see [SearchViewModel.search]) — there is still no
+/// server-side free-text search endpoint.
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key, SearchRepository? repository})
     : _repository = repository;
@@ -83,7 +83,7 @@ class _SearchPageState extends State<SearchPage> {
   Widget build(BuildContext context) {
     return AppPageBody(
       header: const SearchHeader(),
-      toolbar: const [SearchInputBar()],
+      toolbar: [SearchInputBar(onChanged: _viewModel.search)],
       body: _buildBody(),
     );
   }

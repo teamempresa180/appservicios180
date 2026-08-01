@@ -144,7 +144,20 @@ class _ContactManagementPageState extends State<ContactManagementPage> {
         );
       case ContactManagementLoadStatus.success:
         final data = _viewModel.data!;
-        if (data.contacts.isEmpty) return const ContactsEmptyState();
+        if (data.contacts.isEmpty) {
+          // Still offer "Agregar contacto" here — without it, a
+          // brand-new account with zero saved contacts had no way to
+          // add its first one at all (the button only rendered in the
+          // non-empty branch below).
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const ContactsEmptyState(),
+              const SizedBox(height: AppSpacing.space16),
+              AddContactButton(onPressed: _create),
+            ],
+          );
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
