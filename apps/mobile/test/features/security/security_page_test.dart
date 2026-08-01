@@ -118,7 +118,12 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Desactivar'), findsNWidgets(5));
+    // Mock data has 2 active methods (password, biometric) and 3
+    // non-active ones (locked, inactive, revoked) — the toggle button's
+    // label reflects each method's current status: "Desactivar" only
+    // for the active ones, "Activar" for the rest.
+    expect(find.text('Desactivar'), findsNWidgets(2));
+    expect(find.text('Activar'), findsNWidgets(3));
     expect(find.text('Eliminar'), findsNWidgets(5));
   });
 

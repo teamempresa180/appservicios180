@@ -73,6 +73,12 @@ class EditProfileSheet extends StatefulWidget {
 }
 
 class _EditProfileSheetState extends State<EditProfileSheet> {
+  static const int _maxNameLength = 100;
+  static const int _maxPhoneLength = 20;
+  static const int _maxEmailLength = 120;
+  static const int _maxAddressAliasLength = 40;
+  static const int _maxFullAddressLength = 200;
+
   late final _nameController = TextEditingController(text: widget.currentName);
   late final _phoneController = TextEditingController(text: widget.currentPhone);
   late final _emailController = TextEditingController(text: widget.currentEmail);
@@ -106,7 +112,9 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
   String? _phoneValidator(String? value) {
     if (value == null || value.trim().isEmpty) return 'Ingresa un teléfono';
     final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
-    return digits.length >= 7 ? null : 'Ingresa un teléfono válido';
+    if (digits.length < 7) return 'Ingresa un teléfono válido';
+    if (digits.length > 15) return 'Ingresa un teléfono válido';
+    return null;
   }
 
   void _save() {
@@ -147,6 +155,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
                 controller: _nameController,
                 label: 'Nombre para mostrar',
                 prefixIcon: Icons.person_outline,
+                maxLength: _maxNameLength,
                 validator: _requiredValidator,
               ),
               const SizedBox(height: AppSpacing.space12),
@@ -155,6 +164,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
                 label: 'Teléfono',
                 keyboardType: TextInputType.phone,
                 prefixIcon: Icons.phone_outlined,
+                maxLength: _maxPhoneLength,
                 validator: _phoneValidator,
               ),
               const SizedBox(height: AppSpacing.space12),
@@ -163,6 +173,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
                 label: 'Correo electrónico',
                 keyboardType: TextInputType.emailAddress,
                 prefixIcon: Icons.email_outlined,
+                maxLength: _maxEmailLength,
                 validator: _emailValidator,
               ),
               const SizedBox(height: AppSpacing.space12),
@@ -170,6 +181,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
                 controller: _addressAliasController,
                 label: 'Alias de la dirección (Casa, Trabajo...)',
                 prefixIcon: Icons.label_outline,
+                maxLength: _maxAddressAliasLength,
                 validator: _requiredValidator,
               ),
               const SizedBox(height: AppSpacing.space12),
@@ -177,6 +189,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
                 controller: _fullAddressController,
                 label: 'Dirección completa',
                 prefixIcon: Icons.place_outlined,
+                maxLength: _maxFullAddressLength,
                 validator: _requiredValidator,
               ),
               const SizedBox(height: AppSpacing.space20),

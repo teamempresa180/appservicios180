@@ -6,6 +6,8 @@ import '../../../../core/ui/animations/slide_in.dart';
 import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_durations.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
+import '../../../../core/ui/widgets/app_button.dart';
+import '../../../../core/ui/widgets/app_dialog.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
@@ -113,7 +115,30 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  /// Confirms before ending the session — same rule as `ProfilePage`'s
+  /// "Cerrar sesión" tile: it's the one destructive, hard-to-undo
+  /// action on this screen, so an accidental tap shouldn't act
+  /// immediately.
   Future<void> _logout(BuildContext context) async {
+    final confirmed = await AppDialog.show<bool>(
+      context,
+      title: 'Cerrar sesión',
+      content: const Text('¿Seguro que quieres cerrar sesión?'),
+      actions: [
+        AppButton(
+          label: 'Cancelar',
+          variant: AppButtonVariant.text,
+          expand: false,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+        AppButton(
+          label: 'Cerrar sesión',
+          expand: false,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+      ],
+    );
+    if (confirmed != true) return;
     await locator<SessionManager>().logout();
     // No explicit navigation: `AppRouteGuard` (wired to `SessionManager`
     // via `GoRouter.refreshListenable`) redirects to Login on its own

@@ -39,6 +39,37 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // If `AppRouteGuard` sent us here because a refresh-token exchange
+    // failed mid-session (expired/invalid/revoked token, or an
+    // account the backend stopped honoring — see
+    // `SessionManager.onSessionExpired`), say so explicitly instead of
+    // silently landing on Login as if the user had chosen to log out.
+    // Scheduled for the first frame since `AppSnackBar.show` needs a
+    // `Scaffold` already in the tree. Guarded by `isRegistered` (rather
+    // than unconditionally resolving) so widget tests that render
+    // `LoginPage` without going through the real DI setup — e.g. pure
+    // layout/overflow tests — still build instead of hitting GetIt's
+    // "not registered" `StateError`.
+    final sessionManager =
+        widget._sessionManager ??
+        (locator.isRegistered<SessionManager>()
+            ? locator<SessionManager>()
+            : null);
+    if (sessionManager != null && sessionManager.consumeSessionExpired()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        AppSnackBar.show(
+          context,
+          'Tu sesión expiró. Inicia sesión de nuevo para continuar.',
+          type: AppSnackBarType.info,
+        );
+      });
+    }
+  }
+
   Future<void> _handleValidSubmit(LoginCredentials credentials) async {
     setState(() => _isLoading = true);
     try {
@@ -52,9 +83,24 @@ class _LoginPageState extends State<LoginPage> {
     } on HttpException catch (exception) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+      AppSnackBar.show(
+        context,
+        _messageFor(exception),
+        type: AppSnackBarType.error,
+      );
     }
   }
+
+  /// A lost-connectivity failure (no internet, DNS failure, timeout —
+  /// see `HttpException.isConnectivityIssue`) never got a response
+  /// from the server, so its `message` is Dio's raw, English,
+  /// technical exception text — not something to show verbatim in a
+  /// Spanish-language app. Every other `HttpException` subtype means a
+  /// real response came back, so its `message` is already the
+  /// backend's own (Spanish) validation/error text.
+  String _messageFor(HttpException exception) => exception.isConnectivityIssue
+      ? 'No hay conexión a internet. Verifica tu conexión e intenta de nuevo.'
+      : exception.message;
 
   void _goToRegister() => context.go(AppRoutes.register);
 

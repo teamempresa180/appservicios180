@@ -54,40 +54,26 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets(
-      'Login: only the known pre-existing LoginFooter overflow appears '
-      '(${width}px)',
-      (tester) async {
-        // NOTE: LoginPage has a pre-existing overflow in LoginFooter's
-        // "¿No tienes cuenta? Crear cuenta" Row (no Wrap, same class of
-        // bug already fixed in RegisterFooter back in the Register
-        // prompt). Confirmed via `git stash` that it reproduces
-        // identically with the *original*, unmodified core/ui — so it
-        // is NOT a regression introduced by this Design System pass.
-        // Login is frozen for this prompt, so it is reported here
-        // rather than fixed. This test pins that the overflow is
-        // exactly this known one and nothing new got introduced.
-        await setSurfaceSize(tester, width);
-        await tester.pumpWidget(
-          routedApp(
-            AppRoutes.login,
-            GoRoute(
-              path: AppRoutes.login,
-              builder: (context, state) => const LoginPage(),
-            ),
+    testWidgets('Login has no overflow at ${width}px', (tester) async {
+      // NOTE: LoginPage used to have a known overflow in LoginFooter's
+      // "¿No tienes cuenta? Crear cuenta" Row (no Wrap, same class of
+      // bug already fixed in RegisterFooter). Fixed by switching that
+      // Row to a Wrap (see `LoginFooter`) — this now asserts "no
+      // overflow", matching every other screen in this file.
+      await setSurfaceSize(tester, width);
+      await tester.pumpWidget(
+        routedApp(
+          AppRoutes.login,
+          GoRoute(
+            path: AppRoutes.login,
+            builder: (context, state) => const LoginPage(),
           ),
-        );
-        await tester.pumpAndSettle();
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        final exception = tester.takeException();
-        if (width >= 1024) {
-          expect(exception, isNull);
-        } else {
-          expect(exception, isA<FlutterError>());
-          expect(exception.toString(), contains('overflowed by'));
-        }
-      },
-    );
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('Register has no overflow at ${width}px', (tester) async {
       await setSurfaceSize(tester, width);

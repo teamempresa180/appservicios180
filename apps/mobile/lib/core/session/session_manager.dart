@@ -29,6 +29,7 @@ class SessionManager extends ChangeNotifier implements TokenProvider {
   String? _currentUserId;
   String? _currentRole;
   bool _isRestoring = true;
+  bool _sessionExpired = false;
 
   @override
   String? get accessToken => _accessToken;
@@ -45,6 +46,19 @@ class SessionManager extends ChangeNotifier implements TokenProvider {
   bool get isRestoring => _isRestoring;
 
   bool get isAuthenticated => _accessToken != null && _currentUserId != null;
+
+  /// Reads and clears the "the session was cleared involuntarily"
+  /// flag (an expired/invalid refresh token — [onSessionExpired],
+  /// never a manual [logout]). One-shot by design: `LoginPage` calls
+  /// this once when it builds after the `AppRouteGuard` redirect and
+  /// shows an explanatory message iff it was `true` — a plain
+  /// "session expired" toast on every subsequent visit to Login would
+  /// be wrong, so reading it also consumes it.
+  bool consumeSessionExpired() {
+    final value = _sessionExpired;
+    _sessionExpired = false;
+    return value;
+  }
 
   /// Reads any persisted tokens at app start and, if present, confirms
   /// they still identify a real session via `GET /authentications/me`
@@ -131,6 +145,15 @@ class SessionManager extends ChangeNotifier implements TokenProvider {
 
   @override
   Future<void> onSessionExpired() async {
+    // Only set when there was actually a session to lose — checked via
+    // the refresh token rather than [isAuthenticated] because this can
+    // fire mid-`restore()`, before `_currentUserId` is ever set (the
+    // access/refresh tokens are applied first, `GET
+    // /authentications/me` confirms them after). An app that never had
+    // a persisted session at all (fresh install) never reaches here
+    // with a null refresh token in the first place — see
+    // `RefreshInterceptor._refresh`'s own null check.
+    if (_refreshToken != null) _sessionExpired = true;
     await _clear();
     notifyListeners();
   }
