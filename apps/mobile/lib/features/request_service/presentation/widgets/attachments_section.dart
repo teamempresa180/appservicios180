@@ -23,6 +23,14 @@ class AttachmentsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const AppSectionTitle(title: 'Adjuntar fotografías'),
+          if (attachments.isEmpty) ...[
+            Text(
+              'Opcional. Podrás enviar fotos por el chat una vez que un '
+              'profesional tome tu solicitud.',
+              style: context.textStyles.bodySmall,
+            ),
+            const SizedBox(height: AppSpacing.space8),
+          ],
           SizedBox(
             height: 96,
             child: ListView.separated(

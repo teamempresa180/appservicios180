@@ -127,10 +127,13 @@ DateTime defaultRequestServiceScheduledDate() {
 
 const String mockRequestServiceSelectedTime = '10:00';
 
-const List<String> mockRequestServiceAttachments = [
-  'Foto de la fuga',
-  'Foto del mueble afectado',
-];
+/// Empty on purpose. This used to seed two fake photo tiles ("Foto de
+/// la fuga", "Foto del mueble afectado") into every single request a
+/// real client opened — they looked like photos the client had already
+/// attached, so the form claimed evidence had been sent that the
+/// provider would never receive. Until real photo upload exists, the
+/// section shows only its "add" tile (which says "próximamente").
+const List<String> mockRequestServiceAttachments = <String>[];
 
 const RequestPriority mockRequestServicePriority = RequestPriority.normal;
 

@@ -60,13 +60,25 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
     // button sets it to 1-5.
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    final identityId = locator<SessionManager>().currentUserId;
+    if (identityId == null || identityId.isEmpty) {
+      // Without a session id the request would go out with an empty
+      // reviewer and fail deep in the backend with an opaque error —
+      // say what actually happened instead.
+      AppSnackBar.show(
+        context,
+        'Tu sesión expiró. Vuelve a iniciar sesión para calificar.',
+        type: AppSnackBarType.error,
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
     try {
-      final identityId = locator<SessionManager>().currentUserId;
       await _repository.createReview(
         orderId: widget.order.id,
         providerId: widget.providerId,
-        reviewerIdentityId: IdentityId.fromString(identityId ?? ''),
+        reviewerIdentityId: IdentityId.fromString(identityId),
         rating: _rating,
         title: _titleController.text.trim().isEmpty
             ? 'Sin título'
@@ -126,15 +138,31 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
                 ],
               ),
               const SizedBox(height: AppSpacing.space16),
-              AppTextField(controller: _titleController, label: 'Título'),
+              AppTextField(
+                controller: _titleController,
+                label: 'Título (opcional)',
+                maxLength: 80,
+              ),
               const SizedBox(height: AppSpacing.space12),
+              // Multi-line with a hard cap: a review is prose, and a
+              // single-line box with no limit both cramped real feedback
+              // and let a paste blow past what the backend stores.
               AppTextField(
                 controller: _commentController,
                 label: 'Comentario',
                 hint: 'Cuéntanos cómo fue el servicio',
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Cuéntanos brevemente cómo fue el servicio.'
-                    : null,
+                maxLines: 4,
+                maxLength: 500,
+                validator: (value) {
+                  final trimmed = value?.trim() ?? '';
+                  if (trimmed.isEmpty) {
+                    return 'Cuéntanos brevemente cómo fue el servicio.';
+                  }
+                  if (trimmed.length < 5) {
+                    return 'Escribe al menos unas palabras sobre el servicio.';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: AppSpacing.space20),
               AppButton(

@@ -137,15 +137,23 @@ void main() {
     },
   );
 
-  testWidgets('shows the attachments section with every attachment', (
+  testWidgets('shows the attachments section with no fake attachments', (
     tester,
   ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
     expect(find.byType(AttachmentsSection), findsOneWidget);
-    expect(find.text('Foto de la fuga'), findsOneWidget);
-    expect(find.text('Foto del mueble afectado'), findsOneWidget);
+    // The form used to seed two fake photo tiles into every request, so
+    // it looked like the client had already attached evidence that no
+    // provider would ever receive. Only the (clearly-labelled) "add"
+    // tile and its explanation remain.
+    expect(find.text('Foto de la fuga'), findsNothing);
+    expect(find.text('Foto del mueble afectado'), findsNothing);
+    expect(
+      find.textContaining('Podrás enviar fotos por el chat'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('shows the priority selector with the initial priority chosen', (

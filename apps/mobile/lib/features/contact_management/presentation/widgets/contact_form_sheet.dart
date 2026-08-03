@@ -79,6 +79,10 @@ class _ContactFormSheetState extends State<ContactFormSheet> {
   String? _validator(String? value) {
     if (value == null || value.trim().isEmpty) return 'Este campo es obligatorio';
     final trimmed = value.trim();
+    // Guards the backend's own column limit up front, so an over-long
+    // paste fails here with a clear message instead of as a generic
+    // save error after a round trip.
+    if (trimmed.length > 120) return 'Máximo 120 caracteres';
     switch (_effectiveType) {
       case ContactType.email:
         final isValid = RegExp(
@@ -174,6 +178,7 @@ class _ContactFormSheetState extends State<ContactFormSheet> {
                 label: _valueLabel,
                 keyboardType: _keyboardType,
                 prefixIcon: Icons.contact_mail_outlined,
+                maxLength: 120,
                 validator: _validator,
               ),
               const SizedBox(height: AppSpacing.space20),

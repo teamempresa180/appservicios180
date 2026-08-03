@@ -71,8 +71,12 @@ class _OrderActionsState extends State<OrderActions> {
   /// disabled while it runs.
   OrderJourneyActionKind? _busyKind;
 
-  void _openQuotes() {
-    Navigator.of(context).push(
+  /// Opens the order-scoped quotes screen and reloads the list on
+  /// return — accepting a quote in there changes the order's status (and
+  /// therefore which buttons this card should offer), so coming back to
+  /// a card still showing "Ver cotizaciones" was plainly stale.
+  Future<void> _openQuotes() async {
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => Scaffold(
           appBar: AppBar(title: const Text('Cotizaciones')),
@@ -80,6 +84,8 @@ class _OrderActionsState extends State<OrderActions> {
         ),
       ),
     );
+    if (!mounted) return;
+    widget.onChanged?.call();
   }
 
   Future<void> _cancelOrder() async {
@@ -153,10 +159,14 @@ class _OrderActionsState extends State<OrderActions> {
     }
   }
 
-  void _openCreateReview() {
+  /// Opens the rating form and reloads the list on return — once the
+  /// review exists `ClientOrderJourney` stops emitting `rateProvider`,
+  /// but without this reload the card kept offering "Calificar" for an
+  /// order the client had just rated (and a second attempt fails).
+  Future<void> _openCreateReview() async {
     final providerId = widget.data.provider?.id ?? widget.data.order.providerId;
     if (providerId == null) return;
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => Scaffold(
           appBar: AppBar(title: const Text('Calificar')),
@@ -169,6 +179,8 @@ class _OrderActionsState extends State<OrderActions> {
         ),
       ),
     );
+    if (!mounted) return;
+    widget.onChanged?.call();
   }
 
   VoidCallback? _handlerFor(OrderJourneyActionKind kind) {

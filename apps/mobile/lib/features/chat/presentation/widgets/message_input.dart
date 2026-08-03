@@ -16,9 +16,15 @@ const int kMessageMaxLength = 1000;
 /// flight; on failure the typed text stays so nothing is lost and the
 /// user can just retry.
 class MessageInput extends StatefulWidget {
-  const MessageInput({super.key, this.onSend});
+  const MessageInput({super.key, this.onSend, this.failureMessage});
 
   final Future<bool> Function(String text)? onSend;
+
+  /// Resolves the reason the last send failed (e.g.
+  /// `ChatViewModel.sendErrorMessage`), so a specific, actionable cause
+  /// — "no hay conexión", a server message — reaches the user instead of
+  /// the generic fallback below. Falls back when it returns `null`.
+  final String? Function()? failureMessage;
 
   @override
   State<MessageInput> createState() => _MessageInputState();
@@ -50,7 +56,8 @@ class _MessageInputState extends State<MessageInput> {
     } else {
       AppSnackBar.show(
         context,
-        'No se pudo enviar el mensaje. Intenta de nuevo.',
+        widget.failureMessage?.call() ??
+            'No se pudo enviar el mensaje. Intenta de nuevo.',
         type: AppSnackBarType.error,
       );
     }

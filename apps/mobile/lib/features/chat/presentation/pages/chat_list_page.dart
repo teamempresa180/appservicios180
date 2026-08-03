@@ -95,6 +95,14 @@ class _ChatListPageState extends State<ChatListPage> {
         );
       case ChatListLoadStatus.success:
         final filtered = _filteredConversations;
+        if (filtered.isEmpty && _viewModel.conversations.isNotEmpty) {
+          return ChatListEmptyState(
+            title: 'Nada en "${_selectedTab.label}"',
+            description: _selectedTab == ConversationTab.unread
+                ? 'No tienes mensajes sin leer.'
+                : 'No tienes conversaciones pendientes de respuesta.',
+          );
+        }
         return filtered.isEmpty
             ? const ChatListEmptyState()
             : ConversationsList(

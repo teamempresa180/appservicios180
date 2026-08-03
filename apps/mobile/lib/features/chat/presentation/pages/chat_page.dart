@@ -48,12 +48,38 @@ class _ChatPageState extends State<ChatPage> {
     _viewModel.addListener(_onViewModelChanged);
   }
 
-  void _onViewModelChanged() => setState(() {});
+  final _scrollController = ScrollController();
+  int _lastMessageCount = 0;
+
+  void _onViewModelChanged() {
+    setState(() {});
+    // A conversation with any history opened scrolled to the *oldest*
+    // message, and a message the user had just sent landed below the
+    // fold — so the composer appeared to do nothing. Jump to the newest
+    // message whenever the message count grows (initial load included).
+    final count = _viewModel.data?.messages.length ?? 0;
+    if (count > _lastMessageCount) {
+      _lastMessageCount = count;
+      _scrollToBottom();
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+  }
 
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
     _viewModel.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -98,7 +124,10 @@ class _ChatPageState extends State<ChatPage> {
               const TypingIndicator(),
             ],
             const SizedBox(height: AppSpacing.space16),
-            MessageInput(onSend: _viewModel.sendMessage),
+            MessageInput(
+              onSend: _viewModel.sendMessage,
+              failureMessage: () => _viewModel.sendErrorMessage,
+            ),
           ],
         );
     }
@@ -106,6 +135,9 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(child: _buildBody());
+    return SingleChildScrollView(
+      controller: _scrollController,
+      child: _buildBody(),
+    );
   }
 }

@@ -53,6 +53,8 @@ class _OrdersPageState extends State<OrdersPage> {
     _viewModel.addListener(_onViewModelChanged);
   }
 
+  OrderTab _selectedTab = OrderTab.all;
+
   void _onViewModelChanged() => setState(() {});
 
   @override
@@ -61,6 +63,10 @@ class _OrdersPageState extends State<OrdersPage> {
     _viewModel.dispose();
     super.dispose();
   }
+
+  int _countFor(OrderTab tab) => _viewModel.orders
+      .where((display) => tab.matches(display.order.status))
+      .length;
 
   Widget _buildBody() {
     switch (_viewModel.status) {
@@ -75,21 +81,42 @@ class _OrdersPageState extends State<OrdersPage> {
           onActionPressed: _viewModel.retry,
         );
       case OrdersLoadStatus.success:
-        return _viewModel.orders.isEmpty
-            ? const OrderEmptyState()
-            : OrdersList(
-                orders: _viewModel.orders,
-                journeyFor: _viewModel.journeyFor,
-                onOrderChanged: _viewModel.retry,
-              );
+        final filtered = _viewModel.orders
+            .where((display) => _selectedTab.matches(display.order.status))
+            .toList();
+        if (filtered.isEmpty) {
+          // Distinguishes "you have no orders at all" from "this filter
+          // is empty but others aren't" — the second used to render the
+          // same "Sin órdenes todavía" copy, which read as if the
+          // client's orders had disappeared.
+          final hasAnyOrder = _viewModel.orders.isNotEmpty;
+          return OrderEmptyState(
+            title: hasAnyOrder
+                ? 'Nada en "${_selectedTab.label}"'
+                : 'Sin órdenes todavía',
+            description: _selectedTab.emptyMessage,
+          );
+        }
+        return OrdersList(
+          orders: filtered,
+          journeyFor: _viewModel.journeyFor,
+          onOrderChanged: _viewModel.retry,
+        );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final showCounts = _viewModel.status == OrdersLoadStatus.success;
     return AppPageBody(
       header: const OrdersHeader(),
-      toolbar: const [OrderStatusTabs()],
+      toolbar: [
+        OrderStatusTabs(
+          selected: _selectedTab,
+          onChanged: (tab) => setState(() => _selectedTab = tab),
+          countFor: showCounts ? _countFor : null,
+        ),
+      ],
       body: _buildBody(),
     );
   }
