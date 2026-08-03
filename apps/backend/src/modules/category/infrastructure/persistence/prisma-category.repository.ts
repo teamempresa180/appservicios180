@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { Category } from '../../domain/entities/category.entity';
 import { CategoryRepository } from '../../domain/interfaces/category-repository.interface';
 import { CategoryId } from '../../domain/value-objects/category-id.value-object';
@@ -71,6 +72,7 @@ export class PrismaCategoryRepository implements CategoryRepository {
         ],
       },
       orderBy: { name: 'asc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => CategoryPrismaMapper.toDomain(row));
   }

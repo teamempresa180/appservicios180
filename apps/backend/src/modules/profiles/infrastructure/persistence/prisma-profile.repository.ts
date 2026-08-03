@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { Profile } from '../../domain/entities/profile.entity';
 import { ProfileRepository } from '../../domain/interfaces/profile-repository.interface';
@@ -27,6 +28,7 @@ export class PrismaProfileRepository implements ProfileRepository {
     const rows = await this.prisma.profileModel.findMany({
       where: { identityId: identityId.value },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => ProfilePrismaMapper.toDomain(row));
   }
@@ -73,6 +75,7 @@ export class PrismaProfileRepository implements ProfileRepository {
         ],
       },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => ProfilePrismaMapper.toDomain(row));
   }

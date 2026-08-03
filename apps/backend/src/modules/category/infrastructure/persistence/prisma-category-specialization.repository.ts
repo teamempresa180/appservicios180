@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
+import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { CategorySpecialization } from '../../domain/entities/category-specialization.entity';
 import { CategorySpecializationRepository } from '../../domain/interfaces/category-specialization-repository.interface';
 import { CategoryId } from '../../domain/value-objects/category-id.value-object';
@@ -31,6 +32,7 @@ export class PrismaCategorySpecializationRepository
     const rows = await this.prisma.categorySpecializationModel.findMany({
       where: { categoryId: categoryId.value },
       orderBy: { name: 'asc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => CategorySpecializationPrismaMapper.toDomain(row));
   }

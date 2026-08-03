@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
 import { Service } from '../../domain/entities/service.entity';
@@ -30,6 +31,7 @@ export class PrismaServiceRepository implements ServiceRepository {
     const rows = await this.prisma.serviceModel.findMany({
       where: { providerId: providerId.value },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => ServicePrismaMapper.toDomain(row));
   }
@@ -38,6 +40,7 @@ export class PrismaServiceRepository implements ServiceRepository {
     const rows = await this.prisma.serviceModel.findMany({
       where: { categoryId: categoryId.value },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => ServicePrismaMapper.toDomain(row));
   }
@@ -84,6 +87,7 @@ export class PrismaServiceRepository implements ServiceRepository {
         ],
       },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => ServicePrismaMapper.toDomain(row));
   }

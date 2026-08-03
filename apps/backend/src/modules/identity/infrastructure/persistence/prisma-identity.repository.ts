@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { Identity } from '../../domain/entities/identity.entity';
 import { IdentityRepository } from '../../domain/interfaces/identity-repository.interface';
 import { IdentityId } from '../../domain/value-objects/identity-id.value-object';
@@ -71,6 +72,7 @@ export class PrismaIdentityRepository implements IdentityRepository {
         ],
       },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => IdentityPrismaMapper.toDomain(row));
   }

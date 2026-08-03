@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { OrderId } from '../../../order/domain/value-objects/order-id.value-object';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
@@ -27,6 +28,7 @@ export class PrismaReviewRepository implements ReviewRepository {
   async findByOrderId(orderId: OrderId): Promise<Review[]> {
     const rows = await this.prisma.reviewModel.findMany({
       where: { orderId: orderId.value },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => ReviewPrismaMapper.toDomain(row));
   }
@@ -34,6 +36,7 @@ export class PrismaReviewRepository implements ReviewRepository {
   async findByProviderId(providerId: ProviderId): Promise<Review[]> {
     const rows = await this.prisma.reviewModel.findMany({
       where: { providerId: providerId.value },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => ReviewPrismaMapper.toDomain(row));
   }
@@ -41,6 +44,7 @@ export class PrismaReviewRepository implements ReviewRepository {
   async findByReviewerIdentityId(identityId: IdentityId): Promise<Review[]> {
     const rows = await this.prisma.reviewModel.findMany({
       where: { reviewerIdentityId: identityId.value },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => ReviewPrismaMapper.toDomain(row));
   }
@@ -81,6 +85,7 @@ export class PrismaReviewRepository implements ReviewRepository {
         OR: [{ title: { contains: term } }, { comment: { contains: term } }],
       },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => ReviewPrismaMapper.toDomain(row));
   }

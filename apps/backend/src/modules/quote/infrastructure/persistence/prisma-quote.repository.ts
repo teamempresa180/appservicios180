@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { OrderId } from '../../../order/domain/value-objects/order-id.value-object';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
 import { Quote } from '../../domain/entities/quote.entity';
@@ -26,6 +27,7 @@ export class PrismaQuoteRepository implements QuoteRepository {
   async findByOrderId(orderId: OrderId): Promise<Quote[]> {
     const rows = await this.prisma.quoteModel.findMany({
       where: { orderId: orderId.value },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => QuotePrismaMapper.toDomain(row));
   }
@@ -33,6 +35,7 @@ export class PrismaQuoteRepository implements QuoteRepository {
   async findByProviderId(providerId: ProviderId): Promise<Quote[]> {
     const rows = await this.prisma.quoteModel.findMany({
       where: { providerId: providerId.value },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => QuotePrismaMapper.toDomain(row));
   }
@@ -67,6 +70,7 @@ export class PrismaQuoteRepository implements QuoteRepository {
     const rows = await this.prisma.quoteModel.findMany({
       where: { notes: { contains: term } },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => QuotePrismaMapper.toDomain(row));
   }

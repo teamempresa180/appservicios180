@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import {
+  MAX_UNPAGINATED_RESULTS,
+  enumValuesMatching,
+} from '../../../core/infrastructure/enum-search';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { Verification } from '../../domain/entities/verification.entity';
 import { VerificationRepository } from '../../domain/interfaces/verification-repository.interface';
 import { VerificationId } from '../../domain/value-objects/verification-id.value-object';
+import { VerificationType } from '../../domain/value-objects/verification-type.value-object';
+import { VerificationStatus } from '../../domain/value-objects/verification-status.value-object';
 import { VerificationPrismaMapper } from './verification-prisma.mapper';
 
 /**
@@ -28,6 +34,7 @@ export class PrismaVerificationRepository implements VerificationRepository {
     const rows = await this.prisma.verificationModel.findMany({
       where: { identityId: identityId.value },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => VerificationPrismaMapper.toDomain(row));
   }
@@ -62,15 +69,26 @@ export class PrismaVerificationRepository implements VerificationRepository {
   }
 
   async search(term: string): Promise<Verification[]> {
-    // `type`/`status` are Prisma enum columns — enum filters only support
-    // `equals`/`in`, not `contains`, so a substring match across both
-    // fields has to happen in application code after the fetch.
+    // `type`/`status` are Prisma enum columns — enum filters only
+    // support `equals`/`in`, not `contains`. Resolving the substring
+    // match against the (compile-time known) enum values first turns
+    // what used to be an unfiltered full-table fetch + in-memory
+    // `.filter()` into a single bounded `IN (...)` query.
+    const types = enumValuesMatching(VerificationType, term);
+    const statuses = enumValuesMatching(VerificationStatus, term);
+    if (types.length === 0 && statuses.length === 0) {
+      return [];
+    }
     const rows = await this.prisma.verificationModel.findMany({
+      where: {
+        OR: [
+          ...(types.length > 0 ? [{ type: { in: types } }] : []),
+          ...(statuses.length > 0 ? [{ status: { in: statuses } }] : []),
+        ],
+      },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
-    const upper = term.toUpperCase();
-    return rows
-      .filter((row) => row.type.includes(upper) || row.status.includes(upper))
-      .map((row) => VerificationPrismaMapper.toDomain(row));
+    return rows.map((row) => VerificationPrismaMapper.toDomain(row));
   }
 }

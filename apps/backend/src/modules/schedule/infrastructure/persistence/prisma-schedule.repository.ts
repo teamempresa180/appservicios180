@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import {
+  MAX_UNPAGINATED_RESULTS,
+  enumValuesMatching,
+} from '../../../core/infrastructure/enum-search';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
 import { Schedule } from '../../domain/entities/schedule.entity';
 import { ScheduleRepository } from '../../domain/interfaces/schedule-repository.interface';
 import { ScheduleId } from '../../domain/value-objects/schedule-id.value-object';
+import { ScheduleType } from '../../domain/value-objects/schedule-type.value-object';
+import { ScheduleStatus } from '../../domain/value-objects/schedule-status.value-object';
 import { SchedulePrismaMapper } from './schedule-prisma.mapper';
 
 /**
@@ -26,6 +32,7 @@ export class PrismaScheduleRepository implements ScheduleRepository {
     const rows = await this.prisma.scheduleModel.findMany({
       where: { providerId: providerId.value },
       orderBy: { startDateTime: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => SchedulePrismaMapper.toDomain(row));
   }
@@ -64,15 +71,26 @@ export class PrismaScheduleRepository implements ScheduleRepository {
   }
 
   async search(term: string): Promise<Schedule[]> {
-    // `type`/`status` are Prisma enum columns — enum filters only support
-    // `equals`/`in`, not `contains`, so a substring match across both
-    // fields has to happen in application code after the fetch.
+    // `type`/`status` are Prisma enum columns — enum filters only
+    // support `equals`/`in`, not `contains`. Resolving the substring
+    // match against the (compile-time known) enum values first turns
+    // what used to be an unfiltered full-table fetch + in-memory
+    // `.filter()` into a single bounded `IN (...)` query.
+    const types = enumValuesMatching(ScheduleType, term);
+    const statuses = enumValuesMatching(ScheduleStatus, term);
+    if (types.length === 0 && statuses.length === 0) {
+      return [];
+    }
     const rows = await this.prisma.scheduleModel.findMany({
+      where: {
+        OR: [
+          ...(types.length > 0 ? [{ type: { in: types } }] : []),
+          ...(statuses.length > 0 ? [{ status: { in: statuses } }] : []),
+        ],
+      },
       orderBy: { startDateTime: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
-    const upper = term.toUpperCase();
-    return rows
-      .filter((row) => row.type.includes(upper) || row.status.includes(upper))
-      .map((row) => SchedulePrismaMapper.toDomain(row));
+    return rows.map((row) => SchedulePrismaMapper.toDomain(row));
   }
 }

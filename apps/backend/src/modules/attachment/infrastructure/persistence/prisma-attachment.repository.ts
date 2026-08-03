@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { MessageId } from '../../../message/domain/value-objects/message-id.value-object';
 import { Attachment } from '../../domain/entities/attachment.entity';
 import { AttachmentRepository } from '../../domain/interfaces/attachment-repository.interface';
@@ -25,6 +26,7 @@ export class PrismaAttachmentRepository implements AttachmentRepository {
   async findByMessageId(messageId: MessageId): Promise<Attachment[]> {
     const rows = await this.prisma.attachmentModel.findMany({
       where: { messageId: messageId.value },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => AttachmentPrismaMapper.toDomain(row));
   }
@@ -66,6 +68,7 @@ export class PrismaAttachmentRepository implements AttachmentRepository {
     const rows = await this.prisma.attachmentModel.findMany({
       where: { fileName: { contains: term } },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => AttachmentPrismaMapper.toDomain(row));
   }
