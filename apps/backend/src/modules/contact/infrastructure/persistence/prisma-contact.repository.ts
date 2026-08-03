@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { Contact } from '../../domain/entities/contact.entity';
 import { ContactRepository } from '../../domain/interfaces/contact-repository.interface';
@@ -27,6 +28,7 @@ export class PrismaContactRepository implements ContactRepository {
     const rows = await this.prisma.contactModel.findMany({
       where: { identityId: identityId.value },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => ContactPrismaMapper.toDomain(row));
   }
@@ -68,6 +70,7 @@ export class PrismaContactRepository implements ContactRepository {
     const rows = await this.prisma.contactModel.findMany({
       where: { value: { contains: term } },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => ContactPrismaMapper.toDomain(row));
   }

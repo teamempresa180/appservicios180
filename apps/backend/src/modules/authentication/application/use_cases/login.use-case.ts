@@ -65,8 +65,16 @@ export class LoginUseCase {
       throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
     }
 
-    const authentications =
-      await this.authenticationRepository.findByIdentityId(identity.id);
+    // Both lookups are keyed on the same `identity.id` and neither
+    // depends on the other's result, so they go out in parallel — one
+    // database round-trip instead of two on the hottest path in the
+    // app. The checks below still run in the original order, so the
+    // failure a caller sees is unchanged.
+    const [authentications, credentials] = await Promise.all([
+      this.authenticationRepository.findByIdentityId(identity.id),
+      this.credentialRepository.findByIdentityId(identity.id),
+    ]);
+
     const hasActivePasswordMethod = authentications.some(
       (auth) =>
         auth.methodType === AuthMethodType.Password &&
@@ -79,9 +87,6 @@ export class LoginUseCase {
       throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
     }
 
-    const credentials = await this.credentialRepository.findByIdentityId(
-      identity.id,
-    );
     const passwordCredential = credentials.find(
       (credential) =>
         credential.type === CredentialType.Password &&

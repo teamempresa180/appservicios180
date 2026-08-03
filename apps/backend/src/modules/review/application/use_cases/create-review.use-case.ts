@@ -37,21 +37,25 @@ export class CreateReviewUseCase {
     ReviewValidator.validateCreate(command);
 
     const orderId = OrderId.fromString(command.orderId);
-    const order = await this.orderRepository.findById(orderId);
-    if (!order) {
-      throw new NotFoundException(`Order ${command.orderId} not found`);
-    }
-
     const providerId = ProviderId.fromString(command.providerId);
-    const provider = await this.providerRepository.findById(providerId);
-    if (!provider) {
-      throw new NotFoundException(`Provider ${command.providerId} not found`);
-    }
-
     const reviewerIdentityId = IdentityId.fromString(
       command.reviewerIdentityId,
     );
-    const reviewer = await this.identityRepository.findById(reviewerIdentityId);
+
+    // Independent existence checks against different tables — issued
+    // together, then reported in the original order so the error a
+    // caller sees is unchanged.
+    const [order, provider, reviewer] = await Promise.all([
+      this.orderRepository.findById(orderId),
+      this.providerRepository.findById(providerId),
+      this.identityRepository.findById(reviewerIdentityId),
+    ]);
+    if (!order) {
+      throw new NotFoundException(`Order ${command.orderId} not found`);
+    }
+    if (!provider) {
+      throw new NotFoundException(`Provider ${command.providerId} not found`);
+    }
     if (!reviewer) {
       throw new NotFoundException(
         `Identity ${command.reviewerIdentityId} not found`,

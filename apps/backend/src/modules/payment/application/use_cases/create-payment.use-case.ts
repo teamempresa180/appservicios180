@@ -40,29 +40,35 @@ export class CreatePaymentUseCase {
     PaymentValidator.validateCreate(command);
 
     const quoteId = QuoteId.fromString(command.quoteId);
-    const quote = await this.quoteRepository.findById(quoteId);
+    const orderId = OrderId.fromString(command.orderId);
+    const payerIdentityId = IdentityId.fromString(command.payerIdentityId);
+    const receiverProviderId = ProviderId.fromString(
+      command.receiverProviderId,
+    );
+
+    // Four independent existence checks against four different
+    // tables — none of them reads the previous one's result, so they
+    // go out together: one round-trip instead of four. The `if`
+    // ladder below still reports the *first* missing reference in the
+    // same order as before, so the error a caller sees is unchanged.
+    const [quote, order, payer, receiver] = await Promise.all([
+      this.quoteRepository.findById(quoteId),
+      this.orderRepository.findById(orderId),
+      this.identityRepository.findById(payerIdentityId),
+      this.providerRepository.findById(receiverProviderId),
+    ]);
+
     if (!quote) {
       throw new NotFoundException(`Quote ${command.quoteId} not found`);
     }
-
-    const orderId = OrderId.fromString(command.orderId);
-    const order = await this.orderRepository.findById(orderId);
     if (!order) {
       throw new NotFoundException(`Order ${command.orderId} not found`);
     }
-
-    const payerIdentityId = IdentityId.fromString(command.payerIdentityId);
-    const payer = await this.identityRepository.findById(payerIdentityId);
     if (!payer) {
       throw new NotFoundException(
         `Identity ${command.payerIdentityId} not found`,
       );
     }
-
-    const receiverProviderId = ProviderId.fromString(
-      command.receiverProviderId,
-    );
-    const receiver = await this.providerRepository.findById(receiverProviderId);
     if (!receiver) {
       throw new NotFoundException(
         `Provider ${command.receiverProviderId} not found`,

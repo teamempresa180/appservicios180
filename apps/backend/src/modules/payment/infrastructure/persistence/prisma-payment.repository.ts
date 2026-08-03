@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import {
+  MAX_UNPAGINATED_RESULTS,
+  enumValuesMatching,
+} from '../../../core/infrastructure/enum-search';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { OrderId } from '../../../order/domain/value-objects/order-id.value-object';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
@@ -8,6 +12,7 @@ import { QuoteId } from '../../../quote/domain/value-objects/quote-id.value-obje
 import { Payment } from '../../domain/entities/payment.entity';
 import { PaymentRepository } from '../../domain/interfaces/payment-repository.interface';
 import { PaymentId } from '../../domain/value-objects/payment-id.value-object';
+import { PaymentMethod } from '../../domain/value-objects/payment-method.value-object';
 import { PaymentPrismaMapper } from './payment-prisma.mapper';
 
 /**
@@ -28,6 +33,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
   async findByQuoteId(quoteId: QuoteId): Promise<Payment[]> {
     const rows = await this.prisma.paymentModel.findMany({
       where: { quoteId: quoteId.value },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => PaymentPrismaMapper.toDomain(row));
   }
@@ -35,6 +41,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
   async findByOrderId(orderId: OrderId): Promise<Payment[]> {
     const rows = await this.prisma.paymentModel.findMany({
       where: { orderId: orderId.value },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => PaymentPrismaMapper.toDomain(row));
   }
@@ -42,6 +49,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
   async findByPayerIdentityId(identityId: IdentityId): Promise<Payment[]> {
     const rows = await this.prisma.paymentModel.findMany({
       where: { payerIdentityId: identityId.value },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => PaymentPrismaMapper.toDomain(row));
   }
@@ -49,6 +57,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
   async findByReceiverProviderId(providerId: ProviderId): Promise<Payment[]> {
     const rows = await this.prisma.paymentModel.findMany({
       where: { receiverProviderId: providerId.value },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => PaymentPrismaMapper.toDomain(row));
   }
@@ -84,14 +93,19 @@ export class PrismaPaymentRepository implements PaymentRepository {
 
   async search(term: string): Promise<Payment[]> {
     // `method` is a Prisma enum column — enum filters only support
-    // `equals`/`in`, not `contains`, so the substring match has to
-    // happen in application code after the fetch.
+    // `equals`/`in`, not `contains`. Resolving the substring match
+    // against the (compile-time known) enum values first turns what
+    // used to be an unfiltered full-table fetch + in-memory
+    // `.filter()` into a single bounded `IN (...)` query.
+    const methods = enumValuesMatching(PaymentMethod, term);
+    if (methods.length === 0) {
+      return [];
+    }
     const rows = await this.prisma.paymentModel.findMany({
+      where: { method: { in: methods } },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
-    const upper = term.toUpperCase();
-    return rows
-      .filter((row) => row.method.includes(upper))
-      .map((row) => PaymentPrismaMapper.toDomain(row));
+    return rows.map((row) => PaymentPrismaMapper.toDomain(row));
   }
 }

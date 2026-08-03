@@ -1,9 +1,17 @@
+import {
+  normalizePage,
+  normalizePageSize,
+} from '../../../core/application/pagination';
+
 /**
  * Intent to list Availabilities with pagination. Plain data — no behavior.
  */
 export class ListAvailabilityQuery {
-  constructor(
-    public readonly page: number = 1,
-    public readonly pageSize: number = 20,
-  ) {}
+  public readonly page: number;
+  public readonly pageSize: number;
+
+  constructor(page: number = 1, pageSize: number = 20) {
+    this.page = normalizePage(page);
+    this.pageSize = normalizePageSize(pageSize);
+  }
 }

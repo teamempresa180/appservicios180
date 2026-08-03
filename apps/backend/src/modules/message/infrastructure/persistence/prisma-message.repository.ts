@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { ChatId } from '../../../chat/domain/value-objects/chat-id.value-object';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { Message } from '../../domain/entities/message.entity';
@@ -23,6 +24,11 @@ export class PrismaMessageRepository implements MessageRepository {
     return row ? MessagePrismaMapper.toDomain(row) : null;
   }
 
+  // Deliberately *not* capped with `take`, unlike every other feed in
+  // this file: truncating a chat to an arbitrary 200 messages with no
+  // `orderBy` would silently drop part of a conversation. Bounding
+  // this one properly needs a cursor/`sentAt` window on the read
+  // model — a real change to the chat contract, not a query tweak.
   async findByChatId(chatId: ChatId): Promise<Message[]> {
     const rows = await this.prisma.messageModel.findMany({
       where: { chatId: chatId.value },
@@ -33,6 +39,7 @@ export class PrismaMessageRepository implements MessageRepository {
   async findBySenderIdentityId(identityId: IdentityId): Promise<Message[]> {
     const rows = await this.prisma.messageModel.findMany({
       where: { senderIdentityId: identityId.value },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => MessagePrismaMapper.toDomain(row));
   }
@@ -74,6 +81,7 @@ export class PrismaMessageRepository implements MessageRepository {
     const rows = await this.prisma.messageModel.findMany({
       where: { content: { contains: term } },
       orderBy: { sentAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => MessagePrismaMapper.toDomain(row));
   }

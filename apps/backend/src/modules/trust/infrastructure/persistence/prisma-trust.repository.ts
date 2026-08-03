@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import {
+  MAX_UNPAGINATED_RESULTS,
+  enumValuesMatching,
+} from '../../../core/infrastructure/enum-search';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { Trust } from '../../domain/entities/trust.entity';
 import { TrustRepository } from '../../domain/interfaces/trust-repository.interface';
 import { TrustId } from '../../domain/value-objects/trust-id.value-object';
+import { TrustLevel } from '../../domain/value-objects/trust-level.value-object';
+import { TrustStatus } from '../../domain/value-objects/trust-status.value-object';
 import { TrustPrismaMapper } from './trust-prisma.mapper';
 
 /**
@@ -59,15 +65,26 @@ export class PrismaTrustRepository implements TrustRepository {
   }
 
   async search(term: string): Promise<Trust[]> {
-    // `level`/`status` are Prisma enum columns — enum filters only support
-    // `equals`/`in`, not `contains`, so a substring match across both
-    // fields has to happen in application code after the fetch.
+    // `level`/`status` are Prisma enum columns — enum filters only
+    // support `equals`/`in`, not `contains`. Resolving the substring
+    // match against the (compile-time known) enum values first turns
+    // what used to be an unfiltered full-table fetch + in-memory
+    // `.filter()` into a single bounded `IN (...)` query.
+    const levels = enumValuesMatching(TrustLevel, term);
+    const statuses = enumValuesMatching(TrustStatus, term);
+    if (levels.length === 0 && statuses.length === 0) {
+      return [];
+    }
     const rows = await this.prisma.trustModel.findMany({
+      where: {
+        OR: [
+          ...(levels.length > 0 ? [{ level: { in: levels } }] : []),
+          ...(statuses.length > 0 ? [{ status: { in: statuses } }] : []),
+        ],
+      },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
-    const upper = term.toUpperCase();
-    return rows
-      .filter((row) => row.level.includes(upper) || row.status.includes(upper))
-      .map((row) => TrustPrismaMapper.toDomain(row));
+    return rows.map((row) => TrustPrismaMapper.toDomain(row));
   }
 }

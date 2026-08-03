@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { Notification } from '../../domain/entities/notification.entity';
 import { NotificationRepository } from '../../domain/interfaces/notification-repository.interface';
@@ -25,6 +26,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
   async findByIdentityId(identityId: IdentityId): Promise<Notification[]> {
     const rows = await this.prisma.notificationModel.findMany({
       where: { identityId: identityId.value },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => NotificationPrismaMapper.toDomain(row));
   }
@@ -68,6 +70,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
         OR: [{ title: { contains: term } }, { body: { contains: term } }],
       },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => NotificationPrismaMapper.toDomain(row));
   }

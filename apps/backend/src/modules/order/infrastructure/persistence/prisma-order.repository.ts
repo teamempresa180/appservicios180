@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
 import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
@@ -28,6 +29,7 @@ export class PrismaOrderRepository implements OrderRepository {
   async findByIdentityId(identityId: IdentityId): Promise<Order[]> {
     const rows = await this.prisma.orderModel.findMany({
       where: { identityId: identityId.value },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => OrderPrismaMapper.toDomain(row));
   }
@@ -35,6 +37,7 @@ export class PrismaOrderRepository implements OrderRepository {
   async findByProviderId(providerId: ProviderId): Promise<Order[]> {
     const rows = await this.prisma.orderModel.findMany({
       where: { providerId: providerId.value },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => OrderPrismaMapper.toDomain(row));
   }
@@ -47,6 +50,7 @@ export class PrismaOrderRepository implements OrderRepository {
         status: OrderStatus.Pending,
       },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => OrderPrismaMapper.toDomain(row));
   }
@@ -86,6 +90,7 @@ export class PrismaOrderRepository implements OrderRepository {
         ],
       },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => OrderPrismaMapper.toDomain(row));
   }

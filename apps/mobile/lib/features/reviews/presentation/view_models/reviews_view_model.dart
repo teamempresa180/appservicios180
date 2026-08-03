@@ -1,6 +1,10 @@
 import '../../../../core/network/http_exceptions.dart';
 import '../../../../core/presentation/cancellable_view_model.dart';
+import '../../../../order/entities/order.dart';
+import '../../../../profiles/entities/profile.dart';
+import '../../../../provider/entities/provider.dart';
 import '../../../../review/entities/review.dart';
+import '../../../../service/entities/service.dart';
 import '../../mock/mock_reviews_data.dart';
 import '../../models/review_display.dart';
 import '../../repositories/reviews_repository.dart';
@@ -45,22 +49,19 @@ class ReviewsViewModel extends CancellableViewModel {
   }
 
   Future<ReviewDisplay> _buildDisplay(Review review) async {
-    final provider = await _repository.getProviderFor(
-      review,
-      cancelToken: cancelToken,
-    );
-    final profile = await _repository.getProfileFor(
-      review,
-      cancelToken: cancelToken,
-    );
-    final order = await _repository.getOrderFor(
-      review,
-      cancelToken: cancelToken,
-    );
-    final service = await _repository.getServiceFor(
-      review,
-      cancelToken: cancelToken,
-    );
+    // The four lookups are independent — none reads another's result —
+    // so they go out together. Awaited one-by-one this cost four
+    // serial round-trips *per review*, i.e. 40 for a 10-review list.
+    final results = await Future.wait([
+      _repository.getProviderFor(review, cancelToken: cancelToken),
+      _repository.getProfileFor(review, cancelToken: cancelToken),
+      _repository.getOrderFor(review, cancelToken: cancelToken),
+      _repository.getServiceFor(review, cancelToken: cancelToken),
+    ]);
+    final provider = results[0] as Provider;
+    final profile = results[1] as Profile;
+    final order = results[2] as Order;
+    final service = results[3] as Service;
     return ReviewDisplay(
       review: review,
       provider: provider,

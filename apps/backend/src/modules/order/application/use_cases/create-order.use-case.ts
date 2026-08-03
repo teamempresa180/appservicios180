@@ -45,13 +45,18 @@ export class CreateOrderUseCase {
     OrderValidator.validateCreate(command);
 
     const identityId = IdentityId.fromString(command.identityId);
-    const identity = await this.identityRepository.findById(identityId);
+    const categoryId = CategoryId.fromString(command.categoryId);
+
+    // Independent existence checks against different tables — issued
+    // together, then reported in the original order so the error a
+    // caller sees is unchanged.
+    const [identity, category] = await Promise.all([
+      this.identityRepository.findById(identityId),
+      this.categoryRepository.findById(categoryId),
+    ]);
     if (!identity) {
       throw new NotFoundException(`Identity ${command.identityId} not found`);
     }
-
-    const categoryId = CategoryId.fromString(command.categoryId);
-    const category = await this.categoryRepository.findById(categoryId);
     if (!category) {
       throw new NotFoundException(`Category ${command.categoryId} not found`);
     }
@@ -60,13 +65,15 @@ export class CreateOrderUseCase {
     let serviceId: ServiceId | null = null;
     if (command.providerId && command.serviceId) {
       providerId = ProviderId.fromString(command.providerId);
-      const provider = await this.providerRepository.findById(providerId);
+      serviceId = ServiceId.fromString(command.serviceId);
+
+      const [provider, service] = await Promise.all([
+        this.providerRepository.findById(providerId),
+        this.serviceRepository.findById(serviceId),
+      ]);
       if (!provider) {
         throw new NotFoundException(`Provider ${command.providerId} not found`);
       }
-
-      serviceId = ServiceId.fromString(command.serviceId);
-      const service = await this.serviceRepository.findById(serviceId);
       if (!service) {
         throw new NotFoundException(`Service ${command.serviceId} not found`);
       }

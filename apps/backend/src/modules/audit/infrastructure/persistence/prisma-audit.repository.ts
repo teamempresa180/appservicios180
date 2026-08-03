@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { Audit } from '../../domain/entities/audit.entity';
 import { AuditRepository } from '../../domain/interfaces/audit-repository.interface';
@@ -27,6 +28,7 @@ export class PrismaAuditRepository implements AuditRepository {
     const rows = await this.prisma.auditModel.findMany({
       where: { identityId: identityId.value },
       orderBy: { occurredAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => AuditPrismaMapper.toDomain(row));
   }
@@ -61,6 +63,7 @@ export class PrismaAuditRepository implements AuditRepository {
     const rows = await this.prisma.auditModel.findMany({
       where: { description: { contains: term } },
       orderBy: { occurredAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => AuditPrismaMapper.toDomain(row));
   }

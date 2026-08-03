@@ -729,6 +729,10 @@ model ProviderModel {
 
   @@index([providerProfileId])
   @@index([categoryId])
+  // Covers `findCompatible` — the provider-matching query behind
+  // category browse: WHERE category_id = ? AND status = ? [AND
+  // specialization_id = ?] ORDER BY created_at DESC.
+  @@index([categoryId, status, specializationId, createdAt])
   @@map("providers")
 }
 
@@ -794,6 +798,15 @@ model OrderModel {
   @@index([providerId])
   @@index([serviceId])
   @@index([addressId])
+  // Covers `findOpenByCategoryId` — the open-request feed every
+  // Provider polls: WHERE category_id = ? AND provider_id IS NULL AND
+  // status = ? ORDER BY created_at DESC. The single-column
+  // `@@index([categoryId])` above could only narrow to the category
+  // and left MySQL to filter + filesort the rest.
+  @@index([categoryId, status, providerId, createdAt])
+  // Covers the two "my orders" feeds, which both sort newest-first.
+  @@index([identityId, createdAt])
+  @@index([providerId, createdAt])
   @@map("orders")
 }
 

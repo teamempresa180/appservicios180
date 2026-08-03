@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import {
+  MAX_UNPAGINATED_RESULTS,
+  enumValuesMatching,
+} from '../../../core/infrastructure/enum-search';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
 import { Availability } from '../../domain/entities/availability.entity';
 import { AvailabilityRepository } from '../../domain/interfaces/availability-repository.interface';
 import { AvailabilityId } from '../../domain/value-objects/availability-id.value-object';
+import { AvailabilityStatus } from '../../domain/value-objects/availability-status.value-object';
+import { AvailabilityType } from '../../domain/value-objects/availability-type.value-object';
 import { AvailabilityPrismaMapper } from './availability-prisma.mapper';
 
 /**
@@ -26,6 +32,7 @@ export class PrismaAvailabilityRepository implements AvailabilityRepository {
     const rows = await this.prisma.availabilityModel.findMany({
       where: { providerId: providerId.value },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => AvailabilityPrismaMapper.toDomain(row));
   }
@@ -64,15 +71,26 @@ export class PrismaAvailabilityRepository implements AvailabilityRepository {
   }
 
   async search(term: string): Promise<Availability[]> {
-    // `type`/`status` are Prisma enum columns — enum filters only support
-    // `equals`/`in`, not `contains`, so a substring match across both
-    // fields has to happen in application code after the fetch.
+    // `type`/`status` are Prisma enum columns — enum filters only
+    // support `equals`/`in`, not `contains`. Resolving the substring
+    // match against the (compile-time known) enum values first turns
+    // what used to be an unfiltered full-table fetch + in-memory
+    // `.filter()` into a single bounded `IN (...)` query.
+    const types = enumValuesMatching(AvailabilityType, term);
+    const statuses = enumValuesMatching(AvailabilityStatus, term);
+    if (types.length === 0 && statuses.length === 0) {
+      return [];
+    }
     const rows = await this.prisma.availabilityModel.findMany({
+      where: {
+        OR: [
+          ...(types.length > 0 ? [{ type: { in: types } }] : []),
+          ...(statuses.length > 0 ? [{ status: { in: statuses } }] : []),
+        ],
+      },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
-    const upper = term.toUpperCase();
-    return rows
-      .filter((row) => row.type.includes(upper) || row.status.includes(upper))
-      .map((row) => AvailabilityPrismaMapper.toDomain(row));
+    return rows.map((row) => AvailabilityPrismaMapper.toDomain(row));
   }
 }

@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import {
+  MAX_UNPAGINATED_RESULTS,
+  enumValuesMatching,
+} from '../../../core/infrastructure/enum-search';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
 import { SpecializationId } from '../../../category/domain/value-objects/specialization-id.value-object';
@@ -8,6 +12,7 @@ import { Provider } from '../../domain/entities/provider.entity';
 import { ProviderRepository } from '../../domain/interfaces/provider-repository.interface';
 import { ProviderId } from '../../domain/value-objects/provider-id.value-object';
 import { ProviderStatus } from '../../domain/value-objects/provider-status.value-object';
+import { ProviderType } from '../../domain/value-objects/provider-type.value-object';
 import { ProviderPrismaMapper } from './provider-prisma.mapper';
 
 /**
@@ -69,17 +74,26 @@ export class PrismaProviderRepository implements ProviderRepository {
   }
 
   async search(term: string): Promise<Provider[]> {
+    // Previously loaded *every* provider row — `biography` included —
+    // and matched in Node. `type` is a Prisma enum column (no
+    // `contains` support), but its possible values are known at
+    // compile time, so the substring match resolves against that
+    // short list and pushes down as `IN (...)`; `biography` is a text
+    // column and matches with a real `contains` (MySQL's default
+    // collation is case-insensitive, so this keeps the previous
+    // case-insensitive behavior).
+    const types = enumValuesMatching(ProviderType, term);
     const rows = await this.prisma.providerModel.findMany({
+      where: {
+        OR: [
+          ...(types.length > 0 ? [{ type: { in: types } }] : []),
+          { biography: { contains: term } },
+        ],
+      },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
-    const upper = term.toUpperCase();
-    return rows
-      .filter(
-        (row) =>
-          row.type.includes(upper) ||
-          row.biography.toUpperCase().includes(upper),
-      )
-      .map((row) => ProviderPrismaMapper.toDomain(row));
+    return rows.map((row) => ProviderPrismaMapper.toDomain(row));
   }
 
   async findCompatible(
@@ -93,6 +107,7 @@ export class PrismaProviderRepository implements ProviderRepository {
         ...(specializationId ? { specializationId: specializationId.value } : {}),
       },
       orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
     });
     return rows.map((row) => ProviderPrismaMapper.toDomain(row));
   }

@@ -35,21 +35,25 @@ export class CreateChatUseCase {
     ChatValidator.validateCreate(command);
 
     const orderId = OrderId.fromString(command.orderId);
-    const order = await this.orderRepository.findById(orderId);
+    const clientIdentityId = IdentityId.fromString(command.clientIdentityId);
+    const providerId = ProviderId.fromString(command.providerId);
+
+    // Independent existence checks against different tables — issued
+    // together, then reported in the original order so the error a
+    // caller sees is unchanged.
+    const [order, client, provider] = await Promise.all([
+      this.orderRepository.findById(orderId),
+      this.identityRepository.findById(clientIdentityId),
+      this.providerRepository.findById(providerId),
+    ]);
     if (!order) {
       throw new NotFoundException(`Order ${command.orderId} not found`);
     }
-
-    const clientIdentityId = IdentityId.fromString(command.clientIdentityId);
-    const client = await this.identityRepository.findById(clientIdentityId);
     if (!client) {
       throw new NotFoundException(
         `Identity ${command.clientIdentityId} not found`,
       );
     }
-
-    const providerId = ProviderId.fromString(command.providerId);
-    const provider = await this.providerRepository.findById(providerId);
     if (!provider) {
       throw new NotFoundException(`Provider ${command.providerId} not found`);
     }
