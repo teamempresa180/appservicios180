@@ -47,6 +47,19 @@ class SessionManager extends ChangeNotifier implements TokenProvider {
 
   bool get isAuthenticated => _accessToken != null && _currentUserId != null;
 
+  /// Whether the backend actually recognizes this session as a
+  /// provider — i.e. an **Active** `Provider` record exists for the
+  /// identity (see `login.use-case.ts`/`refresh.use-case.ts`, which
+  /// both derive `PROVIDER` from that and nothing else).
+  ///
+  /// The drawer's "Cambiar a prestador de servicios" switch consults
+  /// this before flipping [UserRoleController]: that toggle was
+  /// previously ungated, so any Customer — including one who had never
+  /// applied — could put the app into the full Provider shell
+  /// (dashboard, incoming requests, availability). Purely a UI gate;
+  /// the backend's `RolesGuard` is what actually protects the data.
+  bool get canActAsProvider => _currentRole == 'PROVIDER';
+
   /// Reads and clears the "the session was cleared involuntarily"
   /// flag (an expired/invalid refresh token — [onSessionExpired],
   /// never a manual [logout]). One-shot by design: `LoginPage` calls
@@ -106,9 +119,22 @@ class SessionManager extends ChangeNotifier implements TokenProvider {
       password: password,
     );
     await _applyTokens(tokens);
-    final user = await _authRepository.me();
-    _currentUserId = user.id;
-    _currentRole = user.role;
+    // `_applyTokens` has already written both tokens to secure storage,
+    // but the session isn't usable until `me()` resolves the user id
+    // (`isAuthenticated` requires it). If this call fails, leaving the
+    // tokens persisted produced a half-logged-in device: the login
+    // screen showed an error, yet the next cold start would silently
+    // restore a session the user was told they didn't get. Roll the
+    // whole login back so a failure means "not logged in", full stop.
+    try {
+      final user = await _authRepository.me();
+      _currentUserId = user.id;
+      _currentRole = user.role;
+    } catch (_) {
+      await _clear();
+      notifyListeners();
+      rethrow;
+    }
     notifyListeners();
   }
 
@@ -119,9 +145,15 @@ class SessionManager extends ChangeNotifier implements TokenProvider {
       // backend call succeeds (e.g. offline logout still logs out
       // locally — the refresh token simply stays valid server-side
       // until it naturally expires).
+      //
+      // Catches every error, not just `HttpException`: "log me out"
+      // must be unconditional. A narrower `on HttpException` let any
+      // other throw (a parse/cast error in the repository, a platform
+      // exception from secure storage) escape *before* `_clear()`,
+      // stranding the user logged in with no feedback.
       try {
         await _authRepository.logout(token);
-      } on HttpException {
+      } catch (_) {
         // Ignored — see comment above.
       }
     }
@@ -129,16 +161,24 @@ class SessionManager extends ChangeNotifier implements TokenProvider {
     notifyListeners();
   }
 
+  /// Deliberately does **not** call `notifyListeners()`: a token
+  /// refresh is invisible plumbing, and `service_locator.dart` listens
+  /// here to force `UserRoleController` back in sync with the backend
+  /// role. Notifying would snap a Provider who chose "Cambiar a
+  /// cliente" back into Provider mode the next time any request
+  /// happened to refresh — the role is still updated below, so the
+  /// [canActAsProvider] gate stays accurate either way.
   @override
   Future<void> onTokensRefreshed({
     required String accessToken,
     required String refreshToken,
+    String? role,
   }) async {
     await _applyTokens(
       AuthTokens(
         accessToken: accessToken,
         refreshToken: refreshToken,
-        role: _currentRole ?? '',
+        role: role ?? _currentRole ?? '',
       ),
     );
   }

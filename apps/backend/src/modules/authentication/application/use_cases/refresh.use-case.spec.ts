@@ -1,4 +1,11 @@
 import { UnauthorizedException } from '../../../core/domain/exceptions/unauthorized.exception';
+import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
+import { Provider } from '../../../provider/domain/entities/provider.entity';
+import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
+import { ProviderStatus } from '../../../provider/domain/value-objects/provider-status.value-object';
+import { ProviderType } from '../../../provider/domain/value-objects/provider-type.value-object';
+import { ProviderExperience } from '../../../provider/domain/value-objects/provider-experience.value-object';
+import { ProfileId } from '../../../profiles/domain/value-objects/profile-id.value-object';
 import { Role } from '../../../../common/auth/role.enum';
 import { Identity } from '../../../identity/domain/entities/identity.entity';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
@@ -101,6 +108,23 @@ describe('RefreshUseCase', () => {
     );
   }
 
+  async function seedProvider(status: ProviderStatus): Promise<void> {
+    const now = new Date();
+    await providerRepository.save(
+      new Provider(ProviderId.create(), {
+        identityId,
+        providerProfileId: ProfileId.create(),
+        status,
+        type: ProviderType.Independent,
+        experience: ProviderExperience.Intermediate,
+        biography: 'Plumber.',
+        yearsOfExperience: 5,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    );
+  }
+
   it('issues a new pair and revokes the presented refresh token', async () => {
     const oldToken = `refresh:${identityId.value}:${Role.Customer}:0`;
     await seedStoredRefreshToken(oldToken);
@@ -130,6 +154,64 @@ describe('RefreshUseCase', () => {
     await expect(useCase.execute(new RefreshCommand(token))).rejects.toThrow(
       UnauthorizedException,
     );
+  });
+
+  it('revokes every session for the identity when a revoked token is replayed', async () => {
+    // Reuse of an already-rotated token means the value leaked — every
+    // session derived from it must die, not just the replayed one.
+    const replayed = `refresh:${identityId.value}:${Role.Customer}:0`;
+    const otherLiveSession = `refresh:${identityId.value}:${Role.Customer}:1`;
+    await seedStoredRefreshToken(replayed, { revokedAt: new Date() });
+    await seedStoredRefreshToken(otherLiveSession);
+
+    await expect(useCase.execute(new RefreshCommand(replayed))).rejects.toThrow(
+      UnauthorizedException,
+    );
+
+    const stillLive = await refreshTokenRepository.findByTokenHash(
+      tokenService.hashRefreshToken(otherLiveSession),
+    );
+    expect(stillLive?.isRevoked).toBe(true);
+  });
+
+  it('rejects an empty refresh token without reaching the token service', async () => {
+    await expect(useCase.execute(new RefreshCommand('   '))).rejects.toThrow(
+      ValidationException,
+    );
+  });
+
+  it.each([
+    ProviderStatus.Pending,
+    ProviderStatus.InReview,
+    ProviderStatus.Rejected,
+    ProviderStatus.Suspended,
+    ProviderStatus.Blocked,
+    ProviderStatus.Archived,
+  ])(
+    'keeps the Customer role when the Provider record is %s',
+    async (status) => {
+      // Regression: deriving the role from the mere *existence* of a
+      // Provider record let a non-approved applicant escalate to
+      // Role.Provider just by refreshing, which `RolesGuard` then
+      // trusted. Must match `LoginUseCase`: only Active grants it.
+      await seedProvider(status);
+      const token = `refresh:${identityId.value}:${Role.Customer}:0`;
+      await seedStoredRefreshToken(token);
+
+      const result = await useCase.execute(new RefreshCommand(token));
+
+      expect(result.role).toBe(Role.Customer);
+    },
+  );
+
+  it('grants the Provider role when the Provider record is Active', async () => {
+    await seedProvider(ProviderStatus.Active);
+    const token = `refresh:${identityId.value}:${Role.Customer}:0`;
+    await seedStoredRefreshToken(token);
+
+    const result = await useCase.execute(new RefreshCommand(token));
+
+    expect(result.role).toBe(Role.Provider);
   });
 
   it('throws UnauthorizedException when the stored token is expired', async () => {

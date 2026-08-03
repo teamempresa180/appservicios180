@@ -50,8 +50,22 @@ class RefreshInterceptor extends Interceptor {
       return;
     }
 
+    // The failed request still carries the *old* `Authorization`
+    // header, and `AuthInterceptor` only fills that header in when it
+    // is absent — so replaying `err.requestOptions` as-is resent the
+    // very token that just got rejected, guaranteeing a second 401 and
+    // making the whole refresh-and-retry path a no-op. Stamping the
+    // new token here (rather than deleting the header and leaning on
+    // `AuthInterceptor`) also keeps the retry correct for a request
+    // that legitimately set its own header.
+    final refreshedToken = _tokenProvider.accessToken;
+    final retryOptions = err.requestOptions;
+    if (refreshedToken != null) {
+      retryOptions.headers['Authorization'] = 'Bearer $refreshedToken';
+    }
+
     try {
-      final retried = await _requestDio.fetch<dynamic>(err.requestOptions);
+      final retried = await _requestDio.fetch<dynamic>(retryOptions);
       handler.resolve(retried);
     } on DioException catch (retryError) {
       handler.next(retryError);
@@ -74,9 +88,22 @@ class RefreshInterceptor extends Interceptor {
       await _tokenProvider.onTokensRefreshed(
         accessToken: data['accessToken'] as String,
         refreshToken: data['refreshToken'] as String,
+        // The backend recomputes the role on every refresh, so this is
+        // how an account approved as a Provider mid-session picks up
+        // its new role without logging out and back in.
+        role: data['role'] as String?,
       );
       return true;
     } on DioException {
+      await _tokenProvider.onSessionExpired();
+      return false;
+    } catch (_) {
+      // A malformed/unexpected refresh response (missing fields, wrong
+      // shape) throws a `TypeError` here, not a `DioException`. Without
+      // this branch it escaped `onError` uncaught, so the original
+      // request never got resolved *or* rejected — its `await` simply
+      // hung forever, freezing whatever screen was waiting on it. Treat
+      // an unusable refresh response as a dead session.
       await _tokenProvider.onSessionExpired();
       return false;
     } finally {

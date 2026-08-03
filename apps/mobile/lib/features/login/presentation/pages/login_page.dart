@@ -88,19 +88,52 @@ class _LoginPageState extends State<LoginPage> {
         _messageFor(exception),
         type: AppSnackBarType.error,
       );
+    } catch (_) {
+      // Anything that isn't an `HttpException` (a malformed token
+      // payload, a platform error writing to secure storage). Without
+      // this branch `_isLoading` was never reset, so the card kept
+      // showing "Ingresando..." forever with no error and no way back
+      // — the login screen simply hung.
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      AppSnackBar.show(
+        context,
+        'No pudimos completar el inicio de sesión. Inténtalo de nuevo.',
+        type: AppSnackBarType.error,
+      );
     }
   }
 
-  /// A lost-connectivity failure (no internet, DNS failure, timeout —
-  /// see `HttpException.isConnectivityIssue`) never got a response
-  /// from the server, so its `message` is Dio's raw, English,
-  /// technical exception text — not something to show verbatim in a
-  /// Spanish-language app. Every other `HttpException` subtype means a
-  /// real response came back, so its `message` is already the
-  /// backend's own (Spanish) validation/error text.
-  String _messageFor(HttpException exception) => exception.isConnectivityIssue
-      ? 'No hay conexión a internet. Verifica tu conexión e intenta de nuevo.'
-      : exception.message;
+  /// Turns a failure into something a pilot user can act on.
+  ///
+  /// - Connectivity failures never got a response, so their `message`
+  ///   is Dio's raw English technical text — never show it verbatim in
+  ///   a Spanish-language app.
+  /// - `401` is the wrong-credentials case. The backend deliberately
+  ///   answers with a single generic English string ("Invalid document
+  ///   number or password" — identical for an unknown document number
+  ///   and a wrong password, so it can't be used to enumerate
+  ///   accounts). Translate it here rather than leaking English into
+  ///   the UI; the *generic*-ness is a security property and is
+  ///   preserved.
+  /// - `429` is the login rate limiter (5/min per IP). Its default
+  ///   message is "ThrottlerException: Too Many Requests", which reads
+  ///   like a crash to a non-technical user.
+  String _messageFor(HttpException exception) {
+    if (exception.isConnectivityIssue) {
+      return 'No hay conexión a internet. Verifica tu conexión e intenta de nuevo.';
+    }
+    if (exception is UnauthorizedHttpException) {
+      return 'Documento o contraseña incorrectos. Verifica tus datos e intenta de nuevo.';
+    }
+    if (exception is ServerHttpException && exception.statusCode == 429) {
+      return 'Demasiados intentos. Espera un minuto antes de volver a intentar.';
+    }
+    if (exception is ServerHttpException) {
+      return 'Tuvimos un problema al iniciar sesión. Inténtalo de nuevo en unos minutos.';
+    }
+    return exception.message;
+  }
 
   void _goToRegister() => context.go(AppRoutes.register);
 

@@ -6,6 +6,9 @@ import '../../../../core/ui/extensions/context_theme_extensions.dart';
 import '../../../../core/ui/tokens/app_radius.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_avatar.dart';
+import '../../../../core/ui/widgets/app_button.dart';
+import '../../../../core/ui/widgets/app_dialog.dart';
+import '../../../become_provider/presentation/pages/become_provider_page.dart';
 import '../../../legal/legal_content.dart';
 import '../../../legal/presentation/pages/static_info_page.dart';
 import '../../../notifications/presentation/pages/notifications_page.dart';
@@ -50,12 +53,97 @@ class AppDrawer extends StatelessWidget {
     ),
   );
 
+  /// Confirms before ending the session. Logging out is destructive in
+  /// practice — the pilot has no password-recovery flow yet (see
+  /// `LoginPage._showForgotPasswordInfo`), so a user who taps this by
+  /// accident and can't recall their password is locked out of their
+  /// account entirely. It also sat directly below "Acerca de" in a
+  /// scrolling list, which is exactly where a mis-tap lands.
   Future<void> _logout(BuildContext context) async {
-    Navigator.of(context).pop();
+    final confirmed = await AppDialog.show<bool>(
+      context,
+      title: 'Cerrar sesión',
+      content: Text(
+        '¿Seguro que quieres cerrar sesión? Tendrás que ingresar tu '
+        'documento y contraseña para volver a entrar.',
+        style: context.textStyles.bodyMedium,
+      ),
+      actions: [
+        AppButton(
+          label: 'Cancelar',
+          variant: AppButtonVariant.text,
+          expand: false,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+        AppButton(
+          label: 'Cerrar sesión',
+          variant: AppButtonVariant.text,
+          expand: false,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+      ],
+    );
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+
+    Navigator.of(context).pop(); // Close the drawer.
     await locator<SessionManager>().logout();
     // No explicit navigation: `AppRouteGuard` (wired to `SessionManager`
     // via `GoRouter.refreshListenable`) redirects to Login on its own
     // the moment the session clears.
+  }
+
+  /// The role switch is only a real switch for an approved provider.
+  /// For everyone else it becomes the entry point to the application
+  /// flow instead of silently dropping a Customer into a Provider shell
+  /// with no data behind it (empty dashboard, no incoming requests, and
+  /// every backend call rejected by `RolesGuard`) and no way to tell
+  /// why. See `SessionManager.canActAsProvider`.
+  Future<void> _switchRole(BuildContext context) async {
+    final session = locator<SessionManager>();
+    final controller = locator<UserRoleController>();
+
+    // Switching *back* to client is always allowed — it never grants
+    // anything.
+    if (controller.isProvider || session.canActAsProvider) {
+      await controller.toggle();
+      return;
+    }
+
+    if (!context.mounted) return;
+    final goToApplication = await AppDialog.show<bool>(
+      context,
+      title: 'Aún no eres prestador',
+      content: Text(
+        'Para trabajar como prestador de servicios primero necesitas '
+        'enviar tu solicitud y que aprobemos tus documentos. '
+        '¿Quieres empezar ahora?',
+        style: context.textStyles.bodyMedium,
+      ),
+      actions: [
+        AppButton(
+          label: 'Ahora no',
+          variant: AppButtonVariant.text,
+          expand: false,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+        AppButton(
+          label: 'Quiero ser prestador',
+          variant: AppButtonVariant.text,
+          expand: false,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+      ],
+    );
+    if (goToApplication != true) return;
+    if (!context.mounted) return;
+    _push(
+      context,
+      Scaffold(
+        appBar: AppBar(title: const Text('Quiero ser prestador')),
+        body: const SafeArea(child: BecomeProviderPage()),
+      ),
+    );
   }
 
   @override
@@ -111,6 +199,7 @@ class AppDrawer extends StatelessWidget {
               ),
               child: _RoleSwitchCard(
                 controller: locator<UserRoleController>(),
+                onTap: () => _switchRole(context),
               ),
             ),
             const Padding(
@@ -189,9 +278,14 @@ class AppDrawer extends StatelessWidget {
 /// card (not a plain `ListTile`) so it reads as the one prominent,
 /// distinct action in the drawer instead of blending into the list.
 class _RoleSwitchCard extends StatelessWidget {
-  const _RoleSwitchCard({required this.controller});
+  const _RoleSwitchCard({required this.controller, required this.onTap});
 
   final UserRoleController controller;
+
+  /// Handled by `AppDrawer._switchRole`, not `controller.toggle`
+  /// directly — switching *to* provider is gated on the account
+  /// actually being an approved provider.
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +298,7 @@ class _RoleSwitchCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.radius16),
           child: InkWell(
             borderRadius: BorderRadius.circular(AppRadius.radius16),
-            onTap: controller.toggle,
+            onTap: onTap,
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.space16),
               child: Row(

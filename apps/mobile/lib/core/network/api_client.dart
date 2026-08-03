@@ -90,6 +90,29 @@ class ApiClient {
     ),
   );
 
+  /// `POST` for endpoints that return **no body** (HTTP 200/204 with an
+  /// empty payload) — e.g. `POST /authentications/logout`, which the
+  /// backend declares as `Promise<void>`.
+  ///
+  /// Distinct from [post] because [post] ends in a
+  /// `response.data as Map` cast, and Dio hands back `''` (not `null`, not
+  /// `{}`) for an empty body — so that cast threw a raw `TypeError`,
+  /// *not* a `DioException`, which meant it slipped past every
+  /// `on HttpException` catch in the app. `SessionManager.logout` was
+  /// the real victim: the throw happened before `_clear()`, so tapping
+  /// "Cerrar sesión" left the user fully logged in with no error shown.
+  Future<void> postVoid(
+    String path, {
+    Object? data,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      await _dio.post<void>(path, data: data, cancelToken: cancelToken);
+    } on DioException catch (exception) {
+      throw ErrorMapper.fromDioException(exception);
+    }
+  }
+
   Future<void> delete(String path, {CancelToken? cancelToken}) async {
     try {
       await _dio.delete<void>(path, cancelToken: cancelToken);

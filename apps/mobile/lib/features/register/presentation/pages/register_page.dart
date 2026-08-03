@@ -57,10 +57,31 @@ class _RegisterPageState extends State<RegisterPage> {
         birthDate: data.birthDate,
         password: data.password,
       );
-      await sessionManager.login(
-        documentNumber: data.documentNumber,
-        password: data.password,
-      );
+
+      // The account now exists on the backend. If the follow-up
+      // auto-login fails, this is emphatically *not* a failed
+      // registration — but the old code reported it as one and left
+      // the user on the Register form, where retrying could only ever
+      // fail with "document number already registered". A dead end
+      // that costs the pilot user their account. Send them to Login,
+      // which is the one action that can actually succeed.
+      try {
+        await sessionManager.login(
+          documentNumber: data.documentNumber,
+          password: data.password,
+        );
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        AppSnackBar.show(
+          context,
+          'Tu cuenta fue creada. Inicia sesión para continuar.',
+          type: AppSnackBarType.info,
+        );
+        context.go(AppRoutes.login);
+        return;
+      }
+
       if (!mounted) return;
       context.go(AppRoutes.selectRole);
     } on HttpException catch (exception) {
@@ -71,6 +92,16 @@ class _RegisterPageState extends State<RegisterPage> {
         _messageFor(exception),
         type: AppSnackBarType.error,
       );
+    } catch (_) {
+      // Non-`HttpException` failures would otherwise leave the card
+      // stuck on "Creando cuenta..." with no error and no way back.
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      AppSnackBar.show(
+        context,
+        'No pudimos crear tu cuenta. Inténtalo de nuevo.',
+        type: AppSnackBarType.error,
+      );
     }
   }
 
@@ -78,12 +109,21 @@ class _RegisterPageState extends State<RegisterPage> {
   /// see `HttpException.isConnectivityIssue`) never got a response
   /// from the server, so its `message` is Dio's raw, English,
   /// technical exception text — not something to show verbatim in a
-  /// Spanish-language app. Every other `HttpException` subtype means a
-  /// real response came back, so its `message` is already the
-  /// backend's own (Spanish) validation/error text.
-  String _messageFor(HttpException exception) => exception.isConnectivityIssue
-      ? 'No hay conexión a internet. Verifica tu conexión e intenta de nuevo.'
-      : exception.message;
+  /// Spanish-language app. A `5xx` is likewise the backend's internal
+  /// wording, meaningless to a pilot user. Everything else here is a
+  /// `400`/`422` validation error, whose message is written for the
+  /// end user and names the offending field.
+  String _messageFor(HttpException exception) {
+    if (exception.isConnectivityIssue) {
+      return 'No hay conexión a internet. Verifica tu conexión e intenta de nuevo.';
+    }
+    if (exception is ServerHttpException) {
+      return exception.statusCode == 429
+          ? 'Demasiados intentos. Espera un minuto antes de volver a intentar.'
+          : 'Tuvimos un problema al crear tu cuenta. Inténtalo de nuevo en unos minutos.';
+    }
+    return exception.message;
+  }
 
   void _goToLogin() => context.go(AppRoutes.login);
 

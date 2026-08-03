@@ -1,6 +1,7 @@
 import { RefreshTokenRepository } from '../../domain/interfaces/refresh-token-repository.interface';
 import { TokenService } from '../ports/token.port';
 import { LogoutCommand } from '../commands/logout.command';
+import { AuthSessionValidator } from '../validators/auth-session.validator';
 
 /**
  * Revokes a single refresh token (one session logged out, not "log
@@ -20,6 +21,8 @@ export class LogoutUseCase {
   ) {}
 
   async execute(command: LogoutCommand): Promise<void> {
+    AuthSessionValidator.validateLogout(command);
+
     const tokenHash = this.tokenService.hashRefreshToken(command.refreshToken);
     const stored = await this.refreshTokenRepository.findByTokenHash(tokenHash);
     if (stored && !stored.isRevoked) {

@@ -1,3 +1,4 @@
+import { IdentityId } from '../../../../identity/domain/value-objects/identity-id.value-object';
 import { RefreshToken } from '../../../domain/entities/refresh-token.entity';
 import { RefreshTokenRepository } from '../../../domain/interfaces/refresh-token-repository.interface';
 import { RefreshTokenId } from '../../../domain/value-objects/refresh-token-id.value-object';
@@ -31,6 +32,24 @@ export class InMemoryRefreshTokenRepository implements RefreshTokenRepository {
           createdAt: existing.createdAt,
         }),
       );
+    }
+    return Promise.resolve();
+  }
+
+  revokeAllForIdentity(identityId: IdentityId): Promise<void> {
+    for (const row of [...this.rows.values()]) {
+      if (row.identityId.value === identityId.value && !row.isRevoked) {
+        this.rows.set(
+          row.id.value,
+          new RefreshToken(row.id, {
+            identityId: row.identityId,
+            tokenHash: row.tokenHash,
+            expiresAt: row.expiresAt,
+            revokedAt: new Date(),
+            createdAt: row.createdAt,
+          }),
+        );
+      }
     }
     return Promise.resolve();
   }
