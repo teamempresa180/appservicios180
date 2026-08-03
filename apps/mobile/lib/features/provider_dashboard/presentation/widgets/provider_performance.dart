@@ -6,10 +6,16 @@ import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../models/provider_dashboard_display.dart';
 
-/// Performance recap: average response time and acceptance rate
-/// (**fully simulated**, see `ProviderDashboardDisplay` and the
-/// feature README) plus completed services (**derived**, not
-/// simulated, from the real `orders`).
+/// Performance recap. Every figure is **derived from real domain
+/// data** — acceptance rate from the provider's own decided `quotes`,
+/// completed services from the real `orders`. The former "Tiempo
+/// promedio de respuesta" row is gone: nothing in the domain records
+/// response latency, so it could only ever have shown a fabricated
+/// value (see `ProviderDashboardDisplay`'s class doc).
+///
+/// "Tasa de aceptación" is hidden entirely until at least one quote
+/// has actually been accepted or rejected — a brand-new provider is
+/// shown a short explanation instead of a misleading 0%.
 class ProviderPerformance extends StatelessWidget {
   const ProviderPerformance({super.key, required this.data});
 
@@ -17,26 +23,32 @@ class ProviderPerformance extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final acceptanceRate = data.acceptanceRate;
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const AppSectionTitle(title: 'Rendimiento'),
-          _PerformanceRow(
-            icon: Icons.timer_outlined,
-            label: 'Tiempo promedio de respuesta',
-            value: data.averageResponseTime,
-          ),
-          _PerformanceRow(
-            icon: AppIcons.success,
-            label: 'Tasa de aceptación',
-            value: '${(data.acceptanceRate * 100).round()}%',
-          ),
+          if (acceptanceRate != null)
+            _PerformanceRow(
+              icon: AppIcons.success,
+              label: 'Tasa de aceptación',
+              value: '${(acceptanceRate * 100).round()}%',
+            ),
           _PerformanceRow(
             icon: Icons.task_alt_outlined,
             label: 'Servicios completados',
             value: '${data.completedOrdersCount}',
           ),
+          if (acceptanceRate == null) ...[
+            const SizedBox(height: AppSpacing.space4),
+            Text(
+              'Tu tasa de aceptación aparecerá aquí cuando un cliente '
+              'responda a tu primera cotización.',
+              style: context.textStyles.bodySmall,
+            ),
+          ],
         ],
       ),
     );

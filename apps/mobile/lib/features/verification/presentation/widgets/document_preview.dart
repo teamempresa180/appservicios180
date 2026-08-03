@@ -6,11 +6,14 @@ import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../../../identity/models/document_type.dart';
 import '../../models/verification_display.dart';
 
-/// Recap of the identity document: type (real `Identity.documentType`)
-/// and a neutral placeholder in place of a real scanned image (no
-/// camera/gallery integration, no official branding — same approach as
-/// `ServiceGallery` in `service_detail`). No color/icon stored
-/// anywhere — resolved here from `context.colors.*`.
+/// Recap of the identity on file — all of it real domain data from
+/// `Identity`: full name, document type and the masked document
+/// number, so the provider can verify at a glance that the account
+/// holds the right document. No scanned image is shown (there is no
+/// camera/gallery integration, and no official branding exists), so
+/// the type/number are stated as text rather than mocked up as a
+/// fake ID card. No color/icon stored anywhere — resolved here from
+/// `context.colors.*`.
 class DocumentPreview extends StatelessWidget {
   const DocumentPreview({super.key, required this.data});
 
@@ -41,28 +44,43 @@ class DocumentPreview extends StatelessWidget {
         children: [
           const AppSectionTitle(title: 'Documento de identidad'),
           Container(
-            height: 120,
             width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.space16),
             decoration: BoxDecoration(
               border: Border.all(color: context.colors.outline),
               borderRadius: BorderRadius.circular(AppSpacing.space8),
             ),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.badge_outlined,
-                    size: AppSpacing.space48,
-                    color: context.colors.secondary,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.badge_outlined,
+                  size: AppSpacing.space40,
+                  color: context.colors.secondary,
+                ),
+                const SizedBox(width: AppSpacing.space12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        identity.fullName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textStyles.titleSmall,
+                      ),
+                      const SizedBox(height: AppSpacing.space4),
+                      Text(
+                        _labelFor(identity.documentType),
+                        style: context.textStyles.bodySmall,
+                      ),
+                      Text(
+                        data.maskedDocumentNumber,
+                        style: context.textStyles.bodySmall,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppSpacing.space4),
-                  Text(
-                    _labelFor(identity.documentType),
-                    style: context.textStyles.bodySmall,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

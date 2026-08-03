@@ -238,16 +238,3 @@ final List<Payment> mockDashboardPayments = [
     updatedAt: _seedTimestamp,
   ),
 ];
-
-/// Simulated content not modeled by any domain entity — see
-/// `ProviderDashboardDisplay` and the feature README for why each
-/// exists.
-const num mockDashboardTodayEarnings = 45;
-
-const num mockDashboardWeeklyEarnings = 310;
-
-const num mockDashboardMonthlyEarnings = 1280;
-
-const String mockDashboardAverageResponseTime = 'Responde en menos de 1 hora';
-
-const double mockDashboardAcceptanceRate = 0.92;

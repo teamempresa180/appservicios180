@@ -99,30 +99,35 @@ void main() {
     expect(find.textContaining('Plomera independiente'), findsOneWidget);
   });
 
-  testWidgets('shows experience, completed services and response time', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'shows experience, published services and reviews received — all '
+    'real, no fabricated response time',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
 
-    expect(find.byType(ProviderStatistics), findsOneWidget);
-    expect(find.text('8'), findsOneWidget); // yearsOfExperience
-    expect(find.text('47'), findsOneWidget); // completedServices
-  });
+      expect(find.byType(ProviderStatistics), findsOneWidget);
+      expect(find.text('8'), findsOneWidget); // yearsOfExperience
+      expect(find.text('3'), findsOneWidget); // services.length
+      expect(find.text('4'), findsOneWidget); // reviewsCount
+      expect(find.textContaining('Responde en menos de'), findsNothing);
+    },
+  );
 
-  testWidgets('shows every specialty as a chip', (tester) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'shows every distinct service category as a specialty chip',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
 
-    expect(find.byType(ProviderSpecialties), findsOneWidget);
-    expect(find.text('Reparación de fugas'), findsOneWidget);
-    // "Instalación de tuberías" is both a specialty chip and the name
-    // of a published service further down, so it legitimately appears
-    // twice on the page.
-    expect(find.text('Instalación de tuberías'), findsNWidgets(2));
-    expect(find.text('Mantenimiento preventivo'), findsOneWidget);
-    expect(find.text('Grifería'), findsOneWidget);
-  });
+      // Specialties are derived from the real categories of this
+      // provider's published services (see
+      // `mockProviderProfileCategories`), not a fixed invented list.
+      expect(find.byType(ProviderSpecialties), findsOneWidget);
+      expect(find.text('Plomería'), findsOneWidget);
+      expect(find.text('Instalaciones generales'), findsOneWidget);
+    },
+  );
 
   testWidgets('shows every published service with its price', (tester) async {
     await tester.pumpWidget(buildApp());
@@ -130,7 +135,7 @@ void main() {
 
     expect(find.byType(ProviderServices), findsOneWidget);
     expect(find.text('Reparación de fuga de agua'), findsOneWidget);
-    expect(find.text('Instalación de tuberías'), findsNWidgets(2));
+    expect(find.text('Instalación de tuberías'), findsOneWidget);
     expect(find.text('Instalación de grifería'), findsOneWidget);
     expect(find.text('\$45'), findsOneWidget);
   });

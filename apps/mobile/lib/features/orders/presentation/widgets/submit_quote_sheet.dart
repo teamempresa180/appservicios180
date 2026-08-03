@@ -58,18 +58,19 @@ class _SubmitQuoteSheetState extends State<SubmitQuoteSheet> {
     super.dispose();
   }
 
-  String? _requiredValidator(String? value) =>
-      (value == null || value.trim().isEmpty)
-      ? 'Este campo es obligatorio'
-      : null;
-
+  /// Same bounds `ServiceFormSheet` applies, so a provider can't be
+  /// stopped by one form and let through by the other: positive, and
+  /// capped to catch an accidental extra digit (a quote of
+  /// "1000000000" instead of "100000" is sent to a real client).
   String? _numberValidator(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Este campo es obligatorio';
     }
     final parsed = num.tryParse(value.trim());
     if (parsed == null) return 'Ingresa un número válido';
-    return parsed <= 0 ? 'Ingresa un precio mayor a cero' : null;
+    if (parsed <= 0) return 'Ingresa un precio mayor a cero';
+    if (parsed > 100000000) return 'El precio ingresado es demasiado alto';
+    return null;
   }
 
   String? _durationValidator(String? value) {
@@ -78,7 +79,11 @@ class _SubmitQuoteSheetState extends State<SubmitQuoteSheet> {
     }
     final parsed = int.tryParse(value.trim());
     if (parsed == null) return 'Ingresa un número entero de minutos';
-    return parsed <= 0 ? 'Ingresa una duración mayor a cero' : null;
+    if (parsed <= 0) return 'Ingresa una duración mayor a cero';
+    if (parsed > 1440) {
+      return 'La duración no puede superar 24 horas (1440 min)';
+    }
+    return null;
   }
 
   void _submit() {
@@ -129,11 +134,15 @@ class _SubmitQuoteSheetState extends State<SubmitQuoteSheet> {
                 validator: _durationValidator,
               ),
               const SizedBox(height: AppSpacing.space12),
+              // Optional on purpose: the price and the duration are
+              // what the client decides on, and forcing a note just to
+              // get past the form made providers type filler text (or
+              // abandon the quote) for no benefit.
               AppTextField(
                 controller: _notesController,
-                label: 'Notas para el cliente',
+                label: 'Notas para el cliente (opcional)',
                 prefixIcon: Icons.notes_outlined,
-                validator: _requiredValidator,
+                maxLength: 500,
               ),
               const SizedBox(height: AppSpacing.space20),
               AppButton(label: 'Enviar cotización', onPressed: _submit),

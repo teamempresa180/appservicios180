@@ -21,11 +21,12 @@ enum ProviderProfileLoadStatus { loading, success, error }
 /// [ProviderProfileRepository.getProvider]'s single fixed record, so
 /// different cards genuinely open different providers.
 ///
-/// [rating] and [reviewsCount] are still derived from the loaded
-/// reviews; [completedServices], [responseTime], [coverImages], [about]
-/// and [specialties] are still simulated constants sourced from the
-/// feature's mock data file — see `ProviderProfileData`'s class doc for
-/// why those aren't modeled by any domain entity yet.
+/// `rating`/`reviewsCount` are derived from the loaded reviews, and
+/// `about`/`specialties` are now derived from the real
+/// `Provider.biography`/`categories` inside `ProviderProfileData`. The
+/// only remaining simulated value is `coverImages` — a neutral
+/// placeholder banner label, since no real cover images exist. See
+/// `ProviderProfileData`'s class doc.
 class ProviderProfileViewModel extends ChangeNotifier {
   ProviderProfileViewModel(
     this._repository, {
@@ -89,11 +90,7 @@ class ProviderProfileViewModel extends ChangeNotifier {
         categories: categories,
         rating: averageRating.toDouble(),
         reviewsCount: reviews.length,
-        completedServices: mockProviderProfileCompletedServices,
-        responseTime: mockProviderProfileResponseTime,
         coverImages: mockProviderProfileCoverImages,
-        about: mockProviderProfileAbout,
-        specialties: mockProviderProfileSpecialties,
       );
       _status = ProviderProfileLoadStatus.success;
     } on HttpException catch (exception) {

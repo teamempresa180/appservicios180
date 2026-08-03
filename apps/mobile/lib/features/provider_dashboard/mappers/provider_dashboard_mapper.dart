@@ -7,11 +7,12 @@ import '../../../review/entities/review.dart';
 import '../models/provider_dashboard_display.dart';
 import '../repositories/provider_dashboard_repository.dart';
 
-/// Composes a [ProviderDashboardDisplay] from a
-/// [ProviderDashboardRepository] plus the fields still simulated in
-/// this feature (see `ProviderDashboardDisplay`'s class doc) — the
-/// conversion this feature's page used to do inline in
-/// `_buildData()`. Depends on the repository *contract*, not
+/// Composes a [ProviderDashboardDisplay] purely from a
+/// [ProviderDashboardRepository] — the conversion this feature's page
+/// used to do inline in `_buildData()`. No simulated field is injected
+/// anymore: every figure the dashboard shows is derived from the six
+/// real entities below (see `ProviderDashboardDisplay`'s class doc).
+/// Depends on the repository *contract*, not
 /// `MockProviderDashboardRepository` (see `PROJECT_STATUS.md`, Sprint
 /// 2, Etapa 6).
 ///
@@ -21,11 +22,7 @@ import '../repositories/provider_dashboard_repository.dart';
 abstract final class ProviderDashboardMapper {
   static Future<ProviderDashboardDisplay> toDisplay({
     required ProviderDashboardRepository repository,
-    required num todayEarnings,
-    required num weeklyEarnings,
-    required num monthlyEarnings,
-    required String averageResponseTime,
-    required double acceptanceRate,
+    DateTime? now,
   }) async {
     final results = await Future.wait([
       repository.getProvider(),
@@ -42,11 +39,7 @@ abstract final class ProviderDashboardMapper {
       quotes: results[3] as List<Quote>,
       reviews: results[4] as List<Review>,
       payments: results[5] as List<Payment>,
-      todayEarnings: todayEarnings,
-      weeklyEarnings: weeklyEarnings,
-      monthlyEarnings: monthlyEarnings,
-      averageResponseTime: averageResponseTime,
-      acceptanceRate: acceptanceRate,
+      now: now,
     );
   }
 }

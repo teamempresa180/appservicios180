@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import '../../../../core/network/http_exceptions.dart';
-import '../../mock/mock_availability_data.dart';
 import '../../models/availability_display.dart';
 import '../../repositories/availability_repository.dart';
 
@@ -13,10 +12,9 @@ enum AvailabilityLoadStatus { loading, success, error }
 /// `getAvailabilities()` are `Future`s — a real network call needs a
 /// real Loading/Success/Error state, not a fixed `state` parameter.
 ///
-/// [AvailabilityDisplay.nextAvailableLabel]/[workingHoursLabel] stay
-/// simulated (`mockAvailabilityNextAvailableLabel` etc.) — there is
-/// still no real calendar-aggregation logic backing either, on either
-/// the Flutter or the backend side.
+/// Injects no simulated field anymore: `nextAvailableLabel`/
+/// `workingHoursLabel` are derived from the real availabilities inside
+/// [AvailabilityDisplay] — see its class doc.
 class AvailabilityViewModel extends ChangeNotifier {
   AvailabilityViewModel(this._repository);
 
@@ -43,8 +41,6 @@ class AvailabilityViewModel extends ChangeNotifier {
       _data = AvailabilityDisplay(
         provider: provider,
         availabilities: availabilities,
-        nextAvailableLabel: mockAvailabilityNextAvailableLabel,
-        workingHoursLabel: mockAvailabilityWorkingHoursLabel,
       );
       _status = AvailabilityLoadStatus.success;
     } on HttpException catch (exception) {

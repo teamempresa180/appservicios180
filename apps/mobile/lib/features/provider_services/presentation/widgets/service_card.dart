@@ -7,9 +7,14 @@ import '../../models/provider_service_display.dart';
 import 'service_actions.dart';
 import 'service_status_badge.dart';
 
-/// A single service card: name, category, base price, status,
-/// simulated views/requests, simulated last-updated label and the
-/// edit/pause/delete actions.
+/// A single service card: name, category, base price, status, when it
+/// was last updated (derived from the real `Service.updatedAt`) and
+/// the edit/pause/delete actions.
+///
+/// The former "views / requests" counter row is gone — it was backed
+/// by a simulated per-service map that resolved to a flat 0/0 for
+/// every real service, i.e. an invented performance metric shown as
+/// real data (see `ProviderServiceDisplay`'s class doc).
 class ServiceCard extends StatelessWidget {
   const ServiceCard({
     super.key,
@@ -56,29 +61,6 @@ class ServiceCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.space8),
           Text('\$${service.basePrice}', style: context.textStyles.titleMedium),
           const SizedBox(height: AppSpacing.space8),
-          Row(
-            children: [
-              Icon(
-                Icons.visibility_outlined,
-                size: AppSpacing.space16,
-                color: context.colors.secondary,
-              ),
-              const SizedBox(width: AppSpacing.space4),
-              Text('${data.viewsCount}', style: context.textStyles.bodySmall),
-              const SizedBox(width: AppSpacing.space12),
-              Icon(
-                Icons.request_page_outlined,
-                size: AppSpacing.space16,
-                color: context.colors.secondary,
-              ),
-              const SizedBox(width: AppSpacing.space4),
-              Text(
-                '${data.requestsCount}',
-                style: context.textStyles.bodySmall,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.space4),
           Text(data.lastUpdatedLabel, style: context.textStyles.bodySmall),
           const SizedBox(height: AppSpacing.space12),
           ServiceActions(

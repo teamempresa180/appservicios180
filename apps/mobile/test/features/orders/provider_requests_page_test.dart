@@ -190,6 +190,11 @@ void main() {
     await tester.tap(find.text('Rechazar').first);
     await tester.pumpAndSettle();
 
+    // Rejecting is irreversible, so it's confirmed first.
+    expect(find.text('Rechazar solicitud'), findsOneWidget);
+    await tester.tap(find.text('Rechazar').last);
+    await tester.pumpAndSettle();
+
     expect(find.textContaining('Rechazaste la solicitud'), findsOneWidget);
     expect(find.byType(ProviderRequestCard), findsNWidgets(4));
   });

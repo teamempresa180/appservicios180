@@ -116,17 +116,22 @@ void main() {
     expect(find.text('09:00 - 14:00'), findsOneWidget);
   });
 
-  testWidgets('shows the three schedule actions and the save button', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'shows an honest explanation instead of non-functional edit actions',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
 
-    expect(find.text('Editar horario'), findsOneWidget);
-    expect(find.text('Copiar horario'), findsOneWidget);
-    expect(find.text('Limpiar horario'), findsOneWidget);
-    expect(find.text('Guardar disponibilidad'), findsOneWidget);
-  });
+      expect(
+        find.textContaining('tu horario se configura con nuestro equipo'),
+        findsOneWidget,
+      );
+      expect(find.text('Editar horario'), findsNothing);
+      expect(find.text('Copiar horario'), findsNothing);
+      expect(find.text('Limpiar horario'), findsNothing);
+      expect(find.text('Guardar disponibilidad'), findsNothing);
+    },
+  );
 
   testWidgets('loading state shows AppLoading instead of the schedule', (
     tester,

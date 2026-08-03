@@ -70,15 +70,18 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
     _loadCatalogCategories();
   }
 
-  Future<void> _loadCatalogCategories() async {
+  Future<bool> _loadCatalogCategories() async {
     try {
       final categories = await _categoryRepository.getAll();
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() => _catalogCategories = categories);
+      return categories.isNotEmpty;
     } catch (_) {
       // Falls back to _knownCategories in _create(); no user-facing
-      // error needed since this is a background enhancement, not the
-      // primary load.
+      // error needed here since this is a background enhancement, not
+      // the primary load — _create() is where a still-empty catalog
+      // becomes visible to the user, and it says so there.
+      return false;
     }
   }
 
@@ -100,11 +103,39 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
     return categories;
   }
 
-  Future<void> _create() async {
-    final known = _knownCategories;
-    final categories = _catalogCategories.isNotEmpty
+  /// Resolves the categories the "Nuevo servicio" sheet can offer.
+  /// The catalog load in [initState] is a background enhancement that
+  /// can silently fail (offline, backend hiccup) — when it did, this
+  /// used to open a sheet whose "Guardar" button was permanently
+  /// disabled with no way out: a dead end. Now it retries the catalog
+  /// once on demand and, if there is still nothing to pick, explains
+  /// why instead of opening an unusable form.
+  Future<List<Category>?> _resolveCategories() async {
+    var categories = _catalogCategories.isNotEmpty
         ? _catalogCategories
-        : known;
+        : _knownCategories;
+    if (categories.isEmpty) {
+      await _loadCatalogCategories();
+      if (!mounted) return null;
+      categories = _catalogCategories.isNotEmpty
+          ? _catalogCategories
+          : _knownCategories;
+    }
+    if (categories.isEmpty) {
+      AppSnackBar.show(
+        context,
+        'No pudimos cargar las categorías. Revisa tu conexión e '
+        'intenta de nuevo.',
+        type: AppSnackBarType.error,
+      );
+      return null;
+    }
+    return categories;
+  }
+
+  Future<void> _create() async {
+    final categories = await _resolveCategories();
+    if (categories == null || !mounted) return;
     final result = await ServiceFormSheet.show(context, categories: categories);
     if (result == null || !mounted) return;
     if (result.category == null) return;
@@ -125,10 +156,20 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
         'Servicio creado.',
         type: AppSnackBarType.success,
       );
-      await _viewModel.load();
+      await _viewModel.refresh();
     } on HttpException catch (exception) {
       if (!mounted) return;
       AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    } catch (_) {
+      // `getProvider()` throws a plain `StateError` when the session
+      // has no Provider record — without this the failure escaped as
+      // an unhandled async error and the user saw nothing at all.
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo completar la acción. Intenta de nuevo.',
+        type: AppSnackBarType.error,
+      );
     }
   }
 
@@ -154,10 +195,20 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
         'Servicio actualizado.',
         type: AppSnackBarType.success,
       );
-      await _viewModel.load();
+      await _viewModel.refresh();
     } on HttpException catch (exception) {
       if (!mounted) return;
       AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    } catch (_) {
+      // `getProvider()` throws a plain `StateError` when the session
+      // has no Provider record — without this the failure escaped as
+      // an unhandled async error and the user saw nothing at all.
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo completar la acción. Intenta de nuevo.',
+        type: AppSnackBarType.error,
+      );
     }
   }
 
@@ -174,10 +225,20 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
         isPaused ? 'Servicio reactivado.' : 'Servicio pausado.',
         type: AppSnackBarType.info,
       );
-      await _viewModel.load();
+      await _viewModel.refresh();
     } on HttpException catch (exception) {
       if (!mounted) return;
       AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    } catch (_) {
+      // `getProvider()` throws a plain `StateError` when the session
+      // has no Provider record — without this the failure escaped as
+      // an unhandled async error and the user saw nothing at all.
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo completar la acción. Intenta de nuevo.',
+        type: AppSnackBarType.error,
+      );
     }
   }
 
@@ -211,10 +272,20 @@ class _ProviderServicesPageState extends State<ProviderServicesPage> {
         'Servicio eliminado.',
         type: AppSnackBarType.info,
       );
-      await _viewModel.load();
+      await _viewModel.refresh();
     } on HttpException catch (exception) {
       if (!mounted) return;
       AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    } catch (_) {
+      // `getProvider()` throws a plain `StateError` when the session
+      // has no Provider record — without this the failure escaped as
+      // an unhandled async error and the user saw nothing at all.
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo completar la acción. Intenta de nuevo.',
+        type: AppSnackBarType.error,
+      );
     }
   }
 

@@ -9,9 +9,7 @@ import 'package:mobile/core/ui/widgets/app_empty_state.dart';
 import 'package:mobile/core/ui/widgets/app_loading.dart';
 import 'package:mobile/features/verification/presentation/pages/verification_page.dart';
 import 'package:mobile/features/verification/presentation/widgets/document_preview.dart';
-import 'package:mobile/features/verification/presentation/widgets/selfie_preview.dart';
-import 'package:mobile/features/verification/presentation/widgets/verification_status.dart';
-import 'package:mobile/features/verification/presentation/widgets/verification_step_card.dart';
+import 'package:mobile/features/verification/presentation/widgets/verification_actions.dart';
 import 'package:mobile/features/verification/repositories/mock_verification_repository.dart';
 import 'package:mobile/features/verification/repositories/verification_repository.dart';
 import 'package:mobile/identity/entities/identity.dart';
@@ -58,10 +56,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Verificación de identidad'), findsWidgets);
-    expect(find.text('Diana Restrepo'), findsOneWidget);
+    expect(find.text('Diana Restrepo'), findsWidgets);
   });
 
-  testWidgets('shows the document preview with the real document type', (
+  testWidgets('shows the real identity on file, with a masked number', (
     tester,
   ) async {
     await tester.pumpWidget(buildApp());
@@ -69,52 +67,45 @@ void main() {
 
     expect(find.byType(DocumentPreview), findsOneWidget);
     expect(find.text('Cédula de ciudadanía'), findsOneWidget);
+    // Real `Identity.documentNumber` is '1094825671' — only the last
+    // four digits are printed.
+    expect(find.text('••••••5671'), findsOneWidget);
+    expect(find.text('1094825671'), findsNothing);
   });
 
-  testWidgets('shows the selfie preview', (tester) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
-
-    expect(find.byType(SelfiePreview), findsOneWidget);
-  });
-
-  testWidgets('shows the simulated verification status and review time', (
+  testWidgets('states no fabricated verification status or steps', (
     tester,
   ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.byType(VerificationStatusCard), findsOneWidget);
-    expect(find.text('En revisión'), findsOneWidget);
+    // Nothing behind these ever existed — the screen used to claim the
+    // app held documents it had never received.
+    expect(find.text('En revisión'), findsNothing);
     expect(
       find.textContaining('Aproximadamente 24 a 48 horas hábiles'),
-      findsOneWidget,
+      findsNothing,
     );
+    expect(find.text('Documento de identidad subido'), findsNothing);
+    expect(find.text('Selfie capturada'), findsNothing);
   });
 
-  testWidgets('shows completed and pending steps', (tester) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
-
-    expect(find.byType(VerificationStepCard), findsNWidgets(3));
-    expect(find.text('Documento de identidad subido'), findsOneWidget);
-    expect(find.text('Selfie capturada'), findsWidgets);
-    expect(
-      find.text('Revisión manual del equipo de confianza'),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('shows the three verification actions and the submit button', (
+  testWidgets('replaces the dead action buttons with one honest notice', (
     tester,
   ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Tomar foto'), findsOneWidget);
-    expect(find.text('Subir documento'), findsOneWidget);
-    expect(find.text('Reintentar'), findsOneWidget);
-    expect(find.text('Enviar verificación'), findsOneWidget);
+    expect(find.byType(VerificationActions), findsOneWidget);
+    expect(find.textContaining('estará disponible próximamente'), findsOneWidget);
+    for (final label in [
+      'Tomar foto',
+      'Subir documento',
+      'Reintentar',
+      'Enviar verificación',
+    ]) {
+      expect(find.text(label), findsNothing);
+    }
   });
 
   testWidgets('loading state shows AppLoading instead of the information', (

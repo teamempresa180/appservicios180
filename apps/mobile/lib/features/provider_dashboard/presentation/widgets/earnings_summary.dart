@@ -5,10 +5,11 @@ import '../../../../core/ui/widgets/app_card.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
 import '../../models/provider_dashboard_display.dart';
 
-/// Financial summary: today/week/month earnings.
-/// `todayEarnings`/`weeklyEarnings`/`monthlyEarnings` are **fully
-/// simulated** — see `ProviderDashboardDisplay` and the feature
-/// README.
+/// Financial summary: today/week/month earnings, all **derived from
+/// the provider's own completed `Payment`s** — see
+/// `ProviderDashboardDisplay`. A provider with no completed payments
+/// yet sees zeroes plus a one-line explanation rather than an
+/// unexplained row of `$0`.
 class EarningsSummary extends StatelessWidget {
   const EarningsSummary({super.key, required this.data});
 
@@ -16,6 +17,8 @@ class EarningsSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasEarnings = data.monthlyEarnings > 0;
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,6 +46,14 @@ class EarningsSummary extends StatelessWidget {
               ),
             ],
           ),
+          if (!hasEarnings) ...[
+            const SizedBox(height: AppSpacing.space8),
+            Text(
+              'Aquí verás tus ingresos en cuanto se registre tu primer '
+              'pago completado.',
+              style: context.textStyles.bodySmall,
+            ),
+          ],
         ],
       ),
     );

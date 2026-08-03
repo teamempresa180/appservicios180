@@ -5,7 +5,6 @@ import '../../../../core/ui/icons/app_icons.dart';
 import '../../../../core/ui/tokens/app_spacing.dart';
 import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
-import '../../../../core/ui/widgets/app_snack_bar.dart';
 import '../../repositories/availability_repository.dart';
 import '../view_models/availability_view_model.dart';
 import '../widgets/availability_actions.dart';
@@ -13,7 +12,6 @@ import '../widgets/availability_empty_state.dart';
 import '../widgets/availability_header.dart';
 import '../widgets/availability_loading.dart';
 import '../widgets/availability_statistics.dart';
-import '../widgets/save_availability_button.dart';
 import '../widgets/weekly_schedule.dart';
 
 /// Availability screen: a single provider's weekly schedule, loaded
@@ -58,22 +56,6 @@ class _AvailabilityPageState extends State<AvailabilityPage> {
     super.dispose();
   }
 
-  /// "Editar horario"/"Copiar horario"/"Limpiar horario"/"Guardar
-  /// disponibilidad" have no editable state behind them yet — there is
-  /// no per-slot toggle UI, and the backend has no bulk
-  /// "replace my weekly schedule" endpoint (only single-record
-  /// `PUT /availabilities/:id`). Building real inline editing is a new
-  /// feature, out of scope for Alpha QA — but a silent no-op reads as a
-  /// broken button to a real pilot tester, so every one of these now at
-  /// least confirms it isn't wired up yet instead of doing nothing.
-  void _notImplementedYet(BuildContext context) {
-    AppSnackBar.show(
-      context,
-      'La edición de disponibilidad estará disponible próximamente.',
-      type: AppSnackBarType.info,
-    );
-  }
-
   Widget _buildBody() {
     switch (_viewModel.status) {
       case AvailabilityLoadStatus.loading:
@@ -98,15 +80,7 @@ class _AvailabilityPageState extends State<AvailabilityPage> {
             const SizedBox(height: AppSpacing.space16),
             WeeklySchedule(availabilities: data.availabilities),
             const SizedBox(height: AppSpacing.space16),
-            AvailabilityActions(
-              onEdit: () => _notImplementedYet(context),
-              onCopy: () => _notImplementedYet(context),
-              onClear: () => _notImplementedYet(context),
-            ),
-            const SizedBox(height: AppSpacing.space16),
-            SaveAvailabilityButton(
-              onPressed: () => _notImplementedYet(context),
-            ),
+            const AvailabilityActions(),
           ],
         );
     }

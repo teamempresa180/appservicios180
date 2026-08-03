@@ -8,16 +8,11 @@ import '../../../../core/ui/widgets/app_empty_state.dart';
 import '../../../../core/ui/widgets/app_loading.dart';
 import '../../../../core/ui/widgets/app_page_body.dart';
 import '../../../../core/ui/widgets/app_section_title.dart';
-import '../../../../core/ui/widgets/app_snack_bar.dart';
 import '../../repositories/verification_repository.dart';
 import '../view_models/verification_view_model.dart';
 import '../widgets/document_preview.dart';
-import '../widgets/selfie_preview.dart';
-import '../widgets/submit_verification_button.dart';
 import '../widgets/verification_actions.dart';
 import '../widgets/verification_header.dart';
-import '../widgets/verification_status.dart';
-import '../widgets/verification_steps.dart';
 
 /// Verification screen. Does NOT build its own `Scaffold` — it is
 /// meant to live within the existing navigation flow (opened from
@@ -58,20 +53,6 @@ class _VerificationPageState extends State<VerificationPage> {
     super.dispose();
   }
 
-  /// This screen shows a fixed, visual-only verification status (see
-  /// the class doc — there is no real backend Verification-by-provider
-  /// lookup yet), so "Tomar foto"/"Subir documento"/"Reintentar"/
-  /// "Enviar para revisión" have nothing real to do. A silent no-op
-  /// still reads as a broken button to whoever taps it, so each one
-  /// now at least confirms it isn't wired up instead of doing nothing.
-  void _notImplementedYet(BuildContext context) {
-    AppSnackBar.show(
-      context,
-      'Esta acción estará disponible próximamente.',
-      type: AppSnackBarType.info,
-    );
-  }
-
   Widget _buildBody() {
     switch (_viewModel.status) {
       case VerificationLoadStatus.loading:
@@ -91,21 +72,7 @@ class _VerificationPageState extends State<VerificationPage> {
           children: [
             SlideIn(child: DocumentPreview(data: data)),
             const SizedBox(height: AppSpacing.space16),
-            const SlideIn(child: SelfiePreview()),
-            const SizedBox(height: AppSpacing.space16),
-            ScaleIn(child: VerificationStatusCard(data: data)),
-            const SizedBox(height: AppSpacing.space16),
-            SlideIn(child: VerificationSteps(data: data)),
-            const SizedBox(height: AppSpacing.space16),
-            VerificationActions(
-              onTakePhoto: () => _notImplementedYet(context),
-              onUploadDocument: () => _notImplementedYet(context),
-              onRetry: () => _notImplementedYet(context),
-            ),
-            const SizedBox(height: AppSpacing.space16),
-            SubmitVerificationButton(
-              onPressed: () => _notImplementedYet(context),
-            ),
+            const ScaleIn(child: VerificationActions()),
           ],
         );
     }

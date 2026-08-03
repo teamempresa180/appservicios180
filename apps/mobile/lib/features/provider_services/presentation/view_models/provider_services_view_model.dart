@@ -3,7 +3,6 @@ import '../../../../core/network/http_exceptions.dart';
 import '../../../../profiles/entities/profile.dart';
 import '../../../../provider/entities/provider.dart';
 import '../../../../service/entities/service.dart';
-import '../../mock/mock_provider_services_data.dart';
 import '../../models/provider_service_display.dart';
 import '../../repositories/provider_services_repository.dart';
 
@@ -32,9 +31,18 @@ class ProviderServicesViewModel extends ChangeNotifier {
   List<ProviderServiceDisplay> get services => _services;
   String? get errorMessage => _errorMessage;
 
-  Future<void> load() async {
-    _status = ProviderServicesLoadStatus.loading;
-    if (!_disposed) notifyListeners();
+  /// Reloads without collapsing the already-rendered list back to a
+  /// full-page "Cargando servicios..." spinner — used after a
+  /// successful create/edit/pause/delete, where flashing an empty
+  /// loading screen at a provider who just tapped a button reads as if
+  /// something broke.
+  Future<void> refresh() => load(silent: _services.isNotEmpty);
+
+  Future<void> load({bool silent = false}) async {
+    if (!silent) {
+      _status = ProviderServicesLoadStatus.loading;
+      if (!_disposed) notifyListeners();
+    }
     try {
       final provider = await _repository.getProvider();
       final profile = await _repository.getProfile();
@@ -64,10 +72,6 @@ class ProviderServicesViewModel extends ChangeNotifier {
       profile: profile,
       service: service,
       category: category,
-      viewsCount: mockServiceViewsCount[service.id] ?? 0,
-      requestsCount: mockServiceRequestsCount[service.id] ?? 0,
-      featured: mockServiceFeatured[service.id] ?? false,
-      lastUpdatedLabel: mockServiceLastUpdatedLabel[service.id] ?? '—',
     );
   }
 
