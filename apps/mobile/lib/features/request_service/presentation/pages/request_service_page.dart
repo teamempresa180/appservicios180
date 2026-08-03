@@ -166,7 +166,11 @@ class _RequestServicePageState extends State<RequestServicePage> {
         'Solicitud enviada.',
         type: AppSnackBarType.success,
       );
-      Navigator.of(context).push(
+      // `pushReplacement`, not `push`: the order already exists at this
+      // point, so leaving the (still fully filled in) request form on
+      // the stack let "atrás" from Cotización land back on it and
+      // "Continuar" create a *second*, duplicate order for the same job.
+      Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
           builder: (context) => Scaffold(
             appBar: AppBar(title: const Text('Cotización')),
@@ -179,6 +183,19 @@ class _RequestServicePageState extends State<RequestServicePage> {
       AppSnackBar.show(
         context,
         exception.message,
+        type: AppSnackBarType.error,
+      );
+    } catch (_) {
+      // Anything that isn't an `HttpException` (lost connection mid
+      // request, timeout, a malformed response) used to escape this
+      // method entirely: the spinner stopped and absolutely nothing
+      // else happened, so the client had no idea whether their request
+      // had been sent. Now it always ends in a clear, retryable message.
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo enviar la solicitud. Revisa tu conexión e intenta '
+        'de nuevo.',
         type: AppSnackBarType.error,
       );
     } finally {

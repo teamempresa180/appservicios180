@@ -151,6 +151,20 @@ class _AddressFormSheetState extends State<AddressFormSheet> {
   String? _requiredValidator(String? value) =>
       (value == null || value.trim().isEmpty) ? 'Este campo es obligatorio' : null;
 
+  /// Required + a sane upper bound. Without the cap a pasted wall of
+  /// text sailed through the form and only failed later, at the
+  /// backend's own column limit, as a generic save error.
+  String? Function(String?) _requiredMaxValidator(int max) {
+    return (value) {
+      final required = _requiredValidator(value);
+      if (required != null) return required;
+      if (value!.trim().length > max) {
+        return 'Máximo $max caracteres';
+      }
+      return null;
+    };
+  }
+
   void _save() {
     if (!_formKey.currentState!.validate()) return;
     Navigator.of(context).pop(
@@ -213,14 +227,16 @@ class _AddressFormSheetState extends State<AddressFormSheet> {
                 controller: _aliasController,
                 label: 'Alias (Casa, Trabajo...)',
                 prefixIcon: Icons.label_outline,
-                validator: _requiredValidator,
+                maxLength: 40,
+                validator: _requiredMaxValidator(40),
               ),
               const SizedBox(height: AppSpacing.space12),
               AppTextField(
                 controller: _fullAddressController,
                 label: 'Dirección completa',
                 prefixIcon: Icons.place_outlined,
-                validator: _requiredValidator,
+                maxLength: 160,
+                validator: _requiredMaxValidator(160),
               ),
               if (!widget.isEditing) ...[
                 const SizedBox(height: AppSpacing.space12),
@@ -228,25 +244,30 @@ class _AddressFormSheetState extends State<AddressFormSheet> {
                   controller: _cityController,
                   label: 'Ciudad',
                   prefixIcon: Icons.location_city_outlined,
-                  validator: _requiredValidator,
+                  maxLength: 60,
+                  validator: _requiredMaxValidator(60),
                 ),
                 const SizedBox(height: AppSpacing.space12),
                 AppTextField(
                   controller: _stateController,
                   label: 'Departamento/Estado',
-                  validator: _requiredValidator,
+                  maxLength: 60,
+                  validator: _requiredMaxValidator(60),
                 ),
                 const SizedBox(height: AppSpacing.space12),
                 AppTextField(
                   controller: _countryController,
                   label: 'País',
-                  validator: _requiredValidator,
+                  maxLength: 60,
+                  validator: _requiredMaxValidator(60),
                 ),
                 const SizedBox(height: AppSpacing.space12),
                 AppTextField(
                   controller: _postalCodeController,
                   label: 'Código postal',
-                  validator: _requiredValidator,
+                  keyboardType: TextInputType.number,
+                  maxLength: 12,
+                  validator: _requiredMaxValidator(12),
                 ),
                 const SizedBox(height: AppSpacing.space12),
                 DropdownButtonFormField<AddressType>(
