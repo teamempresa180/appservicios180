@@ -19,15 +19,24 @@ import '../../../service/entities/service.dart';
 ///   here under the name the UI spec asked for. Listed as "simulado"
 ///   in the prompt, but documented here as real domain data to avoid
 ///   inventing a second, inconsistent number.
-/// - [completedServices], [responseTime]: fully simulated — no
-///   `Order`/`Review` aggregation endpoint exists yet to compute these.
 /// - [coverImages]: fully simulated — the domain has no cover/gallery
 ///   concept for `Provider`, and no real images/illustrations exist yet
 ///   (no official branding). Plain labels rendered as neutral
 ///   placeholders.
-/// - [about]: simulated — longer than `Provider.biography`, which is a
-///   short one-liner in the domain mock data.
-/// - [specialties]: fully simulated — no domain equivalent.
+/// - [about]: **now real** — a passthrough of `Provider.biography`,
+///   the provider's own text. It used to be a fixed mock paragraph
+///   ("Plomera independiente con más de 8 años de experiencia...")
+///   rendered on *every* provider's profile, so a real electrician's
+///   page described someone else's plumbing business to real clients.
+///   Empty when the provider wrote no biography — [ProviderInformation]
+///   hides the section rather than inventing one.
+/// - [specialties]: **now derived** — the distinct names of the
+///   categories this provider actually publishes services in. Also
+///   previously a fixed mock list shown on every profile.
+/// - `completedServices`/`responseTime` were removed outright: no
+///   `Order`/`Review` aggregation endpoint exists to compute either,
+///   so both could only ever show a fabricated "47" and "Responde en
+///   menos de 1 hora" to clients deciding whom to hire.
 ///
 /// Nothing here is added to the domain entities themselves.
 class ProviderProfileData {
@@ -40,11 +49,7 @@ class ProviderProfileData {
     required this.categories,
     required this.rating,
     required this.reviewsCount,
-    required this.completedServices,
-    required this.responseTime,
     required this.coverImages,
-    required this.about,
-    required this.specialties,
   });
 
   final Provider provider;
@@ -60,21 +65,29 @@ class ProviderProfileData {
   /// Simulated/derived — see the class doc.
   final int reviewsCount;
 
-  /// Simulated — see the class doc.
-  final int completedServices;
-
-  /// Simulated — see the class doc.
-  final String responseTime;
-
   /// Simulated — see the class doc. Only the first entry is currently
   /// rendered (see `ProviderCover`).
   final List<String> coverImages;
 
-  /// Simulated — see the class doc.
-  final String about;
+  /// Real domain data (`Provider.biography`) — see the class doc.
+  String get about => provider.biography.trim();
 
-  /// Simulated — see the class doc.
-  final List<String> specialties;
+  /// Derived from the real [categories] of this provider's published
+  /// [services] — see the class doc. Empty when they publish none, in
+  /// which case `ProviderSpecialties` hides itself.
+  List<String> get specialties {
+    final publishedCategoryIds = services
+        .map((service) => service.categoryId)
+        .toSet();
+    final names = <String>[];
+    for (final category in categories) {
+      if (publishedCategoryIds.contains(category.id) &&
+          !names.contains(category.name)) {
+        names.add(category.name);
+      }
+    }
+    return names;
+  }
 
   String get name => profile.displayName;
 

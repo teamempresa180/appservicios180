@@ -145,34 +145,3 @@ final Map<ServiceId, Category> mockServiceCategories = {
   _serviceOutletInstall.id: _categoryElectrical,
   _serviceFaucetInstall.id: _categoryPlumbing,
 };
-
-/// Simulated content not modeled by any domain entity — see
-/// `ProviderServiceDisplay` and the feature README for why each
-/// exists.
-final Map<ServiceId, int> mockServiceViewsCount = {
-  _serviceLeakRepair.id: 128,
-  _servicePipeInstall.id: 94,
-  _serviceOutletInstall.id: 40,
-  _serviceFaucetInstall.id: 12,
-};
-
-final Map<ServiceId, int> mockServiceRequestsCount = {
-  _serviceLeakRepair.id: 22,
-  _servicePipeInstall.id: 15,
-  _serviceOutletInstall.id: 4,
-  _serviceFaucetInstall.id: 1,
-};
-
-final Map<ServiceId, bool> mockServiceFeatured = {
-  _serviceLeakRepair.id: true,
-  _servicePipeInstall.id: false,
-  _serviceOutletInstall.id: false,
-  _serviceFaucetInstall.id: false,
-};
-
-final Map<ServiceId, String> mockServiceLastUpdatedLabel = {
-  _serviceLeakRepair.id: 'Actualizado hace 2 días',
-  _servicePipeInstall.id: 'Actualizado hace 1 semana',
-  _serviceOutletInstall.id: 'Actualizado hace 3 semanas',
-  _serviceFaucetInstall.id: 'Actualizado hace 2 meses',
-};

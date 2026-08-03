@@ -117,11 +117,3 @@ final List<Availability> mockAvailabilities = [
     updatedAt: _seedTimestamp,
   ),
 ];
-
-/// Simulated content not modeled by any domain entity — see
-/// `AvailabilityDisplay` and the feature README for why each exists.
-const String mockAvailabilityNextAvailableLabel =
-    'Disponible mañana a las 8:00 a.m.';
-
-const String mockAvailabilityWorkingHoursLabel =
-    'Lunes a viernes 8:00 a.m. – 6:00 p.m., sábados 9:00 a.m. – 2:00 p.m.';

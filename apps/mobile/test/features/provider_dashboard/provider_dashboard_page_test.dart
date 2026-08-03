@@ -105,15 +105,26 @@ void main() {
     expect(find.text('Diana Restrepo'), findsOneWidget);
   });
 
-  testWidgets('shows the simulated earnings summary', (tester) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'shows a zeroed earnings summary with an explanation when no '
+    'completed payment falls in the current day/week/month',
+    (tester) async {
+      // The mock payments are pinned to a fixed 2026-01-01 seed date
+      // (see mock_provider_dashboard_data.dart) so today/week/month
+      // earnings are genuinely $0 whenever the suite runs after that
+      // month — exactly the "no earnings yet" case the explanatory
+      // text exists for.
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
 
-    expect(find.byType(EarningsSummary), findsOneWidget);
-    expect(find.text('\$45'), findsOneWidget);
-    expect(find.text('\$310'), findsOneWidget);
-    expect(find.text('\$1280'), findsOneWidget);
-  });
+      expect(find.byType(EarningsSummary), findsOneWidget);
+      expect(find.text('\$0'), findsNWidgets(3));
+      expect(
+        find.textContaining('en cuanto se registre tu primer pago'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('shows statistics derived from the real orders and reviews', (
     tester,
@@ -130,16 +141,19 @@ void main() {
     expect(find.text('4.7'), findsOneWidget);
   });
 
-  testWidgets('shows performance with simulated and derived values', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'shows performance derived from real quotes and orders, with no '
+    'fabricated response-time figure',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
 
-    expect(find.byType(ProviderPerformance), findsOneWidget);
-    expect(find.text('Responde en menos de 1 hora'), findsOneWidget);
-    expect(find.text('92%'), findsOneWidget);
-  });
+      expect(find.byType(ProviderPerformance), findsOneWidget);
+      // 1 accepted / 1 decided quote (the other is still pending) = 100%.
+      expect(find.text('100%'), findsOneWidget);
+      expect(find.textContaining('Responde en menos de'), findsNothing);
+    },
+  );
 
   testWidgets(
     'shows the active in-progress order front and center, the already-'

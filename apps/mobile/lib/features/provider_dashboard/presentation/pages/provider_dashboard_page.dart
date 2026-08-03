@@ -175,7 +175,13 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
     );
   }
 
+  /// Which active-service action is in flight (`'start'`/`'complete'`)
+  /// — drives [ActiveServiceCard]'s spinner so the card doesn't sit
+  /// inert between the tap and the success snackbar.
+  String? _busyAction;
+
   Future<void> _startOrder(Order order) async {
+    setState(() => _busyAction = 'start');
     try {
       await _ordersRepository.startOrder(order);
       if (!mounted) return;
@@ -184,10 +190,19 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
         'Comenzaste el servicio.',
         type: AppSnackBarType.success,
       );
-      await _viewModel.load();
+      await _viewModel.refresh();
     } on HttpException catch (exception) {
       if (!mounted) return;
       AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo completar la acción. Intenta de nuevo.',
+        type: AppSnackBarType.error,
+      );
+    } finally {
+      if (mounted) setState(() => _busyAction = null);
     }
   }
 
@@ -214,6 +229,7 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
       ],
     );
     if (confirmed != true || !mounted) return;
+    setState(() => _busyAction = 'complete');
     try {
       await _ordersRepository.completeOrder(order);
       if (!mounted) return;
@@ -222,10 +238,19 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
         'Marcaste el servicio como finalizado.',
         type: AppSnackBarType.success,
       );
-      await _viewModel.load();
+      await _viewModel.refresh();
     } on HttpException catch (exception) {
       if (!mounted) return;
       AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo completar la acción. Intenta de nuevo.',
+        type: AppSnackBarType.error,
+      );
+    } finally {
+      if (mounted) setState(() => _busyAction = null);
     }
   }
 
@@ -246,6 +271,13 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
     } on HttpException catch (exception) {
       if (!mounted) return;
       AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo abrir la conversación. Intenta de nuevo.',
+        type: AppSnackBarType.error,
+      );
     }
   }
 
@@ -308,6 +340,7 @@ class _ProviderDashboardPageState extends State<ProviderDashboardPage> {
               onOpenChat: () => _openChat(activeOrder),
               onViewOthers: () => _openProviderRequests(context),
               onNavigate: () => _startNavigation(activeOrder),
+              busyAction: _busyAction,
             ),
           ),
           const SizedBox(height: AppSpacing.space16),

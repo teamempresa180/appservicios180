@@ -190,30 +190,19 @@ final List<Review> mockProviderProfileReviews = [
   ),
 ];
 
-/// Simulated stats/content not modeled by any domain entity — see
-/// `ProviderProfileData` and the feature README for why each exists.
-const int mockProviderProfileCompletedServices = 47;
-
-const String mockProviderProfileResponseTime = 'Responde en menos de 1 hora';
-
-/// Only the first label is currently rendered as the profile's cover
-/// banner (`ProviderCover`) — the rest is reserved for a future
-/// cover carousel. See the feature README.
+/// The last remaining simulated value in this feature: a neutral
+/// placeholder banner label, since no real cover images exist yet (no
+/// official branding). Only the first entry is currently rendered
+/// (`ProviderCover`) — the rest is reserved for a future cover
+/// carousel. See the feature README.
+///
+/// The former `mockProviderProfileCompletedServices` (47),
+/// `mockProviderProfileResponseTime`, `mockProviderProfileAbout` and
+/// `mockProviderProfileSpecialties` are gone: they were rendered on
+/// *every* provider's profile, so real clients read one fictional
+/// plumber's description, specialties and stats no matter whose page
+/// they opened. See `ProviderProfileData`'s class doc.
 const List<String> mockProviderProfileCoverImages = [
   'Portada del perfil',
   'Trabajo reciente',
-];
-
-const String mockProviderProfileAbout =
-    'Plomera independiente con más de 8 años de experiencia atendiendo '
-    'hogares y oficinas. Especializada en diagnóstico y reparación de '
-    'fugas, instalación de tuberías nuevas y mantenimiento preventivo. '
-    'Trabaja con materiales estándar y siempre deja el área de trabajo '
-    'limpia al finalizar cada servicio.';
-
-const List<String> mockProviderProfileSpecialties = [
-  'Reparación de fugas',
-  'Instalación de tuberías',
-  'Mantenimiento preventivo',
-  'Grifería',
 ];

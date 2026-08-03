@@ -125,6 +125,25 @@ class _ServiceFormSheetState extends State<ServiceFormSheet> {
   String? _requiredValidator(String? value) =>
       (value == null || value.trim().isEmpty) ? 'Este campo es obligatorio' : null;
 
+  /// Name/description need enough substance to be useful to a client
+  /// browsing the marketplace — a one-character "a" passed the plain
+  /// required check before and produced a real, unusable listing.
+  String? _nameValidator(String? value) {
+    final required = _requiredValidator(value);
+    if (required != null) return required;
+    return value!.trim().length < 3
+        ? 'El nombre debe tener al menos 3 caracteres'
+        : null;
+  }
+
+  String? _descriptionValidator(String? value) {
+    final required = _requiredValidator(value);
+    if (required != null) return required;
+    return value!.trim().length < 10
+        ? 'Describe el servicio con al menos 10 caracteres'
+        : null;
+  }
+
   /// Base price: any positive amount, capped at a sane upper bound to
   /// catch accidental extra digits (e.g. typing "1000000000" instead
   /// of "100000").
@@ -190,14 +209,14 @@ class _ServiceFormSheetState extends State<ServiceFormSheet> {
                   label: 'Nombre del servicio',
                   prefixIcon: Icons.design_services_outlined,
                   maxLength: 80,
-                  validator: _requiredValidator,
+                  validator: _nameValidator,
                 ),
                 const SizedBox(height: AppSpacing.space12),
                 AppTextField(
                   controller: _descriptionController,
                   label: 'Descripción',
                   maxLength: 500,
-                  validator: _requiredValidator,
+                  validator: _descriptionValidator,
                 ),
                 const SizedBox(height: AppSpacing.space12),
                 if (widget.categories.isNotEmpty)

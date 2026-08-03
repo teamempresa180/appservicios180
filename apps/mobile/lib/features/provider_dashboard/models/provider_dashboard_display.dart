@@ -1,33 +1,33 @@
 import '../../../order/entities/order.dart';
 import '../../../order/models/order_status.dart';
 import '../../../payment/entities/payment.dart';
+import '../../../payment/models/payment_status.dart';
 import '../../../profiles/entities/profile.dart';
 import '../../../provider/entities/provider.dart';
 import '../../../quote/entities/quote.dart';
+import '../../../quote/models/quote_status.dart';
 import '../../../review/entities/review.dart';
 
 /// Presentation-only composition of everything the Provider Dashboard
 /// screen needs. Composes six real domain entities — [provider],
-/// [profile], [orders], [quotes], [reviews], [payments] — plus fields
-/// with no domain equivalent yet:
+/// [profile], [orders], [quotes], [reviews], [payments].
 ///
-/// - [todayEarnings], [weeklyEarnings], [monthlyEarnings]: **fully
-///   simulated** — `Payment.amount` exists per single payment, but no
-///   domain module aggregates earnings by calendar period (today/week/
-///   month); that aggregation logic doesn't exist yet.
-/// - [averageResponseTime]: **fully simulated** — same reasoning
-///   already documented for `mockProviderProfileResponseTime` in
-///   `provider_profile`: no real-time/messaging metric exists to
-///   compute this.
-/// - [acceptanceRate]: **fully simulated** — no domain module tracks
-///   how many Quotes/Orders a provider accepted vs. rejected over
-///   time.
+/// **Every number this model exposes is derived from those real
+/// entities — nothing here is simulated.** Earnings
+/// ([todayEarnings]/[weeklyEarnings]/[monthlyEarnings]) aggregate the
+/// provider's own `Payment.amount` by calendar period, and
+/// [acceptanceRate] counts real accepted vs. rejected [quotes]
+/// (`null`, so the UI hides the row, until at least one quote has
+/// actually been decided). The previously simulated
+/// `averageResponseTime` was removed outright: no domain module
+/// records message/quote response latency, so there was no honest way
+/// to show it, and a fabricated "Responde en menos de 1 hora" on a
+/// commercial dashboard is a credibility problem, not a placeholder.
 ///
-/// Three fields the prompt asked for already have a real domain source
-/// and are exposed as **derived getters** instead of being fabricated
-/// a second time, following the same judgment call already documented
-/// for `ProviderProfileData.experienceYears`, `QuoteData.subtotal`,
-/// `OrderDisplay.scheduledDate` and `AddressDisplay.label`:
+/// The remaining figures follow the same judgment call already
+/// documented for `ProviderProfileData.experienceYears`,
+/// `QuoteData.subtotal`, `OrderDisplay.scheduledDate` and
+/// `AddressDisplay.label`:
 ///
 /// - [activeOrdersCount]/[completedOrdersCount]: **derived**, not
 ///   simulated — counted directly from the real [orders] by
@@ -51,12 +51,13 @@ class ProviderDashboardDisplay {
     required this.quotes,
     required this.reviews,
     required this.payments,
-    required this.todayEarnings,
-    required this.weeklyEarnings,
-    required this.monthlyEarnings,
-    required this.averageResponseTime,
-    required this.acceptanceRate,
-  });
+    DateTime? now,
+  }) : _now = now;
+
+  /// Reference "current time" for the calendar-period earnings
+  /// getters. Injectable so tests are deterministic; production call
+  /// sites leave it null and get `DateTime.now()`.
+  final DateTime? _now;
 
   final Provider provider;
   final Profile profile;
@@ -65,22 +66,60 @@ class ProviderDashboardDisplay {
   final List<Review> reviews;
   final List<Payment> payments;
 
-  /// Simulated — see the class doc.
-  final num todayEarnings;
-
-  /// Simulated — see the class doc.
-  final num weeklyEarnings;
-
-  /// Simulated — see the class doc.
-  final num monthlyEarnings;
-
-  /// Simulated — see the class doc.
-  final String averageResponseTime;
-
-  /// Simulated — see the class doc.
-  final double acceptanceRate;
-
   String get providerName => profile.displayName;
+
+  /// Money this provider actually received: only `Completed` payments
+  /// addressed to them. `Pending`/`Failed`/`Cancelled` payments are
+  /// deliberately excluded — showing them as earnings would inflate
+  /// the figure with money that never arrived.
+  Iterable<Payment> get _earnedPayments => payments.where(
+    (payment) =>
+        payment.status == PaymentStatus.completed &&
+        payment.receiverProviderId == provider.id,
+  );
+
+  num _earningsSince(DateTime start) => _earnedPayments
+      .where((payment) => !payment.createdAt.isBefore(start))
+      .fold<num>(0, (total, payment) => total + payment.amount);
+
+  DateTime get _today {
+    final now = _now ?? DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  /// Derived from the real [payments] — see the class doc.
+  num get todayEarnings => _earningsSince(_today);
+
+  /// Derived from the real [payments] — see the class doc. Week starts
+  /// on Monday, matching how the rest of the app labels weekdays.
+  num get weeklyEarnings {
+    final today = _today;
+    return _earningsSince(today.subtract(Duration(days: today.weekday - 1)));
+  }
+
+  /// Derived from the real [payments] — see the class doc.
+  num get monthlyEarnings {
+    final today = _today;
+    return _earningsSince(DateTime(today.year, today.month));
+  }
+
+  /// Share of this provider's quotes the client actually accepted, out
+  /// of the ones that were decided either way. `null` while no quote
+  /// has been accepted or rejected yet — the UI hides the row rather
+  /// than showing a meaningless "0%" (or, worse, a made-up number) to
+  /// a provider who simply hasn't been quoted on yet.
+  double? get acceptanceRate {
+    final decided = quotes.where(
+      (quote) =>
+          quote.status == QuoteStatus.accepted ||
+          quote.status == QuoteStatus.rejected,
+    );
+    if (decided.isEmpty) return null;
+    final accepted = decided
+        .where((quote) => quote.status == QuoteStatus.accepted)
+        .length;
+    return accepted / decided.length;
+  }
 
   /// Derived from the real [orders] — see the class doc.
   int get activeOrdersCount => orders

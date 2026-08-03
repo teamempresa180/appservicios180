@@ -96,8 +96,28 @@ class _ProviderRequestsPageState extends State<ProviderRequestsPage> {
     } on HttpException catch (exception) {
       if (!mounted) return;
       AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    } catch (_) {
+      // `getCurrentProvider()` throws a plain `StateError` when the
+      // session has no Provider record, and the mock repositories
+      // throw `StateError` too — without this the whole action failed
+      // silently as an unhandled async error: the spinner stopped and
+      // nothing else happened, a dead end for the provider.
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo completar la acción. Intenta de nuevo.',
+        type: AppSnackBarType.error,
+      );
     } finally {
-      if (mounted) setState(() => _busyOrderId = null);
+      // `_busyAction` has to be cleared alongside `_busyOrderId` —
+      // leaving it set kept the last-pressed button's identity around
+      // and could re-show a spinner on the next action.
+      if (mounted) {
+        setState(() {
+          _busyOrderId = null;
+          _busyAction = null;
+        });
+      }
     }
   }
 
@@ -155,12 +175,40 @@ class _ProviderRequestsPageState extends State<ProviderRequestsPage> {
     );
   }
 
-  Future<void> _reject(ProviderRequestDisplay request) => _runAction(
-    request,
-    'reject',
-    () => _viewModel.reject(request),
-    successMessage: 'Rechazaste la solicitud de ${request.clientName}.',
-  );
+  /// Rejecting is irreversible from the provider's side — the request
+  /// leaves "Activas" for good and there is no un-reject action — so
+  /// it gets the same confirmation step [_complete] has. Every other
+  /// action here stays one tap.
+  Future<void> _reject(ProviderRequestDisplay request) async {
+    final confirmed = await AppDialog.show<bool>(
+      context,
+      title: 'Rechazar solicitud',
+      content: Text(
+        '¿Rechazar la solicitud de ${request.clientName}? No podrás '
+        'cotizarla después.',
+      ),
+      actions: [
+        AppButton(
+          label: 'Cancelar',
+          variant: AppButtonVariant.text,
+          expand: false,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+        AppButton(
+          label: 'Rechazar',
+          expand: false,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+      ],
+    );
+    if (confirmed != true || !mounted) return;
+    await _runAction(
+      request,
+      'reject',
+      () => _viewModel.reject(request),
+      successMessage: 'Rechazaste la solicitud de ${request.clientName}.',
+    );
+  }
 
   void _openReviews() {
     Navigator.of(context).push(
@@ -192,6 +240,13 @@ class _ProviderRequestsPageState extends State<ProviderRequestsPage> {
     } on HttpException catch (exception) {
       if (!mounted) return;
       AppSnackBar.show(context, exception.message, type: AppSnackBarType.error);
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        'No se pudo abrir la conversación. Intenta de nuevo.',
+        type: AppSnackBarType.error,
+      );
     }
   }
 

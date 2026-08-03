@@ -34,7 +34,15 @@ class ActiveServiceCard extends StatelessWidget {
     this.onOpenChat,
     this.onViewOthers,
     this.onNavigate,
+    this.busyAction,
   });
+
+  /// Which action is currently in flight (`'start'`/`'complete'`), if
+  /// any — shows a spinner on that button and disables every other
+  /// action meanwhile. Without it the whole card looks inert between
+  /// the tap and the success snackbar (the post-action reload is now
+  /// silent, so nothing else on screen moves).
+  final String? busyAction;
 
   final Order order;
   final OrderJourneyInfo journey;
@@ -52,12 +60,22 @@ class ActiveServiceCard extends StatelessWidget {
   /// that otherwise never got an address, has nothing to navigate to.
   final VoidCallback? onNavigate;
 
+  bool get _isBusy => busyAction != null;
+
   Widget? _primaryActionFor(OrderJourneyAction action) {
     switch (action.kind) {
       case OrderJourneyActionKind.startService:
-        return AppButton(label: action.label, onPressed: onStart);
+        return AppButton(
+          label: action.label,
+          isLoading: busyAction == 'start',
+          onPressed: _isBusy ? null : onStart,
+        );
       case OrderJourneyActionKind.completeService:
-        return AppButton(label: action.label, onPressed: onComplete);
+        return AppButton(
+          label: action.label,
+          isLoading: busyAction == 'complete',
+          onPressed: _isBusy ? null : onComplete,
+        );
       default:
         return null;
     }
@@ -125,7 +143,7 @@ class ActiveServiceCard extends StatelessWidget {
                 AppButton(
                   label: 'Iniciar navegación',
                   variant: AppButtonVariant.outlined,
-                  onPressed: onNavigate,
+                  onPressed: _isBusy ? null : onNavigate,
                 ),
               ],
               const SizedBox(height: AppSpacing.space16),
@@ -136,7 +154,7 @@ class ActiveServiceCard extends StatelessWidget {
                       child: AppButton(
                         label: 'Abrir chat',
                         variant: AppButtonVariant.outlined,
-                        onPressed: onOpenChat,
+                        onPressed: _isBusy ? null : onOpenChat,
                       ),
                     ),
                     const SizedBox(width: AppSpacing.space12),

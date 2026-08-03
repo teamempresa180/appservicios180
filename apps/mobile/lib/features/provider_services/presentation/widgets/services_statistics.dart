@@ -5,12 +5,14 @@ import '../../../../core/ui/widgets/app_stat_tile.dart';
 import '../../../../service/models/service_status.dart';
 import '../../models/provider_service_display.dart';
 
-/// Aggregate statistics over every `ProviderServiceDisplay` passed in.
-/// "Servicios activos"/"Servicios pausados" are **derived** from the
-/// real `Service.status` of each entry; "Total de solicitudes"/"Total
-/// de visualizaciones" sum the **simulated** per-service
-/// `viewsCount`/`requestsCount` — see `ProviderServiceDisplay` and the
-/// feature README.
+/// Aggregate statistics over every `ProviderServiceDisplay` passed in
+/// — all four tiles **derived** from the real `Service.status`.
+///
+/// The former "Total de solicitudes"/"Total de visualizaciones" tiles
+/// were removed along with the simulated per-service counters that
+/// backed them (see `ProviderServiceDisplay`'s class doc); they are
+/// replaced by the archived count and the real total, which the
+/// provider can actually verify against the list right below.
 class ServicesStatistics extends StatelessWidget {
   const ServicesStatistics({super.key, required this.services});
 
@@ -24,11 +26,9 @@ class ServicesStatistics extends StatelessWidget {
     final pausedCount = services
         .where((s) => s.service.status == ServiceStatus.inactive)
         .length;
-    final totalRequests = services.fold<int>(
-      0,
-      (sum, s) => sum + s.requestsCount,
-    );
-    final totalViews = services.fold<int>(0, (sum, s) => sum + s.viewsCount);
+    final archivedCount = services
+        .where((s) => s.service.status == ServiceStatus.archived)
+        .length;
 
     return AppSection(
       title: 'Estadísticas',
@@ -38,10 +38,10 @@ class ServicesStatistics extends StatelessWidget {
           tiles: [
             AppStatTile(label: 'Servicios activos', value: '$activeCount'),
             AppStatTile(label: 'Servicios pausados', value: '$pausedCount'),
-            AppStatTile(label: 'Total de solicitudes', value: '$totalRequests'),
+            AppStatTile(label: 'Servicios archivados', value: '$archivedCount'),
             AppStatTile(
-              label: 'Total de visualizaciones',
-              value: '$totalViews',
+              label: 'Total de servicios',
+              value: '${services.length}',
             ),
           ],
         ),

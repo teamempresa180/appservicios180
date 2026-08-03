@@ -1,65 +1,41 @@
 import '../../../identity/entities/identity.dart';
 import '../../../profiles/entities/profile.dart';
-import 'verification_status_display.dart';
 
 /// Presentation-only composition of everything the Verification screen
-/// needs. Composes two real domain entities — [identity], [profile] —
-/// plus fields with no domain equivalent in **this feature's**
-/// composition:
+/// needs: two real domain entities, [identity] and [profile].
 ///
-/// - [verificationStatus], [completedSteps], [pendingSteps],
-///   [rejectedReason], [estimatedReviewTime]: **fully simulated**, as
-///   explicitly listed by the prompt.
+/// **Every simulated field this model used to carry was removed.** It
+/// previously fabricated `verificationStatus` ("En revisión"),
+/// `completedSteps` ("Documento de identidad subido", "Selfie
+/// capturada"), `pendingSteps`, `rejectedReason` and
+/// `estimatedReviewTime` ("Aproximadamente 24 a 48 horas hábiles") as
+/// fixed constants — so every real provider, including one who had
+/// never uploaded anything, was told the app held their documents and
+/// was reviewing them. On the screen whose entire subject is identity
+/// and trust, that is not a placeholder; it is a false statement about
+/// the user's own account.
 ///
-/// **Important note on `Verification` the domain module**: the domain
-/// already has a real `Verification` entity
-/// (`verification/entities/verification.dart`) with a `VerificationStatus`
-/// enum (`pending`/`approved`/`rejected`/`expired`) that models exactly
-/// this concept. Unlike every other "simulated field that already has
-/// a real equivalent" case documented across this project (e.g.
-/// `OrderDisplay.scheduledDate`, `ProviderServiceDisplay.isPublished`),
-/// this one is **not** switched to a derived getter — the prompt
-/// explicitly restricted this feature's repository to `Identity`/
-/// `Profile` only ("Utilizar únicamente: Identity, Profile"), so
-/// `Verification` is deliberately left unused here. See the feature
-/// README's "Cómo se conectará con Backend" section for how a future
-/// version would likely replace these simulated fields with a real
-/// `VerificationRepository` extended to also return
-/// `List<Verification>`.
-///
-/// Nothing here is added to the domain entities themselves. No `Color`
-/// or `IconData` is stored anywhere in this model — every widget
-/// resolves both purely from `context.colors.*`/`Icons.*` at build
-/// time.
+/// The screen now shows only what the backend actually knows: the real
+/// `Identity` on file. The domain does have a real `Verification`
+/// entity (`verification/entities/verification.dart`), but this
+/// feature's repository is deliberately scoped to `Identity`/`Profile`
+/// (see `verification_repository.dart`), and no backend endpoint
+/// resolves a `Verification` for the current provider yet — see the
+/// feature README's "Cómo se conectará con Backend" section.
 class VerificationDisplay {
-  const VerificationDisplay({
-    required this.identity,
-    required this.profile,
-    required this.verificationStatus,
-    required this.completedSteps,
-    required this.pendingSteps,
-    required this.rejectedReason,
-    required this.estimatedReviewTime,
-  });
+  const VerificationDisplay({required this.identity, required this.profile});
 
   final Identity identity;
   final Profile profile;
 
-  /// Simulated — see the class doc.
-  final VerificationStatusDisplay verificationStatus;
-
-  /// Simulated — see the class doc.
-  final List<String> completedSteps;
-
-  /// Simulated — see the class doc.
-  final List<String> pendingSteps;
-
-  /// Simulated — see the class doc. Only meaningful when
-  /// [verificationStatus] is `rejected`; `null` otherwise.
-  final String? rejectedReason;
-
-  /// Simulated — see the class doc.
-  final String estimatedReviewTime;
-
   String get displayName => profile.displayName;
+
+  /// The document number with everything but the last four characters
+  /// masked — enough for the provider to confirm it is the right
+  /// document, without printing a full government ID on screen.
+  String get maskedDocumentNumber {
+    final number = identity.documentNumber.trim();
+    if (number.length <= 4) return number;
+    return '${'•' * (number.length - 4)}${number.substring(number.length - 4)}';
+  }
 }
