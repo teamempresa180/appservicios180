@@ -8,9 +8,16 @@ abstract class TokenProvider {
 
   /// Called by [RefreshInterceptor] after it successfully exchanges the
   /// refresh token for a new pair — persists the new tokens.
+  ///
+  /// [role] is the role the backend recomputed while issuing the pair
+  /// (`RefreshUseCase` re-derives it from the current Provider record
+  /// rather than copying the old token's claim, precisely so it can
+  /// change mid-session). Nullable only because a response without the
+  /// field should keep the previously known role rather than blank it.
   Future<void> onTokensRefreshed({
     required String accessToken,
     required String refreshToken,
+    String? role,
   });
 
   /// Called when the refresh token itself is rejected (expired/revoked) —
@@ -46,9 +53,11 @@ class TokenProviderHolder implements TokenProvider {
   Future<void> onTokensRefreshed({
     required String accessToken,
     required String refreshToken,
+    String? role,
   }) => _requireDelegate.onTokensRefreshed(
     accessToken: accessToken,
     refreshToken: refreshToken,
+    role: role,
   );
 
   @override

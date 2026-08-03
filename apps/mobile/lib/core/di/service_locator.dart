@@ -161,11 +161,20 @@ void setupServiceLocator() {
   // state didn't match. Only fires on login/restore (`SessionManager`
   // doesn't notify on token refresh), so it never fights the manual
   // "cambiar a prestador" toggle mid-session.
+  //
+  // The `null` case is logout/session-expiry, and it is a real privacy
+  // fix rather than tidiness: `UserRoleController` persists the toggle
+  // to secure storage, and nothing used to reset it. A provider who
+  // logged out left `ui.user_role = provider` behind on the device, so
+  // the *next* account to log in on that phone — a brand-new Customer,
+  // during a 50-user pilot where devices get passed around — booted
+  // straight into the Provider shell until the backend role arrived.
   sessionManager.addListener(() {
     switch (sessionManager.currentRole) {
       case 'PROVIDER':
         locator<UserRoleController>().setRole(UserRole.provider);
       case 'CUSTOMER':
+      case null:
         locator<UserRoleController>().setRole(UserRole.client);
     }
   });

@@ -17,6 +17,7 @@ import { TokenService } from '../ports/token.port';
 import { LoginCommand } from '../commands/login.command';
 import { AuthTokensDto } from '../dto/auth-tokens.dto';
 import { issueTokenPair } from '../services/issue-token-pair';
+import { AuthSessionValidator } from '../validators/auth-session.validator';
 
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid document number or password';
 
@@ -57,6 +58,8 @@ export class LoginUseCase {
   ) {}
 
   async execute(command: LoginCommand): Promise<AuthTokensDto> {
+    AuthSessionValidator.validateLogin(command);
+
     const identity = await this.identityRepository.findByDocumentNumber(
       command.documentNumber,
     );

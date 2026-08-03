@@ -209,6 +209,12 @@ export class AuthenticationController {
 
   @Post(AuthenticationRoutes.logout)
   @HttpCode(200)
+  // Unauthenticated by design (see `LogoutUseCase`) — a token hash
+  // lookup is proof of possession on its own. Throttled anyway so the
+  // endpoint can't be used as an unauthenticated oracle: without a
+  // limit, a caller could probe token hashes at high volume, and
+  // repeated calls each cost a SHA-256 plus a database round trip.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation(AuthenticationSwagger.logout)
   @ApiResponse({ status: 200, description: 'Logged out.' })
   async logout(@Body() dto: LogoutRequestDto): Promise<void> {

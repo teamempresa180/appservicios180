@@ -29,10 +29,14 @@ class HttpAuthRepository implements AuthRepository {
     return AuthTokens.fromJson(json);
   }
 
+  /// Uses [ApiClient.postVoid], not `post` — this endpoint returns an
+  /// empty body, which `post`'s `Map<String, dynamic>` cast can't
+  /// handle. See `ApiClient.postVoid`.
   @override
-  Future<void> logout(String refreshToken) => _apiClient
-      .post('/authentications/logout', data: {'refreshToken': refreshToken})
-      .then((_) {});
+  Future<void> logout(String refreshToken) => _apiClient.postVoid(
+    '/authentications/logout',
+    data: {'refreshToken': refreshToken},
+  );
 
   @override
   Future<CurrentUser> me() async {
