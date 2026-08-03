@@ -31,7 +31,13 @@ class AppStatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (icon != null) {
+      // `mainAxisSize.min` + a bounded label, matching the no-icon
+      // branch below: these tiles sit in `AppStatGrid` cells whose
+      // height is fixed by `childAspectRatio`, so an unbounded label
+      // (or a bumped system font scale) overflowed the cell. The
+      // no-icon branch already guarded against this; this one didn't.
       return Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, color: context.colors.primary),
           const SizedBox(height: AppSpacing.space4),
@@ -45,6 +51,8 @@ class AppStatTile extends StatelessWidget {
           Text(
             label,
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: context.textStyles.bodySmall,
           ),
         ],

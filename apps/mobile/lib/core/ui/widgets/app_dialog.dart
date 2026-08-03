@@ -18,6 +18,13 @@ class AppDialog extends StatelessWidget {
   final Widget content;
   final List<Widget>? actions;
 
+  /// Keeps the dialog from stretching edge-to-edge on a tablet.
+  static const double _maxWidth = 400;
+
+  /// Fraction of the screen height a dialog may occupy at most; past
+  /// this the body scrolls.
+  static const double _maxHeightFactor = 0.8;
+
   /// Shows this dialog via `showDialog` and returns whatever value the
   /// caller passes to `Navigator.pop`.
   static Future<T?> show<T>(
@@ -41,7 +48,14 @@ class AppDialog extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.radius16),
       ),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 400),
+        constraints: BoxConstraints(
+          maxWidth: _maxWidth,
+          // Landscape phones and keyboard-open states leave very little
+          // vertical room; without a cap a dialog with a long body
+          // overflows the screen. Capping it and scrolling the body
+          // below keeps the title and actions reachable instead.
+          maxHeight: MediaQuery.sizeOf(context).height * _maxHeightFactor,
+        ),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.space24),
           child: Column(
@@ -52,18 +66,21 @@ class AppDialog extends StatelessWidget {
                 Text(title!, style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: AppSpacing.space16),
               ],
-              content,
+              // Only the body scrolls — the title stays put at the top
+              // and the actions stay reachable at the bottom.
+              Flexible(child: SingleChildScrollView(child: content)),
               if (actions != null) ...[
                 const SizedBox(height: AppSpacing.space24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    for (final action in actions!) ...[
-                      action,
-                      if (action != actions!.last)
-                        const SizedBox(width: AppSpacing.space8),
-                    ],
-                  ],
+                // `Wrap`, not `Row`: two buttons with long Spanish
+                // labels ("Cancelar" + "Confirmar eliminación") exceed
+                // the dialog width on a small phone and a `Row` would
+                // throw a horizontal overflow. `Wrap` drops the actions
+                // onto a second line instead.
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: AppSpacing.space8,
+                  runSpacing: AppSpacing.space8,
+                  children: actions!,
                 ),
               ],
             ],

@@ -52,11 +52,28 @@ class AppIconRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: textStyles.bodyMedium,
                 )
+              // Same ellipsis treatment as the no-subtitle branch above
+              // — without it a long title/subtitle (an address, a service
+              // description) wrapped to an unbounded number of lines
+              // here while the identical row without a subtitle
+              // truncated, so the two shapes of this widget disagreed on
+              // how overflow reads.
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(title, style: textStyles.bodyMedium),
-                    Text(subtitle!, style: textStyles.bodySmall),
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textStyles.bodyMedium,
+                    ),
+                    Text(
+                      subtitle!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: textStyles.bodySmall,
+                    ),
                   ],
                 ),
         ),
