@@ -18,6 +18,9 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { RolesGuard } from '../../../../common/auth/roles.guard';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { IdentityRoutes } from '../routes/identity.routes';
 import { IdentitySwagger } from '../swagger/identity.swagger';
 import { CreateIdentityUseCase } from '../../application/use_cases/create-identity.use-case';
@@ -44,7 +47,14 @@ import { IdentityHttpMapper } from '../dto/identity-http.mapper';
  * (Prompt 78, Security Hardening) — it is the registration entry
  * point: a brand-new Identity has no credential and no token yet, so
  * requiring `JwtAuthGuard` on it would make sign-up impossible.
- * `update`/`delete`/`findOne` all require an existing session.
+ * `update`/`delete`/`findOne` all require an existing session, and are
+ * additionally scoped to the caller's *own* Identity: each passes
+ * `@CurrentUser()` down to its Use Case, which rejects any other id
+ * with `ForbiddenException` (403). `RolesGuard` sits next to
+ * `JwtAuthGuard` on every guarded route so future `@Roles(...)`
+ * metadata is enforced; no route here needs a specific role today —
+ * every authenticated Identity, Customer or Provider, owns exactly one
+ * Identity record.
  */
 @ApiTags('Identity')
 @Controller(IdentityRoutes.base)
@@ -81,7 +91,7 @@ export class IdentityController {
   }
 
   @Put(IdentityRoutes.byId)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation(IdentitySwagger.update)
   @ApiParam({ name: 'id', description: 'Identity id' })
@@ -96,6 +106,11 @@ export class IdentityController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
+    status: 403,
+    description: 'The Identity does not belong to the caller.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 404,
     description: 'Identity not found.',
     type: ErrorResponseDto,
@@ -103,30 +118,41 @@ export class IdentityController {
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateIdentityRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<IdentityResponseDto> {
     const identity = await this.updateIdentityUseCase.execute(
-      IdentityHttpMapper.toUpdateCommand(id, dto),
+      IdentityHttpMapper.toUpdateCommand(id, dto, user),
     );
     return IdentityHttpMapper.toResponse(identity);
   }
 
   @Delete(IdentityRoutes.byId)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation(IdentitySwagger.delete)
   @ApiParam({ name: 'id', description: 'Identity id' })
   @ApiResponse({ status: 200, description: 'Identity deleted.' })
   @ApiResponse({
+    status: 403,
+    description: 'The Identity does not belong to the caller.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 404,
     description: 'Identity not found.',
     type: ErrorResponseDto,
   })
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.deleteIdentityUseCase.execute(new DeleteIdentityCommand(id));
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<void> {
+    await this.deleteIdentityUseCase.execute(
+      new DeleteIdentityCommand(id, user.id, user.role),
+    );
   }
 
   @Get(IdentityRoutes.byId)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation(IdentitySwagger.get)
   @ApiParam({ name: 'id', description: 'Identity id' })
@@ -136,13 +162,21 @@ export class IdentityController {
     type: IdentityResponseDto,
   })
   @ApiResponse({
+    status: 403,
+    description: 'The Identity does not belong to the caller.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 404,
     description: 'Identity not found.',
     type: ErrorResponseDto,
   })
-  async findOne(@Param('id') id: string): Promise<IdentityResponseDto> {
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<IdentityResponseDto> {
     const identity = await this.getIdentityUseCase.execute(
-      new GetIdentityQuery(id),
+      new GetIdentityQuery(id, user.id, user.role),
     );
     return IdentityHttpMapper.toResponse(identity);
   }

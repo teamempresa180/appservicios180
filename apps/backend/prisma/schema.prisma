@@ -498,7 +498,14 @@ model IdentityModel {
   notifications   NotificationModel[]
   refreshTokens   RefreshTokenModel[]
 
-  @@index([documentNumber])
+  // `documentNumber` is the login identifier: `LoginUseCase` resolves
+  // an account by document number alone, so a duplicate would make
+  // login ambiguous and let a second registration shadow an existing
+  // account. Unique rather than a plain index — it still serves the
+  // same lookup, and it closes the race `CreateIdentityUseCase`'s
+  // application-level check cannot (two concurrent registrations both
+  // passing the check before either writes).
+  @@unique([documentNumber])
   @@map("identities")
 }
 

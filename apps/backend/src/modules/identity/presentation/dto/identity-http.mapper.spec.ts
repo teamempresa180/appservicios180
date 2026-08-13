@@ -1,3 +1,4 @@
+import { Role } from '../../../../common/auth/role.enum';
 import { IdentityDto } from '../../application/dto/identity.dto';
 import { DocumentType } from '../../domain/value-objects/document-type.value-object';
 import { IdentityStatus } from '../../domain/value-objects/identity-status.value-object';
@@ -33,12 +34,17 @@ describe('IdentityHttpMapper', () => {
     expect(Number.isNaN(command.birthDate.getTime())).toBe(true);
   });
 
-  it('toUpdateCommand() carries the id and optional fields through', () => {
+  it('toUpdateCommand() carries the id, the caller and optional fields through', () => {
     const dto: UpdateIdentityRequestDto = { status: IdentityStatus.Suspended };
 
-    const command = IdentityHttpMapper.toUpdateCommand('id-1', dto);
+    const command = IdentityHttpMapper.toUpdateCommand('id-1', dto, {
+      id: 'caller-1',
+      role: Role.Customer,
+    });
 
     expect(command.id).toBe('id-1');
+    expect(command.callerId).toBe('caller-1');
+    expect(command.callerRole).toBe(Role.Customer);
     expect(command.fullName).toBeUndefined();
     expect(command.status).toBe(IdentityStatus.Suspended);
   });

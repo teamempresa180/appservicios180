@@ -1,3 +1,5 @@
+import { Role } from '../../../../common/auth/role.enum';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { IdentityController } from './identity.controller';
 import { CreateIdentityUseCase } from '../../application/use_cases/create-identity.use-case';
 import { UpdateIdentityUseCase } from '../../application/use_cases/update-identity.use-case';
@@ -19,6 +21,8 @@ describe('IdentityController', () => {
   let updateUseCase: { execute: jest.Mock };
   let deleteUseCase: { execute: jest.Mock };
   let getUseCase: { execute: jest.Mock };
+
+  const caller: AuthenticatedUser = { id: 'id-1', role: Role.Customer };
 
   const identityDto: IdentityDto = {
     id: 'id-1',
@@ -68,30 +72,36 @@ describe('IdentityController', () => {
     expect(response.createdAt).toBe('2026-01-01T00:00:00.000Z');
   });
 
-  it('update() maps id + request DTO to a command', async () => {
+  it('update() maps id + request DTO + caller to a command', async () => {
     const dto: UpdateIdentityRequestDto = { fullName: 'New Name' };
 
-    const response = await controller.update('id-1', dto);
+    const response = await controller.update('id-1', dto, caller);
 
     expect(updateUseCase.execute).toHaveBeenCalledWith(
-      new UpdateIdentityCommand('id-1', 'New Name', undefined),
+      new UpdateIdentityCommand(
+        'id-1',
+        'id-1',
+        Role.Customer,
+        'New Name',
+        undefined,
+      ),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('remove() delegates to DeleteIdentityUseCase with the id', async () => {
-    await controller.remove('id-1');
+  it('remove() delegates to DeleteIdentityUseCase with the id and the caller', async () => {
+    await controller.remove('id-1', caller);
 
     expect(deleteUseCase.execute).toHaveBeenCalledWith(
-      new DeleteIdentityCommand('id-1'),
+      new DeleteIdentityCommand('id-1', 'id-1', Role.Customer),
     );
   });
 
-  it('findOne() maps the Application DTO returned by GetIdentityUseCase', async () => {
-    const response = await controller.findOne('id-1');
+  it('findOne() passes the caller to GetIdentityUseCase and maps its Application DTO', async () => {
+    const response = await controller.findOne('id-1', caller);
 
     expect(getUseCase.execute).toHaveBeenCalledWith(
-      new GetIdentityQuery('id-1'),
+      new GetIdentityQuery('id-1', 'id-1', Role.Customer),
     );
     expect(response.fullName).toBe('Jane Doe');
   });
