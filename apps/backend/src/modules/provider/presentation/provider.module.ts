@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PrismaModule } from '../../../infrastructure/prisma/prisma.module';
 import { IdentityPresentationModule } from '../../identity/presentation/identity.module';
 import {
   IDENTITY_REPOSITORY,
@@ -46,6 +47,7 @@ import { PrismaProviderRepository } from '../infrastructure/persistence/prisma-p
     IdentityPresentationModule,
     ProfilesPresentationModule,
     CategoryPresentationModule,
+    PrismaModule,
   ],
   controllers: [ProviderController],
   providers: [

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PrismaModule } from '../../../infrastructure/prisma/prisma.module';
 import { CategoryPresentationModule } from '../../category/presentation/category.module';
 import {
   CATEGORY_REPOSITORY,
@@ -33,7 +34,11 @@ import { PrismaServiceRepository } from '../infrastructure/persistence/prisma-se
  * previously deferred, see `CreateServiceUseCase`'s doc comment).
  */
 @Module({
-  imports: [CategoryPresentationModule, ProviderPresentationModule],
+  imports: [
+    CategoryPresentationModule,
+    ProviderPresentationModule,
+    PrismaModule,
+  ],
   controllers: [ServiceController],
   providers: [
     { provide: SERVICE_REPOSITORY, useClass: PrismaServiceRepository },

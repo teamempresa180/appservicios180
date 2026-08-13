@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PrismaModule } from '../../../infrastructure/prisma/prisma.module';
 import { CategoryController } from './controllers/category.controller';
 import { CreateCategoryUseCase } from '../application/use_cases/create-category.use-case';
 import { UpdateCategoryUseCase } from '../application/use_cases/update-category.use-case';
@@ -26,6 +27,7 @@ import { PrismaCategorySpecializationRepository } from '../infrastructure/persis
  * here (unlike every module referencing `IdentityId`).
  */
 @Module({
+  imports: [PrismaModule],
   controllers: [CategoryController],
   providers: [
     { provide: CATEGORY_REPOSITORY, useClass: PrismaCategoryRepository },

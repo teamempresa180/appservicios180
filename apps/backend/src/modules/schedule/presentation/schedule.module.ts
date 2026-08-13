@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PrismaModule } from '../../../infrastructure/prisma/prisma.module';
 import { ProviderPresentationModule } from '../../provider/presentation/provider.module';
 import {
   PROVIDER_REPOSITORY,
@@ -25,7 +26,7 @@ import { PrismaScheduleRepository } from '../infrastructure/persistence/prisma-s
  * referenced Provider exists before creating a block for it.
  */
 @Module({
-  imports: [ProviderPresentationModule],
+  imports: [ProviderPresentationModule, PrismaModule],
   controllers: [ScheduleController],
   providers: [
     { provide: SCHEDULE_REPOSITORY, useClass: PrismaScheduleRepository },

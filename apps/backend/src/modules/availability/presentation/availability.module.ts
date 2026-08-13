@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PrismaModule } from '../../../infrastructure/prisma/prisma.module';
 import { ProviderPresentationModule } from '../../provider/presentation/provider.module';
 import {
   PROVIDER_REPOSITORY,
@@ -25,7 +26,7 @@ import { PrismaAvailabilityRepository } from '../infrastructure/persistence/pris
  * the referenced Provider exists before creating a record for it.
  */
 @Module({
-  imports: [ProviderPresentationModule],
+  imports: [ProviderPresentationModule, PrismaModule],
   controllers: [AvailabilityController],
   providers: [
     {
