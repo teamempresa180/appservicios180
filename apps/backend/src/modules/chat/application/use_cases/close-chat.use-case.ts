@@ -7,14 +7,22 @@ import { CloseChatCommand } from '../commands/close-chat.command';
 import { ChatDto } from '../dto/chat.dto';
 import { ChatMapper } from '../mappers/chat.mapper';
 import { ChatValidator } from '../validators/chat.validator';
+import { ChatParticipationService } from '../services/chat-participation.service';
 
 /**
  * Closes an existing Chat by transitioning it to `Closed` status. No
  * prior-status guard — same criterion as `CancelOrderUseCase`, which
  * applies the change unconditionally to any found entity.
+ *
+ * Only a participant of the conversation (or an Admin) may close it —
+ * ending someone else's chat is a state change that does not belong to
+ * the caller.
  */
 export class CloseChatUseCase {
-  constructor(private readonly chatRepository: ChatRepository) {}
+  constructor(
+    private readonly chatRepository: ChatRepository,
+    private readonly participation: ChatParticipationService,
+  ) {}
 
   async execute(command: CloseChatCommand): Promise<ChatDto> {
     ChatValidator.validateClose(command);
@@ -24,6 +32,7 @@ export class CloseChatUseCase {
     if (!existing) {
       throw new NotFoundException(`Chat ${command.id} not found`);
     }
+    await this.participation.assertParticipant(existing, command.caller);
 
     const closed = new Chat(existing.id, {
       orderId: existing.orderId,

@@ -1,3 +1,5 @@
+import { Role } from '../../../../common/auth/role.enum';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { ChatController } from './chat.controller';
 import { CreateChatUseCase } from '../../application/use_cases/create-chat.use-case';
 import { CloseChatUseCase } from '../../application/use_cases/close-chat.use-case';
@@ -22,6 +24,8 @@ describe('ChatController', () => {
   let getUseCase: { execute: jest.Mock };
   let listUseCase: { execute: jest.Mock };
   let searchUseCase: { execute: jest.Mock };
+
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
 
   const chatDto: ChatDto = {
     id: 'id-1',
@@ -65,7 +69,7 @@ describe('ChatController', () => {
       type: ChatType.OrderRelated,
     };
 
-    const response = await controller.create(dto);
+    const response = await controller.create(dto, caller);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
       new CreateChatCommand(
@@ -73,49 +77,54 @@ describe('ChatController', () => {
         'identity-1',
         'provider-1',
         ChatType.OrderRelated,
+        caller,
       ),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('close() delegates to CloseChatUseCase with the id', async () => {
-    const response = await controller.close('id-1');
+  it('close() delegates to CloseChatUseCase with the id and the caller', async () => {
+    const response = await controller.close('id-1', caller);
 
     expect(closeUseCase.execute).toHaveBeenCalledWith(
-      new CloseChatCommand('id-1'),
+      new CloseChatCommand('id-1', caller),
     );
     expect(response.id).toBe('id-1');
   });
 
   it('list() maps page/pageSize query params to a query and wraps the paginated result', async () => {
-    const response = await controller.list('2', '10');
+    const response = await controller.list(caller, '2', '10');
 
-    expect(listUseCase.execute).toHaveBeenCalledWith(new ListChatQuery(2, 10));
+    expect(listUseCase.execute).toHaveBeenCalledWith(
+      new ListChatQuery(caller, 2, 10),
+    );
     expect(response.items).toHaveLength(1);
     expect(response.total).toBe(1);
   });
 
   it('search() maps the term query param and the Application DTOs to response DTOs', async () => {
-    const response = await controller.search('SUPPORT');
+    const response = await controller.search('SUPPORT', caller);
 
     expect(searchUseCase.execute).toHaveBeenCalledWith(
-      new SearchChatQuery('SUPPORT'),
+      new SearchChatQuery('SUPPORT', caller),
     );
     expect(response).toHaveLength(1);
     expect(response[0].type).toBe(ChatType.OrderRelated);
   });
 
   it('findOne() maps the Application DTO returned by GetChatUseCase', async () => {
-    const response = await controller.findOne('id-1');
+    const response = await controller.findOne('id-1', caller);
 
-    expect(getUseCase.execute).toHaveBeenCalledWith(new GetChatQuery('id-1'));
+    expect(getUseCase.execute).toHaveBeenCalledWith(
+      new GetChatQuery('id-1', caller),
+    );
     expect(response.id).toBe('id-1');
   });
 
   it('findOne() throws NotFoundException when GetChatUseCase returns null', async () => {
     getUseCase.execute.mockResolvedValue(null);
 
-    await expect(controller.findOne('unknown-id')).rejects.toThrow(
+    await expect(controller.findOne('unknown-id', caller)).rejects.toThrow(
       NotFoundException,
     );
   });

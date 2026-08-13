@@ -25,6 +25,7 @@ import {
   ChatRepository,
 } from '../domain/interfaces/chat-repository.interface';
 import { PrismaChatRepository } from '../infrastructure/persistence/prisma-chat.repository';
+import { ChatParticipationService } from '../application/services/chat-participation.service';
 
 /**
  * Wires the Chat presentation layer to its Use Cases, which are
@@ -44,6 +45,12 @@ import { PrismaChatRepository } from '../infrastructure/persistence/prisma-chat.
   providers: [
     { provide: CHAT_REPOSITORY, useClass: PrismaChatRepository },
     {
+      provide: ChatParticipationService,
+      useFactory: (providerRepo: ProviderRepository) =>
+        new ChatParticipationService(providerRepo),
+      inject: [PROVIDER_REPOSITORY],
+    },
+    {
       provide: CreateChatUseCase,
       useFactory: (
         chatRepo: ChatRepository,
@@ -61,25 +68,37 @@ import { PrismaChatRepository } from '../infrastructure/persistence/prisma-chat.
     },
     {
       provide: CloseChatUseCase,
-      useFactory: (repo: ChatRepository) => new CloseChatUseCase(repo),
-      inject: [CHAT_REPOSITORY],
+      useFactory: (
+        repo: ChatRepository,
+        participation: ChatParticipationService,
+      ) => new CloseChatUseCase(repo, participation),
+      inject: [CHAT_REPOSITORY, ChatParticipationService],
     },
     {
       provide: GetChatUseCase,
-      useFactory: (repo: ChatRepository) => new GetChatUseCase(repo),
-      inject: [CHAT_REPOSITORY],
+      useFactory: (
+        repo: ChatRepository,
+        participation: ChatParticipationService,
+      ) => new GetChatUseCase(repo, participation),
+      inject: [CHAT_REPOSITORY, ChatParticipationService],
     },
     {
       provide: ListChatUseCase,
-      useFactory: (repo: ChatRepository) => new ListChatUseCase(repo),
-      inject: [CHAT_REPOSITORY],
+      useFactory: (
+        repo: ChatRepository,
+        participation: ChatParticipationService,
+      ) => new ListChatUseCase(repo, participation),
+      inject: [CHAT_REPOSITORY, ChatParticipationService],
     },
     {
       provide: SearchChatUseCase,
-      useFactory: (repo: ChatRepository) => new SearchChatUseCase(repo),
-      inject: [CHAT_REPOSITORY],
+      useFactory: (
+        repo: ChatRepository,
+        participation: ChatParticipationService,
+      ) => new SearchChatUseCase(repo, participation),
+      inject: [CHAT_REPOSITORY, ChatParticipationService],
     },
   ],
-  exports: [CHAT_REPOSITORY],
+  exports: [CHAT_REPOSITORY, ChatParticipationService],
 })
 export class ChatPresentationModule {}
