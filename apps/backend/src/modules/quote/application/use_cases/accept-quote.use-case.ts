@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
+import { TransactionRunner } from '../../../core/application/ports/transaction-runner.port';
 import { OrderRepository } from '../../../order/domain/interfaces/order-repository.interface';
 import { OrderStatus } from '../../../order/domain/value-objects/order-status.value-object';
 import { QuoteRepository } from '../../domain/interfaces/quote-repository.interface';
@@ -31,6 +32,16 @@ import { QuoteMapper } from '../mappers/quote.mapper';
  * Case with just a `QuoteRepository` keep compiling unchanged; when
  * omitted, only the Quote itself transitions (no Order side effect) —
  * `QuotePresentationModule` always wires the real one.
+ *
+ * The Order and Quote writes run inside a single `TransactionRunner`
+ * transaction (Etapa 18, Security Hardening) — the only genuinely
+ * multi-aggregate write in the codebase. Without it, a crash between
+ * the two `save` calls could leave an Order `Accepted` with its Quote
+ * still `Pending`, or vice versa. `transactionRunner` is optional for
+ * the same unit-test-compatibility reason as `orderRepository`: when
+ * either is omitted, the two writes happen sequentially, un-transacted
+ * — acceptable for tests against in-memory repositories, which have no
+ * concept of a transaction anyway.
  */
 export class AcceptQuoteUseCase {
   private readonly logger = new Logger(AcceptQuoteUseCase.name);
@@ -38,6 +49,7 @@ export class AcceptQuoteUseCase {
   constructor(
     private readonly quoteRepository: QuoteRepository,
     private readonly orderRepository?: OrderRepository,
+    private readonly transactionRunner?: TransactionRunner,
   ) {}
 
   async execute(command: AcceptQuoteCommand): Promise<QuoteDto> {
@@ -47,8 +59,14 @@ export class AcceptQuoteUseCase {
       throw new NotFoundException(`Quote ${command.id} not found`);
     }
 
-    if (this.orderRepository) {
-      const order = await this.orderRepository.findById(existing.orderId);
+    const accepted = existing.with({
+      status: QuoteStatus.Accepted,
+      updatedAt: new Date(),
+    });
+
+    const orderRepository = this.orderRepository;
+    if (orderRepository) {
+      const order = await orderRepository.findById(existing.orderId);
       if (order) {
         if (order.status !== OrderStatus.Pending) {
           throw new BusinessRuleException(
@@ -65,14 +83,22 @@ export class AcceptQuoteUseCase {
           status: OrderStatus.Accepted,
           updatedAt: new Date(),
         });
-        await this.orderRepository.save(acceptedOrder);
+
+        if (this.transactionRunner) {
+          await this.transactionRunner.run(async (tx) => {
+            await orderRepository.save(acceptedOrder, tx);
+            await this.quoteRepository.save(accepted, tx);
+          });
+        } else {
+          await orderRepository.save(acceptedOrder);
+          await this.quoteRepository.save(accepted);
+        }
+        this.logger.log(
+          `Quote accepted id=${accepted.id.value} orderId=${accepted.orderId.value}`,
+        );
+        return QuoteMapper.toDto(accepted);
       }
     }
-
-    const accepted = existing.with({
-      status: QuoteStatus.Accepted,
-      updatedAt: new Date(),
-    });
 
     await this.quoteRepository.save(accepted);
     this.logger.log(

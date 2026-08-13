@@ -19,11 +19,12 @@ export interface EnvironmentVariables {
   JWT_ISSUER: string;
   JWT_AUDIENCE: string;
   /**
-   * Comma-separated list of allowed CORS origins, or `*` to reflect
-   * any origin (the default — matches the app's previous behavior of
-   * accepting requests from anywhere, since no CORS policy existed at
-   * all before Prompt 78). Set to a real comma-separated list in
-   * production to restrict it.
+   * Comma-separated list of allowed CORS origins. `*` is only ever
+   * the default outside production (local dev convenience) — see
+   * `requireCorsOrigin` for why production requires an explicit
+   * value. This only affects browser callers (Swagger UI, a future
+   * web client): the Flutter app is not a browser and never sends an
+   * `Origin` header, so it is entirely unaffected by this setting.
    */
   CORS_ORIGIN: string;
 }
@@ -96,8 +97,30 @@ export function validateEnv(
     JWT_REFRESH_EXPIRES_IN: env.JWT_REFRESH_EXPIRES_IN ?? '7d',
     JWT_ISSUER: env.JWT_ISSUER ?? 'servicios180-api',
     JWT_AUDIENCE: env.JWT_AUDIENCE ?? 'servicios180-clients',
-    CORS_ORIGIN: env.CORS_ORIGIN ?? '*',
+    CORS_ORIGIN: requireCorsOrigin(env.CORS_ORIGIN, isProduction),
   };
+}
+
+/**
+ * `*` reflects any browser origin — acceptable for local development,
+ * not for a production API that also serves cookie-less bearer-token
+ * clients over the open internet. Mirrors `requireSecret`'s fail-fast
+ * pattern: production must set a real value; outside production, an
+ * unset value falls back to `*` for developer convenience.
+ */
+function requireCorsOrigin(
+  value: string | undefined,
+  isProduction: boolean,
+): string {
+  if (value) {
+    return value;
+  }
+  if (isProduction) {
+    throw new Error(
+      'Missing required environment variable "CORS_ORIGIN" in production',
+    );
+  }
+  return '*';
 }
 
 function requireSecret(

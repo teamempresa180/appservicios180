@@ -1,3 +1,5 @@
+import { existsSync, createReadStream } from 'node:fs';
+import { join } from 'node:path';
 import {
   Body,
   Controller,
@@ -6,11 +8,13 @@ import {
   Post,
   Put,
   Query,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -23,6 +27,11 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
+import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { VerificationRoutes } from '../routes/verification.routes';
 import { VerificationSwagger } from '../swagger/verification.swagger';
@@ -249,5 +258,52 @@ export class VerificationController {
       VerificationHttpMapper.toUploadDocumentCommand(id, documentPath),
     );
     return VerificationHttpMapper.toResponse(verification);
+  }
+
+  /**
+   * Streams the uploaded document instead of serving `uploads/` as a
+   * public static mount (the previous behavior, closed in `main.ts`)
+   * — a KYC document (national ID, selfie, certificate) is exactly
+   * the kind of file that must never be reachable by an unguessed-URL
+   * guess alone. Only the Identity the Verification belongs to, or an
+   * Admin, may fetch it.
+   */
+  @Get(VerificationRoutes.document)
+  @ApiOperation(VerificationSwagger.getDocument)
+  @ApiParam({ name: 'id', description: 'Verification id' })
+  @ApiResponse({ status: 200, description: 'Document file stream.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Not the owner of this Verification.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Verification or document not found.',
+    type: ErrorResponseDto,
+  })
+  async getDocument(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Res() res: Response,
+  ): Promise<void> {
+    const verification = await this.getVerificationUseCase.execute(
+      new GetVerificationQuery(id),
+    );
+    if (verification.identityId !== user.id && user.role !== Role.Admin) {
+      throw new ForbiddenException(
+        'Not authorized to access this document',
+      );
+    }
+    if (!verification.documentPath) {
+      throw new NotFoundException(`Verification ${id} has no document`);
+    }
+
+    const absolutePath = join(process.cwd(), verification.documentPath);
+    if (!existsSync(absolutePath)) {
+      throw new NotFoundException(`Document for Verification ${id} not found`);
+    }
+
+    createReadStream(absolutePath).pipe(res);
   }
 }

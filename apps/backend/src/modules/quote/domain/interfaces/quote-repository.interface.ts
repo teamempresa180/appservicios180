@@ -1,4 +1,5 @@
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { TransactionContext } from '../../../core/domain/ports/transaction-context';
 import { Quote } from '../entities/quote.entity';
 import { QuoteId } from '../value-objects/quote-id.value-object';
 import { OrderId } from '../../../order/domain/value-objects/order-id.value-object';
@@ -23,7 +24,9 @@ export interface QuoteRepository {
   findById(id: QuoteId): Promise<Quote | null>;
   findByOrderId(orderId: OrderId): Promise<Quote[]>;
   findByProviderId(providerId: ProviderId): Promise<Quote[]>;
-  save(quote: Quote): Promise<void>;
+  /** `tx`, when provided (see `TransactionRunner`), scopes this write
+   *  to an in-flight transaction — used by `AcceptQuoteUseCase`. */
+  save(quote: Quote, tx?: TransactionContext): Promise<void>;
   list(page: number, pageSize: number): Promise<PaginatedResult<Quote>>;
   /** Free-text match against `notes`. */
   search(term: string): Promise<Quote[]>;

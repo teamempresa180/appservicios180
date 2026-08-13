@@ -1,4 +1,5 @@
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { TransactionContext } from '../../../core/domain/ports/transaction-context';
 import { Order } from '../entities/order.entity';
 import { OrderId } from '../value-objects/order-id.value-object';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
@@ -23,7 +24,11 @@ export interface OrderRepository {
    *  given Category — what a compatible Provider's dashboard shows
    *  alongside their own `findByProviderId` orders. */
   findOpenByCategoryId(categoryId: CategoryId): Promise<Order[]>;
-  save(order: Order): Promise<void>;
+  /** `tx`, when provided (see `TransactionRunner`), scopes this write
+   *  to an in-flight transaction instead of the default connection —
+   *  used by `AcceptQuoteUseCase` so the Order and Quote transitions
+   *  commit or roll back together. */
+  save(order: Order, tx?: TransactionContext): Promise<void>;
   list(page: number, pageSize: number): Promise<PaginatedResult<Order>>;
   /** Free-text match against `title`/`description`. */
   search(term: string): Promise<Order[]>;

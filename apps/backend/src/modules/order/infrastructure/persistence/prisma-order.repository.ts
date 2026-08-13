@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { TransactionContext } from '../../../core/domain/ports/transaction-context';
 import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
@@ -11,9 +13,14 @@ import { OrderRepository } from '../../domain/interfaces/order-repository.interf
 import { OrderId } from '../../domain/value-objects/order-id.value-object';
 import { OrderPrismaMapper } from './order-prisma.mapper';
 
+/** Anything Prisma's `orderModel.upsert` can be called on — either the
+ *  app-wide singleton or a transaction-scoped client handed back by
+ *  `TransactionRunner.run`. */
+type OrderQueryable = PrismaService | Prisma.TransactionClient;
+
 /**
- * `OrderRepository` implementation backed by Prisma/PostgreSQL — the
- * only place in this module that knows Prisma exists.
+ * `OrderRepository` implementation backed by Prisma/MySQL — the only
+ * place in this module that knows Prisma exists.
  */
 @Injectable()
 export class PrismaOrderRepository implements OrderRepository {
@@ -55,9 +62,10 @@ export class PrismaOrderRepository implements OrderRepository {
     return rows.map((row) => OrderPrismaMapper.toDomain(row));
   }
 
-  async save(order: Order): Promise<void> {
+  async save(order: Order, tx?: TransactionContext): Promise<void> {
     const data = OrderPrismaMapper.toPersistence(order);
-    await this.prisma.orderModel.upsert({
+    const client = (tx as OrderQueryable | undefined) ?? this.prisma;
+    await client.orderModel.upsert({
       where: { id: data.id },
       create: data,
       update: data,

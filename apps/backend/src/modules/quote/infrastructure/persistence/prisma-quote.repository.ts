@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../infrastructure/prisma/prisma.service';
 import { PaginatedResult } from '../../../core/application/paginated-result';
+import { TransactionContext } from '../../../core/domain/ports/transaction-context';
 import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { OrderId } from '../../../order/domain/value-objects/order-id.value-object';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
@@ -9,9 +11,14 @@ import { QuoteRepository } from '../../domain/interfaces/quote-repository.interf
 import { QuoteId } from '../../domain/value-objects/quote-id.value-object';
 import { QuotePrismaMapper } from './quote-prisma.mapper';
 
+/** Anything Prisma's `quoteModel.upsert` can be called on — either the
+ *  app-wide singleton or a transaction-scoped client handed back by
+ *  `TransactionRunner.run`. */
+type QuoteQueryable = PrismaService | Prisma.TransactionClient;
+
 /**
- * `QuoteRepository` implementation backed by Prisma/PostgreSQL — the
- * only place in this module that knows Prisma exists.
+ * `QuoteRepository` implementation backed by Prisma/MySQL — the only
+ * place in this module that knows Prisma exists.
  */
 @Injectable()
 export class PrismaQuoteRepository implements QuoteRepository {
@@ -40,9 +47,10 @@ export class PrismaQuoteRepository implements QuoteRepository {
     return rows.map((row) => QuotePrismaMapper.toDomain(row));
   }
 
-  async save(quote: Quote): Promise<void> {
+  async save(quote: Quote, tx?: TransactionContext): Promise<void> {
     const data = QuotePrismaMapper.toPersistence(quote);
-    await this.prisma.quoteModel.upsert({
+    const client = (tx as QuoteQueryable | undefined) ?? this.prisma;
+    await client.quoteModel.upsert({
       where: { id: data.id },
       create: data,
       update: data,

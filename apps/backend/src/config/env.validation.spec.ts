@@ -8,6 +8,7 @@ describe('validateEnv', () => {
       DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
       JWT_ACCESS_SECRET: 'access-secret',
       JWT_REFRESH_SECRET: 'refresh-secret',
+      CORS_ORIGIN: 'https://app.example.com',
     });
     expect(result).toEqual({
       NODE_ENV: 'production',
@@ -19,7 +20,7 @@ describe('validateEnv', () => {
       JWT_REFRESH_EXPIRES_IN: '7d',
       JWT_ISSUER: 'servicios180-api',
       JWT_AUDIENCE: 'servicios180-clients',
-      CORS_ORIGIN: '*',
+      CORS_ORIGIN: 'https://app.example.com',
     });
   });
 
@@ -62,8 +63,23 @@ describe('validateEnv', () => {
 
   it('throws when JWT_REFRESH_SECRET is missing in production', () => {
     expect(() =>
-      validateEnv({ NODE_ENV: 'production', JWT_ACCESS_SECRET: 'x' }),
+      validateEnv({
+        NODE_ENV: 'production',
+        JWT_ACCESS_SECRET: 'x',
+        JWT_REFRESH_SECRET: undefined,
+        CORS_ORIGIN: 'https://app.example.com',
+      }),
     ).toThrow(/JWT_REFRESH_SECRET/);
+  });
+
+  it('throws when CORS_ORIGIN is missing in production', () => {
+    expect(() =>
+      validateEnv({
+        NODE_ENV: 'production',
+        JWT_ACCESS_SECRET: 'x',
+        JWT_REFRESH_SECRET: 'y',
+      }),
+    ).toThrow(/CORS_ORIGIN/);
   });
 
   it('throws on an invalid NODE_ENV', () => {

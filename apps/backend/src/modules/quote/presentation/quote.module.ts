@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { PrismaTransactionRunner } from '../../../infrastructure/prisma/prisma-transaction-runner';
+import { TransactionRunner } from '../../core/application/ports/transaction-runner.port';
 import { OrderPresentationModule } from '../../order/presentation/order.module';
 import {
   ORDER_REPOSITORY,
@@ -50,11 +52,15 @@ import { PrismaQuoteRepository } from '../infrastructure/persistence/prisma-quot
       useFactory: (repo: QuoteRepository) => new UpdateQuoteUseCase(repo),
       inject: [QUOTE_REPOSITORY],
     },
+    PrismaTransactionRunner,
     {
       provide: AcceptQuoteUseCase,
-      useFactory: (repo: QuoteRepository, orderRepo: OrderRepository) =>
-        new AcceptQuoteUseCase(repo, orderRepo),
-      inject: [QUOTE_REPOSITORY, ORDER_REPOSITORY],
+      useFactory: (
+        repo: QuoteRepository,
+        orderRepo: OrderRepository,
+        transactionRunner: TransactionRunner,
+      ) => new AcceptQuoteUseCase(repo, orderRepo, transactionRunner),
+      inject: [QUOTE_REPOSITORY, ORDER_REPOSITORY, PrismaTransactionRunner],
     },
     {
       provide: RejectQuoteUseCase,

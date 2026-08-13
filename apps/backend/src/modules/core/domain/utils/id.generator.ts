@@ -1,11 +1,13 @@
+import { randomUUID } from 'node:crypto';
+
 /**
- * Generates a RFC-4122 v4 compliant UUID without any external dependency.
- * Pure utility — no persistence, no I/O.
+ * Generates a cryptographically strong RFC-4122 v4 UUID. Every
+ * entity id in the system is generated here — `crypto.randomUUID()`
+ * (Node's CSPRNG-backed implementation, stable since Node 14.17) is
+ * used instead of a `Math.random()`-based generator, since the latter
+ * is not cryptographically secure and several parts of the system
+ * (e.g. `/uploads` file paths) rely on ids being unguessable.
  */
 export function generateId(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
-    const random = (Math.random() * 16) | 0;
-    const value = char === 'x' ? random : (random & 0x3) | 0x8;
-    return value.toString(16);
-  });
+  return randomUUID();
 }

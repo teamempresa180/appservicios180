@@ -27,6 +27,7 @@ describe('ConfigService', () => {
     process.env.PORT = '3000';
     process.env.JWT_ACCESS_SECRET = 'access-secret';
     process.env.JWT_REFRESH_SECRET = 'refresh-secret';
+    process.env.CORS_ORIGIN = 'https://app.example.com';
 
     const config = new ConfigService();
 

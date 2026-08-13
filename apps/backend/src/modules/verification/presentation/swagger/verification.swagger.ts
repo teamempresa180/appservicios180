@@ -34,4 +34,9 @@ export const VerificationSwagger = {
     description:
       'Uploads a supporting document (e.g. criminal-record check, certification) for an existing Verification and stores its path on the record. Accepts application/pdf, image/png, or image/jpeg.',
   },
+  getDocument: {
+    summary: 'Download a Verification document',
+    description:
+      'Streams the uploaded document for a Verification. Only the owning Identity or an Admin may access it.',
+  },
 } as const;
