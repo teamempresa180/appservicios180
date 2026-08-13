@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -34,6 +34,7 @@ describe('AddressController (e2e)', () => {
   let app: INestApplication<App>;
   let identityId: string;
   let authHeader: string;
+  let otherAuthHeader: string;
 
   beforeEach(async () => {
     const identityRepository = new InMemoryIdentityRepository();
@@ -69,9 +70,18 @@ describe('AddressController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await app.init();
 
     authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
+    otherAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'another-identity', role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -106,13 +116,46 @@ describe('AddressController (e2e)', () => {
   });
 
   it('POST /addresses returns 404 when the Identity does not exist', async () => {
+    const unknownAuthHeader = `Bearer ${signTestAccessToken(
+      app.get(ConfigService),
+      { sub: 'unknown-identity', role: 'CUSTOMER' },
+    )}`;
+
     const response = await request(app.getHttpServer())
       .post('/addresses')
-      .set('Authorization', authHeader)
+      .set('Authorization', unknownAuthHeader)
       .send(createAddressBody({ identityId: 'unknown-identity' }))
       .expect(404);
 
     expect((response.body as ErrorResponseDto).error).toBe('NotFoundException');
+  });
+
+  it('POST /addresses returns 403 when creating an Address for another Identity', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/addresses')
+      .set('Authorization', otherAuthHeader)
+      .send(createAddressBody())
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
+  it('POST /addresses returns 400 for an unknown field', async () => {
+    await request(app.getHttpServer())
+      .post('/addresses')
+      .set('Authorization', authHeader)
+      .send({ ...createAddressBody(), injected: 'value' })
+      .expect(400);
+  });
+
+  it('POST /addresses returns 400 for an out-of-range latitude', async () => {
+    await request(app.getHttpServer())
+      .post('/addresses')
+      .set('Authorization', authHeader)
+      .send({ ...createAddressBody(), latitude: 200, longitude: 0 })
+      .expect(400);
   });
 
   it('GET /addresses/:id returns 404 for an unknown id', async () => {
@@ -170,6 +213,48 @@ describe('AddressController (e2e)', () => {
     expect(body.items).toHaveLength(1);
     expect(body.page).toBe(1);
     expect(body.pageSize).toBe(20);
+  });
+
+  it('GET /addresses only returns the caller’s own Addresses', async () => {
+    await request(app.getHttpServer())
+      .post('/addresses')
+      .set('Authorization', authHeader)
+      .send(createAddressBody());
+
+    const response = await request(app.getHttpServer())
+      .get('/addresses')
+      .set('Authorization', otherAuthHeader)
+      .expect(200);
+
+    const body = response.body as AddressListResponseDto;
+    expect(body.items).toHaveLength(0);
+    expect(body.total).toBe(0);
+  });
+
+  it('GET /addresses/:id returns 403 for another Identity’s Address', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/addresses')
+      .set('Authorization', authHeader)
+      .send(createAddressBody());
+    const createdId = (created.body as AddressResponseDto).id;
+
+    await request(app.getHttpServer())
+      .get(`/addresses/${createdId}`)
+      .set('Authorization', otherAuthHeader)
+      .expect(403);
+  });
+
+  it('DELETE /addresses/:id returns 403 for another Identity’s Address', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/addresses')
+      .set('Authorization', authHeader)
+      .send(createAddressBody());
+    const createdId = (created.body as AddressResponseDto).id;
+
+    await request(app.getHttpServer())
+      .delete(`/addresses/${createdId}`)
+      .set('Authorization', otherAuthHeader)
+      .expect(403);
   });
 
   it('GET /addresses/search searches by city', async () => {

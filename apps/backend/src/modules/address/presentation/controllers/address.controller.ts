@@ -19,6 +19,8 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { AddressRoutes } from '../routes/address.routes';
 import { AddressSwagger } from '../swagger/address.swagger';
 import { CreateAddressUseCase } from '../../application/use_cases/create-address.use-case';
@@ -49,6 +51,11 @@ import { AddressHttpMapper } from '../dto/address-http.mapper';
  * `list`/`search` are declared before the dynamic `findOne(:id)` route
  * so `GET /addresses/search` resolves to `search()` rather than being
  * matched as `findOne({ id: 'search' })`.
+ *
+ * Every route passes `@CurrentUser()` into its command/query: an
+ * Address is personal data, so `list`/`search` are scoped to the
+ * caller's own records and the `:id` routes reject Addresses owned by
+ * another Identity with 403.
  */
 @ApiTags('Address')
 @UseGuards(JwtAuthGuard)
@@ -77,15 +84,21 @@ export class AddressController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
+    status: 403,
+    description: 'The Address belongs to another Identity.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 404,
     description: 'Identity not found.',
     type: ErrorResponseDto,
   })
   async create(
+    @CurrentUser() caller: AuthenticatedUser,
     @Body() dto: CreateAddressRequestDto,
   ): Promise<AddressResponseDto> {
     const address = await this.createAddressUseCase.execute(
-      AddressHttpMapper.toCreateCommand(dto),
+      AddressHttpMapper.toCreateCommand(caller, dto),
     );
     return AddressHttpMapper.toResponse(address);
   }
@@ -104,16 +117,22 @@ export class AddressController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
+    status: 403,
+    description: 'The Address belongs to another Identity.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 404,
     description: 'Address not found.',
     type: ErrorResponseDto,
   })
   async update(
+    @CurrentUser() caller: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: UpdateAddressRequestDto,
   ): Promise<AddressResponseDto> {
     const address = await this.updateAddressUseCase.execute(
-      AddressHttpMapper.toUpdateCommand(id, dto),
+      AddressHttpMapper.toUpdateCommand(caller, id, dto),
     );
     return AddressHttpMapper.toResponse(address);
   }
@@ -123,12 +142,22 @@ export class AddressController {
   @ApiParam({ name: 'id', description: 'Address id' })
   @ApiResponse({ status: 200, description: 'Address deleted.' })
   @ApiResponse({
+    status: 403,
+    description: 'The Address belongs to another Identity.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 404,
     description: 'Address not found.',
     type: ErrorResponseDto,
   })
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.deleteAddressUseCase.execute(new DeleteAddressCommand(id));
+  async remove(
+    @CurrentUser() caller: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<void> {
+    await this.deleteAddressUseCase.execute(
+      new DeleteAddressCommand(caller, id),
+    );
   }
 
   @Get()
@@ -137,14 +166,16 @@ export class AddressController {
   @ApiQuery({ name: 'pageSize', required: false, example: 20 })
   @ApiResponse({
     status: 200,
-    description: 'Paginated list of Addresses.',
+    description: "Paginated list of the caller's own Addresses.",
     type: AddressListResponseDto,
   })
   async list(
+    @CurrentUser() caller: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ): Promise<AddressListResponseDto> {
     const query = new ListAddressQuery(
+      caller,
       page !== undefined ? Number(page) : undefined,
       pageSize !== undefined ? Number(pageSize) : undefined,
     );
@@ -157,12 +188,15 @@ export class AddressController {
   @ApiQuery({ name: 'term', required: true, example: 'Bogotá' })
   @ApiResponse({
     status: 200,
-    description: 'Addresses matching the search term.',
+    description: "The caller's own Addresses matching the search term.",
     type: [AddressResponseDto],
   })
-  async search(@Query('term') term: string): Promise<AddressResponseDto[]> {
+  async search(
+    @CurrentUser() caller: AuthenticatedUser,
+    @Query('term') term: string,
+  ): Promise<AddressResponseDto[]> {
     const addresses = await this.searchAddressUseCase.execute(
-      new SearchAddressQuery(term),
+      new SearchAddressQuery(caller, term),
     );
     return addresses.map((address) => AddressHttpMapper.toResponse(address));
   }
@@ -176,13 +210,21 @@ export class AddressController {
     type: AddressResponseDto,
   })
   @ApiResponse({
+    status: 403,
+    description: 'The Address belongs to another Identity.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 404,
     description: 'Address not found.',
     type: ErrorResponseDto,
   })
-  async findOne(@Param('id') id: string): Promise<AddressResponseDto> {
+  async findOne(
+    @CurrentUser() caller: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<AddressResponseDto> {
     const address = await this.getAddressUseCase.execute(
-      new GetAddressQuery(id),
+      new GetAddressQuery(caller, id),
     );
     return AddressHttpMapper.toResponse(address);
   }

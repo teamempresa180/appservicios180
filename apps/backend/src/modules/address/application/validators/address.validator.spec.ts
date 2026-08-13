@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { AddressType } from '../../domain/value-objects/address-type.value-object';
 import { AddressStatus } from '../../domain/value-objects/address-status.value-object';
@@ -6,6 +8,8 @@ import { UpdateAddressCommand } from '../commands/update-address.command';
 import { AddressValidator } from './address.validator';
 
 describe('AddressValidator', () => {
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+
   function validCommand(
     overrides: Partial<{
       identityId: string;
@@ -21,6 +25,7 @@ describe('AddressValidator', () => {
     }> = {},
   ): CreateAddressCommand {
     return new CreateAddressCommand(
+      caller,
       overrides.identityId ?? 'identity-1',
       overrides.alias ?? 'Home',
       overrides.fullAddress ?? 'Calle 1 # 2-3',
@@ -141,6 +146,7 @@ describe('AddressValidator', () => {
       expect(() =>
         AddressValidator.validateUpdate(
           new UpdateAddressCommand(
+            caller,
             'id-1',
             'Work',
             'Carrera 9',
@@ -152,20 +158,22 @@ describe('AddressValidator', () => {
 
     it('rejects a blank id', () => {
       expect(() =>
-        AddressValidator.validateUpdate(new UpdateAddressCommand('  ')),
+        AddressValidator.validateUpdate(new UpdateAddressCommand(caller, '  ')),
       ).toThrow(ValidationException);
     });
 
     it('rejects a blank alias when provided', () => {
       expect(() =>
-        AddressValidator.validateUpdate(new UpdateAddressCommand('id-1', '  ')),
+        AddressValidator.validateUpdate(
+          new UpdateAddressCommand(caller, 'id-1', '  '),
+        ),
       ).toThrow(ValidationException);
     });
 
     it('rejects a blank fullAddress when provided', () => {
       expect(() =>
         AddressValidator.validateUpdate(
-          new UpdateAddressCommand('id-1', undefined, '  '),
+          new UpdateAddressCommand(caller, 'id-1', undefined, '  '),
         ),
       ).toThrow(ValidationException);
     });
@@ -174,6 +182,7 @@ describe('AddressValidator', () => {
       expect(() =>
         AddressValidator.validateUpdate(
           new UpdateAddressCommand(
+            caller,
             'id-1',
             undefined,
             undefined,
@@ -185,7 +194,9 @@ describe('AddressValidator', () => {
 
     it('passes when latitude/longitude are both omitted (pin untouched)', () => {
       expect(() =>
-        AddressValidator.validateUpdate(new UpdateAddressCommand('id-1')),
+        AddressValidator.validateUpdate(
+          new UpdateAddressCommand(caller, 'id-1'),
+        ),
       ).not.toThrow();
     });
 
@@ -193,6 +204,7 @@ describe('AddressValidator', () => {
       expect(() =>
         AddressValidator.validateUpdate(
           new UpdateAddressCommand(
+            caller,
             'id-1',
             undefined,
             undefined,
@@ -208,6 +220,7 @@ describe('AddressValidator', () => {
       expect(() =>
         AddressValidator.validateUpdate(
           new UpdateAddressCommand(
+            caller,
             'id-1',
             undefined,
             undefined,
@@ -223,6 +236,7 @@ describe('AddressValidator', () => {
       expect(() =>
         AddressValidator.validateUpdate(
           new UpdateAddressCommand(
+            caller,
             'id-1',
             undefined,
             undefined,
@@ -238,6 +252,7 @@ describe('AddressValidator', () => {
       expect(() =>
         AddressValidator.validateUpdate(
           new UpdateAddressCommand(
+            caller,
             'id-1',
             undefined,
             undefined,
@@ -253,6 +268,7 @@ describe('AddressValidator', () => {
       expect(() =>
         AddressValidator.validateUpdate(
           new UpdateAddressCommand(
+            caller,
             'id-1',
             undefined,
             undefined,

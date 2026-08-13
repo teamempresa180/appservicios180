@@ -1,4 +1,5 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { assertOwnership } from '../../../core/application/ownership';
 import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { Address } from '../../domain/entities/address.entity';
@@ -16,6 +17,10 @@ import { AddressValidator } from '../validators/address.validator';
  * the referenced Identity actually exists before creating an address
  * for it — same rule already applied to `Contact`/`Profile`, since
  * `Address` also references `IdentityId`.
+ *
+ * The `identityId` in the command is caller-supplied, so it is checked
+ * against the authenticated caller: an Address can only be created for
+ * one's own Identity (an `Admin` may create it for anyone).
  */
 export class CreateAddressUseCase {
   constructor(
@@ -25,6 +30,7 @@ export class CreateAddressUseCase {
 
   async execute(command: CreateAddressCommand): Promise<AddressDto> {
     AddressValidator.validateCreate(command);
+    assertOwnership(command.caller, command.identityId, 'Address');
 
     const identityId = IdentityId.fromString(command.identityId);
     const identity = await this.identityRepository.findById(identityId);

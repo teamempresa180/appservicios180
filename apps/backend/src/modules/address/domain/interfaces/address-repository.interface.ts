@@ -18,7 +18,20 @@ export interface AddressRepository {
   findByIdentityId(identityId: IdentityId): Promise<Address[]>;
   save(address: Address): Promise<void>;
   delete(id: AddressId): Promise<void>;
-  list(page: number, pageSize: number): Promise<PaginatedResult<Address>>;
-  /** Free-text match against `alias`/`fullAddress`/`city`. */
-  search(term: string): Promise<Address[]>;
+  /**
+   * Paginates Addresses. `identityId` restricts the page (and its
+   * `total`) to that Identity's own Addresses — an Address is personal
+   * data, so callers list their own unless they are an `Admin`, in
+   * which case the scope is omitted.
+   */
+  list(
+    page: number,
+    pageSize: number,
+    identityId?: IdentityId,
+  ): Promise<PaginatedResult<Address>>;
+  /**
+   * Free-text match against `alias`/`fullAddress`/`city`, scoped to
+   * `identityId` when given — same ownership rule as `list`.
+   */
+  search(term: string, identityId?: IdentityId): Promise<Address[]>;
 }

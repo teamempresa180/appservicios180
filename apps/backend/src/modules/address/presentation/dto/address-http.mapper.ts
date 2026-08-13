@@ -1,3 +1,4 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { CreateAddressCommand } from '../../application/commands/create-address.command';
 import { UpdateAddressCommand } from '../../application/commands/update-address.command';
@@ -12,10 +13,18 @@ import { AddressListResponseDto } from './address-list.response.dto';
  * Application layer's commands/DTOs. The only place that knows both
  * shapes exist — `AddressController` never builds a
  * `CreateAddressCommand` or an `AddressResponseDto` by hand.
+ *
+ * Commands carry the authenticated caller so the Use Cases can enforce
+ * ownership; it comes from `@CurrentUser()`, never from the request
+ * body.
  */
 export class AddressHttpMapper {
-  static toCreateCommand(dto: CreateAddressRequestDto): CreateAddressCommand {
+  static toCreateCommand(
+    caller: AuthenticatedUser,
+    dto: CreateAddressRequestDto,
+  ): CreateAddressCommand {
     return new CreateAddressCommand(
+      caller,
       dto.identityId,
       dto.alias,
       dto.fullAddress,
@@ -30,10 +39,12 @@ export class AddressHttpMapper {
   }
 
   static toUpdateCommand(
+    caller: AuthenticatedUser,
     id: string,
     dto: UpdateAddressRequestDto,
   ): UpdateAddressCommand {
     return new UpdateAddressCommand(
+      caller,
       id,
       dto.alias,
       dto.fullAddress,
