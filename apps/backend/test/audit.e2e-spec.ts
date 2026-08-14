@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -36,6 +36,8 @@ describe('AuditController (e2e)', () => {
   let app: INestApplication<App>;
   let identityId: string;
   let authHeader: string;
+  let otherAuthHeader: string;
+  let adminAuthHeader: string;
 
   beforeEach(async () => {
     const identityRepository = new InMemoryIdentityRepository();
@@ -71,9 +73,19 @@ describe('AuditController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await app.init();
 
     authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
+    otherAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'another-identity', role: 'CUSTOMER' })}`;
+    adminAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'admin-identity', role: 'ADMIN' })}`;
   });
 
   afterEach(async () => {
@@ -97,9 +109,14 @@ describe('AuditController (e2e)', () => {
   });
 
   it('POST /audit-records returns 404 when the Identity does not exist', async () => {
+    const unknownAuthHeader = `Bearer ${signTestAccessToken(
+      app.get(ConfigService),
+      { sub: 'unknown-identity', role: 'CUSTOMER' },
+    )}`;
+
     const response = await request(app.getHttpServer())
       .post('/audit-records')
-      .set('Authorization', authHeader)
+      .set('Authorization', unknownAuthHeader)
       .send({
         identityId: 'unknown-identity',
         actionType: AuditActionType.LoggedIn,
@@ -108,6 +125,35 @@ describe('AuditController (e2e)', () => {
       .expect(404);
 
     expect((response.body as ErrorResponseDto).error).toBe('NotFoundException');
+  });
+
+  it('POST /audit-records returns 403 when writing into another Identity’s trail', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/audit-records')
+      .set('Authorization', otherAuthHeader)
+      .send({
+        identityId,
+        actionType: AuditActionType.LoggedIn,
+        description: 'Forged entry.',
+      })
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
+  it('POST /audit-records returns 400 for an unknown field', async () => {
+    await request(app.getHttpServer())
+      .post('/audit-records')
+      .set('Authorization', authHeader)
+      .send({
+        identityId,
+        actionType: AuditActionType.LoggedIn,
+        description: 'User logged in from a new device.',
+        injected: 'value',
+      })
+      .expect(400);
   });
 
   it('GET /audit-records/:id returns 404 for an unknown id', async () => {
@@ -157,6 +203,61 @@ describe('AuditController (e2e)', () => {
     expect(body.items).toHaveLength(1);
     expect(body.page).toBe(1);
     expect(body.pageSize).toBe(20);
+  });
+
+  it('GET /audit-records only returns the caller’s own trail', async () => {
+    await request(app.getHttpServer())
+      .post('/audit-records')
+      .set('Authorization', authHeader)
+      .send({
+        identityId,
+        actionType: AuditActionType.LoggedIn,
+        description: 'User logged in from a new device.',
+      });
+
+    const response = await request(app.getHttpServer())
+      .get('/audit-records')
+      .set('Authorization', otherAuthHeader)
+      .expect(200);
+
+    const body = response.body as AuditRecordListResponseDto;
+    expect(body.items).toHaveLength(0);
+    expect(body.total).toBe(0);
+  });
+
+  it('GET /audit-records returns the whole system’s trail for an Admin', async () => {
+    await request(app.getHttpServer())
+      .post('/audit-records')
+      .set('Authorization', authHeader)
+      .send({
+        identityId,
+        actionType: AuditActionType.LoggedIn,
+        description: 'User logged in from a new device.',
+      });
+
+    const response = await request(app.getHttpServer())
+      .get('/audit-records')
+      .set('Authorization', adminAuthHeader)
+      .expect(200);
+
+    expect((response.body as AuditRecordListResponseDto).total).toBe(1);
+  });
+
+  it('GET /audit-records/:id returns 403 for another Identity’s record', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/audit-records')
+      .set('Authorization', authHeader)
+      .send({
+        identityId,
+        actionType: AuditActionType.Created,
+        description: 'Profile created.',
+      });
+    const createdId = (created.body as AuditRecordResponseDto).id;
+
+    await request(app.getHttpServer())
+      .get(`/audit-records/${createdId}`)
+      .set('Authorization', otherAuthHeader)
+      .expect(403);
   });
 
   it('GET /audit-records/search searches by description', async () => {

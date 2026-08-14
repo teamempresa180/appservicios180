@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsEnum, IsNotEmpty, IsString, MaxLength } from 'class-validator';
 import { AuditActionType } from '../../domain/value-objects/audit-action-type.value-object';
 
 /**
@@ -9,17 +10,29 @@ import { AuditActionType } from '../../domain/value-objects/audit-action-type.va
  * Swagger). `AuditHttpMapper` translates between the two. There is no
  * update/delete Request DTO — audit records are immutable by design
  * (see `CreateAuditRecordCommand`).
+ *
+ * Every field carries `class-validator` decorators: the global
+ * `ValidationPipe` runs with `whitelist`/`forbidNonWhitelisted`, so an
+ * undecorated field would be stripped from the payload rather than
+ * reaching the Use Case.
  */
 export class CreateAuditRecordRequestDto {
   @ApiProperty({
     example: 'identity-id-123',
     description: 'The id of the Identity this Audit record belongs to.',
   })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(64)
   identityId!: string;
 
   @ApiProperty({ enum: AuditActionType, example: AuditActionType.LoggedIn })
+  @IsEnum(AuditActionType)
   actionType!: AuditActionType;
 
   @ApiProperty({ example: 'User logged in from a new device.' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(2000)
   description!: string;
 }

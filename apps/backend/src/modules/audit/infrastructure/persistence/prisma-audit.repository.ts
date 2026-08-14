@@ -42,14 +42,21 @@ export class PrismaAuditRepository implements AuditRepository {
     });
   }
 
-  async list(page: number, pageSize: number): Promise<PaginatedResult<Audit>> {
+  async list(
+    page: number,
+    pageSize: number,
+    identityId?: IdentityId,
+  ): Promise<PaginatedResult<Audit>> {
+    const where =
+      identityId !== undefined ? { identityId: identityId.value } : {};
     const [rows, total] = await Promise.all([
       this.prisma.auditModel.findMany({
+        where,
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy: { occurredAt: 'desc' },
       }),
-      this.prisma.auditModel.count(),
+      this.prisma.auditModel.count({ where }),
     ]);
     return {
       items: rows.map((row) => AuditPrismaMapper.toDomain(row)),
@@ -59,9 +66,14 @@ export class PrismaAuditRepository implements AuditRepository {
     };
   }
 
-  async search(term: string): Promise<Audit[]> {
+  async search(term: string, identityId?: IdentityId): Promise<Audit[]> {
     const rows = await this.prisma.auditModel.findMany({
-      where: { description: { contains: term } },
+      where: {
+        ...(identityId !== undefined
+          ? { identityId: identityId.value }
+          : undefined),
+        description: { contains: term },
+      },
       orderBy: { occurredAt: 'desc' },
       take: MAX_UNPAGINATED_RESULTS,
     });

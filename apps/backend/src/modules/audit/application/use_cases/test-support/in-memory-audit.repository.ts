@@ -25,8 +25,14 @@ export class InMemoryAuditRepository implements AuditRepository {
     return Promise.resolve();
   }
 
-  list(page: number, pageSize: number): Promise<PaginatedResult<Audit>> {
-    const all = [...this.rows.values()];
+  list(
+    page: number,
+    pageSize: number,
+    identityId?: IdentityId,
+  ): Promise<PaginatedResult<Audit>> {
+    const all = [...this.rows.values()].filter(
+      (row) => identityId === undefined || row.identityId.equals(identityId),
+    );
     const start = (page - 1) * pageSize;
     return Promise.resolve({
       items: all.slice(start, start + pageSize),
@@ -36,13 +42,14 @@ export class InMemoryAuditRepository implements AuditRepository {
     });
   }
 
-  search(term: string): Promise<Audit[]> {
+  search(term: string, identityId?: IdentityId): Promise<Audit[]> {
     const lower = term.toLowerCase();
     return Promise.resolve(
       [...this.rows.values()].filter(
         (row) =>
-          row.description.toLowerCase().includes(lower) ||
-          row.actionType.toLowerCase().includes(lower),
+          (identityId === undefined || row.identityId.equals(identityId)) &&
+          (row.description.toLowerCase().includes(lower) ||
+            row.actionType.toLowerCase().includes(lower)),
       ),
     );
   }

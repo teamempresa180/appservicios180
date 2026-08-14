@@ -1,9 +1,13 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { AuditRecordDto } from '../../application/dto/audit-record.dto';
 import { AuditActionType } from '../../domain/value-objects/audit-action-type.value-object';
 import { CreateAuditRecordRequestDto } from './create-audit-record.request.dto';
 import { AuditHttpMapper } from './audit-http.mapper';
 
 describe('AuditHttpMapper', () => {
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+
   it('toCreateCommand() carries identityId/actionType/description through', () => {
     const dto: CreateAuditRecordRequestDto = {
       identityId: 'identity-1',
@@ -11,7 +15,7 @@ describe('AuditHttpMapper', () => {
       description: 'Profile updated.',
     };
 
-    const command = AuditHttpMapper.toCreateCommand(dto);
+    const command = AuditHttpMapper.toCreateCommand(caller, dto);
 
     expect(command.identityId).toBe('identity-1');
     expect(command.actionType).toBe(AuditActionType.Updated);

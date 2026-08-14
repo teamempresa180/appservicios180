@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { AuditController } from './audit.controller';
 import { CreateAuditRecordUseCase } from '../../application/use_cases/create-audit-record.use-case';
 import { GetAuditUseCase } from '../../application/use_cases/get-audit.use-case';
@@ -17,6 +19,8 @@ describe('AuditController', () => {
   let getUseCase: { execute: jest.Mock };
   let listUseCase: { execute: jest.Mock };
   let searchUseCase: { execute: jest.Mock };
+
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
 
   const auditDto: AuditRecordDto = {
     id: 'id-1',
@@ -54,10 +58,11 @@ describe('AuditController', () => {
       description: 'User logged in from a new device.',
     };
 
-    const response = await controller.create(dto);
+    const response = await controller.create(caller, dto);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
       new CreateAuditRecordCommand(
+        caller,
         'identity-1',
         AuditActionType.LoggedIn,
         'User logged in from a new device.',
@@ -67,27 +72,31 @@ describe('AuditController', () => {
   });
 
   it('list() maps page/pageSize query params to a query and wraps the paginated result', async () => {
-    const response = await controller.list('2', '10');
+    const response = await controller.list(caller, '2', '10');
 
-    expect(listUseCase.execute).toHaveBeenCalledWith(new ListAuditQuery(2, 10));
+    expect(listUseCase.execute).toHaveBeenCalledWith(
+      new ListAuditQuery(caller, 2, 10),
+    );
     expect(response.items).toHaveLength(1);
     expect(response.total).toBe(1);
   });
 
   it('search() maps the term query param and the Application DTOs to response DTOs', async () => {
-    const response = await controller.search('logged in');
+    const response = await controller.search(caller, 'logged in');
 
     expect(searchUseCase.execute).toHaveBeenCalledWith(
-      new SearchAuditQuery('logged in'),
+      new SearchAuditQuery(caller, 'logged in'),
     );
     expect(response).toHaveLength(1);
     expect(response[0].actionType).toBe(AuditActionType.LoggedIn);
   });
 
   it('findOne() maps the Application DTO returned by GetAuditUseCase', async () => {
-    const response = await controller.findOne('id-1');
+    const response = await controller.findOne(caller, 'id-1');
 
-    expect(getUseCase.execute).toHaveBeenCalledWith(new GetAuditQuery('id-1'));
+    expect(getUseCase.execute).toHaveBeenCalledWith(
+      new GetAuditQuery(caller, 'id-1'),
+    );
     expect(response.description).toBe('User logged in from a new device.');
   });
 });
