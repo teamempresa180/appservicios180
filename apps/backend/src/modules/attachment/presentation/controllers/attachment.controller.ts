@@ -18,6 +18,8 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { AttachmentRoutes } from '../routes/attachment.routes';
 import { AttachmentSwagger } from '../swagger/attachment.swagger';
@@ -90,10 +92,11 @@ export class AttachmentController {
     type: ErrorResponseDto,
   })
   async create(
+    @CurrentUser() caller: AuthenticatedUser,
     @Body() dto: CreateAttachmentRequestDto,
   ): Promise<AttachmentResponseDto> {
     const attachment = await this.createAttachmentUseCase.execute(
-      AttachmentHttpMapper.toCreateCommand(dto),
+      AttachmentHttpMapper.toCreateCommand(caller, dto),
     );
     return AttachmentHttpMapper.toResponse(attachment);
   }
@@ -107,8 +110,13 @@ export class AttachmentController {
     description: 'Attachment not found.',
     type: ErrorResponseDto,
   })
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.deleteAttachmentUseCase.execute(new DeleteAttachmentCommand(id));
+  async remove(
+    @CurrentUser() caller: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<void> {
+    await this.deleteAttachmentUseCase.execute(
+      new DeleteAttachmentCommand(caller, id),
+    );
   }
 
   @Get()
@@ -121,10 +129,12 @@ export class AttachmentController {
     type: AttachmentListResponseDto,
   })
   async list(
+    @CurrentUser() caller: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ): Promise<AttachmentListResponseDto> {
     const query = new ListAttachmentQuery(
+      caller,
       page !== undefined ? Number(page) : undefined,
       pageSize !== undefined ? Number(pageSize) : undefined,
     );
@@ -140,9 +150,12 @@ export class AttachmentController {
     description: 'Attachments matching the search term.',
     type: [AttachmentResponseDto],
   })
-  async search(@Query('term') term: string): Promise<AttachmentResponseDto[]> {
+  async search(
+    @CurrentUser() caller: AuthenticatedUser,
+    @Query('term') term: string,
+  ): Promise<AttachmentResponseDto[]> {
     const attachments = await this.searchAttachmentUseCase.execute(
-      new SearchAttachmentQuery(term),
+      new SearchAttachmentQuery(caller, term),
     );
     return attachments.map((attachment) =>
       AttachmentHttpMapper.toResponse(attachment),
@@ -162,9 +175,12 @@ export class AttachmentController {
     description: 'Attachment not found.',
     type: ErrorResponseDto,
   })
-  async findOne(@Param('id') id: string): Promise<AttachmentResponseDto> {
+  async findOne(
+    @CurrentUser() caller: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<AttachmentResponseDto> {
     const attachment = await this.getAttachmentUseCase.execute(
-      new GetAttachmentQuery(id),
+      new GetAttachmentQuery(caller, id),
     );
     if (!attachment) {
       throw new NotFoundException(`Attachment ${id} not found`);

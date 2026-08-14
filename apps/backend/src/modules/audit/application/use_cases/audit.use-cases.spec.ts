@@ -1,3 +1,6 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Identity } from '../../../identity/domain/entities/identity.entity';
@@ -20,6 +23,7 @@ describe('Audit use cases', () => {
   let repository: InMemoryAuditRepository;
   let identityRepository: InMemoryIdentityRepository;
   let identityId: string;
+  let caller: AuthenticatedUser;
 
   beforeEach(async () => {
     repository = new InMemoryAuditRepository();
@@ -37,6 +41,7 @@ describe('Audit use cases', () => {
     });
     await identityRepository.save(identity);
     identityId = identity.id.value;
+    caller = { id: identityId, role: Role.Customer };
   });
 
   describe('CreateAuditRecordUseCase', () => {
@@ -47,6 +52,7 @@ describe('Audit use cases', () => {
       );
       const dto = await useCase.execute(
         new CreateAuditRecordCommand(
+          caller,
           identityId,
           AuditActionType.LoggedIn,
           'User logged in',
@@ -63,9 +69,14 @@ describe('Audit use cases', () => {
         repository,
         identityRepository,
       );
+      const unknownCaller: AuthenticatedUser = {
+        id: 'unknown-identity',
+        role: Role.Customer,
+      };
       await expect(
         useCase.execute(
           new CreateAuditRecordCommand(
+            unknownCaller,
             'unknown-identity',
             AuditActionType.LoggedIn,
             'User logged in',
@@ -82,6 +93,7 @@ describe('Audit use cases', () => {
       await expect(
         useCase.execute(
           new CreateAuditRecordCommand(
+            caller,
             identityId,
             AuditActionType.LoggedIn,
             '  ',
@@ -98,6 +110,7 @@ describe('Audit use cases', () => {
       await expect(
         useCase.execute(
           new CreateAuditRecordCommand(
+            caller,
             identityId,
             'NOT_A_TYPE' as AuditActionType,
             'User logged in',
@@ -111,7 +124,7 @@ describe('Audit use cases', () => {
     it('throws NotFoundException when it does not exist', async () => {
       await expect(
         new GetAuditUseCase(repository).execute(
-          new GetAuditQuery('unknown-id'),
+          new GetAuditQuery(caller, 'unknown-id'),
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -125,6 +138,7 @@ describe('Audit use cases', () => {
       );
       await createUseCase.execute(
         new CreateAuditRecordCommand(
+          caller,
           identityId,
           AuditActionType.Created,
           'Record A',
@@ -132,6 +146,7 @@ describe('Audit use cases', () => {
       );
       await createUseCase.execute(
         new CreateAuditRecordCommand(
+          caller,
           identityId,
           AuditActionType.Updated,
           'Record B',
@@ -139,11 +154,100 @@ describe('Audit use cases', () => {
       );
 
       const page = await new ListAuditUseCase(repository).execute(
-        new ListAuditQuery(1, 1),
+        new ListAuditQuery(caller, 1, 1),
       );
 
       expect(page.items).toHaveLength(1);
       expect(page.total).toBe(2);
+    });
+  });
+
+  describe('ownership', () => {
+    const intruder: AuthenticatedUser = {
+      id: 'another-identity',
+      role: Role.Customer,
+    };
+    const admin: AuthenticatedUser = {
+      id: 'admin-identity',
+      role: Role.Admin,
+    };
+
+    async function seedOwnedRecord(): Promise<string> {
+      const created = await new CreateAuditRecordUseCase(
+        repository,
+        identityRepository,
+      ).execute(
+        new CreateAuditRecordCommand(
+          caller,
+          identityId,
+          AuditActionType.LoggedIn,
+          'Owner logged in',
+        ),
+      );
+      return created.id;
+    }
+
+    it('CreateAuditRecordUseCase rejects writing into another Identity’s trail', async () => {
+      await expect(
+        new CreateAuditRecordUseCase(repository, identityRepository).execute(
+          new CreateAuditRecordCommand(
+            intruder,
+            identityId,
+            AuditActionType.LoggedIn,
+            'Forged entry',
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('GetAuditUseCase rejects another Identity’s Audit record', async () => {
+      const id = await seedOwnedRecord();
+      await expect(
+        new GetAuditUseCase(repository).execute(
+          new GetAuditQuery(intruder, id),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('ListAuditUseCase hides Audit records owned by another Identity', async () => {
+      await seedOwnedRecord();
+
+      const page = await new ListAuditUseCase(repository).execute(
+        new ListAuditQuery(intruder),
+      );
+
+      expect(page.items).toHaveLength(0);
+      expect(page.total).toBe(0);
+    });
+
+    it('SearchAuditUseCase hides Audit records owned by another Identity', async () => {
+      await seedOwnedRecord();
+
+      const results = await new SearchAuditUseCase(repository).execute(
+        new SearchAuditQuery(intruder, 'logged in'),
+      );
+
+      expect(results).toHaveLength(0);
+    });
+
+    it('an Admin caller reads the whole system’s trail', async () => {
+      await seedOwnedRecord();
+
+      const page = await new ListAuditUseCase(repository).execute(
+        new ListAuditQuery(admin),
+      );
+
+      expect(page.total).toBe(1);
+    });
+
+    it('an Admin caller may read a single record from another Identity’s trail', async () => {
+      const id = await seedOwnedRecord();
+
+      const dto = await new GetAuditUseCase(repository).execute(
+        new GetAuditQuery(admin, id),
+      );
+
+      expect(dto.identityId).toBe(identityId);
     });
   });
 
@@ -154,6 +258,7 @@ describe('Audit use cases', () => {
         identityRepository,
       ).execute(
         new CreateAuditRecordCommand(
+          caller,
           identityId,
           AuditActionType.Other,
           'Special marker event',
@@ -161,7 +266,7 @@ describe('Audit use cases', () => {
       );
 
       const results = await new SearchAuditUseCase(repository).execute(
-        new SearchAuditQuery('special'),
+        new SearchAuditQuery(caller, 'special'),
       );
 
       expect(results).toHaveLength(1);

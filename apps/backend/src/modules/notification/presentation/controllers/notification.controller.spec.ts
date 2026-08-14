@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { NotificationController } from './notification.controller';
 import { CreateNotificationUseCase } from '../../application/use_cases/create-notification.use-case';
 import { MarkNotificationAsReadUseCase } from '../../application/use_cases/mark-notification-as-read.use-case';
@@ -25,6 +27,8 @@ describe('NotificationController', () => {
   let getUseCase: { execute: jest.Mock };
   let listUseCase: { execute: jest.Mock };
   let searchUseCase: { execute: jest.Mock };
+
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
 
   const notificationDto: NotificationDto = {
     id: 'id-1',
@@ -72,10 +76,11 @@ describe('NotificationController', () => {
       type: NotificationType.Info,
     };
 
-    const response = await controller.create(dto);
+    const response = await controller.create(caller, dto);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
       new CreateNotificationCommand(
+        caller,
         'identity-1',
         'Your order was accepted',
         'Provider accepted your request.',
@@ -86,47 +91,47 @@ describe('NotificationController', () => {
   });
 
   it('markAsRead() delegates to MarkNotificationAsReadUseCase with the id', async () => {
-    const response = await controller.markAsRead('id-1');
+    const response = await controller.markAsRead(caller, 'id-1');
 
     expect(markAsReadUseCase.execute).toHaveBeenCalledWith(
-      new MarkNotificationAsReadCommand('id-1'),
+      new MarkNotificationAsReadCommand(caller, 'id-1'),
     );
     expect(response.id).toBe('id-1');
   });
 
   it('remove() delegates to DeleteNotificationUseCase with the id', async () => {
-    await controller.remove('id-1');
+    await controller.remove(caller, 'id-1');
 
     expect(deleteUseCase.execute).toHaveBeenCalledWith(
-      new DeleteNotificationCommand('id-1'),
+      new DeleteNotificationCommand(caller, 'id-1'),
     );
   });
 
   it('list() maps page/pageSize query params to a query and wraps the paginated result', async () => {
-    const response = await controller.list('2', '10');
+    const response = await controller.list(caller, '2', '10');
 
     expect(listUseCase.execute).toHaveBeenCalledWith(
-      new ListNotificationQuery(2, 10),
+      new ListNotificationQuery(caller, 2, 10),
     );
     expect(response.items).toHaveLength(1);
     expect(response.total).toBe(1);
   });
 
   it('search() maps the term query param and the Application DTOs to response DTOs', async () => {
-    const response = await controller.search('order');
+    const response = await controller.search(caller, 'order');
 
     expect(searchUseCase.execute).toHaveBeenCalledWith(
-      new SearchNotificationQuery('order'),
+      new SearchNotificationQuery(caller, 'order'),
     );
     expect(response).toHaveLength(1);
     expect(response[0].title).toBe('Your order was accepted');
   });
 
   it('findOne() maps the Application DTO returned by GetNotificationUseCase', async () => {
-    const response = await controller.findOne('id-1');
+    const response = await controller.findOne(caller, 'id-1');
 
     expect(getUseCase.execute).toHaveBeenCalledWith(
-      new GetNotificationQuery('id-1'),
+      new GetNotificationQuery(caller, 'id-1'),
     );
     expect(response.title).toBe('Your order was accepted');
   });
@@ -134,7 +139,7 @@ describe('NotificationController', () => {
   it('findOne() throws NotFoundException when GetNotificationUseCase returns null', async () => {
     getUseCase.execute.mockResolvedValue(null);
 
-    await expect(controller.findOne('unknown-id')).rejects.toThrow(
+    await expect(controller.findOne(caller, 'unknown-id')).rejects.toThrow(
       NotFoundException,
     );
   });

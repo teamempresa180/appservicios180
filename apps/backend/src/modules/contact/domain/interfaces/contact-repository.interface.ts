@@ -18,7 +18,21 @@ export interface ContactRepository {
   findByIdentityId(identityId: IdentityId): Promise<Contact[]>;
   save(contact: Contact): Promise<void>;
   delete(id: ContactId): Promise<void>;
-  list(page: number, pageSize: number): Promise<PaginatedResult<Contact>>;
-  /** Free-text match against `value`. */
-  search(term: string): Promise<Contact[]>;
+  /**
+   * Paginates Contacts. `identityId` restricts the page (and its
+   * `total`) to that Identity's own contact channels — an email
+   * address or phone number is personal data, so callers list their
+   * own unless they are an `Admin`, in which case the scope is
+   * omitted.
+   */
+  list(
+    page: number,
+    pageSize: number,
+    identityId?: IdentityId,
+  ): Promise<PaginatedResult<Contact>>;
+  /**
+   * Free-text match against `value`, scoped to `identityId` when given
+   * — same ownership rule as `list`.
+   */
+  search(term: string, identityId?: IdentityId): Promise<Contact[]>;
 }

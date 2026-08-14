@@ -50,10 +50,7 @@ export class AddressValidator {
         `type must be one of: ${Object.values(AddressType).join(', ')}`,
       );
     }
-    AddressValidator.validateCoordinates(
-      command.latitude,
-      command.longitude,
-    );
+    AddressValidator.validateCoordinates(command.latitude, command.longitude);
   }
 
   static validateUpdate(command: UpdateAddressCommand): void {
@@ -116,7 +113,11 @@ export class AddressValidator {
     }
 
     if (typeof latitude === 'number') {
-      if (Number.isNaN(latitude) || latitude < MIN_LATITUDE || latitude > MAX_LATITUDE) {
+      if (
+        Number.isNaN(latitude) ||
+        latitude < MIN_LATITUDE ||
+        latitude > MAX_LATITUDE
+      ) {
         throw new ValidationException(
           `latitude must be between ${MIN_LATITUDE} and ${MAX_LATITUDE}`,
         );

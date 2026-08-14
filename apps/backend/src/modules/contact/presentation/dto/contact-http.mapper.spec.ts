@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { ContactDto } from '../../application/dto/contact.dto';
 import { ContactType } from '../../domain/value-objects/contact-type.value-object';
 import { ContactStatus } from '../../domain/value-objects/contact-status.value-object';
@@ -6,6 +8,8 @@ import { UpdateContactRequestDto } from './update-contact.request.dto';
 import { ContactHttpMapper } from './contact-http.mapper';
 
 describe('ContactHttpMapper', () => {
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+
   it('toCreateCommand() carries identityId/type/value through', () => {
     const dto: CreateContactRequestDto = {
       identityId: 'identity-1',
@@ -13,7 +17,7 @@ describe('ContactHttpMapper', () => {
       value: '+573001234567',
     };
 
-    const command = ContactHttpMapper.toCreateCommand(dto);
+    const command = ContactHttpMapper.toCreateCommand(caller, dto);
 
     expect(command.identityId).toBe('identity-1');
     expect(command.type).toBe(ContactType.Phone);
@@ -23,7 +27,7 @@ describe('ContactHttpMapper', () => {
   it('toUpdateCommand() carries the id and optional fields through', () => {
     const dto: UpdateContactRequestDto = { status: ContactStatus.Inactive };
 
-    const command = ContactHttpMapper.toUpdateCommand('id-1', dto);
+    const command = ContactHttpMapper.toUpdateCommand(caller, 'id-1', dto);
 
     expect(command.id).toBe('id-1');
     expect(command.status).toBe(ContactStatus.Inactive);

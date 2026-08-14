@@ -1,3 +1,6 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Identity } from '../../../identity/domain/entities/identity.entity';
@@ -25,6 +28,7 @@ describe('Address use cases', () => {
   let repository: InMemoryAddressRepository;
   let identityRepository: InMemoryIdentityRepository;
   let identityId: string;
+  let caller: AuthenticatedUser;
 
   beforeEach(async () => {
     repository = new InMemoryAddressRepository();
@@ -42,6 +46,7 @@ describe('Address use cases', () => {
     });
     await identityRepository.save(identity);
     identityId = identity.id.value;
+    caller = { id: identityId, role: Role.Customer };
   });
 
   function createCommand(
@@ -52,6 +57,7 @@ describe('Address use cases', () => {
     }> = {},
   ): CreateAddressCommand {
     return new CreateAddressCommand(
+      caller,
       identityId,
       overrides.alias ?? 'Home',
       'Calle 1 # 2-3',
@@ -105,9 +111,14 @@ describe('Address use cases', () => {
 
     it('throws NotFoundException when the Identity does not exist', async () => {
       const useCase = new CreateAddressUseCase(repository, identityRepository);
+      const unknownCaller: AuthenticatedUser = {
+        id: 'unknown-identity',
+        role: Role.Customer,
+      };
       await expect(
         useCase.execute(
           new CreateAddressCommand(
+            unknownCaller,
             'unknown-identity',
             'Home',
             'Calle 1',
@@ -133,6 +144,7 @@ describe('Address use cases', () => {
       await expect(
         useCase.execute(
           new CreateAddressCommand(
+            caller,
             identityId,
             'Home',
             'Calle 1',
@@ -151,7 +163,7 @@ describe('Address use cases', () => {
     it('throws NotFoundException when it does not exist', async () => {
       await expect(
         new GetAddressUseCase(repository).execute(
-          new GetAddressQuery('unknown-id'),
+          new GetAddressQuery(caller, 'unknown-id'),
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -166,6 +178,7 @@ describe('Address use cases', () => {
 
       const updated = await new UpdateAddressUseCase(repository).execute(
         new UpdateAddressCommand(
+          caller,
           created.id,
           'Work',
           'Carrera 9 # 10-11',
@@ -181,7 +194,7 @@ describe('Address use cases', () => {
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
         new UpdateAddressUseCase(repository).execute(
-          new UpdateAddressCommand('unknown-id', 'Work'),
+          new UpdateAddressCommand(caller, 'unknown-id', 'Work'),
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -194,6 +207,7 @@ describe('Address use cases', () => {
 
       const updated = await new UpdateAddressUseCase(repository).execute(
         new UpdateAddressCommand(
+          caller,
           created.id,
           undefined,
           undefined,
@@ -211,12 +225,10 @@ describe('Address use cases', () => {
       const created = await new CreateAddressUseCase(
         repository,
         identityRepository,
-      ).execute(
-        createCommand({ latitude: 4.710989, longitude: -74.072092 }),
-      );
+      ).execute(createCommand({ latitude: 4.710989, longitude: -74.072092 }));
 
       const updated = await new UpdateAddressUseCase(repository).execute(
-        new UpdateAddressCommand(created.id, 'Work'),
+        new UpdateAddressCommand(caller, created.id, 'Work'),
       );
 
       expect(updated.latitude).toBe(4.710989);
@@ -227,12 +239,11 @@ describe('Address use cases', () => {
       const created = await new CreateAddressUseCase(
         repository,
         identityRepository,
-      ).execute(
-        createCommand({ latitude: 4.710989, longitude: -74.072092 }),
-      );
+      ).execute(createCommand({ latitude: 4.710989, longitude: -74.072092 }));
 
       const updated = await new UpdateAddressUseCase(repository).execute(
         new UpdateAddressCommand(
+          caller,
           created.id,
           undefined,
           undefined,
@@ -255,6 +266,7 @@ describe('Address use cases', () => {
       await expect(
         new UpdateAddressUseCase(repository).execute(
           new UpdateAddressCommand(
+            caller,
             created.id,
             undefined,
             undefined,
@@ -275,12 +287,12 @@ describe('Address use cases', () => {
       ).execute(createCommand());
 
       await new DeleteAddressUseCase(repository).execute(
-        new DeleteAddressCommand(created.id),
+        new DeleteAddressCommand(caller, created.id),
       );
 
       await expect(
         new GetAddressUseCase(repository).execute(
-          new GetAddressQuery(created.id),
+          new GetAddressQuery(caller, created.id),
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -288,7 +300,7 @@ describe('Address use cases', () => {
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
         new DeleteAddressUseCase(repository).execute(
-          new DeleteAddressCommand('unknown-id'),
+          new DeleteAddressCommand(caller, 'unknown-id'),
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -304,11 +316,106 @@ describe('Address use cases', () => {
       await createUseCase.execute(createCommand({ alias: 'B' }));
 
       const page = await new ListAddressUseCase(repository).execute(
-        new ListAddressQuery(1, 1),
+        new ListAddressQuery(caller, 1, 1),
       );
 
       expect(page.items).toHaveLength(1);
       expect(page.total).toBe(2);
+    });
+  });
+
+  describe('ownership', () => {
+    const intruder: AuthenticatedUser = {
+      id: 'another-identity',
+      role: Role.Customer,
+    };
+    const admin: AuthenticatedUser = {
+      id: 'admin-identity',
+      role: Role.Admin,
+    };
+
+    async function seedOwnedAddress(): Promise<string> {
+      const created = await new CreateAddressUseCase(
+        repository,
+        identityRepository,
+      ).execute(createCommand());
+      return created.id;
+    }
+
+    it('CreateAddressUseCase rejects an identityId that is not the caller', async () => {
+      await expect(
+        new CreateAddressUseCase(repository, identityRepository).execute(
+          new CreateAddressCommand(
+            intruder,
+            identityId,
+            'Home',
+            'Calle 1',
+            'Bogotá',
+            'Cundinamarca',
+            'Colombia',
+            '110111',
+            AddressType.Home,
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('GetAddressUseCase rejects another Identity’s Address', async () => {
+      const id = await seedOwnedAddress();
+      await expect(
+        new GetAddressUseCase(repository).execute(
+          new GetAddressQuery(intruder, id),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('UpdateAddressUseCase rejects another Identity’s Address', async () => {
+      const id = await seedOwnedAddress();
+      await expect(
+        new UpdateAddressUseCase(repository).execute(
+          new UpdateAddressCommand(intruder, id, 'Hijacked'),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('DeleteAddressUseCase rejects another Identity’s Address', async () => {
+      const id = await seedOwnedAddress();
+      await expect(
+        new DeleteAddressUseCase(repository).execute(
+          new DeleteAddressCommand(intruder, id),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('ListAddressUseCase hides Addresses owned by another Identity', async () => {
+      await seedOwnedAddress();
+
+      const page = await new ListAddressUseCase(repository).execute(
+        new ListAddressQuery(intruder),
+      );
+
+      expect(page.items).toHaveLength(0);
+      expect(page.total).toBe(0);
+    });
+
+    it('SearchAddressUseCase hides Addresses owned by another Identity', async () => {
+      await seedOwnedAddress();
+
+      const results = await new SearchAddressUseCase(repository).execute(
+        new SearchAddressQuery(intruder, 'Bogotá'),
+      );
+
+      expect(results).toHaveLength(0);
+    });
+
+    it('an Admin caller sees every Address', async () => {
+      await seedOwnedAddress();
+
+      const page = await new ListAddressUseCase(repository).execute(
+        new ListAddressQuery(admin),
+      );
+
+      expect(page.total).toBe(1);
     });
   });
 
@@ -319,7 +426,7 @@ describe('Address use cases', () => {
       );
 
       const results = await new SearchAddressUseCase(repository).execute(
-        new SearchAddressQuery('special'),
+        new SearchAddressQuery(caller, 'special'),
       );
 
       expect(results).toHaveLength(1);

@@ -1,4 +1,5 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { assertOwnership } from '../../../core/application/ownership';
 import { Address } from '../../domain/entities/address.entity';
 import { AddressRepository } from '../../domain/interfaces/address-repository.interface';
 import { AddressId } from '../../domain/value-objects/address-id.value-object';
@@ -29,6 +30,7 @@ export class UpdateAddressUseCase {
     if (!existing) {
       throw new NotFoundException(`Address ${command.id} not found`);
     }
+    assertOwnership(command.caller, existing.identityId.value, 'Address');
 
     const updated = new Address(existing.id, {
       identityId: existing.identityId,
@@ -38,8 +40,12 @@ export class UpdateAddressUseCase {
       state: existing.state,
       country: existing.country,
       postalCode: existing.postalCode,
-      latitude: command.latitude !== undefined ? command.latitude : existing.latitude,
-      longitude: command.longitude !== undefined ? command.longitude : existing.longitude,
+      latitude:
+        command.latitude !== undefined ? command.latitude : existing.latitude,
+      longitude:
+        command.longitude !== undefined
+          ? command.longitude
+          : existing.longitude,
       type: existing.type,
       status: command.status ?? existing.status,
       createdAt: existing.createdAt,

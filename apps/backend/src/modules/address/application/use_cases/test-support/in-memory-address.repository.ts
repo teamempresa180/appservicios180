@@ -30,8 +30,14 @@ export class InMemoryAddressRepository implements AddressRepository {
     return Promise.resolve();
   }
 
-  list(page: number, pageSize: number): Promise<PaginatedResult<Address>> {
-    const all = [...this.rows.values()];
+  list(
+    page: number,
+    pageSize: number,
+    identityId?: IdentityId,
+  ): Promise<PaginatedResult<Address>> {
+    const all = [...this.rows.values()].filter(
+      (row) => identityId === undefined || row.identityId.equals(identityId),
+    );
     const start = (page - 1) * pageSize;
     return Promise.resolve({
       items: all.slice(start, start + pageSize),
@@ -41,14 +47,15 @@ export class InMemoryAddressRepository implements AddressRepository {
     });
   }
 
-  search(term: string): Promise<Address[]> {
+  search(term: string, identityId?: IdentityId): Promise<Address[]> {
     const lower = term.toLowerCase();
     return Promise.resolve(
       [...this.rows.values()].filter(
         (row) =>
-          row.alias.toLowerCase().includes(lower) ||
-          row.fullAddress.toLowerCase().includes(lower) ||
-          row.city.toLowerCase().includes(lower),
+          (identityId === undefined || row.identityId.equals(identityId)) &&
+          (row.alias.toLowerCase().includes(lower) ||
+            row.fullAddress.toLowerCase().includes(lower) ||
+            row.city.toLowerCase().includes(lower)),
       ),
     );
   }

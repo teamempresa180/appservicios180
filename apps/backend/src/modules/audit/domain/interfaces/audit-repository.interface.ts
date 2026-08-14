@@ -18,7 +18,20 @@ export interface AuditRepository {
   findById(id: AuditId): Promise<Audit | null>;
   findByIdentityId(identityId: IdentityId): Promise<Audit[]>;
   save(audit: Audit): Promise<void>;
-  list(page: number, pageSize: number): Promise<PaginatedResult<Audit>>;
-  /** Free-text match against `description`/`actionType`. */
-  search(term: string): Promise<Audit[]>;
+  /**
+   * Paginates Audit records. `identityId` restricts the page (and its
+   * `total`) to that Identity's own trail — an audit entry names what
+   * a specific user did and when, so callers read their own unless
+   * they are an `Admin`, in which case the scope is omitted.
+   */
+  list(
+    page: number,
+    pageSize: number,
+    identityId?: IdentityId,
+  ): Promise<PaginatedResult<Audit>>;
+  /**
+   * Free-text match against `description`/`actionType`, scoped to
+   * `identityId` when given — same ownership rule as `list`.
+   */
+  search(term: string, identityId?: IdentityId): Promise<Audit[]>;
 }

@@ -1,3 +1,6 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Identity } from '../../../identity/domain/entities/identity.entity';
@@ -25,6 +28,7 @@ describe('Notification use cases', () => {
   let repository: InMemoryNotificationRepository;
   let identityRepository: InMemoryIdentityRepository;
   let identityId: string;
+  let caller: AuthenticatedUser;
 
   beforeEach(async () => {
     repository = new InMemoryNotificationRepository();
@@ -42,10 +46,12 @@ describe('Notification use cases', () => {
     });
     await identityRepository.save(identity);
     identityId = identity.id.value;
+    caller = { id: identityId, role: Role.Customer };
   });
 
   function createCommand(overrides: Partial<{ title: string }> = {}) {
     return new CreateNotificationCommand(
+      caller,
       identityId,
       overrides.title ?? 'Your order was accepted',
       'Provider accepted your order request.',
@@ -70,6 +76,7 @@ describe('Notification use cases', () => {
       await expect(
         useCase().execute(
           new CreateNotificationCommand(
+            caller,
             'unknown-identity',
             'title',
             'body',
@@ -83,6 +90,7 @@ describe('Notification use cases', () => {
       await expect(
         useCase().execute(
           new CreateNotificationCommand(
+            caller,
             identityId,
             '  ',
             'body',
@@ -96,7 +104,7 @@ describe('Notification use cases', () => {
   describe('GetNotificationUseCase', () => {
     it('returns null when it does not exist', async () => {
       const result = await new GetNotificationUseCase(repository).execute(
-        new GetNotificationQuery('unknown-id'),
+        new GetNotificationQuery(caller, 'unknown-id'),
       );
       expect(result).toBeNull();
     });
@@ -105,7 +113,7 @@ describe('Notification use cases', () => {
       const created = await useCase().execute(createCommand());
 
       const result = await new GetNotificationUseCase(repository).execute(
-        new GetNotificationQuery(created.id),
+        new GetNotificationQuery(caller, created.id),
       );
       expect(result?.id).toBe(created.id);
     });
@@ -116,7 +124,7 @@ describe('Notification use cases', () => {
       const created = await useCase().execute(createCommand());
 
       const read = await new MarkNotificationAsReadUseCase(repository).execute(
-        new MarkNotificationAsReadCommand(created.id),
+        new MarkNotificationAsReadCommand(caller, created.id),
       );
 
       expect(read.status).toBe(NotificationStatus.Read);
@@ -126,7 +134,7 @@ describe('Notification use cases', () => {
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
         new MarkNotificationAsReadUseCase(repository).execute(
-          new MarkNotificationAsReadCommand('unknown-id'),
+          new MarkNotificationAsReadCommand(caller, 'unknown-id'),
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -137,11 +145,11 @@ describe('Notification use cases', () => {
       const created = await useCase().execute(createCommand());
 
       await new DeleteNotificationUseCase(repository).execute(
-        new DeleteNotificationCommand(created.id),
+        new DeleteNotificationCommand(caller, created.id),
       );
 
       const result = await new GetNotificationUseCase(repository).execute(
-        new GetNotificationQuery(created.id),
+        new GetNotificationQuery(caller, created.id),
       );
       expect(result).toBeNull();
     });
@@ -149,7 +157,7 @@ describe('Notification use cases', () => {
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
         new DeleteNotificationUseCase(repository).execute(
-          new DeleteNotificationCommand('unknown-id'),
+          new DeleteNotificationCommand(caller, 'unknown-id'),
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -161,11 +169,83 @@ describe('Notification use cases', () => {
       await useCase().execute(createCommand({ title: 'B' }));
 
       const page = await new ListNotificationUseCase(repository).execute(
-        new ListNotificationQuery(1, 1),
+        new ListNotificationQuery(caller, 1, 1),
       );
 
       expect(page.items).toHaveLength(1);
       expect(page.total).toBe(2);
+    });
+  });
+
+  describe('recipient scoping', () => {
+    const intruder: AuthenticatedUser = {
+      id: 'another-identity',
+      role: Role.Customer,
+    };
+    const admin: AuthenticatedUser = {
+      id: 'admin-identity',
+      role: Role.Admin,
+    };
+
+    it('GetNotificationUseCase rejects another Identity’s Notification', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new GetNotificationUseCase(repository).execute(
+          new GetNotificationQuery(intruder, created.id),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('MarkNotificationAsReadUseCase rejects another Identity’s Notification', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new MarkNotificationAsReadUseCase(repository).execute(
+          new MarkNotificationAsReadCommand(intruder, created.id),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('DeleteNotificationUseCase rejects another Identity’s Notification', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new DeleteNotificationUseCase(repository).execute(
+          new DeleteNotificationCommand(intruder, created.id),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('ListNotificationUseCase hides Notifications addressed to another Identity', async () => {
+      await useCase().execute(createCommand());
+
+      const page = await new ListNotificationUseCase(repository).execute(
+        new ListNotificationQuery(intruder),
+      );
+
+      expect(page.items).toHaveLength(0);
+      expect(page.total).toBe(0);
+    });
+
+    it('SearchNotificationUseCase hides Notifications addressed to another Identity', async () => {
+      await useCase().execute(createCommand({ title: 'Special Notification' }));
+
+      const results = await new SearchNotificationUseCase(repository).execute(
+        new SearchNotificationQuery(intruder, 'special'),
+      );
+
+      expect(results).toHaveLength(0);
+    });
+
+    it('an Admin caller sees every Notification', async () => {
+      await useCase().execute(createCommand());
+
+      const page = await new ListNotificationUseCase(repository).execute(
+        new ListNotificationQuery(admin),
+      );
+
+      expect(page.total).toBe(1);
     });
   });
 
@@ -174,7 +254,7 @@ describe('Notification use cases', () => {
       await useCase().execute(createCommand({ title: 'Special Notification' }));
 
       const results = await new SearchNotificationUseCase(repository).execute(
-        new SearchNotificationQuery('special'),
+        new SearchNotificationQuery(caller, 'special'),
       );
 
       expect(results).toHaveLength(1);

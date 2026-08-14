@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -34,6 +34,7 @@ describe('ContactController (e2e)', () => {
   let app: INestApplication<App>;
   let identityId: string;
   let authHeader: string;
+  let otherAuthHeader: string;
 
   beforeEach(async () => {
     const identityRepository = new InMemoryIdentityRepository();
@@ -69,9 +70,18 @@ describe('ContactController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await app.init();
 
     authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
+    otherAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'another-identity', role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -96,9 +106,14 @@ describe('ContactController (e2e)', () => {
   });
 
   it('POST /contacts returns 404 when the Identity does not exist', async () => {
+    const unknownAuthHeader = `Bearer ${signTestAccessToken(
+      app.get(ConfigService),
+      { sub: 'unknown-identity', role: 'CUSTOMER' },
+    )}`;
+
     const response = await request(app.getHttpServer())
       .post('/contacts')
-      .set('Authorization', authHeader)
+      .set('Authorization', unknownAuthHeader)
       .send({
         identityId: 'unknown-identity',
         type: ContactType.Email,
@@ -107,6 +122,47 @@ describe('ContactController (e2e)', () => {
       .expect(404);
 
     expect((response.body as ErrorResponseDto).error).toBe('NotFoundException');
+  });
+
+  it('POST /contacts returns 403 when creating a Contact for another Identity', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/contacts')
+      .set('Authorization', otherAuthHeader)
+      .send({
+        identityId,
+        type: ContactType.Email,
+        value: 'jane.doe@example.com',
+      })
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
+  it('POST /contacts returns 400 for an unknown field', async () => {
+    await request(app.getHttpServer())
+      .post('/contacts')
+      .set('Authorization', authHeader)
+      .send({
+        identityId,
+        type: ContactType.Email,
+        value: 'jane.doe@example.com',
+        injected: 'value',
+      })
+      .expect(400);
+  });
+
+  it('POST /contacts returns 400 when the value does not match the type', async () => {
+    await request(app.getHttpServer())
+      .post('/contacts')
+      .set('Authorization', authHeader)
+      .send({
+        identityId,
+        type: ContactType.Phone,
+        value: 'jane.doe@example.com',
+      })
+      .expect(400);
   });
 
   it('GET /contacts/:id returns 404 for an unknown id', async () => {
@@ -178,6 +234,62 @@ describe('ContactController (e2e)', () => {
     expect(body.items).toHaveLength(1);
     expect(body.page).toBe(1);
     expect(body.pageSize).toBe(20);
+  });
+
+  it('GET /contacts only returns the caller’s own Contacts', async () => {
+    await request(app.getHttpServer())
+      .post('/contacts')
+      .set('Authorization', authHeader)
+      .send({
+        identityId,
+        type: ContactType.Email,
+        value: 'jane.doe@example.com',
+      });
+
+    const response = await request(app.getHttpServer())
+      .get('/contacts')
+      .set('Authorization', otherAuthHeader)
+      .expect(200);
+
+    const body = response.body as ContactListResponseDto;
+    expect(body.items).toHaveLength(0);
+    expect(body.total).toBe(0);
+  });
+
+  it('GET /contacts/:id returns 403 for another Identity’s Contact', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/contacts')
+      .set('Authorization', authHeader)
+      .send({
+        identityId,
+        type: ContactType.Email,
+        value: 'jane.doe@example.com',
+      });
+    const createdId = (created.body as ContactResponseDto).id;
+
+    await request(app.getHttpServer())
+      .get(`/contacts/${createdId}`)
+      .set('Authorization', otherAuthHeader)
+      .expect(403);
+  });
+
+  it('GET /contacts/search only returns the caller’s own Contacts', async () => {
+    await request(app.getHttpServer())
+      .post('/contacts')
+      .set('Authorization', authHeader)
+      .send({
+        identityId,
+        type: ContactType.Email,
+        value: 'jane.doe@example.com',
+      });
+
+    const response = await request(app.getHttpServer())
+      .get('/contacts/search')
+      .set('Authorization', otherAuthHeader)
+      .query({ term: 'jane.doe' })
+      .expect(200);
+
+    expect(response.body as ContactResponseDto[]).toHaveLength(0);
   });
 
   it('GET /contacts/search searches by value', async () => {

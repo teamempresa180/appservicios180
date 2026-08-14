@@ -18,7 +18,21 @@ export interface NotificationRepository {
   findByIdentityId(identityId: IdentityId): Promise<Notification[]>;
   save(notification: Notification): Promise<void>;
   delete(id: NotificationId): Promise<void>;
-  list(page: number, pageSize: number): Promise<PaginatedResult<Notification>>;
-  /** Free-text match against `title`/`body`. */
-  search(term: string): Promise<Notification[]>;
+  /**
+   * Paginates Notifications. `identityId` restricts the page (and its
+   * `total`) to the ones addressed to that Identity — a Notification's
+   * `identityId` is its recipient, and its body quotes order details,
+   * names and prices, so callers read their own inbox unless they are
+   * an `Admin`, in which case the scope is omitted.
+   */
+  list(
+    page: number,
+    pageSize: number,
+    identityId?: IdentityId,
+  ): Promise<PaginatedResult<Notification>>;
+  /**
+   * Free-text match against `title`/`body`, scoped to `identityId`
+   * when given — same recipient rule as `list`.
+   */
+  search(term: string, identityId?: IdentityId): Promise<Notification[]>;
 }

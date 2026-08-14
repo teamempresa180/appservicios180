@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { NotificationDto } from '../../application/dto/notification.dto';
 import { NotificationStatus } from '../../domain/value-objects/notification-status.value-object';
 import { NotificationType } from '../../domain/value-objects/notification-type.value-object';
@@ -5,6 +7,8 @@ import { CreateNotificationRequestDto } from './create-notification.request.dto'
 import { NotificationHttpMapper } from './notification-http.mapper';
 
 describe('NotificationHttpMapper', () => {
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+
   it('toCreateCommand() maps every field in order', () => {
     const dto: CreateNotificationRequestDto = {
       identityId: 'identity-1',
@@ -13,7 +17,7 @@ describe('NotificationHttpMapper', () => {
       type: NotificationType.Info,
     };
 
-    const command = NotificationHttpMapper.toCreateCommand(dto);
+    const command = NotificationHttpMapper.toCreateCommand(caller, dto);
 
     expect(command.identityId).toBe('identity-1');
     expect(command.title).toBe('Your order was accepted');

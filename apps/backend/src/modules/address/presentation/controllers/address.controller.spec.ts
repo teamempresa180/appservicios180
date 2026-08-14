@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { AddressController } from './address.controller';
 import { CreateAddressUseCase } from '../../application/use_cases/create-address.use-case';
 import { UpdateAddressUseCase } from '../../application/use_cases/update-address.use-case';
@@ -25,6 +27,8 @@ describe('AddressController', () => {
   let getUseCase: { execute: jest.Mock };
   let listUseCase: { execute: jest.Mock };
   let searchUseCase: { execute: jest.Mock };
+
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
 
   const addressDto: AddressDto = {
     id: 'id-1',
@@ -80,10 +84,11 @@ describe('AddressController', () => {
       type: AddressType.Home,
     };
 
-    const response = await controller.create(dto);
+    const response = await controller.create(caller, dto);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
       new CreateAddressCommand(
+        caller,
         'identity-1',
         'Home',
         'Calle 123 #45-67',
@@ -102,10 +107,11 @@ describe('AddressController', () => {
   it('update() maps id + request DTO to a command', async () => {
     const dto: UpdateAddressRequestDto = { alias: 'New Alias' };
 
-    const response = await controller.update('id-1', dto);
+    const response = await controller.update(caller, 'id-1', dto);
 
     expect(updateUseCase.execute).toHaveBeenCalledWith(
       new UpdateAddressCommand(
+        caller,
         'id-1',
         'New Alias',
         undefined,
@@ -118,38 +124,38 @@ describe('AddressController', () => {
   });
 
   it('remove() delegates to DeleteAddressUseCase with the id', async () => {
-    await controller.remove('id-1');
+    await controller.remove(caller, 'id-1');
 
     expect(deleteUseCase.execute).toHaveBeenCalledWith(
-      new DeleteAddressCommand('id-1'),
+      new DeleteAddressCommand(caller, 'id-1'),
     );
   });
 
   it('list() maps page/pageSize query params to a query and wraps the paginated result', async () => {
-    const response = await controller.list('2', '10');
+    const response = await controller.list(caller, '2', '10');
 
     expect(listUseCase.execute).toHaveBeenCalledWith(
-      new ListAddressQuery(2, 10),
+      new ListAddressQuery(caller, 2, 10),
     );
     expect(response.items).toHaveLength(1);
     expect(response.total).toBe(1);
   });
 
   it('search() maps the term query param and the Application DTOs to response DTOs', async () => {
-    const response = await controller.search('Bogotá');
+    const response = await controller.search(caller, 'Bogotá');
 
     expect(searchUseCase.execute).toHaveBeenCalledWith(
-      new SearchAddressQuery('Bogotá'),
+      new SearchAddressQuery(caller, 'Bogotá'),
     );
     expect(response).toHaveLength(1);
     expect(response[0].city).toBe('Bogotá');
   });
 
   it('findOne() maps the Application DTO returned by GetAddressUseCase', async () => {
-    const response = await controller.findOne('id-1');
+    const response = await controller.findOne(caller, 'id-1');
 
     expect(getUseCase.execute).toHaveBeenCalledWith(
-      new GetAddressQuery('id-1'),
+      new GetAddressQuery(caller, 'id-1'),
     );
     expect(response.alias).toBe('Home');
   });

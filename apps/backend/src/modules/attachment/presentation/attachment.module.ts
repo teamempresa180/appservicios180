@@ -21,7 +21,9 @@ import { PrismaAttachmentRepository } from '../infrastructure/persistence/prisma
  * wired to the real `PrismaAttachmentRepository` (Sprint 3, Etapa 10)
  * via the `ATTACHMENT_REPOSITORY` DI token. Imports
  * `MessagePresentationModule` — `CreateAttachmentUseCase` verifies the
- * referenced Message exists before creating an attachment.
+ * referenced Message exists before creating an attachment, and
+ * `DeleteAttachmentUseCase` uses the same repository to check that the
+ * caller is the Message's sender before removing one.
  */
 @Module({
   imports: [MessagePresentationModule],
@@ -38,9 +40,11 @@ import { PrismaAttachmentRepository } from '../infrastructure/persistence/prisma
     },
     {
       provide: DeleteAttachmentUseCase,
-      useFactory: (repo: AttachmentRepository) =>
-        new DeleteAttachmentUseCase(repo),
-      inject: [ATTACHMENT_REPOSITORY],
+      useFactory: (
+        attachmentRepo: AttachmentRepository,
+        messageRepo: MessageRepository,
+      ) => new DeleteAttachmentUseCase(attachmentRepo, messageRepo),
+      inject: [ATTACHMENT_REPOSITORY, MESSAGE_REPOSITORY],
     },
     {
       provide: GetAttachmentUseCase,

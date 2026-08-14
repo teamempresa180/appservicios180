@@ -1,4 +1,5 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { assertOwnership } from '../../../core/application/ownership';
 import { Notification } from '../../domain/entities/notification.entity';
 import { NotificationRepository } from '../../domain/interfaces/notification-repository.interface';
 import { NotificationId } from '../../domain/value-objects/notification-id.value-object';
@@ -12,6 +13,10 @@ import { NotificationMapper } from '../mappers/notification.mapper';
  * status and setting `readAt`. No prior-status guard — same criterion
  * as `CancelOrderUseCase`, which applies the change unconditionally
  * to any found entity.
+ *
+ * Only the recipient may mark their own Notification as read — the
+ * read state belongs to the addressee, and letting anyone flip it
+ * would let one user hide another's alerts.
  */
 export class MarkNotificationAsReadUseCase {
   constructor(
@@ -26,6 +31,7 @@ export class MarkNotificationAsReadUseCase {
     if (!existing) {
       throw new NotFoundException(`Notification ${command.id} not found`);
     }
+    assertOwnership(command.caller, existing.identityId.value, 'Notification');
 
     const read = new Notification(existing.id, {
       identityId: existing.identityId,

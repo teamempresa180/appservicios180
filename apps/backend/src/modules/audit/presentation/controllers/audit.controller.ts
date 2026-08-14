@@ -17,6 +17,8 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { AuditRoutes } from '../routes/audit.routes';
 import { AuditSwagger } from '../swagger/audit.swagger';
 import { CreateAuditRecordUseCase } from '../../application/use_cases/create-audit-record.use-case';
@@ -79,10 +81,11 @@ export class AuditController {
     type: ErrorResponseDto,
   })
   async create(
+    @CurrentUser() caller: AuthenticatedUser,
     @Body() dto: CreateAuditRecordRequestDto,
   ): Promise<AuditRecordResponseDto> {
     const audit = await this.createAuditRecordUseCase.execute(
-      AuditHttpMapper.toCreateCommand(dto),
+      AuditHttpMapper.toCreateCommand(caller, dto),
     );
     return AuditHttpMapper.toResponse(audit);
   }
@@ -97,10 +100,12 @@ export class AuditController {
     type: AuditRecordListResponseDto,
   })
   async list(
+    @CurrentUser() caller: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ): Promise<AuditRecordListResponseDto> {
     const query = new ListAuditQuery(
+      caller,
       page !== undefined ? Number(page) : undefined,
       pageSize !== undefined ? Number(pageSize) : undefined,
     );
@@ -116,9 +121,12 @@ export class AuditController {
     description: 'Audit records matching the search term.',
     type: [AuditRecordResponseDto],
   })
-  async search(@Query('term') term: string): Promise<AuditRecordResponseDto[]> {
+  async search(
+    @CurrentUser() caller: AuthenticatedUser,
+    @Query('term') term: string,
+  ): Promise<AuditRecordResponseDto[]> {
     const audits = await this.searchAuditUseCase.execute(
-      new SearchAuditQuery(term),
+      new SearchAuditQuery(caller, term),
     );
     return audits.map((audit) => AuditHttpMapper.toResponse(audit));
   }
@@ -136,8 +144,13 @@ export class AuditController {
     description: 'Audit record not found.',
     type: ErrorResponseDto,
   })
-  async findOne(@Param('id') id: string): Promise<AuditRecordResponseDto> {
-    const audit = await this.getAuditUseCase.execute(new GetAuditQuery(id));
+  async findOne(
+    @CurrentUser() caller: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<AuditRecordResponseDto> {
+    const audit = await this.getAuditUseCase.execute(
+      new GetAuditQuery(caller, id),
+    );
     return AuditHttpMapper.toResponse(audit);
   }
 }

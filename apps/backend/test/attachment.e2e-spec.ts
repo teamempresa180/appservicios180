@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -30,6 +30,8 @@ import { PROFILE_REPOSITORY } from '../src/modules/profiles/domain/interfaces/pr
 import { InMemoryProfileRepository } from '../src/modules/profiles/application/use_cases/test-support/in-memory-profile.repository';
 import { CATEGORY_REPOSITORY } from '../src/modules/category/domain/interfaces/category-repository.interface';
 import { InMemoryCategoryRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category.repository';
+import { CATEGORY_SPECIALIZATION_REPOSITORY } from '../src/modules/category/domain/interfaces/category-specialization-repository.interface';
+import { InMemoryCategorySpecializationRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category-specialization.repository';
 import { SERVICE_REPOSITORY } from '../src/modules/service/domain/interfaces/service-repository.interface';
 import { InMemoryServiceRepository } from '../src/modules/service/application/use_cases/test-support/in-memory-service.repository';
 import { AttachmentType } from '../src/modules/attachment/domain/value-objects/attachment-type.value-object';
@@ -50,19 +52,33 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
  * also overridden because `MessagePresentationModule` (imported
  * transitively) pulls in `ChatPresentationModule`, which itself pulls
  * in `OrderPresentationModule`/`ProviderPresentationModule`.
+ *
+ * `CATEGORY_SPECIALIZATION_REPOSITORY` is overridden for the same
+ * reason as the rest: every Prisma-backed repository reachable from
+ * this graph needs a fake, because `PrismaService` lives in a
+ * `@Global` module that only `AppModule` imports — a TestingModule
+ * built from the feature module alone cannot resolve it.
  */
 describe('AttachmentController (e2e)', () => {
   let app: INestApplication<App>;
   let messageId: string;
+  /** The Message's sender — may attach to it and delete its files. */
   let authHeader: string;
+  /** The other side of the Chat — sees the files, cannot mutate them. */
+  let peerAuthHeader: string;
+  /** An Identity outside the Chat entirely. */
+  let strangerAuthHeader: string;
 
   beforeEach(async () => {
     const now = new Date();
 
+    const senderIdentityId = IdentityId.create();
+    const peerIdentityId = IdentityId.create();
+
     const messageRepository = new InMemoryMessageRepository();
     const message = new Message(MessageId.create(), {
       chatId: ChatId.create(),
-      senderIdentityId: IdentityId.create(),
+      senderIdentityId,
       content: 'On my way, be there in 10 minutes.',
       type: MessageType.Text,
       status: MessageStatus.Sent,
@@ -71,6 +87,15 @@ describe('AttachmentController (e2e)', () => {
     });
     await messageRepository.save(message);
     messageId = message.id.value;
+
+    // The in-memory Attachment fake has no Chat graph to walk, so the
+    // Message's audience is declared directly — see
+    // `InMemoryAttachmentRepository.registerParticipants`.
+    const attachmentRepository = new InMemoryAttachmentRepository();
+    attachmentRepository.registerParticipants(messageId, [
+      senderIdentityId.value,
+      peerIdentityId.value,
+    ]);
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
@@ -81,7 +106,7 @@ describe('AttachmentController (e2e)', () => {
       providers: [JwtStrategy],
     })
       .overrideProvider(ATTACHMENT_REPOSITORY)
-      .useValue(new InMemoryAttachmentRepository())
+      .useValue(attachmentRepository)
       .overrideProvider(MESSAGE_REPOSITORY)
       .useValue(messageRepository)
       .overrideProvider(CHAT_REPOSITORY)
@@ -96,6 +121,8 @@ describe('AttachmentController (e2e)', () => {
       .useValue(new InMemoryProfileRepository())
       .overrideProvider(CATEGORY_REPOSITORY)
       .useValue(new InMemoryCategoryRepository())
+      .overrideProvider(CATEGORY_SPECIALIZATION_REPOSITORY)
+      .useValue(new InMemoryCategorySpecializationRepository())
       .overrideProvider(SERVICE_REPOSITORY)
       .useValue(new InMemoryServiceRepository())
       .compile();
@@ -105,9 +132,19 @@ describe('AttachmentController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await app.init();
 
-    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'test-identity', role: 'CUSTOMER' })}`;
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: senderIdentityId.value, role: 'CUSTOMER' })}`;
+    peerAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: peerIdentityId.value, role: 'PROVIDER' })}`;
+    strangerAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'stranger-identity', role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -187,6 +224,90 @@ describe('AttachmentController (e2e)', () => {
     expect(body.items).toHaveLength(1);
     expect(body.page).toBe(1);
     expect(body.pageSize).toBe(20);
+  });
+
+  it('POST /attachments returns 403 when attaching to another Identity’s Message', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/attachments')
+      .set('Authorization', peerAuthHeader)
+      .send(createAttachmentBody())
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
+  it('POST /attachments returns 400 for an unknown field', async () => {
+    await request(app.getHttpServer())
+      .post('/attachments')
+      .set('Authorization', authHeader)
+      .send({ ...createAttachmentBody(), injected: 'value' })
+      .expect(400);
+  });
+
+  it('POST /attachments returns 400 for a fileSize over the limit', async () => {
+    await request(app.getHttpServer())
+      .post('/attachments')
+      .set('Authorization', authHeader)
+      .send(createAttachmentBody({ fileSize: 20971521 }))
+      .expect(400);
+  });
+
+  it('GET /attachments only returns Attachments from the caller’s own Chats', async () => {
+    await request(app.getHttpServer())
+      .post('/attachments')
+      .set('Authorization', authHeader)
+      .send(createAttachmentBody());
+
+    const response = await request(app.getHttpServer())
+      .get('/attachments')
+      .set('Authorization', strangerAuthHeader)
+      .expect(200);
+
+    const body = response.body as AttachmentListResponseDto;
+    expect(body.items).toHaveLength(0);
+    expect(body.total).toBe(0);
+  });
+
+  it('GET /attachments still shows the chat peer the conversation’s Attachments', async () => {
+    await request(app.getHttpServer())
+      .post('/attachments')
+      .set('Authorization', authHeader)
+      .send(createAttachmentBody());
+
+    const response = await request(app.getHttpServer())
+      .get('/attachments')
+      .set('Authorization', peerAuthHeader)
+      .expect(200);
+
+    expect((response.body as AttachmentListResponseDto).total).toBe(1);
+  });
+
+  it('GET /attachments/:id returns 403 for an Identity outside the Chat', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/attachments')
+      .set('Authorization', authHeader)
+      .send(createAttachmentBody());
+    const createdId = (created.body as AttachmentResponseDto).id;
+
+    await request(app.getHttpServer())
+      .get(`/attachments/${createdId}`)
+      .set('Authorization', strangerAuthHeader)
+      .expect(403);
+  });
+
+  it('DELETE /attachments/:id returns 403 for the chat peer', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/attachments')
+      .set('Authorization', authHeader)
+      .send(createAttachmentBody());
+    const createdId = (created.body as AttachmentResponseDto).id;
+
+    await request(app.getHttpServer())
+      .delete(`/attachments/${createdId}`)
+      .set('Authorization', peerAuthHeader)
+      .expect(403);
   });
 
   it('GET /attachments/search searches by file name', async () => {

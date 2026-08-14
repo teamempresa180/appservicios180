@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { AddressDto } from '../../application/dto/address.dto';
 import { AddressType } from '../../domain/value-objects/address-type.value-object';
 import { AddressStatus } from '../../domain/value-objects/address-status.value-object';
@@ -6,6 +8,8 @@ import { UpdateAddressRequestDto } from './update-address.request.dto';
 import { AddressHttpMapper } from './address-http.mapper';
 
 describe('AddressHttpMapper', () => {
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+
   it('toCreateCommand() carries all create fields through', () => {
     const dto: CreateAddressRequestDto = {
       identityId: 'identity-1',
@@ -18,7 +22,7 @@ describe('AddressHttpMapper', () => {
       type: AddressType.Home,
     };
 
-    const command = AddressHttpMapper.toCreateCommand(dto);
+    const command = AddressHttpMapper.toCreateCommand(caller, dto);
 
     expect(command.identityId).toBe('identity-1');
     expect(command.alias).toBe('Home');
@@ -33,7 +37,7 @@ describe('AddressHttpMapper', () => {
   it('toUpdateCommand() carries the id and optional fields through', () => {
     const dto: UpdateAddressRequestDto = { status: AddressStatus.Archived };
 
-    const command = AddressHttpMapper.toUpdateCommand('id-1', dto);
+    const command = AddressHttpMapper.toUpdateCommand(caller, 'id-1', dto);
 
     expect(command.id).toBe('id-1');
     expect(command.status).toBe(AddressStatus.Archived);
@@ -79,7 +83,7 @@ describe('AddressHttpMapper', () => {
       longitude: -74.072092,
     };
 
-    const command = AddressHttpMapper.toCreateCommand(dto);
+    const command = AddressHttpMapper.toCreateCommand(caller, dto);
 
     expect(command.latitude).toBe(4.710989);
     expect(command.longitude).toBe(-74.072092);
@@ -88,7 +92,7 @@ describe('AddressHttpMapper', () => {
   it('toUpdateCommand() carries latitude/longitude through, including explicit null to clear the pin', () => {
     const dto: UpdateAddressRequestDto = { latitude: null, longitude: null };
 
-    const command = AddressHttpMapper.toUpdateCommand('id-1', dto);
+    const command = AddressHttpMapper.toUpdateCommand(caller, 'id-1', dto);
 
     expect(command.latitude).toBeNull();
     expect(command.longitude).toBeNull();

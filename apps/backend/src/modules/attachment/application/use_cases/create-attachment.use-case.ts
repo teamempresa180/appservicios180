@@ -1,4 +1,5 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { assertOwnership } from '../../../core/application/ownership';
 import { MessageRepository } from '../../../message/domain/interfaces/message-repository.interface';
 import { MessageId } from '../../../message/domain/value-objects/message-id.value-object';
 import { Attachment } from '../../domain/entities/attachment.entity';
@@ -16,6 +17,12 @@ import { AttachmentValidator } from '../validators/attachment.validator';
  * referenced Message exists before creating the attachment — Message
  * is implemented earlier in this same Sprint 3, Etapa 10 prompt, so
  * this check is not deferred.
+ *
+ * That same lookup answers the authorization question: only the
+ * sender of a Message may attach files to it. Participation is the
+ * rule for *reading* an Attachment (both sides of a chat see the
+ * conversation), but authorship is the rule for *writing* one —
+ * otherwise the other party could put files under your name.
  */
 export class CreateAttachmentUseCase {
   constructor(
@@ -31,6 +38,11 @@ export class CreateAttachmentUseCase {
     if (!message) {
       throw new NotFoundException(`Message ${command.messageId} not found`);
     }
+    assertOwnership(
+      command.caller,
+      message.senderIdentityId.value,
+      'Attachment',
+    );
 
     const attachment = new Attachment(AttachmentId.create(), {
       messageId,

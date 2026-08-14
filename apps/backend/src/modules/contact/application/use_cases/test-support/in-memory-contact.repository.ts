@@ -30,8 +30,14 @@ export class InMemoryContactRepository implements ContactRepository {
     return Promise.resolve();
   }
 
-  list(page: number, pageSize: number): Promise<PaginatedResult<Contact>> {
-    const all = [...this.rows.values()];
+  list(
+    page: number,
+    pageSize: number,
+    identityId?: IdentityId,
+  ): Promise<PaginatedResult<Contact>> {
+    const all = [...this.rows.values()].filter(
+      (row) => identityId === undefined || row.identityId.equals(identityId),
+    );
     const start = (page - 1) * pageSize;
     return Promise.resolve({
       items: all.slice(start, start + pageSize),
@@ -41,11 +47,13 @@ export class InMemoryContactRepository implements ContactRepository {
     });
   }
 
-  search(term: string): Promise<Contact[]> {
+  search(term: string, identityId?: IdentityId): Promise<Contact[]> {
     const lower = term.toLowerCase();
     return Promise.resolve(
-      [...this.rows.values()].filter((row) =>
-        row.value.toLowerCase().includes(lower),
+      [...this.rows.values()].filter(
+        (row) =>
+          (identityId === undefined || row.identityId.equals(identityId)) &&
+          row.value.toLowerCase().includes(lower),
       ),
     );
   }

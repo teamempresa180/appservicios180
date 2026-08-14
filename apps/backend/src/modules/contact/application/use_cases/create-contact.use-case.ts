@@ -1,4 +1,5 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { assertOwnership } from '../../../core/application/ownership';
 import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { Contact } from '../../domain/entities/contact.entity';
@@ -16,6 +17,11 @@ import { ContactValidator } from '../validators/contact.validator';
  * to verify the referenced Identity actually exists before creating a
  * contact for it — same rule already applied to `Authentication`/
  * `Credential`/`Profile`, since `Contact` also references `IdentityId`.
+ *
+ * The `identityId` in the command is caller-supplied, so it is checked
+ * against the authenticated caller: a contact channel can only be
+ * created for one's own Identity (an `Admin` may create it for
+ * anyone).
  */
 export class CreateContactUseCase {
   constructor(
@@ -25,6 +31,7 @@ export class CreateContactUseCase {
 
   async execute(command: CreateContactCommand): Promise<ContactDto> {
     ContactValidator.validateCreate(command);
+    assertOwnership(command.caller, command.identityId, 'Contact');
 
     const identityId = IdentityId.fromString(command.identityId);
     const identity = await this.identityRepository.findById(identityId);

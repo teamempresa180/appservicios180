@@ -19,6 +19,8 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { ContactRoutes } from '../routes/contact.routes';
 import { ContactSwagger } from '../swagger/contact.swagger';
 import { CreateContactUseCase } from '../../application/use_cases/create-contact.use-case';
@@ -82,10 +84,11 @@ export class ContactController {
     type: ErrorResponseDto,
   })
   async create(
+    @CurrentUser() caller: AuthenticatedUser,
     @Body() dto: CreateContactRequestDto,
   ): Promise<ContactResponseDto> {
     const contact = await this.createContactUseCase.execute(
-      ContactHttpMapper.toCreateCommand(dto),
+      ContactHttpMapper.toCreateCommand(caller, dto),
     );
     return ContactHttpMapper.toResponse(contact);
   }
@@ -109,11 +112,12 @@ export class ContactController {
     type: ErrorResponseDto,
   })
   async update(
+    @CurrentUser() caller: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: UpdateContactRequestDto,
   ): Promise<ContactResponseDto> {
     const contact = await this.updateContactUseCase.execute(
-      ContactHttpMapper.toUpdateCommand(id, dto),
+      ContactHttpMapper.toUpdateCommand(caller, id, dto),
     );
     return ContactHttpMapper.toResponse(contact);
   }
@@ -127,8 +131,13 @@ export class ContactController {
     description: 'Contact not found.',
     type: ErrorResponseDto,
   })
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.deleteContactUseCase.execute(new DeleteContactCommand(id));
+  async remove(
+    @CurrentUser() caller: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<void> {
+    await this.deleteContactUseCase.execute(
+      new DeleteContactCommand(caller, id),
+    );
   }
 
   @Get()
@@ -141,10 +150,12 @@ export class ContactController {
     type: ContactListResponseDto,
   })
   async list(
+    @CurrentUser() caller: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ): Promise<ContactListResponseDto> {
     const query = new ListContactQuery(
+      caller,
       page !== undefined ? Number(page) : undefined,
       pageSize !== undefined ? Number(pageSize) : undefined,
     );
@@ -160,9 +171,12 @@ export class ContactController {
     description: 'Contacts matching the search term.',
     type: [ContactResponseDto],
   })
-  async search(@Query('term') term: string): Promise<ContactResponseDto[]> {
+  async search(
+    @CurrentUser() caller: AuthenticatedUser,
+    @Query('term') term: string,
+  ): Promise<ContactResponseDto[]> {
     const contacts = await this.searchContactUseCase.execute(
-      new SearchContactQuery(term),
+      new SearchContactQuery(caller, term),
     );
     return contacts.map((contact) => ContactHttpMapper.toResponse(contact));
   }
@@ -180,9 +194,12 @@ export class ContactController {
     description: 'Contact not found.',
     type: ErrorResponseDto,
   })
-  async findOne(@Param('id') id: string): Promise<ContactResponseDto> {
+  async findOne(
+    @CurrentUser() caller: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<ContactResponseDto> {
     const contact = await this.getContactUseCase.execute(
-      new GetContactQuery(id),
+      new GetContactQuery(caller, id),
     );
     return ContactHttpMapper.toResponse(contact);
   }

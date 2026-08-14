@@ -49,14 +49,18 @@ export class PrismaAddressRepository implements AddressRepository {
   async list(
     page: number,
     pageSize: number,
+    identityId?: IdentityId,
   ): Promise<PaginatedResult<Address>> {
+    const where =
+      identityId !== undefined ? { identityId: identityId.value } : {};
     const [rows, total] = await Promise.all([
       this.prisma.addressModel.findMany({
+        where,
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.addressModel.count(),
+      this.prisma.addressModel.count({ where }),
     ]);
     return {
       items: rows.map((row) => AddressPrismaMapper.toDomain(row)),
@@ -66,9 +70,12 @@ export class PrismaAddressRepository implements AddressRepository {
     };
   }
 
-  async search(term: string): Promise<Address[]> {
+  async search(term: string, identityId?: IdentityId): Promise<Address[]> {
     const rows = await this.prisma.addressModel.findMany({
       where: {
+        ...(identityId !== undefined
+          ? { identityId: identityId.value }
+          : undefined),
         OR: [
           { alias: { contains: term } },
           { fullAddress: { contains: term } },

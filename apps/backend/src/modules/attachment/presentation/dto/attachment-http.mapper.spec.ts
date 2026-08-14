@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { AttachmentDto } from '../../application/dto/attachment.dto';
 import { AttachmentStatus } from '../../domain/value-objects/attachment-status.value-object';
 import { AttachmentType } from '../../domain/value-objects/attachment-type.value-object';
@@ -5,6 +7,8 @@ import { CreateAttachmentRequestDto } from './create-attachment.request.dto';
 import { AttachmentHttpMapper } from './attachment-http.mapper';
 
 describe('AttachmentHttpMapper', () => {
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+
   it('toCreateCommand() maps every field in order', () => {
     const dto: CreateAttachmentRequestDto = {
       messageId: 'message-1',
@@ -14,7 +18,7 @@ describe('AttachmentHttpMapper', () => {
       type: AttachmentType.Image,
     };
 
-    const command = AttachmentHttpMapper.toCreateCommand(dto);
+    const command = AttachmentHttpMapper.toCreateCommand(caller, dto);
 
     expect(command.messageId).toBe('message-1');
     expect(command.fileName).toBe('leak-photo.jpg');
