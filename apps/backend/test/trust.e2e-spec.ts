@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -37,6 +37,8 @@ describe('TrustController (e2e)', () => {
   let app: INestApplication<App>;
   let identityId: string;
   let authHeader: string;
+  let outsiderAuthHeader: string;
+  let adminAuthHeader: string;
 
   beforeEach(async () => {
     const identityRepository = new InMemoryIdentityRepository();
@@ -72,9 +74,19 @@ describe('TrustController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await app.init();
 
     authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
+    outsiderAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: IdentityId.create().value, role: 'CUSTOMER' })}`;
+    adminAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: IdentityId.create().value, role: 'ADMIN' })}`;
   });
 
   afterEach(async () => {
@@ -93,18 +105,39 @@ describe('TrustController (e2e)', () => {
     expect(body.status).toBe('ACTIVE');
   });
 
+  // The token's subject is the same unknown id, so ownership passes
+  // and the request reaches the "Identity not found" branch.
   it('POST /trust-profiles returns 404 when the Identity does not exist', async () => {
+    const unknownId = IdentityId.create().value;
+    const unknownAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: unknownId, role: 'CUSTOMER' })}`;
+
     const response = await request(app.getHttpServer())
       .post('/trust-profiles')
-      .set('Authorization', authHeader)
+      .set('Authorization', unknownAuthHeader)
       .send({
-        identityId: 'unknown-identity',
+        identityId: unknownId,
         score: 75,
         level: TrustLevel.High,
       })
       .expect(404);
 
     expect((response.body as ErrorResponseDto).error).toBe('NotFoundException');
+  });
+
+  it('POST /trust-profiles rejects creating a profile for another Identity with 403', async () => {
+    await request(app.getHttpServer())
+      .post('/trust-profiles')
+      .set('Authorization', outsiderAuthHeader)
+      .send({ identityId, score: 75, level: TrustLevel.High })
+      .expect(403);
+  });
+
+  it('POST /trust-profiles rejects a score outside 0-100 with 400', async () => {
+    await request(app.getHttpServer())
+      .post('/trust-profiles')
+      .set('Authorization', authHeader)
+      .send({ identityId, score: 101, level: TrustLevel.High })
+      .expect(400);
   });
 
   it('POST /trust-profiles returns 422 when the Identity already has a Trust profile', async () => {
@@ -131,20 +164,44 @@ describe('TrustController (e2e)', () => {
       .expect(404);
   });
 
-  it('PUT /trust-profiles/:id updates the score', async () => {
+  const createOwnProfile = async (): Promise<string> => {
     const created = await request(app.getHttpServer())
       .post('/trust-profiles')
       .set('Authorization', authHeader)
       .send({ identityId, score: 75, level: TrustLevel.High });
-    const createdId = (created.body as TrustResponseDto).id;
+    return (created.body as TrustResponseDto).id;
+  };
+
+  it('PUT /trust-profiles/:id lets an Admin update the score', async () => {
+    const createdId = await createOwnProfile();
 
     const response = await request(app.getHttpServer())
       .put(`/trust-profiles/${createdId}`)
-      .set('Authorization', authHeader)
+      .set('Authorization', adminAuthHeader)
       .send({ score: 90 })
       .expect(200);
 
     expect((response.body as TrustResponseDto).score).toBe(90);
+  });
+
+  it('PUT /trust-profiles/:id refuses a non-Admin setting their own score', async () => {
+    const createdId = await createOwnProfile();
+
+    await request(app.getHttpServer())
+      .put(`/trust-profiles/${createdId}`)
+      .set('Authorization', authHeader)
+      .send({ score: 100 })
+      .expect(403);
+  });
+
+  it('PUT /trust-profiles/:id rejects a score outside 0-100 with 400', async () => {
+    const createdId = await createOwnProfile();
+
+    await request(app.getHttpServer())
+      .put(`/trust-profiles/${createdId}`)
+      .set('Authorization', adminAuthHeader)
+      .send({ score: -5 })
+      .expect(400);
   });
 
   it('GET /trust-profiles lists Trust profiles page by page', async () => {
@@ -179,5 +236,30 @@ describe('TrustController (e2e)', () => {
     const body = response.body as TrustResponseDto[];
     expect(body).toHaveLength(1);
     expect(body[0].level).toBe('HIGH');
+  });
+
+  // Trust profiles are public marketplace information: a Customer
+  // comparing Providers must be able to read anyone's. Only writes are
+  // restricted, so these two stay visible to a non-owner by design.
+  it('GET /trust-profiles stays readable by any authenticated caller', async () => {
+    await createOwnProfile();
+
+    const response = await request(app.getHttpServer())
+      .get('/trust-profiles')
+      .set('Authorization', outsiderAuthHeader)
+      .expect(200);
+
+    expect((response.body as TrustListResponseDto).items).toHaveLength(1);
+  });
+
+  it('GET /trust-profiles/:id stays readable by any authenticated caller', async () => {
+    const createdId = await createOwnProfile();
+
+    const response = await request(app.getHttpServer())
+      .get(`/trust-profiles/${createdId}`)
+      .set('Authorization', outsiderAuthHeader)
+      .expect(200);
+
+    expect((response.body as TrustResponseDto).id).toBe(createdId);
   });
 });

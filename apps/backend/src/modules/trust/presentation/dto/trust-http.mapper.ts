@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { CreateTrustProfileCommand } from '../../application/commands/create-trust-profile.command';
 import { UpdateTrustProfileCommand } from '../../application/commands/update-trust-profile.command';
@@ -16,8 +17,14 @@ import { TrustListResponseDto } from './trust-list.response.dto';
 export class TrustHttpMapper {
   static toCreateCommand(
     dto: CreateTrustProfileRequestDto,
+    caller: AuthenticatedUser,
   ): CreateTrustProfileCommand {
-    return new CreateTrustProfileCommand(dto.identityId, dto.score, dto.level);
+    return new CreateTrustProfileCommand(
+      dto.identityId,
+      dto.score,
+      dto.level,
+      caller,
+    );
   }
 
   static toUpdateCommand(

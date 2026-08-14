@@ -1,3 +1,5 @@
+﻿import { Role } from '../../../../common/auth/role.enum';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { TrustController } from './trust.controller';
 import { CreateTrustProfileUseCase } from '../../application/use_cases/create-trust-profile.use-case';
 import { UpdateTrustProfileUseCase } from '../../application/use_cases/update-trust-profile.use-case';
@@ -56,6 +58,8 @@ describe('TrustController', () => {
     );
   });
 
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+
   it('create() maps the request DTO to a command and the Application DTO to a response DTO', async () => {
     const dto: CreateTrustProfileRequestDto = {
       identityId: 'identity-1',
@@ -63,10 +67,10 @@ describe('TrustController', () => {
       level: TrustLevel.High,
     };
 
-    const response = await controller.create(dto);
+    const response = await controller.create(dto, caller);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
-      new CreateTrustProfileCommand('identity-1', 75, TrustLevel.High),
+      new CreateTrustProfileCommand('identity-1', 75, TrustLevel.High, caller),
     );
     expect(response.id).toBe('id-1');
   });
@@ -107,3 +111,4 @@ describe('TrustController', () => {
     expect(response.score).toBe(75);
   });
 });
+

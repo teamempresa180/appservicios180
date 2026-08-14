@@ -1,3 +1,5 @@
+﻿import { Role } from '../../../../common/auth/role.enum';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { TrustDto } from '../../application/dto/trust.dto';
 import { TrustLevel } from '../../domain/value-objects/trust-level.value-object';
 import { TrustStatus } from '../../domain/value-objects/trust-status.value-object';
@@ -6,6 +8,8 @@ import { UpdateTrustProfileRequestDto } from './update-trust-profile.request.dto
 import { TrustHttpMapper } from './trust-http.mapper';
 
 describe('TrustHttpMapper', () => {
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+
   it('toCreateCommand() carries identityId/score/level through', () => {
     const dto: CreateTrustProfileRequestDto = {
       identityId: 'identity-1',
@@ -13,7 +17,7 @@ describe('TrustHttpMapper', () => {
       level: TrustLevel.Medium,
     };
 
-    const command = TrustHttpMapper.toCreateCommand(dto);
+    const command = TrustHttpMapper.toCreateCommand(dto, caller);
 
     expect(command.identityId).toBe('identity-1');
     expect(command.score).toBe(60);
@@ -69,3 +73,4 @@ describe('TrustHttpMapper', () => {
     expect(response.total).toBe(1);
   });
 });
+

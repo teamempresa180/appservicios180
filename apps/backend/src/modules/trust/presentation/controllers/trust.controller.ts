@@ -18,6 +18,11 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { RolesGuard } from '../../../../common/auth/roles.guard';
+import { Roles } from '../../../../common/auth/roles.decorator';
+import { Role } from '../../../../common/auth/role.enum';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { TrustRoutes } from '../routes/trust.routes';
 import { TrustSwagger } from '../swagger/trust.swagger';
 import { CreateTrustProfileUseCase } from '../../application/use_cases/create-trust-profile.use-case';
@@ -52,9 +57,18 @@ import { TrustHttpMapper } from '../dto/trust-http.mapper';
  * `list`/`search` are declared before the dynamic `findOne(:id)` route
  * so `GET /trust-profiles/search` resolves to `search()` rather than
  * being matched as `findOne({ id: 'search' })`.
+ *
+ * Read access is deliberately open to any authenticated caller: a
+ * Customer choosing between Providers needs to see how trusted each
+ * one is, so a Trust profile is public marketplace information rather
+ * than private data. Writing is not: `PUT` sets `score`, the
+ * reputation signal itself, and is gated to `Role.Admin` — a user
+ * being able to set their own trust score is the whole vulnerability.
+ * `POST` stays available to ordinary users but only for their own
+ * Identity.
  */
 @ApiTags('Trust')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 @Controller(TrustRoutes.base)
 export class TrustController {
@@ -88,16 +102,29 @@ export class TrustController {
     description: 'Identity already has a Trust profile.',
     type: ErrorResponseDto,
   })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller is not the Identity the profile is for.',
+    type: ErrorResponseDto,
+  })
   async create(
     @Body() dto: CreateTrustProfileRequestDto,
+    @CurrentUser() caller: AuthenticatedUser,
   ): Promise<TrustResponseDto> {
     const trust = await this.createTrustProfileUseCase.execute(
-      TrustHttpMapper.toCreateCommand(dto),
+      TrustHttpMapper.toCreateCommand(dto, caller),
     );
     return TrustHttpMapper.toResponse(trust);
   }
 
   @Put(TrustRoutes.byId)
+  // Admin-only: `score`/`level`/`status` are the marketplace's
+  // assessment of a user, never that user's own claim about
+  // themselves. No admin account is issued yet, so in practice this
+  // route is closed — which is the correct state until a real
+  // moderation flow exists. The mobile app never calls it (it only
+  // reads `GET /trust-profiles`), so nothing legitimate breaks.
+  @Roles(Role.Admin)
   @ApiOperation(TrustSwagger.update)
   @ApiParam({ name: 'id', description: 'Trust profile id' })
   @ApiResponse({
@@ -108,6 +135,11 @@ export class TrustController {
   @ApiResponse({
     status: 400,
     description: 'Validation error.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller is not an administrator.',
     type: ErrorResponseDto,
   })
   @ApiResponse({

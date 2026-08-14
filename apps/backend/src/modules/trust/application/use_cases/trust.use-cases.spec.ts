@@ -1,4 +1,7 @@
+﻿import { Role } from '../../../../common/auth/role.enum';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Identity } from '../../../identity/domain/entities/identity.entity';
@@ -24,6 +27,7 @@ describe('Trust use cases', () => {
   let repository: InMemoryTrustRepository;
   let identityRepository: InMemoryIdentityRepository;
   let identityId: string;
+  let owner: AuthenticatedUser;
 
   beforeEach(async () => {
     repository = new InMemoryTrustRepository();
@@ -41,6 +45,7 @@ describe('Trust use cases', () => {
     });
     await identityRepository.save(identity);
     identityId = identity.id.value;
+    owner = { id: identityId, role: Role.Customer };
   });
 
   describe('CreateTrustProfileUseCase', () => {
@@ -50,7 +55,7 @@ describe('Trust use cases', () => {
         identityRepository,
       );
       const dto = await useCase.execute(
-        new CreateTrustProfileCommand(identityId, 75, TrustLevel.High),
+        new CreateTrustProfileCommand(identityId, 75, TrustLevel.High, owner),
       );
 
       expect(dto.identityId).toBe(identityId);
@@ -69,6 +74,7 @@ describe('Trust use cases', () => {
             'unknown-identity',
             75,
             TrustLevel.High,
+            { id: 'unknown-identity', role: Role.Customer },
           ),
         ),
       ).rejects.toThrow(NotFoundException);
@@ -85,6 +91,7 @@ describe('Trust use cases', () => {
             identityId,
             Number.NaN,
             TrustLevel.High,
+            owner,
           ),
         ),
       ).rejects.toThrow(ValidationException);
@@ -96,14 +103,51 @@ describe('Trust use cases', () => {
         identityRepository,
       );
       await useCase.execute(
-        new CreateTrustProfileCommand(identityId, 50, TrustLevel.Medium),
+        new CreateTrustProfileCommand(identityId, 50, TrustLevel.Medium, owner),
       );
 
       await expect(
         useCase.execute(
-          new CreateTrustProfileCommand(identityId, 60, TrustLevel.High),
+          new CreateTrustProfileCommand(identityId, 60, TrustLevel.High, owner),
         ),
       ).rejects.toThrow(BusinessRuleException);
+    });
+
+    it('rejects a score outside the 0-100 range', async () => {
+      const useCase = new CreateTrustProfileUseCase(
+        repository,
+        identityRepository,
+      );
+      await expect(
+        useCase.execute(
+          new CreateTrustProfileCommand(
+            identityId,
+            101,
+            TrustLevel.High,
+            owner,
+          ),
+        ),
+      ).rejects.toThrow(ValidationException);
+      await expect(
+        useCase.execute(
+          new CreateTrustProfileCommand(identityId, -1, TrustLevel.High, owner),
+        ),
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it('throws ForbiddenException when creating a profile for another Identity', async () => {
+      const useCase = new CreateTrustProfileUseCase(
+        repository,
+        identityRepository,
+      );
+      await expect(
+        useCase.execute(
+          new CreateTrustProfileCommand(identityId, 75, TrustLevel.High, {
+            id: IdentityId.create().value,
+            role: Role.Customer,
+          }),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -123,7 +167,7 @@ describe('Trust use cases', () => {
         repository,
         identityRepository,
       ).execute(
-        new CreateTrustProfileCommand(identityId, 50, TrustLevel.Medium),
+        new CreateTrustProfileCommand(identityId, 50, TrustLevel.Medium, owner),
       );
 
       const updated = await new UpdateTrustProfileUseCase(repository).execute(
@@ -167,10 +211,15 @@ describe('Trust use cases', () => {
         identityRepository,
       );
       await createUseCase.execute(
-        new CreateTrustProfileCommand(identityId, 50, TrustLevel.Medium),
+        new CreateTrustProfileCommand(identityId, 50, TrustLevel.Medium, owner),
       );
       await createUseCase.execute(
-        new CreateTrustProfileCommand(identity2.id.value, 60, TrustLevel.High),
+        new CreateTrustProfileCommand(
+          identity2.id.value,
+          60,
+          TrustLevel.High,
+          { id: identity2.id.value, role: Role.Customer },
+        ),
       );
 
       const page = await new ListTrustUseCase(repository).execute(
@@ -188,7 +237,7 @@ describe('Trust use cases', () => {
         repository,
         identityRepository,
       ).execute(
-        new CreateTrustProfileCommand(identityId, 95, TrustLevel.VeryHigh),
+        new CreateTrustProfileCommand(identityId, 95, TrustLevel.VeryHigh, owner),
       );
 
       const results = await new SearchTrustUseCase(repository).execute(
@@ -199,3 +248,4 @@ describe('Trust use cases', () => {
     });
   });
 });
+
