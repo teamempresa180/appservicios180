@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { ContactController } from './contact.controller';
 import { CreateContactUseCase } from '../../application/use_cases/create-contact.use-case';
 import { UpdateContactUseCase } from '../../application/use_cases/update-contact.use-case';
@@ -25,6 +27,8 @@ describe('ContactController', () => {
   let getUseCase: { execute: jest.Mock };
   let listUseCase: { execute: jest.Mock };
   let searchUseCase: { execute: jest.Mock };
+
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
 
   const contactDto: ContactDto = {
     id: 'id-1',
@@ -68,10 +72,11 @@ describe('ContactController', () => {
       value: 'jane.doe@example.com',
     };
 
-    const response = await controller.create(dto);
+    const response = await controller.create(caller, dto);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
       new CreateContactCommand(
+        caller,
         'identity-1',
         ContactType.Email,
         'jane.doe@example.com',
@@ -83,47 +88,47 @@ describe('ContactController', () => {
   it('update() maps id + request DTO to a command', async () => {
     const dto: UpdateContactRequestDto = { value: 'new@example.com' };
 
-    const response = await controller.update('id-1', dto);
+    const response = await controller.update(caller, 'id-1', dto);
 
     expect(updateUseCase.execute).toHaveBeenCalledWith(
-      new UpdateContactCommand('id-1', 'new@example.com', undefined),
+      new UpdateContactCommand(caller, 'id-1', 'new@example.com', undefined),
     );
     expect(response.id).toBe('id-1');
   });
 
   it('remove() delegates to DeleteContactUseCase with the id', async () => {
-    await controller.remove('id-1');
+    await controller.remove(caller, 'id-1');
 
     expect(deleteUseCase.execute).toHaveBeenCalledWith(
-      new DeleteContactCommand('id-1'),
+      new DeleteContactCommand(caller, 'id-1'),
     );
   });
 
   it('list() maps page/pageSize query params to a query and wraps the paginated result', async () => {
-    const response = await controller.list('2', '10');
+    const response = await controller.list(caller, '2', '10');
 
     expect(listUseCase.execute).toHaveBeenCalledWith(
-      new ListContactQuery(2, 10),
+      new ListContactQuery(caller, 2, 10),
     );
     expect(response.items).toHaveLength(1);
     expect(response.total).toBe(1);
   });
 
   it('search() maps the term query param and the Application DTOs to response DTOs', async () => {
-    const response = await controller.search('jane');
+    const response = await controller.search(caller, 'jane');
 
     expect(searchUseCase.execute).toHaveBeenCalledWith(
-      new SearchContactQuery('jane'),
+      new SearchContactQuery(caller, 'jane'),
     );
     expect(response).toHaveLength(1);
     expect(response[0].value).toBe('jane.doe@example.com');
   });
 
   it('findOne() maps the Application DTO returned by GetContactUseCase', async () => {
-    const response = await controller.findOne('id-1');
+    const response = await controller.findOne(caller, 'id-1');
 
     expect(getUseCase.execute).toHaveBeenCalledWith(
-      new GetContactQuery('id-1'),
+      new GetContactQuery(caller, 'id-1'),
     );
     expect(response.value).toBe('jane.doe@example.com');
   });

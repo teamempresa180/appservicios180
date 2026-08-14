@@ -1,4 +1,5 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { assertOwnership } from '../../../core/application/ownership';
 import { Contact } from '../../domain/entities/contact.entity';
 import { ContactRepository } from '../../domain/interfaces/contact-repository.interface';
 import { ContactId } from '../../domain/value-objects/contact-id.value-object';
@@ -23,6 +24,14 @@ export class UpdateContactUseCase {
     const existing = await this.contactRepository.findById(id);
     if (!existing) {
       throw new NotFoundException(`Contact ${command.id} not found`);
+    }
+    assertOwnership(command.caller, existing.identityId.value, 'Contact');
+
+    // `type` is immutable, so the new `value` is checked against the
+    // stored Contact's own channel — the command has no `type` of its
+    // own to validate against.
+    if (command.value !== undefined) {
+      ContactValidator.validateValueForType(existing.type, command.value);
     }
 
     const updated = new Contact(existing.id, {

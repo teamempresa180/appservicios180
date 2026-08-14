@@ -49,14 +49,18 @@ export class PrismaContactRepository implements ContactRepository {
   async list(
     page: number,
     pageSize: number,
+    identityId?: IdentityId,
   ): Promise<PaginatedResult<Contact>> {
+    const where =
+      identityId !== undefined ? { identityId: identityId.value } : {};
     const [rows, total] = await Promise.all([
       this.prisma.contactModel.findMany({
+        where,
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.contactModel.count(),
+      this.prisma.contactModel.count({ where }),
     ]);
     return {
       items: rows.map((row) => ContactPrismaMapper.toDomain(row)),
@@ -66,9 +70,14 @@ export class PrismaContactRepository implements ContactRepository {
     };
   }
 
-  async search(term: string): Promise<Contact[]> {
+  async search(term: string, identityId?: IdentityId): Promise<Contact[]> {
     const rows = await this.prisma.contactModel.findMany({
-      where: { value: { contains: term } },
+      where: {
+        ...(identityId !== undefined
+          ? { identityId: identityId.value }
+          : undefined),
+        value: { contains: term },
+      },
       orderBy: { createdAt: 'desc' },
       take: MAX_UNPAGINATED_RESULTS,
     });

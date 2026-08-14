@@ -1,3 +1,4 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { CreateContactCommand } from '../../application/commands/create-contact.command';
 import { UpdateContactCommand } from '../../application/commands/update-contact.command';
@@ -12,17 +13,30 @@ import { ContactListResponseDto } from './contact-list.response.dto';
  * Application layer's commands/DTOs. The only place that knows both
  * shapes exist — `ContactController` never builds a
  * `CreateContactCommand` or a `ContactResponseDto` by hand.
+ *
+ * Commands carry the authenticated caller so the Use Cases can enforce
+ * ownership; it comes from `@CurrentUser()`, never from the request
+ * body.
  */
 export class ContactHttpMapper {
-  static toCreateCommand(dto: CreateContactRequestDto): CreateContactCommand {
-    return new CreateContactCommand(dto.identityId, dto.type, dto.value);
+  static toCreateCommand(
+    caller: AuthenticatedUser,
+    dto: CreateContactRequestDto,
+  ): CreateContactCommand {
+    return new CreateContactCommand(
+      caller,
+      dto.identityId,
+      dto.type,
+      dto.value,
+    );
   }
 
   static toUpdateCommand(
+    caller: AuthenticatedUser,
     id: string,
     dto: UpdateContactRequestDto,
   ): UpdateContactCommand {
-    return new UpdateContactCommand(id, dto.value, dto.status);
+    return new UpdateContactCommand(caller, id, dto.value, dto.status);
   }
 
   static toResponse(dto: ContactDto): ContactResponseDto {
