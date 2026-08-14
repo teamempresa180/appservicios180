@@ -39,7 +39,7 @@ describe('LocalVerificationDocumentStorageService', () => {
     const path = await service.save('verification-1', {
       originalname: '../../etc/passwd.png',
       mimetype: 'image/png',
-      buffer: Buffer.from('bytes'),
+      buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]),
     });
 
     expect(path).toBe(
@@ -55,5 +55,27 @@ describe('LocalVerificationDocumentStorageService', () => {
         buffer: Buffer.from('bytes'),
       }),
     ).rejects.toThrow(ValidationException);
+  });
+
+  // The declared `Content-Type` is on the allow-list, so the mimetype
+  // check passes — only the real leading bytes give the file away.
+  it('rejects a file whose bytes do not match its declared type', async () => {
+    await expect(
+      service.save('verification-1', {
+        originalname: 'not-really.png',
+        mimetype: 'image/png',
+        buffer: Buffer.from('MZ\x90\x00 an executable, actually'),
+      }),
+    ).rejects.toThrow(ValidationException);
+  });
+
+  it('accepts a real JPEG signature', async () => {
+    const path = await service.save('verification-1', {
+      originalname: 'selfie.jpg',
+      mimetype: 'image/jpeg',
+      buffer: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]),
+    });
+
+    expect(path).toBe('uploads/verifications/verification-1/selfie.jpg');
   });
 });

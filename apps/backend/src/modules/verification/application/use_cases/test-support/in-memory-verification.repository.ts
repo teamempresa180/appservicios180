@@ -25,8 +25,14 @@ export class InMemoryVerificationRepository implements VerificationRepository {
     return Promise.resolve();
   }
 
-  list(page: number, pageSize: number): Promise<PaginatedResult<Verification>> {
-    const all = [...this.rows.values()];
+  list(
+    page: number,
+    pageSize: number,
+    identityId: IdentityId | null,
+  ): Promise<PaginatedResult<Verification>> {
+    const all = [...this.rows.values()].filter(
+      (row) => !identityId || row.identityId.equals(identityId),
+    );
     const start = (page - 1) * pageSize;
     return Promise.resolve({
       items: all.slice(start, start + pageSize),
@@ -36,11 +42,13 @@ export class InMemoryVerificationRepository implements VerificationRepository {
     });
   }
 
-  search(term: string): Promise<Verification[]> {
+  search(term: string, identityId: IdentityId | null): Promise<Verification[]> {
     const upper = term.toUpperCase();
     return Promise.resolve(
       [...this.rows.values()].filter(
-        (row) => row.type.includes(upper) || row.status.includes(upper),
+        (row) =>
+          (row.type.includes(upper) || row.status.includes(upper)) &&
+          (!identityId || row.identityId.equals(identityId)),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEnum, IsOptional } from 'class-validator';
 import { VerificationStatus } from '../../domain/value-objects/verification-status.value-object';
 
 /**
@@ -12,7 +13,11 @@ import { VerificationStatus } from '../../domain/value-objects/verification-stat
 export class UpdateVerificationRequestDto {
   @ApiPropertyOptional({
     enum: VerificationStatus,
-    example: VerificationStatus.Approved,
+    example: VerificationStatus.Pending,
+    description:
+      'Only an Admin may set an arbitrary status; the owner may only resubmit a rejected Verification as PENDING.',
   })
+  @IsOptional()
+  @IsEnum(VerificationStatus)
   status?: VerificationStatus;
 }

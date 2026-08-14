@@ -1,3 +1,5 @@
+import { Role } from '../../../../common/auth/role.enum';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { VerificationDto } from '../../application/dto/verification.dto';
 import { VerificationType } from '../../domain/value-objects/verification-type.value-object';
 import { VerificationStatus } from '../../domain/value-objects/verification-status.value-object';
@@ -6,16 +8,19 @@ import { UpdateVerificationRequestDto } from './update-verification.request.dto'
 import { VerificationHttpMapper } from './verification-http.mapper';
 
 describe('VerificationHttpMapper', () => {
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+
   it('toCreateCommand() carries identityId/type through', () => {
     const dto: CreateVerificationRequestDto = {
       identityId: 'identity-1',
       type: VerificationType.Phone,
     };
 
-    const command = VerificationHttpMapper.toCreateCommand(dto);
+    const command = VerificationHttpMapper.toCreateCommand(dto, caller);
 
     expect(command.identityId).toBe('identity-1');
     expect(command.type).toBe(VerificationType.Phone);
+    expect(command.caller).toBe(caller);
   });
 
   it('toUpdateCommand() carries the id and optional status through', () => {
@@ -23,7 +28,7 @@ describe('VerificationHttpMapper', () => {
       status: VerificationStatus.Rejected,
     };
 
-    const command = VerificationHttpMapper.toUpdateCommand('id-1', dto);
+    const command = VerificationHttpMapper.toUpdateCommand('id-1', dto, caller);
 
     expect(command.id).toBe('id-1');
     expect(command.status).toBe(VerificationStatus.Rejected);
@@ -33,6 +38,7 @@ describe('VerificationHttpMapper', () => {
     const command = VerificationHttpMapper.toUploadDocumentCommand(
       'id-1',
       'uploads/verifications/id-1/record.pdf',
+      caller,
     );
 
     expect(command.id).toBe('id-1');

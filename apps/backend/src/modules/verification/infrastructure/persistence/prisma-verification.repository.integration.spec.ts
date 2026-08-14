@@ -101,7 +101,7 @@ describe('PrismaVerificationRepository (integration)', () => {
     await repository.save(buildVerification());
     await repository.save(buildVerification());
 
-    const page = await repository.list(1, 1);
+    const page = await repository.list(1, 1, null);
 
     expect(page.items).toHaveLength(1);
     expect(page.total).toBeGreaterThanOrEqual(2);
@@ -112,7 +112,7 @@ describe('PrismaVerificationRepository (integration)', () => {
   it('searches Verifications by type', async () => {
     await repository.save(buildVerification({ type: VerificationType.Facial }));
 
-    const results = await repository.search('facial');
+    const results = await repository.search('facial', null);
 
     expect(results.some((v) => v.type === VerificationType.Facial)).toBe(true);
   });

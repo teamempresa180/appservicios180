@@ -1,3 +1,5 @@
+﻿import { Role } from '../../../../common/auth/role.enum';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { VerificationController } from './verification.controller';
 import { CreateVerificationUseCase } from '../../application/use_cases/create-verification.use-case';
 import { UpdateVerificationUseCase } from '../../application/use_cases/update-verification.use-case';
@@ -21,6 +23,8 @@ import { NotFoundException } from '../../../core/domain/exceptions/not-found.exc
 import { LocalVerificationDocumentStorageService } from '../../infrastructure/storage/local-verification-document-storage.service';
 
 describe('VerificationController', () => {
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+
   let controller: VerificationController;
   let createUseCase: { execute: jest.Mock };
   let updateUseCase: { execute: jest.Mock };
@@ -85,10 +89,14 @@ describe('VerificationController', () => {
       type: VerificationType.Document,
     };
 
-    const response = await controller.create(dto);
+    const response = await controller.create(dto, caller);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
-      new CreateVerificationCommand('identity-1', VerificationType.Document),
+      new CreateVerificationCommand(
+        'identity-1',
+        VerificationType.Document,
+        caller,
+      ),
     );
     expect(response.id).toBe('id-1');
     expect(response.verifiedAt).toBeNull();
@@ -99,39 +107,43 @@ describe('VerificationController', () => {
       status: VerificationStatus.Approved,
     };
 
-    const response = await controller.update('id-1', dto);
+    const response = await controller.update('id-1', dto, caller);
 
     expect(updateUseCase.execute).toHaveBeenCalledWith(
-      new UpdateVerificationCommand('id-1', VerificationStatus.Approved),
+      new UpdateVerificationCommand(
+        'id-1',
+        VerificationStatus.Approved,
+        caller,
+      ),
     );
     expect(response.id).toBe('id-1');
   });
 
   it('list() maps page/pageSize query params to a query and wraps the paginated result', async () => {
-    const response = await controller.list('2', '10');
+    const response = await controller.list(caller, '2', '10');
 
     expect(listUseCase.execute).toHaveBeenCalledWith(
-      new ListVerificationQuery(2, 10),
+      new ListVerificationQuery(caller, 2, 10),
     );
     expect(response.items).toHaveLength(1);
     expect(response.total).toBe(1);
   });
 
   it('search() maps the term query param and the Application DTOs to response DTOs', async () => {
-    const response = await controller.search('DOCUMENT');
+    const response = await controller.search('DOCUMENT', caller);
 
     expect(searchUseCase.execute).toHaveBeenCalledWith(
-      new SearchVerificationQuery('DOCUMENT'),
+      new SearchVerificationQuery('DOCUMENT', caller),
     );
     expect(response).toHaveLength(1);
     expect(response[0].type).toBe(VerificationType.Document);
   });
 
   it('findOne() maps the Application DTO returned by GetVerificationUseCase', async () => {
-    const response = await controller.findOne('id-1');
+    const response = await controller.findOne('id-1', caller);
 
     expect(getUseCase.execute).toHaveBeenCalledWith(
-      new GetVerificationQuery('id-1'),
+      new GetVerificationQuery('id-1', caller),
     );
     expect(response.type).toBe(VerificationType.Document);
   });
@@ -144,16 +156,17 @@ describe('VerificationController', () => {
     };
 
     it('confirms the Verification exists, stores the file, then persists the resulting path', async () => {
-      const response = await controller.uploadDocument('id-1', file);
+      const response = await controller.uploadDocument('id-1', file, caller);
 
       expect(getUseCase.execute).toHaveBeenCalledWith(
-        new GetVerificationQuery('id-1'),
+        new GetVerificationQuery('id-1', caller),
       );
       expect(documentStorage.save).toHaveBeenCalledWith('id-1', file);
       expect(uploadDocumentUseCase.execute).toHaveBeenCalledWith(
         new UploadVerificationDocumentCommand(
           'id-1',
           'uploads/verifications/id-1/record.pdf',
+          caller,
         ),
       );
       expect(response.documentPath).toBe(
@@ -163,7 +176,7 @@ describe('VerificationController', () => {
 
     it('throws ValidationException when no file is provided', async () => {
       await expect(
-        controller.uploadDocument('id-1', undefined),
+        controller.uploadDocument('id-1', undefined, caller),
       ).rejects.toThrow(ValidationException);
       expect(documentStorage.save).not.toHaveBeenCalled();
       expect(uploadDocumentUseCase.execute).not.toHaveBeenCalled();
@@ -175,9 +188,10 @@ describe('VerificationController', () => {
       );
 
       await expect(
-        controller.uploadDocument('unknown-id', file),
+        controller.uploadDocument('unknown-id', file, caller),
       ).rejects.toThrow(NotFoundException);
       expect(documentStorage.save).not.toHaveBeenCalled();
     });
   });
 });
+
