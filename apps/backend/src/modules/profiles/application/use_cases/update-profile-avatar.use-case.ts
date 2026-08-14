@@ -1,3 +1,5 @@
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { Profile } from '../../domain/entities/profile.entity';
 import { ProfileRepository } from '../../domain/interfaces/profile-repository.interface';
@@ -17,6 +19,12 @@ import { ProfileValidator } from '../validators/profile.validator';
  * invoked from the controller before this use case) — this only ever
  * deals with the path string, never file bytes, keeping the
  * Application layer free of any filesystem/multipart concerns.
+ *
+ * Only the owning Identity (or an `Admin`) may replace an avatar —
+ * same rule as `UpdateProfileUseCase`. The controller additionally
+ * runs `GetProfileUseCase` before writing any bytes to disk, so an
+ * upload aimed at someone else's Profile is rejected before the file
+ * is stored.
  */
 export class UpdateProfileAvatarUseCase {
   constructor(private readonly profileRepository: ProfileRepository) {}
@@ -28,6 +36,14 @@ export class UpdateProfileAvatarUseCase {
     const existing = await this.profileRepository.findById(id);
     if (!existing) {
       throw new NotFoundException(`Profile ${command.id} not found`);
+    }
+    if (
+      existing.identityId.value !== command.callerId &&
+      command.callerRole !== Role.Admin
+    ) {
+      throw new ForbiddenException(
+        "You may only change your own Profile's avatar",
+      );
     }
 
     const updated = new Profile(existing.id, {

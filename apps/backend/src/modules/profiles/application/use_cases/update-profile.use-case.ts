@@ -1,3 +1,5 @@
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { Profile } from '../../domain/entities/profile.entity';
 import { ProfileRepository } from '../../domain/interfaces/profile-repository.interface';
@@ -14,6 +16,11 @@ import { ProfileValidator } from '../validators/profile.validator';
  * command), so they stay untouched, same pattern as
  * `UpdateIdentityUseCase` leaving `documentType`/`documentNumber`/
  * `birthDate` alone.
+ *
+ * Only the owning Identity (or an `Admin`) may update a Profile. The
+ * record is loaded first to learn its `identityId`, so a caller aiming
+ * at someone else's Profile gets a 403 and one aiming at a
+ * non-existent id gets a 404.
  */
 export class UpdateProfileUseCase {
   constructor(private readonly profileRepository: ProfileRepository) {}
@@ -25,6 +32,12 @@ export class UpdateProfileUseCase {
     const existing = await this.profileRepository.findById(id);
     if (!existing) {
       throw new NotFoundException(`Profile ${command.id} not found`);
+    }
+    if (
+      existing.identityId.value !== command.callerId &&
+      command.callerRole !== Role.Admin
+    ) {
+      throw new ForbiddenException('You may only update your own Profile');
     }
 
     const updated = new Profile(existing.id, {

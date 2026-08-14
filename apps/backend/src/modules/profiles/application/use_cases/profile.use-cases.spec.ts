@@ -1,3 +1,5 @@
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Identity } from '../../../identity/domain/entities/identity.entity';
@@ -28,6 +30,24 @@ describe('Profile use cases', () => {
   let identityRepository: InMemoryIdentityRepository;
   let identityId: string;
 
+  /** The caller in the happy path is always the Identity that owns the
+   *  Profile under test — every write is owner-only since Etapa 18. */
+  const createCommand = (
+    displayName: string,
+    visibility: ProfileVisibility = ProfileVisibility.Public,
+    owner: string = identityId,
+    caller: string = owner,
+  ): CreateProfileCommand =>
+    new CreateProfileCommand(
+      owner,
+      caller,
+      Role.Customer,
+      displayName,
+      null,
+      null,
+      visibility,
+    );
+
   beforeEach(async () => {
     repository = new InMemoryProfileRepository();
     identityRepository = new InMemoryIdentityRepository();
@@ -49,15 +69,7 @@ describe('Profile use cases', () => {
   describe('CreateProfileUseCase', () => {
     it('creates a Profile in Active status', async () => {
       const useCase = new CreateProfileUseCase(repository, identityRepository);
-      const dto = await useCase.execute(
-        new CreateProfileCommand(
-          identityId,
-          'Ana María',
-          null,
-          null,
-          ProfileVisibility.Public,
-        ),
-      );
+      const dto = await useCase.execute(createCommand('Ana María'));
 
       expect(dto.identityId).toBe(identityId);
       expect(dto.displayName).toBe('Ana María');
@@ -68,65 +80,93 @@ describe('Profile use cases', () => {
       const useCase = new CreateProfileUseCase(repository, identityRepository);
       await expect(
         useCase.execute(
-          new CreateProfileCommand(
-            'unknown-identity',
+          createCommand(
             'Ana',
-            null,
-            null,
             ProfileVisibility.Public,
+            'unknown-identity',
+            'unknown-identity',
           ),
         ),
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('rejects a blank displayName', async () => {
+    it('throws ForbiddenException when creating a Profile for another Identity', async () => {
       const useCase = new CreateProfileUseCase(repository, identityRepository);
       await expect(
         useCase.execute(
-          new CreateProfileCommand(
-            identityId,
-            '  ',
-            null,
-            null,
+          createCommand(
+            'Impostor',
             ProfileVisibility.Public,
+            identityId,
+            'someone-else',
           ),
         ),
-      ).rejects.toThrow(ValidationException);
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects a blank displayName', async () => {
+      const useCase = new CreateProfileUseCase(repository, identityRepository);
+      await expect(useCase.execute(createCommand('  '))).rejects.toThrow(
+        ValidationException,
+      );
     });
 
     it('rejects an invalid visibility', async () => {
       const useCase = new CreateProfileUseCase(repository, identityRepository);
       await expect(
         useCase.execute(
-          new CreateProfileCommand(
-            identityId,
-            'Ana',
-            null,
-            null,
-            'NOT_A_VISIBILITY' as ProfileVisibility,
-          ),
+          createCommand('Ana', 'NOT_A_VISIBILITY' as ProfileVisibility),
         ),
       ).rejects.toThrow(ValidationException);
     });
   });
 
   describe('GetProfileUseCase', () => {
-    it('returns the Profile when it exists', async () => {
+    it('returns the Profile to its owner', async () => {
       const created = await new CreateProfileUseCase(
         repository,
         identityRepository,
-      ).execute(
-        new CreateProfileCommand(
-          identityId,
-          'Ana',
-          null,
-          null,
-          ProfileVisibility.Public,
-        ),
-      );
+      ).execute(createCommand('Ana'));
 
       const found = await new GetProfileUseCase(repository).execute(
-        new GetProfileQuery(created.id),
+        new GetProfileQuery(created.id, identityId, Role.Customer),
+      );
+      expect(found.id).toBe(created.id);
+    });
+
+    it('returns a Public Profile to any authenticated caller', async () => {
+      const created = await new CreateProfileUseCase(
+        repository,
+        identityRepository,
+      ).execute(createCommand('Ana', ProfileVisibility.Public));
+
+      const found = await new GetProfileUseCase(repository).execute(
+        new GetProfileQuery(created.id, 'someone-else', Role.Customer),
+      );
+      expect(found.id).toBe(created.id);
+    });
+
+    it('throws ForbiddenException for another Identity’s Private Profile', async () => {
+      const created = await new CreateProfileUseCase(
+        repository,
+        identityRepository,
+      ).execute(createCommand('Ana', ProfileVisibility.Private));
+
+      await expect(
+        new GetProfileUseCase(repository).execute(
+          new GetProfileQuery(created.id, 'someone-else', Role.Customer),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('returns a Private Profile to its own owner', async () => {
+      const created = await new CreateProfileUseCase(
+        repository,
+        identityRepository,
+      ).execute(createCommand('Ana', ProfileVisibility.Private));
+
+      const found = await new GetProfileUseCase(repository).execute(
+        new GetProfileQuery(created.id, identityId, Role.Customer),
       );
       expect(found.id).toBe(created.id);
     });
@@ -134,7 +174,7 @@ describe('Profile use cases', () => {
     it('throws NotFoundException when it does not exist', async () => {
       await expect(
         new GetProfileUseCase(repository).execute(
-          new GetProfileQuery('unknown-id'),
+          new GetProfileQuery('unknown-id', identityId, Role.Customer),
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -145,19 +185,13 @@ describe('Profile use cases', () => {
       const created = await new CreateProfileUseCase(
         repository,
         identityRepository,
-      ).execute(
-        new CreateProfileCommand(
-          identityId,
-          'Ana',
-          null,
-          null,
-          ProfileVisibility.Public,
-        ),
-      );
+      ).execute(createCommand('Ana'));
 
       const updated = await new UpdateProfileUseCase(repository).execute(
         new UpdateProfileCommand(
           created.id,
+          identityId,
+          Role.Customer,
           'Ana María',
           ProfileVisibility.Private,
           ProfileStatus.Inactive,
@@ -169,10 +203,33 @@ describe('Profile use cases', () => {
       expect(updated.status).toBe(ProfileStatus.Inactive);
     });
 
+    it('throws ForbiddenException when the Profile belongs to another Identity', async () => {
+      const created = await new CreateProfileUseCase(
+        repository,
+        identityRepository,
+      ).execute(createCommand('Ana'));
+
+      await expect(
+        new UpdateProfileUseCase(repository).execute(
+          new UpdateProfileCommand(
+            created.id,
+            'someone-else',
+            Role.Customer,
+            'Hijacked',
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
         new UpdateProfileUseCase(repository).execute(
-          new UpdateProfileCommand('unknown-id', 'New Name'),
+          new UpdateProfileCommand(
+            'unknown-id',
+            identityId,
+            Role.Customer,
+            'New Name',
+          ),
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -183,22 +240,14 @@ describe('Profile use cases', () => {
       const created = await new CreateProfileUseCase(
         repository,
         identityRepository,
-      ).execute(
-        new CreateProfileCommand(
-          identityId,
-          'Ana',
-          null,
-          null,
-          ProfileVisibility.Public,
-        ),
-      );
+      ).execute(createCommand('Ana'));
       expect(created.avatarUrl).toBeNull();
 
-      const updated = await new UpdateProfileAvatarUseCase(
-        repository,
-      ).execute(
+      const updated = await new UpdateProfileAvatarUseCase(repository).execute(
         new UpdateProfileAvatarCommand(
           created.id,
+          identityId,
+          Role.Customer,
           `uploads/profiles/${created.id}/avatar.png`,
         ),
       );
@@ -209,11 +258,31 @@ describe('Profile use cases', () => {
       expect(updated.displayName).toBe('Ana');
     });
 
+    it('throws ForbiddenException when the Profile belongs to another Identity', async () => {
+      const created = await new CreateProfileUseCase(
+        repository,
+        identityRepository,
+      ).execute(createCommand('Ana'));
+
+      await expect(
+        new UpdateProfileAvatarUseCase(repository).execute(
+          new UpdateProfileAvatarCommand(
+            created.id,
+            'someone-else',
+            Role.Customer,
+            `uploads/profiles/${created.id}/avatar.png`,
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
         new UpdateProfileAvatarUseCase(repository).execute(
           new UpdateProfileAvatarCommand(
             'unknown-id',
+            identityId,
+            Role.Customer,
             'uploads/profiles/unknown-id/avatar.png',
           ),
         ),
@@ -224,19 +293,16 @@ describe('Profile use cases', () => {
       const created = await new CreateProfileUseCase(
         repository,
         identityRepository,
-      ).execute(
-        new CreateProfileCommand(
-          identityId,
-          'Ana',
-          null,
-          null,
-          ProfileVisibility.Public,
-        ),
-      );
+      ).execute(createCommand('Ana'));
 
       await expect(
         new UpdateProfileAvatarUseCase(repository).execute(
-          new UpdateProfileAvatarCommand(created.id, '  '),
+          new UpdateProfileAvatarCommand(
+            created.id,
+            identityId,
+            Role.Customer,
+            '  ',
+          ),
         ),
       ).rejects.toThrow(ValidationException);
     });
@@ -247,80 +313,76 @@ describe('Profile use cases', () => {
       const created = await new CreateProfileUseCase(
         repository,
         identityRepository,
-      ).execute(
-        new CreateProfileCommand(
-          identityId,
-          'Ana',
-          null,
-          null,
-          ProfileVisibility.Public,
-        ),
-      );
+      ).execute(createCommand('Ana'));
 
       await new DeleteProfileUseCase(repository).execute(
-        new DeleteProfileCommand(created.id),
+        new DeleteProfileCommand(created.id, identityId, Role.Customer),
       );
 
       await expect(
         new GetProfileUseCase(repository).execute(
-          new GetProfileQuery(created.id),
+          new GetProfileQuery(created.id, identityId, Role.Customer),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException when the Profile belongs to another Identity', async () => {
+      const created = await new CreateProfileUseCase(
+        repository,
+        identityRepository,
+      ).execute(createCommand('Ana'));
+
+      await expect(
+        new DeleteProfileUseCase(repository).execute(
+          new DeleteProfileCommand(created.id, 'someone-else', Role.Customer),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
         new DeleteProfileUseCase(repository).execute(
-          new DeleteProfileCommand('unknown-id'),
+          new DeleteProfileCommand('unknown-id', identityId, Role.Customer),
         ),
       ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('ListProfileUseCase', () => {
-    it('paginates results', async () => {
+    it('paginates the caller’s own Profiles', async () => {
       const createUseCase = new CreateProfileUseCase(
         repository,
         identityRepository,
       );
-      await createUseCase.execute(
-        new CreateProfileCommand(
-          identityId,
-          'A',
-          null,
-          null,
-          ProfileVisibility.Public,
-        ),
-      );
-      await createUseCase.execute(
-        new CreateProfileCommand(
-          identityId,
-          'B',
-          null,
-          null,
-          ProfileVisibility.Public,
-        ),
-      );
+      await createUseCase.execute(createCommand('A'));
+      await createUseCase.execute(createCommand('B'));
 
       const page = await new ListProfileUseCase(repository).execute(
-        new ListProfileQuery(1, 1),
+        new ListProfileQuery(identityId, Role.Customer, 1, 1),
       );
 
       expect(page.items).toHaveLength(1);
       expect(page.total).toBe(2);
+    });
+
+    it('does not return Profiles owned by another Identity', async () => {
+      await new CreateProfileUseCase(repository, identityRepository).execute(
+        createCommand('A'),
+      );
+
+      const page = await new ListProfileUseCase(repository).execute(
+        new ListProfileQuery('someone-else', Role.Customer),
+      );
+
+      expect(page.items).toHaveLength(0);
+      expect(page.total).toBe(0);
     });
   });
 
   describe('SearchProfileUseCase', () => {
     it('finds Profiles by displayName', async () => {
       await new CreateProfileUseCase(repository, identityRepository).execute(
-        new CreateProfileCommand(
-          identityId,
-          'Special Name',
-          null,
-          null,
-          ProfileVisibility.Public,
-        ),
+        createCommand('Special Name'),
       );
 
       const results = await new SearchProfileUseCase(repository).execute(

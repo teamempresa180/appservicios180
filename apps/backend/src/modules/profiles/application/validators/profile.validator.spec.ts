@@ -1,3 +1,4 @@
+import { Role } from '../../../../common/auth/role.enum';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { ProfileVisibility } from '../../domain/value-objects/profile-visibility.value-object';
 import { ProfileStatus } from '../../domain/value-objects/profile-status.value-object';
@@ -6,13 +7,23 @@ import { UpdateProfileCommand } from '../commands/update-profile.command';
 import { UpdateProfileAvatarCommand } from '../commands/update-profile-avatar.command';
 import { ProfileValidator } from './profile.validator';
 
+/**
+ * The validator only inspects the structural fields, so the
+ * `callerId`/`callerRole` every command carries since Etapa 18 are
+ * fixed placeholders here — ownership itself is enforced by the use
+ * cases and covered in `profile.use-cases.spec.ts`.
+ */
 describe('ProfileValidator', () => {
+  const caller = 'caller-1';
+
   describe('validateCreate', () => {
     it('passes for a well-formed command', () => {
       expect(() =>
         ProfileValidator.validateCreate(
           new CreateProfileCommand(
             'identity-1',
+            caller,
+            Role.Customer,
             'Ana',
             null,
             null,
@@ -27,6 +38,8 @@ describe('ProfileValidator', () => {
         ProfileValidator.validateCreate(
           new CreateProfileCommand(
             '  ',
+            caller,
+            Role.Customer,
             'Ana',
             null,
             null,
@@ -41,6 +54,8 @@ describe('ProfileValidator', () => {
         ProfileValidator.validateCreate(
           new CreateProfileCommand(
             'identity-1',
+            caller,
+            Role.Customer,
             '   ',
             null,
             null,
@@ -55,6 +70,8 @@ describe('ProfileValidator', () => {
         ProfileValidator.validateCreate(
           new CreateProfileCommand(
             'identity-1',
+            caller,
+            Role.Customer,
             'Ana',
             null,
             null,
@@ -71,6 +88,8 @@ describe('ProfileValidator', () => {
         ProfileValidator.validateUpdate(
           new UpdateProfileCommand(
             'id-1',
+            caller,
+            Role.Customer,
             'New Name',
             ProfileVisibility.Private,
             ProfileStatus.Active,
@@ -81,14 +100,16 @@ describe('ProfileValidator', () => {
 
     it('rejects a blank id', () => {
       expect(() =>
-        ProfileValidator.validateUpdate(new UpdateProfileCommand('  ')),
+        ProfileValidator.validateUpdate(
+          new UpdateProfileCommand('  ', caller, Role.Customer),
+        ),
       ).toThrow(ValidationException);
     });
 
     it('rejects a blank displayName when provided', () => {
       expect(() =>
         ProfileValidator.validateUpdate(
-          new UpdateProfileCommand('id-1', '   '),
+          new UpdateProfileCommand('id-1', caller, Role.Customer, '   '),
         ),
       ).toThrow(ValidationException);
     });
@@ -98,6 +119,8 @@ describe('ProfileValidator', () => {
         ProfileValidator.validateUpdate(
           new UpdateProfileCommand(
             'id-1',
+            caller,
+            Role.Customer,
             undefined,
             'INVALID' as ProfileVisibility,
           ),
@@ -110,6 +133,8 @@ describe('ProfileValidator', () => {
         ProfileValidator.validateUpdate(
           new UpdateProfileCommand(
             'id-1',
+            caller,
+            Role.Customer,
             undefined,
             undefined,
             'INVALID' as ProfileStatus,
@@ -125,6 +150,8 @@ describe('ProfileValidator', () => {
         ProfileValidator.validateUpdateAvatar(
           new UpdateProfileAvatarCommand(
             'id-1',
+            caller,
+            Role.Customer,
             'uploads/profiles/id-1/avatar.png',
           ),
         ),
@@ -134,7 +161,12 @@ describe('ProfileValidator', () => {
     it('rejects a blank id', () => {
       expect(() =>
         ProfileValidator.validateUpdateAvatar(
-          new UpdateProfileAvatarCommand('  ', 'uploads/profiles/id-1/avatar.png'),
+          new UpdateProfileAvatarCommand(
+            '  ',
+            caller,
+            Role.Customer,
+            'uploads/profiles/id-1/avatar.png',
+          ),
         ),
       ).toThrow(ValidationException);
     });
@@ -142,7 +174,7 @@ describe('ProfileValidator', () => {
     it('rejects a blank avatarUrl', () => {
       expect(() =>
         ProfileValidator.validateUpdateAvatar(
-          new UpdateProfileAvatarCommand('id-1', '  '),
+          new UpdateProfileAvatarCommand('id-1', caller, Role.Customer, '  '),
         ),
       ).toThrow(ValidationException);
     });
@@ -168,9 +200,9 @@ describe('ProfileValidator', () => {
     });
 
     it('rejects an undefined mimetype', () => {
-      expect(() =>
-        ProfileValidator.validateAvatarMimeType(undefined),
-      ).toThrow(ValidationException);
+      expect(() => ProfileValidator.validateAvatarMimeType(undefined)).toThrow(
+        ValidationException,
+      );
     });
   });
 });

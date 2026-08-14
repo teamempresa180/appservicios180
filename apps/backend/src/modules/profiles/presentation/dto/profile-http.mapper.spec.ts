@@ -1,3 +1,5 @@
+import { Role } from '../../../../common/auth/role.enum';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { ProfileDto } from '../../application/dto/profile.dto';
 import { ProfileVisibility } from '../../domain/value-objects/profile-visibility.value-object';
 import { ProfileStatus } from '../../domain/value-objects/profile-status.value-object';
@@ -6,6 +8,8 @@ import { UpdateProfileRequestDto } from './update-profile.request.dto';
 import { ProfileHttpMapper } from './profile-http.mapper';
 
 describe('ProfileHttpMapper', () => {
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+
   it('toCreateCommand() carries all create fields through, defaulting nullable fields', () => {
     const dto: CreateProfileRequestDto = {
       identityId: 'identity-1',
@@ -13,9 +17,11 @@ describe('ProfileHttpMapper', () => {
       visibility: ProfileVisibility.Public,
     };
 
-    const command = ProfileHttpMapper.toCreateCommand(dto);
+    const command = ProfileHttpMapper.toCreateCommand(dto, caller);
 
     expect(command.identityId).toBe('identity-1');
+    expect(command.callerId).toBe('identity-1');
+    expect(command.callerRole).toBe(Role.Customer);
     expect(command.displayName).toBe('Jane Doe');
     expect(command.avatarUrl).toBeNull();
     expect(command.bio).toBeNull();
@@ -25,9 +31,11 @@ describe('ProfileHttpMapper', () => {
   it('toUpdateCommand() carries the id and optional fields through', () => {
     const dto: UpdateProfileRequestDto = { status: ProfileStatus.Archived };
 
-    const command = ProfileHttpMapper.toUpdateCommand('id-1', dto);
+    const command = ProfileHttpMapper.toUpdateCommand('id-1', dto, caller);
 
     expect(command.id).toBe('id-1');
+    expect(command.callerId).toBe('identity-1');
+    expect(command.callerRole).toBe(Role.Customer);
     expect(command.status).toBe(ProfileStatus.Archived);
   });
 
