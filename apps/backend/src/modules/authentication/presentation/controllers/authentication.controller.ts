@@ -19,6 +19,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { RolesGuard } from '../../../../common/auth/roles.guard';
 import { CurrentUser } from '../../../../common/auth/current-user.decorator';
 import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { AuthenticationRoutes } from '../routes/authentication.routes';
@@ -71,6 +72,12 @@ import { AuthSessionHttpMapper } from '../dto/auth-session-http.mapper';
  * impossible: `LoginUseCase` requires an *active* `Password`
  * `Authentication` record to exist before it will even check the
  * password, and there is no other way to create that first record.
+ *
+ * `update`/`delete`/`findOne` are additionally scoped to the caller's
+ * own records (Etapa 18): each passes `@CurrentUser()` down to its Use
+ * Case, which answers 403 for another Identity's method. Without that,
+ * any authenticated user could lock or delete someone else's
+ * `Password` method by id and lock them out of their account.
  */
 @ApiTags('Authentication')
 @Controller(AuthenticationRoutes.base)
@@ -112,7 +119,7 @@ export class AuthenticationController {
   }
 
   @Put(AuthenticationRoutes.byId)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation(AuthenticationSwagger.update)
   @ApiParam({ name: 'id', description: 'Authentication method id' })
@@ -127,6 +134,11 @@ export class AuthenticationController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
+    status: 403,
+    description: 'The Authentication method belongs to another Identity.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 404,
     description: 'Authentication method not found.',
     type: ErrorResponseDto,
@@ -134,27 +146,36 @@ export class AuthenticationController {
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateAuthenticationRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<AuthenticationResponseDto> {
     const authentication = await this.updateAuthenticationUseCase.execute(
-      AuthenticationHttpMapper.toUpdateCommand(id, dto),
+      AuthenticationHttpMapper.toUpdateCommand(id, dto, user),
     );
     return AuthenticationHttpMapper.toResponse(authentication);
   }
 
   @Delete(AuthenticationRoutes.byId)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation(AuthenticationSwagger.delete)
   @ApiParam({ name: 'id', description: 'Authentication method id' })
   @ApiResponse({ status: 200, description: 'Authentication method deleted.' })
   @ApiResponse({
+    status: 403,
+    description: 'The Authentication method belongs to another Identity.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 404,
     description: 'Authentication method not found.',
     type: ErrorResponseDto,
   })
-  async remove(@Param('id') id: string): Promise<void> {
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<void> {
     await this.deleteAuthenticationUseCase.execute(
-      new DeleteAuthenticationCommand(id),
+      new DeleteAuthenticationCommand(id, user.id, user.role),
     );
   }
 
@@ -224,7 +245,7 @@ export class AuthenticationController {
   }
 
   @Get(AuthenticationRoutes.me)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation(AuthenticationSwagger.me)
   @ApiResponse({
@@ -242,7 +263,7 @@ export class AuthenticationController {
   }
 
   @Get(AuthenticationRoutes.byId)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation(AuthenticationSwagger.get)
   @ApiParam({ name: 'id', description: 'Authentication method id' })
@@ -252,13 +273,21 @@ export class AuthenticationController {
     type: AuthenticationResponseDto,
   })
   @ApiResponse({
+    status: 403,
+    description: 'The Authentication method belongs to another Identity.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 404,
     description: 'Authentication method not found.',
     type: ErrorResponseDto,
   })
-  async findOne(@Param('id') id: string): Promise<AuthenticationResponseDto> {
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<AuthenticationResponseDto> {
     const authentication = await this.getAuthenticationUseCase.execute(
-      new GetAuthenticationQuery(id),
+      new GetAuthenticationQuery(id, user.id, user.role),
     );
     return AuthenticationHttpMapper.toResponse(authentication);
   }

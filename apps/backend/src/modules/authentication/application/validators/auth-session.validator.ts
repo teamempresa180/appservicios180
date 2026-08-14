@@ -30,7 +30,11 @@ const MAX_TOKEN_LENGTH = 4096;
 
 export class AuthSessionValidator {
   static validateLogin(command: LoginCommand): void {
-    requireString(command.documentNumber, 'documentNumber', MAX_DOCUMENT_NUMBER_LENGTH);
+    requireString(
+      command.documentNumber,
+      'documentNumber',
+      MAX_DOCUMENT_NUMBER_LENGTH,
+    );
     requireString(command.password, 'password', MAX_PASSWORD_LENGTH);
   }
 

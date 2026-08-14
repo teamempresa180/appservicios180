@@ -86,32 +86,43 @@ describe('AuthenticationController', () => {
     expect(response.createdAt).toBe('2026-01-01T00:00:00.000Z');
   });
 
-  it('update() maps id + request DTO to a command', async () => {
+  it('update() maps id + request DTO + caller to a command', async () => {
     const dto: UpdateAuthenticationRequestDto = {
       status: AuthenticationStatus.Locked,
     };
 
-    const response = await controller.update('id-1', dto);
+    const response = await controller.update('id-1', dto, {
+      id: 'identity-1',
+      role: Role.Customer,
+    });
 
     expect(updateUseCase.execute).toHaveBeenCalledWith(
-      new UpdateAuthenticationCommand('id-1', AuthenticationStatus.Locked),
+      new UpdateAuthenticationCommand(
+        'id-1',
+        'identity-1',
+        Role.Customer,
+        AuthenticationStatus.Locked,
+      ),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('remove() delegates to DeleteAuthenticationUseCase with the id', async () => {
-    await controller.remove('id-1');
+  it('remove() delegates to DeleteAuthenticationUseCase with the id and the caller', async () => {
+    await controller.remove('id-1', { id: 'identity-1', role: Role.Customer });
 
     expect(deleteUseCase.execute).toHaveBeenCalledWith(
-      new DeleteAuthenticationCommand('id-1'),
+      new DeleteAuthenticationCommand('id-1', 'identity-1', Role.Customer),
     );
   });
 
-  it('findOne() maps the Application DTO returned by GetAuthenticationUseCase', async () => {
-    const response = await controller.findOne('id-1');
+  it('findOne() passes the caller to GetAuthenticationUseCase and maps its Application DTO', async () => {
+    const response = await controller.findOne('id-1', {
+      id: 'identity-1',
+      role: Role.Customer,
+    });
 
     expect(getUseCase.execute).toHaveBeenCalledWith(
-      new GetAuthenticationQuery('id-1'),
+      new GetAuthenticationQuery('id-1', 'identity-1', Role.Customer),
     );
     expect(response.methodType).toBe(AuthMethodType.Password);
   });
