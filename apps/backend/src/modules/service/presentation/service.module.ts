@@ -53,13 +53,19 @@ import { PrismaServiceRepository } from '../infrastructure/persistence/prisma-se
     },
     {
       provide: UpdateServiceUseCase,
-      useFactory: (repo: ServiceRepository) => new UpdateServiceUseCase(repo),
-      inject: [SERVICE_REPOSITORY],
+      useFactory: (
+        repo: ServiceRepository,
+        providerRepo: ProviderRepository,
+      ) => new UpdateServiceUseCase(repo, providerRepo),
+      inject: [SERVICE_REPOSITORY, PROVIDER_REPOSITORY],
     },
     {
       provide: DeleteServiceUseCase,
-      useFactory: (repo: ServiceRepository) => new DeleteServiceUseCase(repo),
-      inject: [SERVICE_REPOSITORY],
+      useFactory: (
+        repo: ServiceRepository,
+        providerRepo: ProviderRepository,
+      ) => new DeleteServiceUseCase(repo, providerRepo),
+      inject: [SERVICE_REPOSITORY, PROVIDER_REPOSITORY],
     },
     {
       provide: GetServiceUseCase,

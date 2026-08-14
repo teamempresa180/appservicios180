@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -52,7 +52,10 @@ describe('ServiceController (e2e)', () => {
   let app: INestApplication<App>;
   let categoryId: string;
   let providerId: string;
+  let providerIdentityId: string;
   let authHeader: string;
+  let ownerAuthHeader: string;
+  let otherProviderAuthHeader: string;
 
   beforeEach(async () => {
     const now = new Date();
@@ -85,6 +88,7 @@ describe('ServiceController (e2e)', () => {
     });
     await providerRepository.save(provider);
     providerId = provider.id.value;
+    providerIdentityId = provider.identityId.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
@@ -111,9 +115,23 @@ describe('ServiceController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await app.init();
 
+    // Writes require the Provider role *and* ownership of the target
+    // Provider, so the owner token carries the seeded Provider's own
+    // Identity. `authHeader` stays a plain Customer: it is what the
+    // read-only browsing cases use.
     authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'test-identity', role: 'CUSTOMER' })}`;
+    ownerAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: providerIdentityId, role: 'PROVIDER' })}`;
+    otherProviderAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'another-identity', role: 'PROVIDER' })}`;
   });
 
   afterEach(async () => {
@@ -136,7 +154,7 @@ describe('ServiceController (e2e)', () => {
   it('POST /services creates a Service and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/services')
-      .set('Authorization', authHeader)
+      .set('Authorization', ownerAuthHeader)
       .send(createServiceBody())
       .expect(201);
 
@@ -149,7 +167,7 @@ describe('ServiceController (e2e)', () => {
   it('POST /services returns 404 when the Category does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/services')
-      .set('Authorization', authHeader)
+      .set('Authorization', ownerAuthHeader)
       .send(createServiceBody({ categoryId: 'unknown-category' }))
       .expect(404);
 
@@ -159,11 +177,55 @@ describe('ServiceController (e2e)', () => {
   it('POST /services returns 404 when the Provider does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/services')
-      .set('Authorization', authHeader)
+      .set('Authorization', ownerAuthHeader)
       .send(createServiceBody({ providerId: 'unknown-provider' }))
       .expect(404);
 
     expect((response.body as ErrorResponseDto).error).toBe('NotFoundException');
+  });
+
+  it('POST /services refuses a Customer', async () => {
+    await request(app.getHttpServer())
+      .post('/services')
+      .set('Authorization', authHeader)
+      .send(createServiceBody())
+      .expect(403);
+  });
+
+  it("POST /services refuses a Provider publishing under another Provider's id", async () => {
+    const response = await request(app.getHttpServer())
+      .post('/services')
+      .set('Authorization', otherProviderAuthHeader)
+      .send(createServiceBody())
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
+  it('POST /services rejects a zero basePrice', async () => {
+    await request(app.getHttpServer())
+      .post('/services')
+      .set('Authorization', ownerAuthHeader)
+      .send(createServiceBody({ basePrice: 0 }))
+      .expect(400);
+  });
+
+  it('POST /services rejects a fractional estimatedDuration', async () => {
+    await request(app.getHttpServer())
+      .post('/services')
+      .set('Authorization', ownerAuthHeader)
+      .send(createServiceBody({ estimatedDuration: 30.5 }))
+      .expect(400);
+  });
+
+  it('POST /services rejects an unknown field', async () => {
+    await request(app.getHttpServer())
+      .post('/services')
+      .set('Authorization', ownerAuthHeader)
+      .send(createServiceBody({ status: 'ACTIVE' }))
+      .expect(400);
   });
 
   it('GET /services/:id returns 404 for an unknown id', async () => {
@@ -176,29 +238,60 @@ describe('ServiceController (e2e)', () => {
   it('PUT /services/:id updates the basePrice', async () => {
     const created = await request(app.getHttpServer())
       .post('/services')
-      .set('Authorization', authHeader)
+      .set('Authorization', ownerAuthHeader)
       .send(createServiceBody());
     const createdId = (created.body as ServiceResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/services/${createdId}`)
-      .set('Authorization', authHeader)
+      .set('Authorization', ownerAuthHeader)
       .send({ basePrice: 55.0 })
       .expect(200);
 
     expect((response.body as ServiceResponseDto).basePrice).toBe(55.0);
   });
 
-  it('DELETE /services/:id deletes an existing Service', async () => {
+  it("PUT /services/:id refuses to edit another Provider's Service", async () => {
     const created = await request(app.getHttpServer())
       .post('/services')
-      .set('Authorization', authHeader)
+      .set('Authorization', ownerAuthHeader)
+      .send(createServiceBody());
+    const createdId = (created.body as ServiceResponseDto).id;
+
+    const response = await request(app.getHttpServer())
+      .put(`/services/${createdId}`)
+      .set('Authorization', otherProviderAuthHeader)
+      .send({ basePrice: 1 })
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
+  it("DELETE /services/:id refuses to delete another Provider's Service", async () => {
+    const created = await request(app.getHttpServer())
+      .post('/services')
+      .set('Authorization', ownerAuthHeader)
       .send(createServiceBody());
     const createdId = (created.body as ServiceResponseDto).id;
 
     await request(app.getHttpServer())
       .delete(`/services/${createdId}`)
-      .set('Authorization', authHeader)
+      .set('Authorization', otherProviderAuthHeader)
+      .expect(403);
+  });
+
+  it('DELETE /services/:id deletes an existing Service', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/services')
+      .set('Authorization', ownerAuthHeader)
+      .send(createServiceBody());
+    const createdId = (created.body as ServiceResponseDto).id;
+
+    await request(app.getHttpServer())
+      .delete(`/services/${createdId}`)
+      .set('Authorization', ownerAuthHeader)
       .expect(200);
     await request(app.getHttpServer())
       .get(`/services/${createdId}`)
@@ -209,7 +302,7 @@ describe('ServiceController (e2e)', () => {
   it('GET /services lists Services page by page', async () => {
     await request(app.getHttpServer())
       .post('/services')
-      .set('Authorization', authHeader)
+      .set('Authorization', ownerAuthHeader)
       .send(createServiceBody());
 
     const response = await request(app.getHttpServer())
@@ -226,7 +319,7 @@ describe('ServiceController (e2e)', () => {
   it('GET /services/search searches by name', async () => {
     await request(app.getHttpServer())
       .post('/services')
-      .set('Authorization', authHeader)
+      .set('Authorization', ownerAuthHeader)
       .send(createServiceBody());
 
     const response = await request(app.getHttpServer())

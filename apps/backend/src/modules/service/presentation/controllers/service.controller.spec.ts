@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { ServiceController } from './service.controller';
 import { CreateServiceUseCase } from '../../application/use_cases/create-service.use-case';
 import { UpdateServiceUseCase } from '../../application/use_cases/update-service.use-case';
@@ -25,6 +27,15 @@ describe('ServiceController', () => {
   let getUseCase: { execute: jest.Mock };
   let listUseCase: { execute: jest.Mock };
   let searchUseCase: { execute: jest.Mock };
+
+  /**
+   * The controller forwards the authenticated caller to the Use Case,
+   * which owns the ownership rules — these cases assert wiring only.
+   */
+  const caller: AuthenticatedUser = {
+    id: 'identity-1',
+    role: Role.Provider,
+  };
 
   const serviceDto: ServiceDto = {
     id: 'id-1',
@@ -76,7 +87,7 @@ describe('ServiceController', () => {
       type: ServiceType.Standard,
     };
 
-    const response = await controller.create(dto);
+    const response = await controller.create(dto, caller);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
       new CreateServiceCommand(
@@ -88,6 +99,7 @@ describe('ServiceController', () => {
         60,
         ServiceType.Standard,
       ),
+      caller,
     );
     expect(response.id).toBe('id-1');
   });
@@ -95,19 +107,21 @@ describe('ServiceController', () => {
   it('update() maps id + request DTO to a command', async () => {
     const dto: UpdateServiceRequestDto = { basePrice: 55.0 };
 
-    const response = await controller.update('id-1', dto);
+    const response = await controller.update('id-1', dto, caller);
 
     expect(updateUseCase.execute).toHaveBeenCalledWith(
       new UpdateServiceCommand('id-1', 55.0, undefined, undefined),
+      caller,
     );
     expect(response.id).toBe('id-1');
   });
 
   it('remove() delegates to DeleteServiceUseCase with the id', async () => {
-    await controller.remove('id-1');
+    await controller.remove('id-1', caller);
 
     expect(deleteUseCase.execute).toHaveBeenCalledWith(
       new DeleteServiceCommand('id-1'),
+      caller,
     );
   });
 

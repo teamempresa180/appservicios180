@@ -1,3 +1,6 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { CategoryRepository } from '../../../category/domain/interfaces/category-repository.interface';
 import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
@@ -25,6 +28,12 @@ import { ServiceValidator } from '../validators/service.validator';
  * `PrismaProviderRepository` (Sprint 3, Etapa 7), so this check is no
  * longer deferred — see `PROJECT_STATUS.md`, section "Prompt 64", for
  * the full resolution.
+ *
+ * Authorization (Sprint 4, Etapa 18): the resolved Provider must
+ * belong to the authenticated caller (`provider.identityId ===
+ * caller.id`) unless the caller is an `Admin`. Without this, any
+ * authenticated user could publish services under another provider's
+ * name simply by naming their `providerId`.
  */
 export class CreateServiceUseCase {
   constructor(
@@ -33,7 +42,10 @@ export class CreateServiceUseCase {
     private readonly providerRepository: ProviderRepository,
   ) {}
 
-  async execute(command: CreateServiceCommand): Promise<ServiceDto> {
+  async execute(
+    command: CreateServiceCommand,
+    caller: AuthenticatedUser,
+  ): Promise<ServiceDto> {
     ServiceValidator.validateCreate(command);
 
     const categoryId = CategoryId.fromString(command.categoryId);
@@ -46,6 +58,15 @@ export class CreateServiceUseCase {
     const provider = await this.providerRepository.findById(providerId);
     if (!provider) {
       throw new NotFoundException(`Provider ${command.providerId} not found`);
+    }
+
+    if (
+      caller.role !== Role.Admin &&
+      provider.identityId.value !== caller.id
+    ) {
+      throw new ForbiddenException(
+        'A Service can only be created for a Provider owned by the authenticated Identity',
+      );
     }
 
     const now = new Date();

@@ -19,6 +19,11 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { RolesGuard } from '../../../../common/auth/roles.guard';
+import { Roles } from '../../../../common/auth/roles.decorator';
+import { Role } from '../../../../common/auth/role.enum';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { ServiceRoutes } from '../routes/service.routes';
 import { ServiceSwagger } from '../swagger/service.swagger';
 import { CreateServiceUseCase } from '../../application/use_cases/create-service.use-case';
@@ -54,7 +59,7 @@ import { ServiceHttpMapper } from '../dto/service-http.mapper';
  * matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Service')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 @Controller(ServiceRoutes.base)
 export class ServiceController {
@@ -84,11 +89,14 @@ export class ServiceController {
     description: 'Category or Provider not found.',
     type: ErrorResponseDto,
   })
+  @Roles(Role.Provider, Role.Admin)
   async create(
     @Body() dto: CreateServiceRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<ServiceResponseDto> {
     const service = await this.createServiceUseCase.execute(
       ServiceHttpMapper.toCreateCommand(dto),
+      user,
     );
     return ServiceHttpMapper.toResponse(service);
   }
@@ -114,9 +122,11 @@ export class ServiceController {
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateServiceRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<ServiceResponseDto> {
     const service = await this.updateServiceUseCase.execute(
       ServiceHttpMapper.toUpdateCommand(id, dto),
+      user,
     );
     return ServiceHttpMapper.toResponse(service);
   }
@@ -130,8 +140,11 @@ export class ServiceController {
     description: 'Service not found.',
     type: ErrorResponseDto,
   })
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.deleteServiceUseCase.execute(new DeleteServiceCommand(id));
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<void> {
+    await this.deleteServiceUseCase.execute(new DeleteServiceCommand(id), user);
   }
 
   @Get()

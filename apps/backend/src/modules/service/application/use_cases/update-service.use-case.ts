@@ -1,4 +1,8 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { ProviderRepository } from '../../../provider/domain/interfaces/provider-repository.interface';
 import { Service } from '../../domain/entities/service.entity';
 import { ServiceRepository } from '../../domain/interfaces/service-repository.interface';
 import { ServiceId } from '../../domain/value-objects/service-id.value-object';
@@ -15,11 +19,23 @@ import { ServiceValidator } from '../validators/service.validator';
  * or Category is structurally impossible here, same criterion as
  * `Trust`'s 1:1 `identityId` being unreachable from its update
  * command.
+ *
+ * Authorization (Sprint 4, Etapa 18): the Service's owning Provider is
+ * resolved and its `identityId` compared against the caller. Only that
+ * Identity — or an `Admin` — may edit the Service; previously any
+ * authenticated caller could repricing or deactivate a competitor's
+ * listing.
  */
 export class UpdateServiceUseCase {
-  constructor(private readonly serviceRepository: ServiceRepository) {}
+  constructor(
+    private readonly serviceRepository: ServiceRepository,
+    private readonly providerRepository: ProviderRepository,
+  ) {}
 
-  async execute(command: UpdateServiceCommand): Promise<ServiceDto> {
+  async execute(
+    command: UpdateServiceCommand,
+    caller: AuthenticatedUser,
+  ): Promise<ServiceDto> {
     ServiceValidator.validateUpdate(command);
 
     const id = ServiceId.fromString(command.id);
@@ -27,6 +43,8 @@ export class UpdateServiceUseCase {
     if (!existing) {
       throw new NotFoundException(`Service ${command.id} not found`);
     }
+
+    await this.assertCallerOwnsService(existing, caller);
 
     const updated = new Service(existing.id, {
       providerId: existing.providerId,
@@ -44,5 +62,20 @@ export class UpdateServiceUseCase {
 
     await this.serviceRepository.save(updated);
     return ServiceMapper.toDto(updated);
+  }
+
+  private async assertCallerOwnsService(
+    service: Service,
+    caller: AuthenticatedUser,
+  ): Promise<void> {
+    if (caller.role === Role.Admin) {
+      return;
+    }
+    const provider = await this.providerRepository.findById(service.providerId);
+    if (!provider || provider.identityId.value !== caller.id) {
+      throw new ForbiddenException(
+        'Only the Provider owning this Service, or an Admin, may modify it',
+      );
+    }
   }
 }
