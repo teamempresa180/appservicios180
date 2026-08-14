@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { PassportModule } from '@nestjs/passport';
@@ -30,7 +31,9 @@ import { PROFILE_REPOSITORY } from '../src/modules/profiles/domain/interfaces/pr
 import { InMemoryProfileRepository } from '../src/modules/profiles/application/use_cases/test-support/in-memory-profile.repository';
 import { ProfileId } from '../src/modules/profiles/domain/value-objects/profile-id.value-object';
 import { CATEGORY_REPOSITORY } from '../src/modules/category/domain/interfaces/category-repository.interface';
+import { CATEGORY_SPECIALIZATION_REPOSITORY } from '../src/modules/category/domain/interfaces/category-specialization-repository.interface';
 import { InMemoryCategoryRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category.repository';
+import { InMemoryCategorySpecializationRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category-specialization.repository';
 import { SERVICE_REPOSITORY } from '../src/modules/service/domain/interfaces/service-repository.interface';
 import { InMemoryServiceRepository } from '../src/modules/service/application/use_cases/test-support/in-memory-service.repository';
 import { ServiceId } from '../src/modules/service/domain/value-objects/service-id.value-object';
@@ -57,16 +60,22 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
  */
 describe('QuoteController (e2e)', () => {
   let app: INestApplication<App>;
-  let authHeader: string;
+  /** The Provider that submits the Quotes — the only role allowed to. */
+  let providerAuthHeader: string;
+  /** The customer who requested the seeded Order — decides on Quotes. */
+  let customerAuthHeader: string;
+  /** Authenticated, but on neither side of the Quote. */
+  let strangerAuthHeader: string;
   let orderId: string;
   let providerId: string;
 
   beforeEach(async () => {
     const now = new Date();
 
+    const customerIdentityId = IdentityId.create();
     const orderRepository = new InMemoryOrderRepository();
     const order = new Order(OrderId.create(), {
-      identityId: IdentityId.create(),
+      identityId: customerIdentityId,
       providerId: null,
       serviceId: null,
       categoryId: CategoryId.create(),
@@ -82,9 +91,10 @@ describe('QuoteController (e2e)', () => {
     await orderRepository.save(order);
     orderId = order.id.value;
 
+    const providerIdentityId = IdentityId.create();
     const providerRepository = new InMemoryProviderRepository();
     const provider = new Provider(ProviderId.create(), {
-      identityId: IdentityId.create(),
+      identityId: providerIdentityId,
       providerProfileId: ProfileId.create(),
       status: ProviderStatus.Active,
       type: ProviderType.Independent,
@@ -117,6 +127,8 @@ describe('QuoteController (e2e)', () => {
       .useValue(new InMemoryProfileRepository())
       .overrideProvider(CATEGORY_REPOSITORY)
       .useValue(new InMemoryCategoryRepository())
+      .overrideProvider(CATEGORY_SPECIALIZATION_REPOSITORY)
+      .useValue(new InMemoryCategorySpecializationRepository())
       .overrideProvider(SERVICE_REPOSITORY)
       .useValue(new InMemoryServiceRepository())
       .compile();
@@ -126,9 +138,22 @@ describe('QuoteController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    // Mirrors the global pipe `main.ts` installs, so this suite
+    // exercises the same DTO validation production runs.
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await app.init();
 
-    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'test-identity', role: 'CUSTOMER' })}`;
+    const config = app.get(ConfigService);
+    providerAuthHeader = `Bearer ${signTestAccessToken(config, { sub: providerIdentityId.value, role: 'PROVIDER' })}`;
+    customerAuthHeader = `Bearer ${signTestAccessToken(config, { sub: customerIdentityId.value, role: 'CUSTOMER' })}`;
+    strangerAuthHeader = `Bearer ${signTestAccessToken(config, { sub: randomUUID(), role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -147,10 +172,19 @@ describe('QuoteController (e2e)', () => {
     ...overrides,
   });
 
+  /** Submits the seeded Provider's Quote and returns its id. */
+  async function createQuote(): Promise<string> {
+    const created = await request(app.getHttpServer())
+      .post('/quotes')
+      .set('Authorization', providerAuthHeader)
+      .send(createQuoteBody());
+    return (created.body as QuoteResponseDto).id;
+  }
+
   it('POST /quotes creates a Quote and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/quotes')
-      .set('Authorization', authHeader)
+      .set('Authorization', providerAuthHeader)
       .send(createQuoteBody())
       .expect(201);
 
@@ -159,100 +193,179 @@ describe('QuoteController (e2e)', () => {
     expect(body.status).toBe('PENDING');
   });
 
+  it('POST /quotes returns 403 for a caller without the Provider role', async () => {
+    await request(app.getHttpServer())
+      .post('/quotes')
+      .set('Authorization', customerAuthHeader)
+      .send(createQuoteBody())
+      .expect(403);
+  });
+
+  it('POST /quotes returns 403 when quoting under a Provider the caller does not own', async () => {
+    const otherProvider = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: randomUUID(), role: 'PROVIDER' })}`;
+
+    const response = await request(app.getHttpServer())
+      .post('/quotes')
+      .set('Authorization', otherProvider)
+      .send(createQuoteBody())
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
   it('POST /quotes returns 404 when the Order does not exist', async () => {
     const response = await request(app.getHttpServer())
       .post('/quotes')
-      .set('Authorization', authHeader)
-      .send(createQuoteBody({ orderId: 'unknown-order' }))
+      .set('Authorization', providerAuthHeader)
+      .send(createQuoteBody({ orderId: randomUUID() }))
       .expect(404);
 
     expect((response.body as ErrorResponseDto).error).toBe('NotFoundException');
   });
 
+  it('POST /quotes returns 400 for a fractional estimatedDuration', async () => {
+    await request(app.getHttpServer())
+      .post('/quotes')
+      .set('Authorization', providerAuthHeader)
+      .send(createQuoteBody({ estimatedDuration: 90.5 }))
+      .expect(400);
+  });
+
+  it('POST /quotes returns 400 for a non-positive proposedPrice', async () => {
+    await request(app.getHttpServer())
+      .post('/quotes')
+      .set('Authorization', providerAuthHeader)
+      .send(createQuoteBody({ proposedPrice: 0 }))
+      .expect(400);
+  });
+
   it('GET /quotes/:id returns 404 for an unknown id', async () => {
     await request(app.getHttpServer())
       .get('/quotes/unknown-id')
-      .set('Authorization', authHeader)
+      .set('Authorization', customerAuthHeader)
       .expect(404);
   });
 
-  it('PUT /quotes/:id updates the proposedPrice', async () => {
-    const created = await request(app.getHttpServer())
-      .post('/quotes')
-      .set('Authorization', authHeader)
-      .send(createQuoteBody());
-    const createdId = (created.body as QuoteResponseDto).id;
+  it('PUT /quotes/:id updates the proposedPrice for the quoting Provider', async () => {
+    const createdId = await createQuote();
 
     const response = await request(app.getHttpServer())
       .put(`/quotes/${createdId}`)
-      .set('Authorization', authHeader)
+      .set('Authorization', providerAuthHeader)
       .send({ proposedPrice: 80.0 })
       .expect(200);
 
     expect((response.body as QuoteResponseDto).proposedPrice).toBe(80.0);
   });
 
-  it('PUT /quotes/:id/accept accepts an existing Quote', async () => {
-    const created = await request(app.getHttpServer())
-      .post('/quotes')
-      .set('Authorization', authHeader)
-      .send(createQuoteBody());
-    const createdId = (created.body as QuoteResponseDto).id;
+  it('PUT /quotes/:id returns 403 for the customer receiving the Quote', async () => {
+    const createdId = await createQuote();
+
+    await request(app.getHttpServer())
+      .put(`/quotes/${createdId}`)
+      .set('Authorization', customerAuthHeader)
+      .send({ proposedPrice: 1 })
+      .expect(403);
+  });
+
+  it('PUT /quotes/:id/accept accepts an existing Quote for the Order customer', async () => {
+    const createdId = await createQuote();
 
     const response = await request(app.getHttpServer())
       .put(`/quotes/${createdId}/accept`)
-      .set('Authorization', authHeader)
+      .set('Authorization', customerAuthHeader)
       .expect(200);
 
     expect((response.body as QuoteResponseDto).status).toBe('ACCEPTED');
   });
 
-  it('PUT /quotes/:id/reject rejects an existing Quote', async () => {
-    const created = await request(app.getHttpServer())
-      .post('/quotes')
-      .set('Authorization', authHeader)
-      .send(createQuoteBody());
-    const createdId = (created.body as QuoteResponseDto).id;
+  it('PUT /quotes/:id/accept returns 403 for anyone but the Order customer', async () => {
+    const createdId = await createQuote();
+
+    await request(app.getHttpServer())
+      .put(`/quotes/${createdId}/accept`)
+      .set('Authorization', strangerAuthHeader)
+      .expect(403);
+    await request(app.getHttpServer())
+      .put(`/quotes/${createdId}/accept`)
+      .set('Authorization', providerAuthHeader)
+      .expect(403);
+  });
+
+  it('PUT /quotes/:id/reject rejects an existing Quote for the Order customer', async () => {
+    const createdId = await createQuote();
 
     const response = await request(app.getHttpServer())
       .put(`/quotes/${createdId}/reject`)
-      .set('Authorization', authHeader)
+      .set('Authorization', customerAuthHeader)
       .expect(200);
 
     expect((response.body as QuoteResponseDto).status).toBe('REJECTED');
   });
 
-  it('GET /quotes lists Quotes page by page', async () => {
+  it('PUT /quotes/:id/reject returns 403 for a caller who is not the Order customer', async () => {
+    const createdId = await createQuote();
+
     await request(app.getHttpServer())
-      .post('/quotes')
-      .set('Authorization', authHeader)
-      .send(createQuoteBody());
+      .put(`/quotes/${createdId}/reject`)
+      .set('Authorization', strangerAuthHeader)
+      .expect(403);
+  });
+
+  it('GET /quotes lists the caller’s own Quotes page by page', async () => {
+    await createQuote();
+
+    for (const header of [providerAuthHeader, customerAuthHeader]) {
+      const response = await request(app.getHttpServer())
+        .get('/quotes')
+        .set('Authorization', header)
+        .expect(200);
+
+      const body = response.body as QuoteListResponseDto;
+      expect(body.items).toHaveLength(1);
+      expect(body.page).toBe(1);
+      expect(body.pageSize).toBe(20);
+    }
+  });
+
+  it('GET /quotes hides Quotes the caller is not a party to', async () => {
+    await createQuote();
 
     const response = await request(app.getHttpServer())
       .get('/quotes')
-      .set('Authorization', authHeader)
+      .set('Authorization', strangerAuthHeader)
       .expect(200);
 
     const body = response.body as QuoteListResponseDto;
-    expect(body.items).toHaveLength(1);
-    expect(body.page).toBe(1);
-    expect(body.pageSize).toBe(20);
+    expect(body.items).toHaveLength(0);
+    expect(body.total).toBe(0);
   });
 
-  it('GET /quotes/search searches by notes', async () => {
-    await request(app.getHttpServer())
-      .post('/quotes')
-      .set('Authorization', authHeader)
-      .send(createQuoteBody());
+  it('GET /quotes/search searches by notes within the caller’s own Quotes', async () => {
+    await createQuote();
 
     const response = await request(app.getHttpServer())
       .get('/quotes/search')
-      .set('Authorization', authHeader)
+      .set('Authorization', providerAuthHeader)
       .query({ term: 'labor' })
       .expect(200);
 
     const body = response.body as QuoteResponseDto[];
     expect(body).toHaveLength(1);
     expect(body[0].notes).toBe('Includes parts and labor.');
+  });
+
+  it('GET /quotes/search hides matches the caller is not a party to', async () => {
+    await createQuote();
+
+    const response = await request(app.getHttpServer())
+      .get('/quotes/search')
+      .set('Authorization', strangerAuthHeader)
+      .query({ term: 'labor' })
+      .expect(200);
+
+    expect(response.body as QuoteResponseDto[]).toHaveLength(0);
   });
 });

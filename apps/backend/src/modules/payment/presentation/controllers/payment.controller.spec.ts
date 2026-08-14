@@ -17,8 +17,13 @@ import { PaymentStatus } from '../../domain/value-objects/payment-status.value-o
 import { CreatePaymentRequestDto } from '../dto/create-payment.request.dto';
 import { UpdatePaymentRequestDto } from '../dto/update-payment.request.dto';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { Caller } from '../../../core/application/caller';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 
 describe('PaymentController', () => {
+  const user: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+  const caller: Caller = { identityId: 'identity-1', isAdmin: false };
   let controller: PaymentController;
   let createUseCase: { execute: jest.Mock };
   let updateUseCase: { execute: jest.Mock };
@@ -75,7 +80,7 @@ describe('PaymentController', () => {
       method: PaymentMethod.Card,
     };
 
-    const response = await controller.create(dto);
+    const response = await controller.create(dto, user);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
       new CreatePaymentCommand(
@@ -85,56 +90,57 @@ describe('PaymentController', () => {
         'provider-1',
         75.0,
         PaymentMethod.Card,
+        caller,
       ),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('update() maps id + request DTO to a command', async () => {
+  it('update() maps id + request DTO + caller to a command', async () => {
     const dto: UpdatePaymentRequestDto = { status: PaymentStatus.Completed };
 
-    const response = await controller.update('id-1', dto);
+    const response = await controller.update('id-1', dto, user);
 
     expect(updateUseCase.execute).toHaveBeenCalledWith(
-      new UpdatePaymentCommand('id-1', PaymentStatus.Completed),
+      new UpdatePaymentCommand('id-1', caller, PaymentStatus.Completed),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('cancel() delegates to CancelPaymentUseCase with the id', async () => {
-    const response = await controller.cancel('id-1');
+  it('cancel() delegates to CancelPaymentUseCase with the id and the caller', async () => {
+    const response = await controller.cancel('id-1', user);
 
     expect(cancelUseCase.execute).toHaveBeenCalledWith(
-      new CancelPaymentCommand('id-1'),
+      new CancelPaymentCommand('id-1', caller),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('list() maps page/pageSize query params to a query and wraps the paginated result', async () => {
-    const response = await controller.list('2', '10');
+  it('list() maps page/pageSize query params plus the caller to a query', async () => {
+    const response = await controller.list(user, '2', '10');
 
     expect(listUseCase.execute).toHaveBeenCalledWith(
-      new ListPaymentQuery(2, 10),
+      new ListPaymentQuery(caller, 2, 10),
     );
     expect(response.items).toHaveLength(1);
     expect(response.total).toBe(1);
   });
 
-  it('search() maps the term query param and the Application DTOs to response DTOs', async () => {
-    const response = await controller.search('CARD');
+  it('search() maps the term query param and the caller', async () => {
+    const response = await controller.search('CARD', user);
 
     expect(searchUseCase.execute).toHaveBeenCalledWith(
-      new SearchPaymentQuery('CARD'),
+      new SearchPaymentQuery('CARD', caller),
     );
     expect(response).toHaveLength(1);
     expect(response[0].method).toBe(PaymentMethod.Card);
   });
 
   it('findOne() maps the Application DTO returned by GetPaymentUseCase', async () => {
-    const response = await controller.findOne('id-1');
+    const response = await controller.findOne('id-1', user);
 
     expect(getUseCase.execute).toHaveBeenCalledWith(
-      new GetPaymentQuery('id-1'),
+      new GetPaymentQuery('id-1', caller),
     );
     expect(response.id).toBe('id-1');
   });
@@ -142,7 +148,7 @@ describe('PaymentController', () => {
   it('findOne() throws NotFoundException when GetPaymentUseCase returns null', async () => {
     getUseCase.execute.mockResolvedValue(null);
 
-    await expect(controller.findOne('unknown-id')).rejects.toThrow(
+    await expect(controller.findOne('unknown-id', user)).rejects.toThrow(
       NotFoundException,
     );
   });

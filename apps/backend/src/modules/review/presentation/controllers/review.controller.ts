@@ -19,6 +19,9 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { toCaller } from '../../../core/application/caller';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ReviewRoutes } from '../routes/review.routes';
 import { ReviewSwagger } from '../swagger/review.swagger';
@@ -62,6 +65,15 @@ import { ReviewHttpMapper } from '../dto/review-http.mapper';
  * `search` is declared before the dynamic `findOne(:id)` route so
  * `GET /reviews/search` resolves to `search()` rather than being
  * matched as `findOne({ id: 'search' })`.
+ *
+ * Authorization here is deliberately asymmetric, and unlike the other
+ * modules in this pass the reads stay open. Reviews are public
+ * marketplace content — a customer has to be able to read a
+ * Provider's reviews before hiring them — so `list`/`search`/
+ * `findOne` return everything to any authenticated caller, with no
+ * ownership filter. Only authorship is protected: create/update/
+ * delete carry the caller through to the Use Case, which ties the
+ * review to `reviewerIdentityId`.
  */
 @ApiTags('Review')
 @UseGuards(JwtAuthGuard)
@@ -94,11 +106,17 @@ export class ReviewController {
     description: 'Order, Provider or reviewer Identity not found.',
     type: ErrorResponseDto,
   })
+  @ApiResponse({
+    status: 403,
+    description: 'reviewerIdentityId is not the calling Identity.',
+    type: ErrorResponseDto,
+  })
   async create(
     @Body() dto: CreateReviewRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<ReviewResponseDto> {
     const review = await this.createReviewUseCase.execute(
-      ReviewHttpMapper.toCreateCommand(dto),
+      ReviewHttpMapper.toCreateCommand(dto, toCaller(user)),
     );
     return ReviewHttpMapper.toResponse(review);
   }
@@ -121,12 +139,18 @@ export class ReviewController {
     description: 'Review not found.',
     type: ErrorResponseDto,
   })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller is not the author of this Review.',
+    type: ErrorResponseDto,
+  })
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateReviewRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<ReviewResponseDto> {
     const review = await this.updateReviewUseCase.execute(
-      ReviewHttpMapper.toUpdateCommand(id, dto),
+      ReviewHttpMapper.toUpdateCommand(id, dto, toCaller(user)),
     );
     return ReviewHttpMapper.toResponse(review);
   }
@@ -140,8 +164,18 @@ export class ReviewController {
     description: 'Review not found.',
     type: ErrorResponseDto,
   })
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.deleteReviewUseCase.execute(new DeleteReviewCommand(id));
+  @ApiResponse({
+    status: 403,
+    description: 'Caller is not the author of this Review.',
+    type: ErrorResponseDto,
+  })
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<void> {
+    await this.deleteReviewUseCase.execute(
+      new DeleteReviewCommand(id, toCaller(user)),
+    );
   }
 
   @Get()

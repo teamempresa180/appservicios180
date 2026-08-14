@@ -1,3 +1,4 @@
+import { Caller } from '../../../core/application/caller';
 import { OrderDto } from '../../application/dto/order.dto';
 import { OrderStatus } from '../../domain/value-objects/order-status.value-object';
 import { OrderPriority } from '../../domain/value-objects/order-priority.value-object';
@@ -6,6 +7,8 @@ import { UpdateOrderRequestDto } from './update-order.request.dto';
 import { OrderHttpMapper } from './order-http.mapper';
 
 describe('OrderHttpMapper', () => {
+  const caller: Caller = { identityId: 'identity-1', isAdmin: false };
+
   it('toCreateCommand() parses the ISO date string to Date', () => {
     const dto: CreateOrderRequestDto = {
       identityId: 'identity-1',
@@ -31,9 +34,10 @@ describe('OrderHttpMapper', () => {
       priority: OrderPriority.Low,
     };
 
-    const command = OrderHttpMapper.toUpdateCommand('id-1', dto);
+    const command = OrderHttpMapper.toUpdateCommand('id-1', dto, caller);
 
     expect(command.id).toBe('id-1');
+    expect(command.caller).toBe(caller);
     expect(command.scheduledDate).toEqual(new Date('2026-02-02T09:00:00.000Z'));
     expect(command.priority).toBe(OrderPriority.Low);
   });

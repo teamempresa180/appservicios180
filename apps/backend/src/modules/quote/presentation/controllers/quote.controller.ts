@@ -18,6 +18,12 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { RolesGuard } from '../../../../common/auth/roles.guard';
+import { Roles } from '../../../../common/auth/roles.decorator';
+import { Role } from '../../../../common/auth/role.enum';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { toCaller } from '../../../core/application/caller';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { QuoteRoutes } from '../routes/quote.routes';
 import { QuoteSwagger } from '../swagger/quote.swagger';
@@ -61,9 +67,16 @@ import { QuoteHttpMapper } from '../dto/quote-http.mapper';
  * `list`/`search` are declared before the dynamic `findOne(:id)` route
  * so `GET /quotes/search` resolves to `search()` rather than being
  * matched as `findOne({ id: 'search' })`.
+ *
+ * Submitting a Quote is a Provider action, so `POST /quotes` is
+ * role-gated here; everything finer-grained (which Provider, whose
+ * Order) depends on stored state and is enforced by the Use Cases,
+ * which receive the caller in their command/query — see
+ * `quote-access.ts`. `list`/`search` are not role-gated but *are*
+ * scoped: they return only the Quotes the caller is a party to.
  */
 @ApiTags('Quote')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 @Controller(QuoteRoutes.base)
 export class QuoteController {
@@ -78,7 +91,14 @@ export class QuoteController {
   ) {}
 
   @Post()
+  @Roles(Role.Provider, Role.Admin)
   @ApiOperation(QuoteSwagger.create)
+  @ApiResponse({
+    status: 403,
+    description:
+      'Caller is not a Provider, or the providerId is not their own Provider record.',
+    type: ErrorResponseDto,
+  })
   @ApiResponse({
     status: 201,
     description: 'Quote created.',
@@ -94,9 +114,12 @@ export class QuoteController {
     description: 'Order or Provider not found.',
     type: ErrorResponseDto,
   })
-  async create(@Body() dto: CreateQuoteRequestDto): Promise<QuoteResponseDto> {
+  async create(
+    @Body() dto: CreateQuoteRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<QuoteResponseDto> {
     const quote = await this.createQuoteUseCase.execute(
-      QuoteHttpMapper.toCreateCommand(dto),
+      QuoteHttpMapper.toCreateCommand(dto, toCaller(user)),
     );
     return QuoteHttpMapper.toResponse(quote);
   }
@@ -122,9 +145,10 @@ export class QuoteController {
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateQuoteRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<QuoteResponseDto> {
     const quote = await this.updateQuoteUseCase.execute(
-      QuoteHttpMapper.toUpdateCommand(id, dto),
+      QuoteHttpMapper.toUpdateCommand(id, dto, toCaller(user)),
     );
     return QuoteHttpMapper.toResponse(quote);
   }
@@ -142,9 +166,18 @@ export class QuoteController {
     description: 'Quote not found.',
     type: ErrorResponseDto,
   })
-  async accept(@Param('id') id: string): Promise<QuoteResponseDto> {
+  @ApiResponse({
+    status: 403,
+    description:
+      'Caller is not the customer who requested the referenced Order.',
+    type: ErrorResponseDto,
+  })
+  async accept(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<QuoteResponseDto> {
     const quote = await this.acceptQuoteUseCase.execute(
-      new AcceptQuoteCommand(id),
+      new AcceptQuoteCommand(id, toCaller(user)),
     );
     return QuoteHttpMapper.toResponse(quote);
   }
@@ -162,9 +195,18 @@ export class QuoteController {
     description: 'Quote not found.',
     type: ErrorResponseDto,
   })
-  async reject(@Param('id') id: string): Promise<QuoteResponseDto> {
+  @ApiResponse({
+    status: 403,
+    description:
+      'Caller is not the customer who requested the referenced Order.',
+    type: ErrorResponseDto,
+  })
+  async reject(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<QuoteResponseDto> {
     const quote = await this.rejectQuoteUseCase.execute(
-      new RejectQuoteCommand(id),
+      new RejectQuoteCommand(id, toCaller(user)),
     );
     return QuoteHttpMapper.toResponse(quote);
   }
@@ -179,10 +221,12 @@ export class QuoteController {
     type: QuoteListResponseDto,
   })
   async list(
+    @CurrentUser() user: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ): Promise<QuoteListResponseDto> {
     const query = new ListQuoteQuery(
+      toCaller(user),
       page !== undefined ? Number(page) : undefined,
       pageSize !== undefined ? Number(pageSize) : undefined,
     );
@@ -198,9 +242,12 @@ export class QuoteController {
     description: 'Quotes matching the search term.',
     type: [QuoteResponseDto],
   })
-  async search(@Query('term') term: string): Promise<QuoteResponseDto[]> {
+  async search(
+    @Query('term') term: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<QuoteResponseDto[]> {
     const quotes = await this.searchQuoteUseCase.execute(
-      new SearchQuoteQuery(term),
+      new SearchQuoteQuery(term, toCaller(user)),
     );
     return quotes.map((quote) => QuoteHttpMapper.toResponse(quote));
   }

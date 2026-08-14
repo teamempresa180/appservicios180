@@ -18,8 +18,12 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { RolesGuard } from '../../../../common/auth/roles.guard';
+import { Roles } from '../../../../common/auth/roles.decorator';
+import { Role } from '../../../../common/auth/role.enum';
 import { CurrentUser } from '../../../../common/auth/current-user.decorator';
 import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { toCaller } from '../../../core/application/caller';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { OrderRoutes } from '../routes/order.routes';
 import { OrderSwagger } from '../swagger/order.swagger';
@@ -71,9 +75,20 @@ import { OrderHttpMapper } from '../dto/order-http.mapper';
  * `list`/`search` are declared before the dynamic `findOne(:id)` route
  * so `GET /orders/search` resolves to `search()` rather than being
  * matched as `findOne({ id: 'search' })`.
+ *
+ * Authorization comes in two layers. Coarse role gating lives here
+ * via `@Roles(...)`: the unscoped `GET /orders` and `GET
+ * /orders/search` return *every* Order in the system, so they are
+ * Admin-only back-office endpoints — client-facing listing goes
+ * through the already-scoped `GET /orders/mine` and `GET
+ * /orders/relevant-for-provider`, which are the only two listings the
+ * mobile app uses. Fine-grained per-record ownership can't be decided
+ * from the request alone (it depends on the stored Order), so it
+ * lives in the Use Cases, which receive the caller as part of the
+ * command/query — see `order-access.ts`.
  */
 @ApiTags('Order')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 @Controller(OrderRoutes.base)
 export class OrderController {
@@ -128,6 +143,11 @@ export class OrderController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
+    status: 403,
+    description: 'Caller is not the customer who requested the Order.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 404,
     description: 'Order not found.',
     type: ErrorResponseDto,
@@ -135,9 +155,10 @@ export class OrderController {
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateOrderRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<OrderResponseDto> {
     const order = await this.updateOrderUseCase.execute(
-      OrderHttpMapper.toUpdateCommand(id, dto),
+      OrderHttpMapper.toUpdateCommand(id, dto, toCaller(user)),
     );
     return OrderHttpMapper.toResponse(order);
   }
@@ -151,13 +172,22 @@ export class OrderController {
     type: OrderResponseDto,
   })
   @ApiResponse({
+    status: 403,
+    description:
+      'Caller is neither the customer who requested the Order nor its assigned Provider.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 404,
     description: 'Order not found.',
     type: ErrorResponseDto,
   })
-  async cancel(@Param('id') id: string): Promise<OrderResponseDto> {
+  async cancel(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<OrderResponseDto> {
     const order = await this.cancelOrderUseCase.execute(
-      new CancelOrderCommand(id),
+      new CancelOrderCommand(id, toCaller(user)),
     );
     return OrderHttpMapper.toResponse(order);
   }
@@ -176,13 +206,21 @@ export class OrderController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
+    status: 403,
+    description: 'Caller is not the Provider assigned to the Order.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 422,
     description: 'Order is not Accepted.',
     type: ErrorResponseDto,
   })
-  async start(@Param('id') id: string): Promise<OrderResponseDto> {
+  async start(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<OrderResponseDto> {
     const order = await this.startOrderUseCase.execute(
-      new StartOrderCommand(id),
+      new StartOrderCommand(id, toCaller(user)),
     );
     return OrderHttpMapper.toResponse(order);
   }
@@ -201,19 +239,33 @@ export class OrderController {
     type: ErrorResponseDto,
   })
   @ApiResponse({
+    status: 403,
+    description: 'Caller is not the Provider assigned to the Order.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 422,
     description: 'Order is not InProgress.',
     type: ErrorResponseDto,
   })
-  async complete(@Param('id') id: string): Promise<OrderResponseDto> {
+  async complete(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<OrderResponseDto> {
     const order = await this.completeOrderUseCase.execute(
-      new CompleteOrderCommand(id),
+      new CompleteOrderCommand(id, toCaller(user)),
     );
     return OrderHttpMapper.toResponse(order);
   }
 
   @Get()
+  @Roles(Role.Admin)
   @ApiOperation(OrderSwagger.list)
+  @ApiResponse({
+    status: 403,
+    description: 'Requires the Admin role.',
+    type: ErrorResponseDto,
+  })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'pageSize', required: false, example: 20 })
   @ApiResponse({
@@ -260,7 +312,13 @@ export class OrderController {
   }
 
   @Get(OrderRoutes.search)
+  @Roles(Role.Admin)
   @ApiOperation(OrderSwagger.search)
+  @ApiResponse({
+    status: 403,
+    description: 'Requires the Admin role.',
+    type: ErrorResponseDto,
+  })
   @ApiQuery({ name: 'term', required: true, example: 'faucet' })
   @ApiResponse({
     status: 200,
@@ -283,12 +341,23 @@ export class OrderController {
     type: OrderResponseDto,
   })
   @ApiResponse({
+    status: 403,
+    description:
+      'Caller is neither the customer who requested the Order nor its assigned Provider.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 404,
     description: 'Order not found.',
     type: ErrorResponseDto,
   })
-  async findOne(@Param('id') id: string): Promise<OrderResponseDto> {
-    const order = await this.getOrderUseCase.execute(new GetOrderQuery(id));
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<OrderResponseDto> {
+    const order = await this.getOrderUseCase.execute(
+      new GetOrderQuery(id, toCaller(user)),
+    );
     if (!order) {
       throw new NotFoundException(`Order ${id} not found`);
     }

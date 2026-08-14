@@ -3,6 +3,7 @@ import { Payment } from '../../domain/entities/payment.entity';
 import { PaymentRepository } from '../../domain/interfaces/payment-repository.interface';
 import { PaymentId } from '../../domain/value-objects/payment-id.value-object';
 import { PaymentStatus } from '../../domain/value-objects/payment-status.value-object';
+import { assertPayer } from '../authorization/payment-access';
 import { CancelPaymentCommand } from '../commands/cancel-payment.command';
 import { PaymentDto } from '../dto/payment.dto';
 import { PaymentMapper } from '../mappers/payment.mapper';
@@ -12,6 +13,9 @@ import { PaymentMapper } from '../mappers/payment.mapper';
  * status. No prior-status guard — same criterion as
  * `CancelOrderUseCase`, which applies the change unconditionally to
  * any found entity.
+ *
+ * Restricted to the original payer (or an Admin) — same rationale as
+ * `UpdatePaymentUseCase`.
  */
 export class CancelPaymentUseCase {
   constructor(private readonly paymentRepository: PaymentRepository) {}
@@ -22,6 +26,7 @@ export class CancelPaymentUseCase {
     if (!existing) {
       throw new NotFoundException(`Payment ${command.id} not found`);
     }
+    assertPayer(existing, command.caller, 'cancel');
 
     const cancelled = new Payment(existing.id, {
       quoteId: existing.quoteId,

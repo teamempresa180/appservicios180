@@ -1,6 +1,8 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { ProviderRepository } from '../../../provider/domain/interfaces/provider-repository.interface';
 import { QuoteRepository } from '../../domain/interfaces/quote-repository.interface';
 import { QuoteId } from '../../domain/value-objects/quote-id.value-object';
+import { assertSubmittingProvider } from '../authorization/quote-access';
 import { UpdateQuoteCommand } from '../commands/update-quote.command';
 import { QuoteDto } from '../dto/quote.dto';
 import { QuoteMapper } from '../mappers/quote.mapper';
@@ -11,9 +13,16 @@ import { QuoteValidator } from '../validators/quote.validator';
  * `estimatedDuration`, `notes`) — `orderId`/`providerId`/`type` are
  * not offered by `UpdateQuoteCommand`; status changes go exclusively
  * through `AcceptQuoteUseCase`/`RejectQuoteUseCase`.
+ *
+ * Revising the offer belongs to the Provider that submitted it (or an
+ * Admin) — the customer receiving the Quote must not be able to edit
+ * the price they are about to accept.
  */
 export class UpdateQuoteUseCase {
-  constructor(private readonly quoteRepository: QuoteRepository) {}
+  constructor(
+    private readonly quoteRepository: QuoteRepository,
+    private readonly providerRepository: ProviderRepository,
+  ) {}
 
   async execute(command: UpdateQuoteCommand): Promise<QuoteDto> {
     QuoteValidator.validateUpdate(command);
@@ -23,6 +32,12 @@ export class UpdateQuoteUseCase {
     if (!existing) {
       throw new NotFoundException(`Quote ${command.id} not found`);
     }
+    await assertSubmittingProvider(
+      existing,
+      command.caller,
+      this.providerRepository,
+      'update',
+    );
 
     const updated = existing.with({
       proposedPrice: command.proposedPrice ?? existing.proposedPrice,

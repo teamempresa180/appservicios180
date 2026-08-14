@@ -1,9 +1,11 @@
 import { Logger } from '@nestjs/common';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
+import { ProviderRepository } from '../../../provider/domain/interfaces/provider-repository.interface';
 import { OrderRepository } from '../../domain/interfaces/order-repository.interface';
 import { OrderId } from '../../domain/value-objects/order-id.value-object';
 import { OrderStatus } from '../../domain/value-objects/order-status.value-object';
+import { assertAssignedProvider } from '../authorization/order-access';
 import { StartOrderCommand } from '../commands/start-order.command';
 import { OrderDto } from '../dto/order.dto';
 import { OrderMapper } from '../mappers/order.mapper';
@@ -15,11 +17,18 @@ import { OrderMapper } from '../mappers/order.mapper';
  * guarded: only an `Accepted` Order can start, since `InProgress`
  * without a prior client acceptance would skip the quote-acceptance
  * step this status machine depends on (see `AcceptQuoteUseCase`).
+ *
+ * Starting the work is the assigned Provider's call alone (or an
+ * Admin's) — checked before the status guard so an unrelated caller
+ * learns nothing about the Order's state.
  */
 export class StartOrderUseCase {
   private readonly logger = new Logger(StartOrderUseCase.name);
 
-  constructor(private readonly orderRepository: OrderRepository) {}
+  constructor(
+    private readonly orderRepository: OrderRepository,
+    private readonly providerRepository: ProviderRepository,
+  ) {}
 
   async execute(command: StartOrderCommand): Promise<OrderDto> {
     const id = OrderId.fromString(command.id);
@@ -27,6 +36,12 @@ export class StartOrderUseCase {
     if (!existing) {
       throw new NotFoundException(`Order ${command.id} not found`);
     }
+    await assertAssignedProvider(
+      existing,
+      command.caller,
+      this.providerRepository,
+      'start',
+    );
     if (existing.status !== OrderStatus.Accepted) {
       throw new BusinessRuleException(
         `Order ${command.id} must be Accepted before it can start`,

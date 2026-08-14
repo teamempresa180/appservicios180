@@ -1,3 +1,4 @@
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
@@ -26,6 +27,11 @@ import { PaymentValidator } from '../validators/payment.validator';
  * these checks is deferred. No uniqueness check: `findByQuoteId`
  * returns `Payment[]`, so multiple Payment records per Quote are
  * allowed by the domain contract.
+ *
+ * `payerIdentityId` must be the caller's own Identity (Admin aside):
+ * a payment record filed in someone else's name would both
+ * misattribute money and, because the payer is who may later read or
+ * cancel it, hand that record to the wrong party.
  */
 export class CreatePaymentUseCase {
   constructor(
@@ -38,6 +44,15 @@ export class CreatePaymentUseCase {
 
   async execute(command: CreatePaymentCommand): Promise<PaymentDto> {
     PaymentValidator.validateCreate(command);
+
+    if (
+      !command.caller.isAdmin &&
+      command.payerIdentityId !== command.caller.identityId
+    ) {
+      throw new ForbiddenException(
+        'A Payment can only be registered for the calling Identity',
+      );
+    }
 
     const quoteId = QuoteId.fromString(command.quoteId);
     const orderId = OrderId.fromString(command.orderId);

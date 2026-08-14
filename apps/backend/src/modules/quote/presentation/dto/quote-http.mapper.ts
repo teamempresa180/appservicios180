@@ -1,3 +1,4 @@
+import { Caller } from '../../../core/application/caller';
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { CreateQuoteCommand } from '../../application/commands/create-quote.command';
 import { UpdateQuoteCommand } from '../../application/commands/update-quote.command';
@@ -14,7 +15,10 @@ import { QuoteListResponseDto } from './quote-list.response.dto';
  * `CreateQuoteCommand` or a `QuoteResponseDto` by hand.
  */
 export class QuoteHttpMapper {
-  static toCreateCommand(dto: CreateQuoteRequestDto): CreateQuoteCommand {
+  static toCreateCommand(
+    dto: CreateQuoteRequestDto,
+    caller: Caller,
+  ): CreateQuoteCommand {
     return new CreateQuoteCommand(
       dto.orderId,
       dto.providerId,
@@ -22,15 +26,18 @@ export class QuoteHttpMapper {
       dto.estimatedDuration,
       dto.notes,
       dto.type,
+      caller,
     );
   }
 
   static toUpdateCommand(
     id: string,
     dto: UpdateQuoteRequestDto,
+    caller: Caller,
   ): UpdateQuoteCommand {
     return new UpdateQuoteCommand(
       id,
+      caller,
       dto.proposedPrice,
       dto.estimatedDuration,
       dto.notes,

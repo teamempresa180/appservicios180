@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { PassportModule } from '@nestjs/passport';
@@ -39,7 +40,9 @@ import { PROFILE_REPOSITORY } from '../src/modules/profiles/domain/interfaces/pr
 import { InMemoryProfileRepository } from '../src/modules/profiles/application/use_cases/test-support/in-memory-profile.repository';
 import { ProfileId } from '../src/modules/profiles/domain/value-objects/profile-id.value-object';
 import { CATEGORY_REPOSITORY } from '../src/modules/category/domain/interfaces/category-repository.interface';
+import { CATEGORY_SPECIALIZATION_REPOSITORY } from '../src/modules/category/domain/interfaces/category-specialization-repository.interface';
 import { InMemoryCategoryRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category.repository';
+import { InMemoryCategorySpecializationRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category-specialization.repository';
 import { SERVICE_REPOSITORY } from '../src/modules/service/domain/interfaces/service-repository.interface';
 import { InMemoryServiceRepository } from '../src/modules/service/application/use_cases/test-support/in-memory-service.repository';
 import { ServiceId } from '../src/modules/service/domain/value-objects/service-id.value-object';
@@ -66,7 +69,12 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
  */
 describe('PaymentController (e2e)', () => {
   let app: INestApplication<App>;
+  /** The Identity that pays — the only one allowed to mutate. */
   let authHeader: string;
+  /** The Identity behind the receiving Provider — may read, not mutate. */
+  let receiverAuthHeader: string;
+  /** Authenticated, but on neither end of the Payment. */
+  let strangerAuthHeader: string;
   let quoteId: string;
   let orderId: string;
   let identityId: string;
@@ -88,9 +96,10 @@ describe('PaymentController (e2e)', () => {
     await identityRepository.save(identity);
     identityId = identity.id.value;
 
+    const receiverIdentityId = IdentityId.create();
     const providerRepository = new InMemoryProviderRepository();
     const provider = new Provider(ProviderId.create(), {
-      identityId: IdentityId.create(),
+      identityId: receiverIdentityId,
       providerProfileId: ProfileId.create(),
       status: ProviderStatus.Active,
       type: ProviderType.Independent,
@@ -158,6 +167,8 @@ describe('PaymentController (e2e)', () => {
       .useValue(new InMemoryProfileRepository())
       .overrideProvider(CATEGORY_REPOSITORY)
       .useValue(new InMemoryCategoryRepository())
+      .overrideProvider(CATEGORY_SPECIALIZATION_REPOSITORY)
+      .useValue(new InMemoryCategorySpecializationRepository())
       .overrideProvider(SERVICE_REPOSITORY)
       .useValue(new InMemoryServiceRepository())
       .compile();
@@ -167,9 +178,22 @@ describe('PaymentController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    // Mirrors the global pipe `main.ts` installs, so this suite
+    // exercises the same DTO validation production runs.
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await app.init();
 
-    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
+    const config = app.get(ConfigService);
+    authHeader = `Bearer ${signTestAccessToken(config, { sub: identityId, role: 'CUSTOMER' })}`;
+    receiverAuthHeader = `Bearer ${signTestAccessToken(config, { sub: receiverIdentityId.value, role: 'PROVIDER' })}`;
+    strangerAuthHeader = `Bearer ${signTestAccessToken(config, { sub: randomUUID(), role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -188,6 +212,15 @@ describe('PaymentController (e2e)', () => {
     ...overrides,
   });
 
+  /** Registers the payer's Payment and returns its id. */
+  async function createPayment(): Promise<string> {
+    const created = await request(app.getHttpServer())
+      .post('/payments')
+      .set('Authorization', authHeader)
+      .send(createPaymentBody());
+    return (created.body as PaymentResponseDto).id;
+  }
+
   it('POST /payments creates a Payment and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/payments')
@@ -204,10 +237,30 @@ describe('PaymentController (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/payments')
       .set('Authorization', authHeader)
-      .send(createPaymentBody({ quoteId: 'unknown-quote' }))
+      .send(createPaymentBody({ quoteId: randomUUID() }))
       .expect(404);
 
     expect((response.body as ErrorResponseDto).error).toBe('NotFoundException');
+  });
+
+  it('POST /payments returns 403 when paying in another Identity’s name', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/payments')
+      .set('Authorization', strangerAuthHeader)
+      .send(createPaymentBody())
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
+  it('POST /payments returns 400 for a non-positive amount', async () => {
+    await request(app.getHttpServer())
+      .post('/payments')
+      .set('Authorization', authHeader)
+      .send(createPaymentBody({ amount: 0 }))
+      .expect(400);
   });
 
   it('GET /payments/:id returns 404 for an unknown id', async () => {
@@ -248,28 +301,74 @@ describe('PaymentController (e2e)', () => {
     expect((response.body as PaymentResponseDto).status).toBe('CANCELLED');
   });
 
-  it('GET /payments lists Payments page by page', async () => {
+  it('PUT /payments/:id and /cancel return 403 for anyone but the payer', async () => {
+    const createdId = await createPayment();
+
+    for (const header of [receiverAuthHeader, strangerAuthHeader]) {
+      await request(app.getHttpServer())
+        .put(`/payments/${createdId}`)
+        .set('Authorization', header)
+        .send({ status: 'COMPLETED' })
+        .expect(403);
+      await request(app.getHttpServer())
+        .put(`/payments/${createdId}/cancel`)
+        .set('Authorization', header)
+        .expect(403);
+    }
+  });
+
+  it('GET /payments/:id is readable by the payer and the receiving Provider', async () => {
+    const createdId = await createPayment();
+
+    for (const header of [authHeader, receiverAuthHeader]) {
+      const response = await request(app.getHttpServer())
+        .get(`/payments/${createdId}`)
+        .set('Authorization', header)
+        .expect(200);
+      expect((response.body as PaymentResponseDto).id).toBe(createdId);
+    }
+  });
+
+  it('GET /payments/:id returns 403 for a third party', async () => {
+    const createdId = await createPayment();
+
     await request(app.getHttpServer())
-      .post('/payments')
-      .set('Authorization', authHeader)
-      .send(createPaymentBody());
+      .get(`/payments/${createdId}`)
+      .set('Authorization', strangerAuthHeader)
+      .expect(403);
+  });
+
+  it('GET /payments lists the caller’s own Payments page by page', async () => {
+    await createPayment();
+
+    for (const header of [authHeader, receiverAuthHeader]) {
+      const response = await request(app.getHttpServer())
+        .get('/payments')
+        .set('Authorization', header)
+        .expect(200);
+
+      const body = response.body as PaymentListResponseDto;
+      expect(body.items).toHaveLength(1);
+      expect(body.page).toBe(1);
+      expect(body.pageSize).toBe(20);
+    }
+  });
+
+  it('GET /payments hides third parties’ Payments', async () => {
+    await createPayment();
 
     const response = await request(app.getHttpServer())
       .get('/payments')
-      .set('Authorization', authHeader)
+      .set('Authorization', strangerAuthHeader)
       .expect(200);
 
     const body = response.body as PaymentListResponseDto;
-    expect(body.items).toHaveLength(1);
-    expect(body.page).toBe(1);
-    expect(body.pageSize).toBe(20);
+    expect(body.items).toHaveLength(0);
+    expect(body.total).toBe(0);
   });
 
-  it('GET /payments/search searches by method', async () => {
-    await request(app.getHttpServer())
-      .post('/payments')
-      .set('Authorization', authHeader)
-      .send(createPaymentBody());
+  it('GET /payments/search searches by method within the caller’s own Payments', async () => {
+    await createPayment();
 
     const response = await request(app.getHttpServer())
       .get('/payments/search')
@@ -280,5 +379,17 @@ describe('PaymentController (e2e)', () => {
     const body = response.body as PaymentResponseDto[];
     expect(body).toHaveLength(1);
     expect(body[0].method).toBe('CARD');
+  });
+
+  it('GET /payments/search hides third parties’ Payments', async () => {
+    await createPayment();
+
+    const response = await request(app.getHttpServer())
+      .get('/payments/search')
+      .set('Authorization', strangerAuthHeader)
+      .query({ term: 'CARD' })
+      .expect(200);
+
+    expect(response.body as PaymentResponseDto[]).toHaveLength(0);
   });
 });

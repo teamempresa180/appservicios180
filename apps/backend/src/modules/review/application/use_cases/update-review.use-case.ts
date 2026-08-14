@@ -2,6 +2,7 @@ import { NotFoundException } from '../../../core/domain/exceptions/not-found.exc
 import { Review } from '../../domain/entities/review.entity';
 import { ReviewRepository } from '../../domain/interfaces/review-repository.interface';
 import { ReviewId } from '../../domain/value-objects/review-id.value-object';
+import { assertReviewAuthor } from '../authorization/review-access';
 import { UpdateReviewCommand } from '../commands/update-review.command';
 import { ReviewDto } from '../dto/review.dto';
 import { ReviewMapper } from '../mappers/review.mapper';
@@ -12,6 +13,10 @@ import { ReviewValidator } from '../validators/review.validator';
  * `comment`) — `orderId`/`providerId`/`reviewerIdentityId`/`rating`/
  * `status` are not offered by `UpdateReviewCommand`, so they stay
  * untouched.
+ *
+ * Restricted to the review's author (or an Admin) — notably the
+ * reviewed Provider must not be able to rewrite criticism of their
+ * own work.
  */
 export class UpdateReviewUseCase {
   constructor(private readonly reviewRepository: ReviewRepository) {}
@@ -24,6 +29,7 @@ export class UpdateReviewUseCase {
     if (!existing) {
       throw new NotFoundException(`Review ${command.id} not found`);
     }
+    assertReviewAuthor(existing, command.caller, 'update');
 
     const updated = new Review(existing.id, {
       orderId: existing.orderId,

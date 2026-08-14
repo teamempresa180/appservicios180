@@ -1,3 +1,4 @@
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
@@ -24,6 +25,11 @@ import { ReviewValidator } from '../validators/review.validator';
  * since Etapa 7, Identity since Etapa 2), so none of these checks is
  * deferred. No uniqueness check: `findByOrderId` returns `Review[]`,
  * so multiple reviews per Order are allowed by the domain contract.
+ *
+ * `reviewerIdentityId` must be the caller's own Identity (Admin
+ * aside): a review is a public statement attributed to a person, and
+ * posting one under someone else's name is impersonation that also
+ * hands them the right to edit or delete it afterwards.
  */
 export class CreateReviewUseCase {
   constructor(
@@ -35,6 +41,15 @@ export class CreateReviewUseCase {
 
   async execute(command: CreateReviewCommand): Promise<ReviewDto> {
     ReviewValidator.validateCreate(command);
+
+    if (
+      !command.caller.isAdmin &&
+      command.reviewerIdentityId !== command.caller.identityId
+    ) {
+      throw new ForbiddenException(
+        'A Review can only be posted by the calling Identity',
+      );
+    }
 
     const orderId = OrderId.fromString(command.orderId);
     const providerId = ProviderId.fromString(command.providerId);

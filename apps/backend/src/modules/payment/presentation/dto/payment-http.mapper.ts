@@ -1,3 +1,4 @@
+import { Caller } from '../../../core/application/caller';
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { CreatePaymentCommand } from '../../application/commands/create-payment.command';
 import { UpdatePaymentCommand } from '../../application/commands/update-payment.command';
@@ -14,7 +15,10 @@ import { PaymentListResponseDto } from './payment-list.response.dto';
  * `CreatePaymentCommand` or a `PaymentResponseDto` by hand.
  */
 export class PaymentHttpMapper {
-  static toCreateCommand(dto: CreatePaymentRequestDto): CreatePaymentCommand {
+  static toCreateCommand(
+    dto: CreatePaymentRequestDto,
+    caller: Caller,
+  ): CreatePaymentCommand {
     return new CreatePaymentCommand(
       dto.quoteId,
       dto.orderId,
@@ -22,14 +26,16 @@ export class PaymentHttpMapper {
       dto.receiverProviderId,
       dto.amount,
       dto.method,
+      caller,
     );
   }
 
   static toUpdateCommand(
     id: string,
     dto: UpdatePaymentRequestDto,
+    caller: Caller,
   ): UpdatePaymentCommand {
-    return new UpdatePaymentCommand(id, dto.status);
+    return new UpdatePaymentCommand(id, caller, dto.status);
   }
 
   static toResponse(dto: PaymentDto): PaymentResponseDto {

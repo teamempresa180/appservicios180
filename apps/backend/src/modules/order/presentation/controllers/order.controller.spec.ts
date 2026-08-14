@@ -23,8 +23,14 @@ import { OrderPriority } from '../../domain/value-objects/order-priority.value-o
 import { CreateOrderRequestDto } from '../dto/create-order.request.dto';
 import { UpdateOrderRequestDto } from '../dto/update-order.request.dto';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { Caller } from '../../../core/application/caller';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 
 describe('OrderController', () => {
+  /** The authenticated caller every non-Admin test acts as. */
+  const user: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+  const caller: Caller = { identityId: 'identity-1', isAdmin: false };
   let controller: OrderController;
   let createUseCase: { execute: jest.Mock };
   let updateUseCase: { execute: jest.Mock };
@@ -118,7 +124,7 @@ describe('OrderController', () => {
   });
 
   it('mine() delegates to ListMyOrdersUseCase with the caller id', async () => {
-    const response = await controller.mine({ id: 'identity-1', role: 'CUSTOMER' } as any);
+    const response = await controller.mine(user);
 
     expect(myOrdersUseCase.execute).toHaveBeenCalledWith('identity-1');
     expect(response).toHaveLength(1);
@@ -127,21 +133,22 @@ describe('OrderController', () => {
   it('relevantForProvider() delegates to ListOrdersForProviderUseCase with the caller id', async () => {
     const response = await controller.relevantForProvider({
       id: 'identity-1',
-      role: 'PROVIDER',
-    } as any);
+      role: Role.Provider,
+    });
 
     expect(providerOrdersUseCase.execute).toHaveBeenCalledWith('identity-1');
     expect(response).toHaveLength(1);
   });
 
-  it('update() maps id + request DTO to a command', async () => {
+  it('update() maps id + request DTO + caller to a command', async () => {
     const dto: UpdateOrderRequestDto = { title: 'New Title' };
 
-    const response = await controller.update('id-1', dto);
+    const response = await controller.update('id-1', dto, user);
 
     expect(updateUseCase.execute).toHaveBeenCalledWith(
       new UpdateOrderCommand(
         'id-1',
+        caller,
         'New Title',
         undefined,
         undefined,
@@ -151,31 +158,42 @@ describe('OrderController', () => {
     expect(response.id).toBe('id-1');
   });
 
-  it('cancel() delegates to CancelOrderUseCase with the id', async () => {
-    const response = await controller.cancel('id-1');
+  it('cancel() delegates to CancelOrderUseCase with the id and the caller', async () => {
+    const response = await controller.cancel('id-1', user);
 
     expect(cancelUseCase.execute).toHaveBeenCalledWith(
-      new CancelOrderCommand('id-1'),
+      new CancelOrderCommand('id-1', caller),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('start() delegates to StartOrderUseCase with the id', async () => {
-    const response = await controller.start('id-1');
+  it('start() delegates to StartOrderUseCase with the id and the caller', async () => {
+    const response = await controller.start('id-1', user);
 
     expect(startUseCase.execute).toHaveBeenCalledWith(
-      new StartOrderCommand('id-1'),
+      new StartOrderCommand('id-1', caller),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('complete() delegates to CompleteOrderUseCase with the id', async () => {
-    const response = await controller.complete('id-1');
+  it('complete() delegates to CompleteOrderUseCase with the id and the caller', async () => {
+    const response = await controller.complete('id-1', user);
 
     expect(completeUseCase.execute).toHaveBeenCalledWith(
-      new CompleteOrderCommand('id-1'),
+      new CompleteOrderCommand('id-1', caller),
     );
     expect(response.id).toBe('id-1');
+  });
+
+  it('marks the caller as an Admin when the JWT carries the Admin role', async () => {
+    await controller.cancel('id-1', { id: 'admin-1', role: Role.Admin });
+
+    expect(cancelUseCase.execute).toHaveBeenCalledWith(
+      new CancelOrderCommand('id-1', {
+        identityId: 'admin-1',
+        isAdmin: true,
+      }),
+    );
   });
 
   it('list() maps page/pageSize query params to a query and wraps the paginated result', async () => {
@@ -197,16 +215,18 @@ describe('OrderController', () => {
   });
 
   it('findOne() maps the Application DTO returned by GetOrderUseCase', async () => {
-    const response = await controller.findOne('id-1');
+    const response = await controller.findOne('id-1', user);
 
-    expect(getUseCase.execute).toHaveBeenCalledWith(new GetOrderQuery('id-1'));
+    expect(getUseCase.execute).toHaveBeenCalledWith(
+      new GetOrderQuery('id-1', caller),
+    );
     expect(response.title).toBe('Fix leaking kitchen faucet');
   });
 
   it('findOne() throws NotFoundException when GetOrderUseCase returns null', async () => {
     getUseCase.execute.mockResolvedValue(null);
 
-    await expect(controller.findOne('unknown-id')).rejects.toThrow(
+    await expect(controller.findOne('unknown-id', user)).rejects.toThrow(
       NotFoundException,
     );
   });

@@ -1,3 +1,5 @@
+import { Caller } from '../../../core/application/caller';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Identity } from '../../../identity/domain/entities/identity.entity';
@@ -51,6 +53,15 @@ describe('Quote use cases', () => {
   let providerRepository: InMemoryProviderRepository;
   let orderId: string;
   let providerId: string;
+  /** The Identity that owns the seeded Provider — quotes are its own. */
+  let quotingProvider: Caller;
+  /** The Identity that requested the seeded Order. */
+  let orderCustomer: Caller;
+  /** An authenticated user on neither side of the Quote. */
+  const stranger: Caller = {
+    identityId: 'a0000000-0000-4000-8000-000000000000',
+    isAdmin: false,
+  };
 
   beforeEach(async () => {
     repository = new InMemoryQuoteRepository();
@@ -71,9 +82,12 @@ describe('Quote use cases', () => {
       updatedAt: now,
     });
     await identityRepository.save(identity);
+    orderCustomer = { identityId: identity.id.value, isAdmin: false };
 
+    const providerIdentityId = IdentityId.create();
+    quotingProvider = { identityId: providerIdentityId.value, isAdmin: false };
     const provider = new Provider(ProviderId.create(), {
-      identityId: IdentityId.create(),
+      identityId: providerIdentityId,
       providerProfileId: ProfileId.create(),
       status: ProviderStatus.Active,
       type: ProviderType.Independent,
@@ -138,6 +152,7 @@ describe('Quote use cases', () => {
       120,
       overrides.notes ?? 'Includes parts and labor',
       QuoteType.Standard,
+      quotingProvider,
     );
   }
 
@@ -168,6 +183,7 @@ describe('Quote use cases', () => {
             120,
             'notes',
             QuoteType.Standard,
+            quotingProvider,
           ),
         ),
       ).rejects.toThrow(NotFoundException);
@@ -183,9 +199,26 @@ describe('Quote use cases', () => {
             120,
             'notes',
             QuoteType.Standard,
+            quotingProvider,
           ),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException when quoting under a Provider the caller does not own', async () => {
+      await expect(
+        useCase().execute(
+          new CreateQuoteCommand(
+            orderId,
+            providerId,
+            100,
+            120,
+            'notes',
+            QuoteType.Standard,
+            stranger,
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('rejects a negative proposedPrice', async () => {
@@ -198,6 +231,7 @@ describe('Quote use cases', () => {
             120,
             'notes',
             QuoteType.Standard,
+            quotingProvider,
           ),
         ),
       ).rejects.toThrow(ValidationException);
@@ -223,11 +257,21 @@ describe('Quote use cases', () => {
   });
 
   describe('UpdateQuoteUseCase', () => {
+    function updateUseCase() {
+      return new UpdateQuoteUseCase(repository, providerRepository);
+    }
+
     it('updates proposedPrice, estimatedDuration and notes', async () => {
       const created = await useCase().execute(createCommand());
 
-      const updated = await new UpdateQuoteUseCase(repository).execute(
-        new UpdateQuoteCommand(created.id, 150, 180, 'Updated notes'),
+      const updated = await updateUseCase().execute(
+        new UpdateQuoteCommand(
+          created.id,
+          quotingProvider,
+          150,
+          180,
+          'Updated notes',
+        ),
       );
 
       expect(updated.proposedPrice).toBe(150);
@@ -237,39 +281,86 @@ describe('Quote use cases', () => {
 
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
-        new UpdateQuoteUseCase(repository).execute(
-          new UpdateQuoteCommand('unknown-id', 150),
+        updateUseCase().execute(
+          new UpdateQuoteCommand('unknown-id', quotingProvider, 150),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException when the caller is not the quoting Provider', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        updateUseCase().execute(
+          new UpdateQuoteCommand(created.id, orderCustomer, 1),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('AcceptQuoteUseCase', () => {
-    it('accepts an existing Quote', async () => {
+    function acceptUseCase() {
+      return new AcceptQuoteUseCase(repository, orderRepository);
+    }
+
+    it('accepts an existing Quote for the customer who requested the Order', async () => {
       const created = await useCase().execute(createCommand());
 
-      const accepted = await new AcceptQuoteUseCase(repository).execute(
-        new AcceptQuoteCommand(created.id),
+      const accepted = await acceptUseCase().execute(
+        new AcceptQuoteCommand(created.id, orderCustomer),
       );
 
       expect(accepted.status).toBe(QuoteStatus.Accepted);
     });
 
+    it('advances the referenced Order to Accepted', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await acceptUseCase().execute(
+        new AcceptQuoteCommand(created.id, orderCustomer),
+      );
+
+      const order = await orderRepository.findById(OrderId.fromString(orderId));
+      expect(order?.status).toBe(OrderStatus.Accepted);
+    });
+
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
-        new AcceptQuoteUseCase(repository).execute(
-          new AcceptQuoteCommand('unknown-id'),
+        acceptUseCase().execute(
+          new AcceptQuoteCommand('unknown-id', orderCustomer),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException for the quoting Provider (it is the customer’s decision)', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        acceptUseCase().execute(
+          new AcceptQuoteCommand(created.id, quotingProvider),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('throws ForbiddenException for an unrelated caller', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        acceptUseCase().execute(new AcceptQuoteCommand(created.id, stranger)),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('RejectQuoteUseCase', () => {
-    it('rejects an existing Quote', async () => {
+    function rejectUseCase() {
+      return new RejectQuoteUseCase(repository, orderRepository);
+    }
+
+    it('rejects an existing Quote for the customer who requested the Order', async () => {
       const created = await useCase().execute(createCommand());
 
-      const rejected = await new RejectQuoteUseCase(repository).execute(
-        new RejectQuoteCommand(created.id),
+      const rejected = await rejectUseCase().execute(
+        new RejectQuoteCommand(created.id, orderCustomer),
       );
 
       expect(rejected.status).toBe(QuoteStatus.Rejected);
@@ -277,37 +368,100 @@ describe('Quote use cases', () => {
 
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
-        new RejectQuoteUseCase(repository).execute(
-          new RejectQuoteCommand('unknown-id'),
+        rejectUseCase().execute(
+          new RejectQuoteCommand('unknown-id', orderCustomer),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException for an unrelated caller', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        rejectUseCase().execute(new RejectQuoteCommand(created.id, stranger)),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('ListQuoteUseCase', () => {
-    it('paginates results', async () => {
+    function listUseCase() {
+      return new ListQuoteUseCase(
+        repository,
+        orderRepository,
+        providerRepository,
+      );
+    }
+
+    it('paginates the quoting Provider’s own Quotes', async () => {
       await useCase().execute(createCommand({ notes: 'A' }));
       await useCase().execute(createCommand({ notes: 'B' }));
 
-      const page = await new ListQuoteUseCase(repository).execute(
-        new ListQuoteQuery(1, 1),
+      const page = await listUseCase().execute(
+        new ListQuoteQuery(quotingProvider, 1, 1),
       );
 
       expect(page.items).toHaveLength(1);
       expect(page.total).toBe(2);
     });
+
+    it('shows the customer the Quotes submitted for their own Order', async () => {
+      await useCase().execute(createCommand({ notes: 'A' }));
+
+      const page = await listUseCase().execute(
+        new ListQuoteQuery(orderCustomer),
+      );
+
+      expect(page.total).toBe(1);
+    });
+
+    it('shows nothing to a caller who is party to neither side', async () => {
+      await useCase().execute(createCommand({ notes: 'A' }));
+
+      const page = await listUseCase().execute(new ListQuoteQuery(stranger));
+
+      expect(page.items).toHaveLength(0);
+      expect(page.total).toBe(0);
+    });
+
+    it('shows everything to an Admin', async () => {
+      await useCase().execute(createCommand({ notes: 'A' }));
+
+      const page = await listUseCase().execute(
+        new ListQuoteQuery({ identityId: 'admin-1', isAdmin: true }),
+      );
+
+      expect(page.total).toBe(1);
+    });
   });
 
   describe('SearchQuoteUseCase', () => {
-    it('finds Quotes by notes', async () => {
+    function searchUseCase() {
+      return new SearchQuoteUseCase(
+        repository,
+        orderRepository,
+        providerRepository,
+      );
+    }
+
+    it('finds the caller’s own Quotes by notes', async () => {
       await useCase().execute(createCommand({ notes: 'Special Quote' }));
 
-      const results = await new SearchQuoteUseCase(repository).execute(
-        new SearchQuoteQuery('special'),
+      const results = await searchUseCase().execute(
+        new SearchQuoteQuery('special', quotingProvider),
       );
 
       expect(results).toHaveLength(1);
       expect(results[0].notes).toBe('Special Quote');
+    });
+
+    it('drops matches the caller is not a party to', async () => {
+      await useCase().execute(createCommand({ notes: 'Special Quote' }));
+
+      const results = await searchUseCase().execute(
+        new SearchQuoteQuery('special', stranger),
+      );
+
+      expect(results).toHaveLength(0);
     });
   });
 });

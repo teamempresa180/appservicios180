@@ -1,3 +1,6 @@
+import { Caller } from '../../../core/application/caller';
+import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Identity } from '../../../identity/domain/entities/identity.entity';
@@ -27,6 +30,8 @@ import { OrderStatus } from '../../domain/value-objects/order-status.value-objec
 import { CreateOrderCommand } from '../commands/create-order.command';
 import { UpdateOrderCommand } from '../commands/update-order.command';
 import { CancelOrderCommand } from '../commands/cancel-order.command';
+import { StartOrderCommand } from '../commands/start-order.command';
+import { CompleteOrderCommand } from '../commands/complete-order.command';
 import { GetOrderQuery } from '../queries/get-order.query';
 import { ListOrderQuery } from '../queries/list-order.query';
 import { SearchOrderQuery } from '../queries/search-order.query';
@@ -35,6 +40,8 @@ import { CreateOrderUseCase } from './create-order.use-case';
 import { GetOrderUseCase } from './get-order.use-case';
 import { UpdateOrderUseCase } from './update-order.use-case';
 import { CancelOrderUseCase } from './cancel-order.use-case';
+import { StartOrderUseCase } from './start-order.use-case';
+import { CompleteOrderUseCase } from './complete-order.use-case';
 import { ListOrderUseCase } from './list-order.use-case';
 import { SearchOrderUseCase } from './search-order.use-case';
 
@@ -48,6 +55,19 @@ describe('Order use cases', () => {
   let providerId: string;
   let serviceId: string;
   let categoryId: string;
+  /** The customer who requests every Order created in these tests. */
+  let customer: Caller;
+  /** The Identity behind the seeded Provider record. */
+  let assignedProvider: Caller;
+  /** An authenticated user with no relationship to the Order at all. */
+  const stranger: Caller = {
+    identityId: 'a0000000-0000-4000-8000-000000000000',
+    isAdmin: false,
+  };
+  const admin: Caller = {
+    identityId: 'b0000000-0000-4000-8000-000000000000',
+    isAdmin: true,
+  };
 
   beforeEach(async () => {
     repository = new InMemoryOrderRepository();
@@ -68,9 +88,12 @@ describe('Order use cases', () => {
     });
     await identityRepository.save(identity);
     identityId = identity.id.value;
+    customer = { identityId, isAdmin: false };
 
+    const providerIdentityId = IdentityId.create();
+    assignedProvider = { identityId: providerIdentityId.value, isAdmin: false };
     const provider = new Provider(ProviderId.create(), {
-      identityId: IdentityId.create(),
+      identityId: providerIdentityId,
       providerProfileId: ProfileId.create(),
       status: ProviderStatus.Active,
       type: ProviderType.Independent,
@@ -265,18 +288,48 @@ describe('Order use cases', () => {
   });
 
   describe('GetOrderUseCase', () => {
+    function getUseCase() {
+      return new GetOrderUseCase(repository, providerRepository);
+    }
+
     it('returns null when it does not exist', async () => {
-      const result = await new GetOrderUseCase(repository).execute(
-        new GetOrderQuery('unknown-id'),
+      const result = await getUseCase().execute(
+        new GetOrderQuery('unknown-id', customer),
       );
       expect(result).toBeNull();
     });
 
-    it('returns the Order when it exists', async () => {
+    it('returns the Order to the customer who requested it', async () => {
       const created = await useCase().execute(createCommand());
 
-      const result = await new GetOrderUseCase(repository).execute(
-        new GetOrderQuery(created.id),
+      const result = await getUseCase().execute(
+        new GetOrderQuery(created.id, customer),
+      );
+      expect(result?.id).toBe(created.id);
+    });
+
+    it('returns the Order to the assigned Provider', async () => {
+      const created = await useCase().execute(createCommand());
+
+      const result = await getUseCase().execute(
+        new GetOrderQuery(created.id, assignedProvider),
+      );
+      expect(result?.id).toBe(created.id);
+    });
+
+    it('throws ForbiddenException for an unrelated caller', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        getUseCase().execute(new GetOrderQuery(created.id, stranger)),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('lets an Admin read any Order', async () => {
+      const created = await useCase().execute(createCommand());
+
+      const result = await getUseCase().execute(
+        new GetOrderQuery(created.id, admin),
       );
       expect(result?.id).toBe(created.id);
     });
@@ -289,6 +342,7 @@ describe('Order use cases', () => {
       const updated = await new UpdateOrderUseCase(repository).execute(
         new UpdateOrderCommand(
           created.id,
+          customer,
           'New title',
           'New description',
           new Date('2026-02-01T08:00:00Z'),
@@ -304,18 +358,52 @@ describe('Order use cases', () => {
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
         new UpdateOrderUseCase(repository).execute(
-          new UpdateOrderCommand('unknown-id', 'New title'),
+          new UpdateOrderCommand('unknown-id', customer, 'New title'),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it("throws ForbiddenException when the caller is not the Order's customer", async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new UpdateOrderUseCase(repository).execute(
+          new UpdateOrderCommand(created.id, stranger, 'Hijacked title'),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('throws ForbiddenException even for the assigned Provider', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new UpdateOrderUseCase(repository).execute(
+          new UpdateOrderCommand(created.id, assignedProvider, 'New title'),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('CancelOrderUseCase', () => {
-    it('cancels an existing Order', async () => {
+    function cancelUseCase() {
+      return new CancelOrderUseCase(repository, providerRepository);
+    }
+
+    it('cancels an existing Order for the customer who requested it', async () => {
       const created = await useCase().execute(createCommand());
 
-      const cancelled = await new CancelOrderUseCase(repository).execute(
-        new CancelOrderCommand(created.id),
+      const cancelled = await cancelUseCase().execute(
+        new CancelOrderCommand(created.id, customer),
+      );
+
+      expect(cancelled.status).toBe(OrderStatus.Cancelled);
+    });
+
+    it('lets the assigned Provider cancel', async () => {
+      const created = await useCase().execute(createCommand());
+
+      const cancelled = await cancelUseCase().execute(
+        new CancelOrderCommand(created.id, assignedProvider),
       );
 
       expect(cancelled.status).toBe(OrderStatus.Cancelled);
@@ -323,10 +411,74 @@ describe('Order use cases', () => {
 
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
-        new CancelOrderUseCase(repository).execute(
-          new CancelOrderCommand('unknown-id'),
-        ),
+        cancelUseCase().execute(new CancelOrderCommand('unknown-id', customer)),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException when the caller is neither party to the Order', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        cancelUseCase().execute(new CancelOrderCommand(created.id, stranger)),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('throws ForbiddenException for a Provider that is not assigned to the Order (open request)', async () => {
+      const open = await useCase().execute(
+        new CreateOrderCommand(
+          identityId,
+          categoryId,
+          'Open plumbing request',
+          'Need a plumber, any compatible provider',
+          new Date('2026-01-01T08:00:00Z'),
+          OrderPriority.Medium,
+        ),
+      );
+
+      await expect(
+        cancelUseCase().execute(
+          new CancelOrderCommand(open.id, assignedProvider),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('StartOrderUseCase / CompleteOrderUseCase', () => {
+    it('throws ForbiddenException when the caller is not the assigned Provider', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new StartOrderUseCase(repository, providerRepository).execute(
+          new StartOrderCommand(created.id, stranger),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+      await expect(
+        new CompleteOrderUseCase(repository, providerRepository).execute(
+          new CompleteOrderCommand(created.id, stranger),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('throws ForbiddenException even for the customer who requested the Order', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new StartOrderUseCase(repository, providerRepository).execute(
+          new StartOrderCommand(created.id, customer),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('reaches the status guard for the assigned Provider', async () => {
+      const created = await useCase().execute(createCommand());
+
+      // Authorized, but the Order is still Pending — the transition
+      // guard is what rejects it now, not the ownership check.
+      await expect(
+        new StartOrderUseCase(repository, providerRepository).execute(
+          new StartOrderCommand(created.id, assignedProvider),
+        ),
+      ).rejects.toThrow(BusinessRuleException);
     });
   });
 

@@ -23,6 +23,11 @@ export const QUOTE_REPOSITORY = Symbol('QuoteRepository');
 export interface QuoteRepository {
   findById(id: QuoteId): Promise<Quote | null>;
   findByOrderId(orderId: OrderId): Promise<Quote[]>;
+  /** Every Quote submitted for any of the given Orders, in one query.
+   *  What the scoped `GET /quotes` needs to show a customer the
+   *  Quotes across all of their own Orders without a `findByOrderId`
+   *  call per Order. Returns `[]` for an empty input. */
+  findByOrderIds(orderIds: OrderId[]): Promise<Quote[]>;
   findByProviderId(providerId: ProviderId): Promise<Quote[]>;
   /** `tx`, when provided (see `TransactionRunner`), scopes this write
    *  to an in-flight transaction — used by `AcceptQuoteUseCase`. */

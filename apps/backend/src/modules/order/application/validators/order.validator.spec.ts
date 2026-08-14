@@ -1,3 +1,4 @@
+import { Caller } from '../../../core/application/caller';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { OrderPriority } from '../../domain/value-objects/order-priority.value-object';
 import { CreateOrderCommand } from '../commands/create-order.command';
@@ -5,6 +6,8 @@ import { UpdateOrderCommand } from '../commands/update-order.command';
 import { OrderValidator } from './order.validator';
 
 describe('OrderValidator', () => {
+  const caller: Caller = { identityId: 'identity-1', isAdmin: false };
+
   function validCommand(
     overrides: Partial<{ identityId: string }> = {},
   ): CreateOrderCommand {
@@ -118,14 +121,14 @@ describe('OrderValidator', () => {
     it('passes for a well-formed command', () => {
       expect(() =>
         OrderValidator.validateUpdate(
-          new UpdateOrderCommand('id-1', 'New title'),
+          new UpdateOrderCommand('id-1', caller, 'New title'),
         ),
       ).not.toThrow();
     });
 
     it('rejects a blank id', () => {
       expect(() =>
-        OrderValidator.validateUpdate(new UpdateOrderCommand('  ')),
+        OrderValidator.validateUpdate(new UpdateOrderCommand('  ', caller)),
       ).toThrow(ValidationException);
     });
 
@@ -134,6 +137,7 @@ describe('OrderValidator', () => {
         OrderValidator.validateUpdate(
           new UpdateOrderCommand(
             'id-1',
+            caller,
             undefined,
             undefined,
             undefined,

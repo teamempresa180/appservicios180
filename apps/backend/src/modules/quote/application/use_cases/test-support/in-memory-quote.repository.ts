@@ -19,6 +19,13 @@ export class InMemoryQuoteRepository implements QuoteRepository {
     );
   }
 
+  findByOrderIds(orderIds: OrderId[]): Promise<Quote[]> {
+    const wanted = new Set(orderIds.map((orderId) => orderId.value));
+    return Promise.resolve(
+      [...this.rows.values()].filter((row) => wanted.has(row.orderId.value)),
+    );
+  }
+
   findByProviderId(providerId: ProviderId): Promise<Quote[]> {
     return Promise.resolve(
       [...this.rows.values()].filter((row) =>

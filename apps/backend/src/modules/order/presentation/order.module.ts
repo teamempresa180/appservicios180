@@ -43,6 +43,11 @@ import { PrismaOrderRepository } from '../infrastructure/persistence/prisma-orde
  * `ProviderPresentationModule` and `ServicePresentationModule` —
  * `CreateOrderUseCase` verifies the referenced Identity, Provider and
  * Service all exist before creating an order.
+ *
+ * `PROVIDER_REPOSITORY` is also injected into the read/cancel/start/
+ * complete Use Cases: their ownership checks have to resolve
+ * `Order.providerId` back to the owning Identity to decide whether
+ * the caller is the assigned Provider (see `order-access.ts`).
  */
 @Module({
   imports: [
@@ -85,23 +90,27 @@ import { PrismaOrderRepository } from '../infrastructure/persistence/prisma-orde
     },
     {
       provide: CancelOrderUseCase,
-      useFactory: (repo: OrderRepository) => new CancelOrderUseCase(repo),
-      inject: [ORDER_REPOSITORY],
+      useFactory: (repo: OrderRepository, providerRepo: ProviderRepository) =>
+        new CancelOrderUseCase(repo, providerRepo),
+      inject: [ORDER_REPOSITORY, PROVIDER_REPOSITORY],
     },
     {
       provide: StartOrderUseCase,
-      useFactory: (repo: OrderRepository) => new StartOrderUseCase(repo),
-      inject: [ORDER_REPOSITORY],
+      useFactory: (repo: OrderRepository, providerRepo: ProviderRepository) =>
+        new StartOrderUseCase(repo, providerRepo),
+      inject: [ORDER_REPOSITORY, PROVIDER_REPOSITORY],
     },
     {
       provide: CompleteOrderUseCase,
-      useFactory: (repo: OrderRepository) => new CompleteOrderUseCase(repo),
-      inject: [ORDER_REPOSITORY],
+      useFactory: (repo: OrderRepository, providerRepo: ProviderRepository) =>
+        new CompleteOrderUseCase(repo, providerRepo),
+      inject: [ORDER_REPOSITORY, PROVIDER_REPOSITORY],
     },
     {
       provide: GetOrderUseCase,
-      useFactory: (repo: OrderRepository) => new GetOrderUseCase(repo),
-      inject: [ORDER_REPOSITORY],
+      useFactory: (repo: OrderRepository, providerRepo: ProviderRepository) =>
+        new GetOrderUseCase(repo, providerRepo),
+      inject: [ORDER_REPOSITORY, PROVIDER_REPOSITORY],
     },
     {
       provide: ListOrderUseCase,

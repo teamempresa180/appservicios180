@@ -1,3 +1,4 @@
+import { Caller } from '../../../core/application/caller';
 import { QuoteDto } from '../../application/dto/quote.dto';
 import { QuoteStatus } from '../../domain/value-objects/quote-status.value-object';
 import { QuoteType } from '../../domain/value-objects/quote-type.value-object';
@@ -6,6 +7,8 @@ import { UpdateQuoteRequestDto } from './update-quote.request.dto';
 import { QuoteHttpMapper } from './quote-http.mapper';
 
 describe('QuoteHttpMapper', () => {
+  const caller: Caller = { identityId: 'identity-1', isAdmin: false };
+
   it('toCreateCommand() carries all create fields through', () => {
     const dto: CreateQuoteRequestDto = {
       orderId: 'order-1',
@@ -16,7 +19,7 @@ describe('QuoteHttpMapper', () => {
       type: QuoteType.Detailed,
     };
 
-    const command = QuoteHttpMapper.toCreateCommand(dto);
+    const command = QuoteHttpMapper.toCreateCommand(dto, caller);
 
     expect(command.orderId).toBe('order-1');
     expect(command.providerId).toBe('provider-1');
@@ -27,9 +30,10 @@ describe('QuoteHttpMapper', () => {
   it('toUpdateCommand() carries the id and optional fields through', () => {
     const dto: UpdateQuoteRequestDto = { notes: 'Updated notes.' };
 
-    const command = QuoteHttpMapper.toUpdateCommand('id-1', dto);
+    const command = QuoteHttpMapper.toUpdateCommand('id-1', dto, caller);
 
     expect(command.id).toBe('id-1');
+    expect(command.caller).toBe(caller);
     expect(command.notes).toBe('Updated notes.');
   });
 

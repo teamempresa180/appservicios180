@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { PassportModule } from '@nestjs/passport';
@@ -33,7 +34,9 @@ import { PROFILE_REPOSITORY } from '../src/modules/profiles/domain/interfaces/pr
 import { InMemoryProfileRepository } from '../src/modules/profiles/application/use_cases/test-support/in-memory-profile.repository';
 import { ProfileId } from '../src/modules/profiles/domain/value-objects/profile-id.value-object';
 import { CATEGORY_REPOSITORY } from '../src/modules/category/domain/interfaces/category-repository.interface';
+import { CATEGORY_SPECIALIZATION_REPOSITORY } from '../src/modules/category/domain/interfaces/category-specialization-repository.interface';
 import { InMemoryCategoryRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category.repository';
+import { InMemoryCategorySpecializationRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category-specialization.repository';
 import { SERVICE_REPOSITORY } from '../src/modules/service/domain/interfaces/service-repository.interface';
 import { InMemoryServiceRepository } from '../src/modules/service/application/use_cases/test-support/in-memory-service.repository';
 import { ServiceId } from '../src/modules/service/domain/value-objects/service-id.value-object';
@@ -58,6 +61,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
 describe('ReviewController (e2e)', () => {
   let app: INestApplication<App>;
   let authHeader: string;
+  let strangerAuthHeader: string;
   let orderId: string;
   let providerId: string;
   let identityId: string;
@@ -131,6 +135,8 @@ describe('ReviewController (e2e)', () => {
       .useValue(new InMemoryProfileRepository())
       .overrideProvider(CATEGORY_REPOSITORY)
       .useValue(new InMemoryCategoryRepository())
+      .overrideProvider(CATEGORY_SPECIALIZATION_REPOSITORY)
+      .useValue(new InMemoryCategorySpecializationRepository())
       .overrideProvider(SERVICE_REPOSITORY)
       .useValue(new InMemoryServiceRepository())
       .compile();
@@ -140,9 +146,22 @@ describe('ReviewController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    // Mirrors the global pipe `main.ts` installs, so this suite
+    // exercises the same DTO validation production runs.
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await app.init();
 
-    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
+    const config = app.get(ConfigService);
+    authHeader = `Bearer ${signTestAccessToken(config, { sub: identityId, role: 'CUSTOMER' })}`;
+    // Authenticated, but not the author of the seeded Reviews.
+    strangerAuthHeader = `Bearer ${signTestAccessToken(config, { sub: randomUUID(), role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -177,10 +196,32 @@ describe('ReviewController (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/reviews')
       .set('Authorization', authHeader)
-      .send(createReviewBody({ orderId: 'unknown-order' }))
+      .send(createReviewBody({ orderId: randomUUID() }))
       .expect(404);
 
     expect((response.body as ErrorResponseDto).error).toBe('NotFoundException');
+  });
+
+  it('POST /reviews returns 403 when posting under another Identity’s name', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/reviews')
+      .set('Authorization', strangerAuthHeader)
+      .send(createReviewBody())
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
+  it('POST /reviews returns 400 for a rating outside the 1..5 scale', async () => {
+    for (const rating of [0, -5, 6, 1000000, 4.5]) {
+      await request(app.getHttpServer())
+        .post('/reviews')
+        .set('Authorization', authHeader)
+        .send(createReviewBody({ rating }))
+        .expect(400);
+    }
   });
 
   it('GET /reviews/:id returns 404 for an unknown id', async () => {
@@ -204,6 +245,38 @@ describe('ReviewController (e2e)', () => {
       .expect(200);
 
     expect((response.body as ReviewResponseDto).title).toBe('Updated title');
+  });
+
+  it('PUT /reviews/:id and DELETE /reviews/:id return 403 for a non-author', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/reviews')
+      .set('Authorization', authHeader)
+      .send(createReviewBody());
+    const createdId = (created.body as ReviewResponseDto).id;
+
+    await request(app.getHttpServer())
+      .put(`/reviews/${createdId}`)
+      .set('Authorization', strangerAuthHeader)
+      .send({ title: 'Whitewashed' })
+      .expect(403);
+    await request(app.getHttpServer())
+      .delete(`/reviews/${createdId}`)
+      .set('Authorization', strangerAuthHeader)
+      .expect(403);
+  });
+
+  it('GET /reviews stays public marketplace content for any authenticated caller', async () => {
+    await request(app.getHttpServer())
+      .post('/reviews')
+      .set('Authorization', authHeader)
+      .send(createReviewBody());
+
+    const response = await request(app.getHttpServer())
+      .get('/reviews')
+      .set('Authorization', strangerAuthHeader)
+      .expect(200);
+
+    expect((response.body as ReviewListResponseDto).items).toHaveLength(1);
   });
 
   it('DELETE /reviews/:id deletes an existing Review', async () => {

@@ -39,6 +39,18 @@ export class PrismaQuoteRepository implements QuoteRepository {
     return rows.map((row) => QuotePrismaMapper.toDomain(row));
   }
 
+  async findByOrderIds(orderIds: OrderId[]): Promise<Quote[]> {
+    if (orderIds.length === 0) {
+      return [];
+    }
+    const rows = await this.prisma.quoteModel.findMany({
+      where: { orderId: { in: orderIds.map((orderId) => orderId.value) } },
+      orderBy: { createdAt: 'desc' },
+      take: MAX_UNPAGINATED_RESULTS,
+    });
+    return rows.map((row) => QuotePrismaMapper.toDomain(row));
+  }
+
   async findByProviderId(providerId: ProviderId): Promise<Quote[]> {
     const rows = await this.prisma.quoteModel.findMany({
       where: { providerId: providerId.value },
