@@ -29,8 +29,6 @@ import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto'
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
 import { CurrentUser } from '../../../../common/auth/current-user.decorator';
 import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
-import { Role } from '../../../../common/auth/role.enum';
-import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { VerificationRoutes } from '../routes/verification.routes';
@@ -71,6 +69,14 @@ import {
  * `list`/`search` are declared before the dynamic `findOne(:id)` route
  * so `GET /verifications/search` resolves to `search()` rather than
  * being matched as `findOne({ id: 'search' })`.
+ *
+ * A Verification is KYC data, so every route forwards `@CurrentUser()`
+ * and the Application layer decides per row: reads and document
+ * uploads are restricted to the owning Identity (or an Admin), and
+ * approving a Verification is an Admin-only transition — the owner may
+ * only resubmit a rejected one. No `@Roles(...)` gate on the class:
+ * ordinary users must still be able to open and resubmit their own
+ * verification.
  */
 @ApiTags('Verification')
 @UseGuards(JwtAuthGuard)
@@ -104,11 +110,17 @@ export class VerificationController {
     description: 'Identity not found.',
     type: ErrorResponseDto,
   })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller is not the Identity the Verification is for.',
+    type: ErrorResponseDto,
+  })
   async create(
     @Body() dto: CreateVerificationRequestDto,
+    @CurrentUser() caller: AuthenticatedUser,
   ): Promise<VerificationResponseDto> {
     const verification = await this.createVerificationUseCase.execute(
-      VerificationHttpMapper.toCreateCommand(dto),
+      VerificationHttpMapper.toCreateCommand(dto, caller),
     );
     return VerificationHttpMapper.toResponse(verification);
   }
@@ -131,12 +143,19 @@ export class VerificationController {
     description: 'Verification not found.',
     type: ErrorResponseDto,
   })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Caller does not own this Verification, or attempted a status transition reserved for an Admin.',
+    type: ErrorResponseDto,
+  })
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateVerificationRequestDto,
+    @CurrentUser() caller: AuthenticatedUser,
   ): Promise<VerificationResponseDto> {
     const verification = await this.updateVerificationUseCase.execute(
-      VerificationHttpMapper.toUpdateCommand(id, dto),
+      VerificationHttpMapper.toUpdateCommand(id, dto, caller),
     );
     return VerificationHttpMapper.toResponse(verification);
   }
@@ -147,14 +166,16 @@ export class VerificationController {
   @ApiQuery({ name: 'pageSize', required: false, example: 20 })
   @ApiResponse({
     status: 200,
-    description: 'Paginated list of Verifications.',
+    description: 'Paginated list of the caller’s own Verifications.',
     type: VerificationListResponseDto,
   })
   async list(
+    @CurrentUser() caller: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ): Promise<VerificationListResponseDto> {
     const query = new ListVerificationQuery(
+      caller,
       page !== undefined ? Number(page) : undefined,
       pageSize !== undefined ? Number(pageSize) : undefined,
     );
@@ -172,9 +193,10 @@ export class VerificationController {
   })
   async search(
     @Query('term') term: string,
+    @CurrentUser() caller: AuthenticatedUser,
   ): Promise<VerificationResponseDto[]> {
     const verifications = await this.searchVerificationUseCase.execute(
-      new SearchVerificationQuery(term),
+      new SearchVerificationQuery(term, caller),
     );
     return verifications.map((verification) =>
       VerificationHttpMapper.toResponse(verification),
@@ -194,9 +216,17 @@ export class VerificationController {
     description: 'Verification not found.',
     type: ErrorResponseDto,
   })
-  async findOne(@Param('id') id: string): Promise<VerificationResponseDto> {
+  @ApiResponse({
+    status: 403,
+    description: 'Caller does not own this Verification.',
+    type: ErrorResponseDto,
+  })
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser() caller: AuthenticatedUser,
+  ): Promise<VerificationResponseDto> {
     const verification = await this.getVerificationUseCase.execute(
-      new GetVerificationQuery(id),
+      new GetVerificationQuery(id, caller),
     );
     return VerificationHttpMapper.toResponse(verification);
   }
@@ -211,7 +241,13 @@ export class VerificationController {
    * by hand either.
    */
   @Post(VerificationRoutes.document)
-  @UseInterceptors(FileInterceptor('file'))
+  // 10 MB: comfortably above a photographed ID or a scanned
+  // certificate, and low enough that an unbounded upload can no longer
+  // be used to exhaust disk or memory. Multer rejects anything larger
+  // before the handler runs.
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }),
+  )
   @ApiOperation(VerificationSwagger.uploadDocument)
   @ApiParam({ name: 'id', description: 'Verification id' })
   @ApiConsumes('multipart/form-data')
@@ -238,24 +274,35 @@ export class VerificationController {
     description: 'Verification not found.',
     type: ErrorResponseDto,
   })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller does not own this Verification.',
+    type: ErrorResponseDto,
+  })
   async uploadDocument(
     @Param('id') id: string,
     @UploadedFile() file: UploadedVerificationDocumentFile | undefined,
+    @CurrentUser() caller: AuthenticatedUser,
   ): Promise<VerificationResponseDto> {
     if (!file) {
       throw new ValidationException('file is required');
     }
 
-    // Confirms the Verification exists *before* writing anything to disk
-    // — otherwise an upload against an unknown id would leave an orphan
-    // file under `uploads/verifications/<id>/`. `GetVerificationUseCase`
-    // throws `NotFoundException` (translated to a 404 by
-    // `DomainExceptionFilter`) exactly like every other `:id` route here.
-    await this.getVerificationUseCase.execute(new GetVerificationQuery(id));
+    // Confirms the Verification exists *and belongs to the caller*
+    // before writing anything to disk — otherwise an upload against an
+    // unknown or foreign id would leave a file under
+    // `uploads/verifications/<id>/` regardless. `GetVerificationUseCase`
+    // throws `NotFoundException`/`ForbiddenException` (translated to
+    // 404/403 by `DomainExceptionFilter`) exactly like every other
+    // `:id` route here; the use case below re-checks ownership so the
+    // rule holds for any future caller too.
+    await this.getVerificationUseCase.execute(
+      new GetVerificationQuery(id, caller),
+    );
 
     const documentPath = await this.verificationDocumentStorage.save(id, file);
     const verification = await this.uploadVerificationDocumentUseCase.execute(
-      VerificationHttpMapper.toUploadDocumentCommand(id, documentPath),
+      VerificationHttpMapper.toUploadDocumentCommand(id, documentPath, caller),
     );
     return VerificationHttpMapper.toResponse(verification);
   }
@@ -288,13 +335,8 @@ export class VerificationController {
     @Res() res: Response,
   ): Promise<void> {
     const verification = await this.getVerificationUseCase.execute(
-      new GetVerificationQuery(id),
+      new GetVerificationQuery(id, user),
     );
-    if (verification.identityId !== user.id && user.role !== Role.Admin) {
-      throw new ForbiddenException(
-        'Not authorized to access this document',
-      );
-    }
     if (!verification.documentPath) {
       throw new NotFoundException(`Verification ${id} has no document`);
     }

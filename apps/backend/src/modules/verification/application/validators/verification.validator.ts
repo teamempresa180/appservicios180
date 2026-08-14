@@ -74,4 +74,36 @@ export class VerificationValidator {
       );
     }
   }
+
+  /**
+   * Confirms the file's actual leading bytes match the format it
+   * claims to be. `validateDocumentMimeType` only inspects the
+   * `Content-Type` the client itself declared, which any caller can
+   * set freely — on its own it would happily store an executable
+   * labelled `image/png`. These three signatures are fixed by the file
+   * formats themselves, so a simple prefix comparison is enough and no
+   * external sniffing library is warranted.
+   */
+  static validateDocumentSignature(mimetype: string, buffer: Buffer): void {
+    const signatures: Record<string, number[]> = {
+      'application/pdf': [0x25, 0x50, 0x44, 0x46], // "%PDF"
+      'image/png': [0x89, 0x50, 0x4e, 0x47],
+      'image/jpeg': [0xff, 0xd8, 0xff],
+    };
+
+    const expected = signatures[mimetype];
+    if (!expected) {
+      throw new ValidationException(
+        `file must be one of: ${ALLOWED_VERIFICATION_DOCUMENT_MIME_TYPES.join(', ')}`,
+      );
+    }
+    const matches =
+      buffer.length >= expected.length &&
+      expected.every((byte, index) => buffer[index] === byte);
+    if (!matches) {
+      throw new ValidationException(
+        `file content does not match the declared type ${mimetype}`,
+      );
+    }
+  }
 }

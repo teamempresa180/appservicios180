@@ -1,3 +1,5 @@
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
@@ -19,6 +21,10 @@ import { VerificationValidator } from '../validators/verification.validator';
  * rule already applied to `Authentication`/`Credential`/`Profile`/
  * `Contact`/`Address`, since `Verification` also references
  * `IdentityId`.
+ *
+ * The record must be for the caller's own Identity (Admins excepted).
+ * Otherwise anyone could open KYC records against other people's
+ * Identities.
  */
 export class CreateVerificationUseCase {
   constructor(
@@ -28,6 +34,15 @@ export class CreateVerificationUseCase {
 
   async execute(command: CreateVerificationCommand): Promise<VerificationDto> {
     VerificationValidator.validateCreate(command);
+
+    if (
+      command.caller.role !== Role.Admin &&
+      command.identityId !== command.caller.id
+    ) {
+      throw new ForbiddenException(
+        'A Verification can only be created for the authenticated Identity',
+      );
+    }
 
     const identityId = IdentityId.fromString(command.identityId);
     const identity = await this.identityRepository.findById(identityId);

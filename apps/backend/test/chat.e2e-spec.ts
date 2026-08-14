@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -34,6 +34,8 @@ import { InMemoryProfileRepository } from '../src/modules/profiles/application/u
 import { ProfileId } from '../src/modules/profiles/domain/value-objects/profile-id.value-object';
 import { CATEGORY_REPOSITORY } from '../src/modules/category/domain/interfaces/category-repository.interface';
 import { InMemoryCategoryRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category.repository';
+import { CATEGORY_SPECIALIZATION_REPOSITORY } from '../src/modules/category/domain/interfaces/category-specialization-repository.interface';
+import { InMemoryCategorySpecializationRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category-specialization.repository';
 import { SERVICE_REPOSITORY } from '../src/modules/service/domain/interfaces/service-repository.interface';
 import { InMemoryServiceRepository } from '../src/modules/service/application/use_cases/test-support/in-memory-service.repository';
 import { ServiceId } from '../src/modules/service/domain/value-objects/service-id.value-object';
@@ -62,6 +64,7 @@ describe('ChatController (e2e)', () => {
   let identityId: string;
   let providerId: string;
   let authHeader: string;
+  let outsiderAuthHeader: string;
 
   beforeEach(async () => {
     const now = new Date();
@@ -132,6 +135,8 @@ describe('ChatController (e2e)', () => {
       .useValue(new InMemoryProfileRepository())
       .overrideProvider(CATEGORY_REPOSITORY)
       .useValue(new InMemoryCategoryRepository())
+      .overrideProvider(CATEGORY_SPECIALIZATION_REPOSITORY)
+      .useValue(new InMemoryCategorySpecializationRepository())
       .overrideProvider(SERVICE_REPOSITORY)
       .useValue(new InMemoryServiceRepository())
       .compile();
@@ -141,9 +146,18 @@ describe('ChatController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await app.init();
 
     authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
+    outsiderAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: IdentityId.create().value, role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -176,10 +190,26 @@ describe('ChatController (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/chats')
       .set('Authorization', authHeader)
-      .send(createChatBody({ orderId: 'unknown-order' }))
+      .send(createChatBody({ orderId: OrderId.create().value }))
       .expect(404);
 
     expect((response.body as ErrorResponseDto).error).toBe('NotFoundException');
+  });
+
+  it('POST /chats rejects a non-UUID orderId with 400', async () => {
+    await request(app.getHttpServer())
+      .post('/chats')
+      .set('Authorization', authHeader)
+      .send(createChatBody({ orderId: 'not-a-uuid' }))
+      .expect(400);
+  });
+
+  it('POST /chats rejects a caller who is neither participant with 403', async () => {
+    await request(app.getHttpServer())
+      .post('/chats')
+      .set('Authorization', outsiderAuthHeader)
+      .send(createChatBody())
+      .expect(403);
   });
 
   it('GET /chats/:id returns 404 for an unknown id', async () => {
@@ -236,5 +266,60 @@ describe('ChatController (e2e)', () => {
     const body = response.body as ChatResponseDto[];
     expect(body).toHaveLength(1);
     expect(body[0].type).toBe('ORDER_RELATED');
+  });
+
+  it('GET /chats does not leak Chats the caller does not take part in', async () => {
+    await request(app.getHttpServer())
+      .post('/chats')
+      .set('Authorization', authHeader)
+      .send(createChatBody());
+
+    const response = await request(app.getHttpServer())
+      .get('/chats')
+      .set('Authorization', outsiderAuthHeader)
+      .expect(200);
+
+    expect((response.body as ChatListResponseDto).items).toHaveLength(0);
+  });
+
+  it('GET /chats/search does not leak Chats the caller does not take part in', async () => {
+    await request(app.getHttpServer())
+      .post('/chats')
+      .set('Authorization', authHeader)
+      .send(createChatBody());
+
+    const response = await request(app.getHttpServer())
+      .get('/chats/search')
+      .set('Authorization', outsiderAuthHeader)
+      .query({ term: 'ORDER_RELATED' })
+      .expect(200);
+
+    expect(response.body as ChatResponseDto[]).toHaveLength(0);
+  });
+
+  it('GET /chats/:id returns 403 to a non-participant', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/chats')
+      .set('Authorization', authHeader)
+      .send(createChatBody());
+    const createdId = (created.body as ChatResponseDto).id;
+
+    await request(app.getHttpServer())
+      .get(`/chats/${createdId}`)
+      .set('Authorization', outsiderAuthHeader)
+      .expect(403);
+  });
+
+  it('PUT /chats/:id/close returns 403 to a non-participant', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/chats')
+      .set('Authorization', authHeader)
+      .send(createChatBody());
+    const createdId = (created.body as ChatResponseDto).id;
+
+    await request(app.getHttpServer())
+      .put(`/chats/${createdId}/close`)
+      .set('Authorization', outsiderAuthHeader)
+      .expect(403);
   });
 });

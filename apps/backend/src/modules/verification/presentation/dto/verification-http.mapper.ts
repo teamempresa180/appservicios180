@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { CreateVerificationCommand } from '../../application/commands/create-verification.command';
 import { UpdateVerificationCommand } from '../../application/commands/update-verification.command';
@@ -17,22 +18,25 @@ import { VerificationListResponseDto } from './verification-list.response.dto';
 export class VerificationHttpMapper {
   static toCreateCommand(
     dto: CreateVerificationRequestDto,
+    caller: AuthenticatedUser,
   ): CreateVerificationCommand {
-    return new CreateVerificationCommand(dto.identityId, dto.type);
+    return new CreateVerificationCommand(dto.identityId, dto.type, caller);
   }
 
   static toUpdateCommand(
     id: string,
     dto: UpdateVerificationRequestDto,
+    caller: AuthenticatedUser,
   ): UpdateVerificationCommand {
-    return new UpdateVerificationCommand(id, dto.status);
+    return new UpdateVerificationCommand(id, dto.status, caller);
   }
 
   static toUploadDocumentCommand(
     id: string,
     documentPath: string,
+    caller: AuthenticatedUser,
   ): UploadVerificationDocumentCommand {
-    return new UploadVerificationDocumentCommand(id, documentPath);
+    return new UploadVerificationDocumentCommand(id, documentPath, caller);
   }
 
   static toResponse(dto: VerificationDto): VerificationResponseDto {

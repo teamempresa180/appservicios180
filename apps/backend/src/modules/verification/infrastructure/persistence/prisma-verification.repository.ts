@@ -51,14 +51,17 @@ export class PrismaVerificationRepository implements VerificationRepository {
   async list(
     page: number,
     pageSize: number,
+    identityId: IdentityId | null,
   ): Promise<PaginatedResult<Verification>> {
+    const where = identityId ? { identityId: identityId.value } : {};
     const [rows, total] = await Promise.all([
       this.prisma.verificationModel.findMany({
+        where,
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.verificationModel.count(),
+      this.prisma.verificationModel.count({ where }),
     ]);
     return {
       items: rows.map((row) => VerificationPrismaMapper.toDomain(row)),
@@ -68,7 +71,10 @@ export class PrismaVerificationRepository implements VerificationRepository {
     };
   }
 
-  async search(term: string): Promise<Verification[]> {
+  async search(
+    term: string,
+    identityId: IdentityId | null,
+  ): Promise<Verification[]> {
     // `type`/`status` are Prisma enum columns — enum filters only
     // support `equals`/`in`, not `contains`. Resolving the substring
     // match against the (compile-time known) enum values first turns
@@ -85,6 +91,7 @@ export class PrismaVerificationRepository implements VerificationRepository {
           ...(types.length > 0 ? [{ type: { in: types } }] : []),
           ...(statuses.length > 0 ? [{ status: { in: statuses } }] : []),
         ],
+        ...(identityId ? { identityId: identityId.value } : {}),
       },
       orderBy: { createdAt: 'desc' },
       take: MAX_UNPAGINATED_RESULTS,

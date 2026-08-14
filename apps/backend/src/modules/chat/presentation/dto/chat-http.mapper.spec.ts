@@ -1,3 +1,4 @@
+import { Role } from '../../../../common/auth/role.enum';
 import { ChatDto } from '../../application/dto/chat.dto';
 import { ChatStatus } from '../../domain/value-objects/chat-status.value-object';
 import { ChatType } from '../../domain/value-objects/chat-type.value-object';
@@ -13,12 +14,16 @@ describe('ChatHttpMapper', () => {
       type: ChatType.OrderRelated,
     };
 
-    const command = ChatHttpMapper.toCreateCommand(dto);
+    const command = ChatHttpMapper.toCreateCommand(dto, {
+      id: 'identity-1',
+      role: Role.Customer,
+    });
 
     expect(command.orderId).toBe('order-1');
     expect(command.clientIdentityId).toBe('identity-1');
     expect(command.providerId).toBe('provider-1');
     expect(command.type).toBe(ChatType.OrderRelated);
+    expect(command.caller.id).toBe('identity-1');
   });
 
   it('toResponse() converts Date fields to ISO strings', () => {

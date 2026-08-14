@@ -1,9 +1,13 @@
+import { Role } from '../../../../common/auth/role.enum';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { MessageType } from '../../domain/value-objects/message-type.value-object';
 import { SendMessageCommand } from '../commands/send-message.command';
 import { MessageValidator } from './message.validator';
 
 describe('MessageValidator', () => {
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+
   function validCommand(
     overrides: Partial<{ chatId: string }> = {},
   ): SendMessageCommand {
@@ -12,6 +16,7 @@ describe('MessageValidator', () => {
       'identity-1',
       'Hello there',
       MessageType.Text,
+      caller,
     );
   }
 
@@ -34,6 +39,7 @@ describe('MessageValidator', () => {
             'identity-1',
             '  ',
             MessageType.Text,
+            caller,
           ),
         ),
       ).toThrow(ValidationException);
@@ -47,6 +53,7 @@ describe('MessageValidator', () => {
             'identity-1',
             'Hello',
             'INVALID' as MessageType,
+            caller,
           ),
         ),
       ).toThrow(ValidationException);

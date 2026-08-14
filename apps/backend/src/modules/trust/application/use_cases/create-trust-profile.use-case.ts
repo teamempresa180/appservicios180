@@ -1,4 +1,6 @@
+import { Role } from '../../../../common/auth/role.enum';
 import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
@@ -22,6 +24,9 @@ import { TrustValidator } from '../validators/trust.validator';
  * `TrustRepository.findByIdentityId` returning `Trust | null` (not an
  * array, unlike every other module): **at most one Trust record per
  * Identity** — throws `BusinessRuleException` if one already exists.
+ *
+ * The profile must be for the caller's own Identity (Admins excepted),
+ * so nobody can seed a reputation record against somebody else.
  */
 export class CreateTrustProfileUseCase {
   constructor(
@@ -31,6 +36,15 @@ export class CreateTrustProfileUseCase {
 
   async execute(command: CreateTrustProfileCommand): Promise<TrustDto> {
     TrustValidator.validateCreate(command);
+
+    if (
+      command.caller.role !== Role.Admin &&
+      command.identityId !== command.caller.id
+    ) {
+      throw new ForbiddenException(
+        'A Trust profile can only be created for the authenticated Identity',
+      );
+    }
 
     const identityId = IdentityId.fromString(command.identityId);
     const identity = await this.identityRepository.findById(identityId);

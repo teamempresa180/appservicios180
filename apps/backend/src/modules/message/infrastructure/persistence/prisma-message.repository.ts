@@ -3,6 +3,7 @@ import { PrismaService } from '../../../../infrastructure/prisma/prisma.service'
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { MAX_UNPAGINATED_RESULTS } from '../../../core/infrastructure/enum-search';
 import { ChatId } from '../../../chat/domain/value-objects/chat-id.value-object';
+import { ChatParticipantScope } from '../../../chat/domain/interfaces/chat-repository.interface';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { Message } from '../../domain/entities/message.entity';
 import { MessageRepository } from '../../domain/interfaces/message-repository.interface';
@@ -57,17 +58,38 @@ export class PrismaMessageRepository implements MessageRepository {
     await this.prisma.messageModel.delete({ where: { id: id.value } });
   }
 
+  /**
+   * Turns a participant scope into a `where` fragment on the related
+   * Chat row — a Message is readable exactly when its conversation is.
+   * An absent scope yields `{}` (Admin only).
+   */
+  private static whereFor(scope: ChatParticipantScope | null): object {
+    if (!scope) {
+      return {};
+    }
+    const branches: { clientIdentityId?: string; providerId?: string }[] = [
+      { clientIdentityId: scope.clientIdentityId.value },
+    ];
+    if (scope.providerId) {
+      branches.push({ providerId: scope.providerId.value });
+    }
+    return { chat: { OR: branches } };
+  }
+
   async list(
     page: number,
     pageSize: number,
+    scope: ChatParticipantScope | null,
   ): Promise<PaginatedResult<Message>> {
+    const where = PrismaMessageRepository.whereFor(scope);
     const [rows, total] = await Promise.all([
       this.prisma.messageModel.findMany({
+        where,
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy: { sentAt: 'desc' },
       }),
-      this.prisma.messageModel.count(),
+      this.prisma.messageModel.count({ where }),
     ]);
     return {
       items: rows.map((row) => MessagePrismaMapper.toDomain(row)),
@@ -77,9 +99,15 @@ export class PrismaMessageRepository implements MessageRepository {
     };
   }
 
-  async search(term: string): Promise<Message[]> {
+  async search(
+    term: string,
+    scope: ChatParticipantScope | null,
+  ): Promise<Message[]> {
     const rows = await this.prisma.messageModel.findMany({
-      where: { content: { contains: term } },
+      where: {
+        content: { contains: term },
+        ...PrismaMessageRepository.whereFor(scope),
+      },
       orderBy: { sentAt: 'desc' },
       take: MAX_UNPAGINATED_RESULTS,
     });

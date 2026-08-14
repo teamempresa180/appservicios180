@@ -9,7 +9,10 @@ import { IdentityId } from '../../../identity/domain/value-objects/identity-id.v
 import { OrderId } from '../../../order/domain/value-objects/order-id.value-object';
 import { ProviderId } from '../../../provider/domain/value-objects/provider-id.value-object';
 import { Chat } from '../../domain/entities/chat.entity';
-import { ChatRepository } from '../../domain/interfaces/chat-repository.interface';
+import {
+  ChatParticipantScope,
+  ChatRepository,
+} from '../../domain/interfaces/chat-repository.interface';
 import { ChatId } from '../../domain/value-objects/chat-id.value-object';
 import { ChatType } from '../../domain/value-objects/chat-type.value-object';
 import { ChatPrismaMapper } from './chat-prisma.mapper';
@@ -62,14 +65,40 @@ export class PrismaChatRepository implements ChatRepository {
     });
   }
 
-  async list(page: number, pageSize: number): Promise<PaginatedResult<Chat>> {
+  /**
+   * Translates a participant scope into a Prisma `where` fragment. An
+   * absent scope yields `{}` (Admin only); a caller with no Provider
+   * record only matches the client side.
+   */
+  private static whereFor(
+    scope: ChatParticipantScope | null,
+  ): { OR: { clientIdentityId?: string; providerId?: string }[] } | object {
+    if (!scope) {
+      return {};
+    }
+    const branches: { clientIdentityId?: string; providerId?: string }[] = [
+      { clientIdentityId: scope.clientIdentityId.value },
+    ];
+    if (scope.providerId) {
+      branches.push({ providerId: scope.providerId.value });
+    }
+    return { OR: branches };
+  }
+
+  async list(
+    page: number,
+    pageSize: number,
+    scope: ChatParticipantScope | null,
+  ): Promise<PaginatedResult<Chat>> {
+    const where = PrismaChatRepository.whereFor(scope);
     const [rows, total] = await Promise.all([
       this.prisma.chatModel.findMany({
+        where,
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.chatModel.count(),
+      this.prisma.chatModel.count({ where }),
     ]);
     return {
       items: rows.map((row) => ChatPrismaMapper.toDomain(row)),
@@ -79,7 +108,10 @@ export class PrismaChatRepository implements ChatRepository {
     };
   }
 
-  async search(term: string): Promise<Chat[]> {
+  async search(
+    term: string,
+    scope: ChatParticipantScope | null,
+  ): Promise<Chat[]> {
     // `type` is a Prisma enum column — enum filters only support
     // `equals`/`in`, not `contains`. Resolving the substring match
     // against the (compile-time known) enum values first turns what
@@ -90,7 +122,10 @@ export class PrismaChatRepository implements ChatRepository {
       return [];
     }
     const rows = await this.prisma.chatModel.findMany({
-      where: { type: { in: types } },
+      where: {
+        type: { in: types },
+        ...PrismaChatRepository.whereFor(scope),
+      },
       orderBy: { createdAt: 'desc' },
       take: MAX_UNPAGINATED_RESULTS,
     });

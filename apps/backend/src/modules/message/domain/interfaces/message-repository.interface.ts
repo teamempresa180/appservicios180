@@ -2,6 +2,7 @@ import { PaginatedResult } from '../../../core/application/paginated-result';
 import { Message } from '../entities/message.entity';
 import { MessageId } from '../value-objects/message-id.value-object';
 import { ChatId } from '../../../chat/domain/value-objects/chat-id.value-object';
+import { ChatParticipantScope } from '../../../chat/domain/interfaces/chat-repository.interface';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 
 /**
@@ -20,7 +21,17 @@ export interface MessageRepository {
   findBySenderIdentityId(identityId: IdentityId): Promise<Message[]>;
   save(message: Message): Promise<void>;
   delete(id: MessageId): Promise<void>;
-  list(page: number, pageSize: number): Promise<PaginatedResult<Message>>;
-  /** Free-text match against `content`. */
-  search(term: string): Promise<Message[]>;
+  /**
+   * `scope` restricts the page to Messages belonging to a Chat the
+   * caller takes part in; `null` means "no restriction" and is
+   * reserved for Admin callers. A message is as private as its
+   * conversation, so this is the same scope the Chat module applies.
+   */
+  list(
+    page: number,
+    pageSize: number,
+    scope: ChatParticipantScope | null,
+  ): Promise<PaginatedResult<Message>>;
+  /** Free-text match against `content`, restricted to `scope` when given. */
+  search(term: string, scope: ChatParticipantScope | null): Promise<Message[]>;
 }

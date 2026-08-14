@@ -1,3 +1,4 @@
+import { Role } from '../../../../common/auth/role.enum';
 import { MessageDto } from '../../application/dto/message.dto';
 import { MessageStatus } from '../../domain/value-objects/message-status.value-object';
 import { MessageType } from '../../domain/value-objects/message-type.value-object';
@@ -13,12 +14,16 @@ describe('MessageHttpMapper', () => {
       type: MessageType.Text,
     };
 
-    const command = MessageHttpMapper.toSendCommand(dto);
+    const command = MessageHttpMapper.toSendCommand(dto, {
+      id: 'identity-1',
+      role: Role.Customer,
+    });
 
     expect(command.chatId).toBe('chat-1');
     expect(command.senderIdentityId).toBe('identity-1');
     expect(command.content).toBe('On my way.');
     expect(command.type).toBe(MessageType.Text);
+    expect(command.caller.id).toBe('identity-1');
   });
 
   it('toResponse() converts sentAt to an ISO string and readAt to null when absent', () => {

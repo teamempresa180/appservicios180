@@ -41,7 +41,11 @@ export class LocalVerificationDocumentStorageService {
     verificationId: string,
     file: UploadedVerificationDocumentFile,
   ): Promise<string> {
+    // Two checks, in order: the declared `Content-Type` must be on the
+    // allow-list, and the file's real leading bytes must match it. The
+    // first alone is spoofable — a caller controls its own headers.
     VerificationValidator.validateDocumentMimeType(file.mimetype);
+    VerificationValidator.validateDocumentSignature(file.mimetype, file.buffer);
 
     const sanitizedName =
       LocalVerificationDocumentStorageService.sanitizeFileName(

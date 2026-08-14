@@ -17,7 +17,17 @@ export interface VerificationRepository {
   findById(id: VerificationId): Promise<Verification | null>;
   findByIdentityId(identityId: IdentityId): Promise<Verification[]>;
   save(verification: Verification): Promise<void>;
-  list(page: number, pageSize: number): Promise<PaginatedResult<Verification>>;
-  /** Free-text match against `type`/`status`. */
-  search(term: string): Promise<Verification[]>;
+  /**
+   * `identityId` restricts the page to the Verifications of a single
+   * Identity; `null` means "no restriction" and is reserved for Admin
+   * callers. A Verification carries KYC evidence, so an unrestricted
+   * listing exposes who has been verified and with which documents.
+   */
+  list(
+    page: number,
+    pageSize: number,
+    identityId: IdentityId | null,
+  ): Promise<PaginatedResult<Verification>>;
+  /** Free-text match against `type`/`status`, restricted to `identityId` when given. */
+  search(term: string, identityId: IdentityId | null): Promise<Verification[]>;
 }

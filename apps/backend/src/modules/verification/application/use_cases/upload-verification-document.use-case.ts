@@ -1,3 +1,5 @@
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { Verification } from '../../domain/entities/verification.entity';
 import { VerificationRepository } from '../../domain/interfaces/verification-repository.interface';
@@ -18,6 +20,10 @@ import { VerificationValidator } from '../validators/verification.validator';
  * controller before this use case) — this only ever deals with the
  * path string, never file bytes, keeping the Application layer free of
  * any filesystem/multipart concerns.
+ *
+ * Only the owner of the Verification (or an Admin) may attach a
+ * document to it — otherwise anyone could overwrite the identity
+ * document backing somebody else's KYC record.
  */
 export class UploadVerificationDocumentUseCase {
   constructor(
@@ -33,6 +39,14 @@ export class UploadVerificationDocumentUseCase {
     const existing = await this.verificationRepository.findById(id);
     if (!existing) {
       throw new NotFoundException(`Verification ${command.id} not found`);
+    }
+    if (
+      command.caller.role !== Role.Admin &&
+      existing.identityId.value !== command.caller.id
+    ) {
+      throw new ForbiddenException(
+        `Verification ${command.id} does not belong to the authenticated Identity`,
+      );
     }
 
     const updated = new Verification(existing.id, {

@@ -18,6 +18,8 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { MessageRoutes } from '../routes/message.routes';
 import { MessageSwagger } from '../swagger/message.swagger';
@@ -58,6 +60,14 @@ import { MessageHttpMapper } from '../dto/message-http.mapper';
  * `search` is declared before the dynamic `findOne(:id)` route so
  * `GET /messages/search` resolves to `search()` rather than being
  * matched as `findOne({ id: 'search' })`.
+ *
+ * Every route forwards `@CurrentUser()`. Messages are the private
+ * content of a Chat, so all five endpoints are decided against the
+ * caller's participation in the relevant conversation (`send`
+ * additionally refuses to attribute a message to anybody but the
+ * caller, and `remove` is restricted to the original sender). No
+ * `@Roles(...)` gate: Customers and Providers both use these
+ * endpoints legitimately — the restriction is per-row, not per-role.
  */
 @ApiTags('Message')
 @UseGuards(JwtAuthGuard)
@@ -89,9 +99,18 @@ export class MessageController {
     description: 'Chat or sender Identity not found.',
     type: ErrorResponseDto,
   })
-  async send(@Body() dto: SendMessageRequestDto): Promise<MessageResponseDto> {
+  @ApiResponse({
+    status: 403,
+    description:
+      'Caller is not the sender, or is not a participant of the Chat.',
+    type: ErrorResponseDto,
+  })
+  async send(
+    @Body() dto: SendMessageRequestDto,
+    @CurrentUser() caller: AuthenticatedUser,
+  ): Promise<MessageResponseDto> {
     const message = await this.sendMessageUseCase.execute(
-      MessageHttpMapper.toSendCommand(dto),
+      MessageHttpMapper.toSendCommand(dto, caller),
     );
     return MessageHttpMapper.toResponse(message);
   }
@@ -105,8 +124,18 @@ export class MessageController {
     description: 'Message not found.',
     type: ErrorResponseDto,
   })
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.deleteMessageUseCase.execute(new DeleteMessageCommand(id));
+  @ApiResponse({
+    status: 403,
+    description: 'Caller is not the sender of this Message.',
+    type: ErrorResponseDto,
+  })
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() caller: AuthenticatedUser,
+  ): Promise<void> {
+    await this.deleteMessageUseCase.execute(
+      new DeleteMessageCommand(id, caller),
+    );
   }
 
   @Get()
@@ -115,14 +144,17 @@ export class MessageController {
   @ApiQuery({ name: 'pageSize', required: false, example: 20 })
   @ApiResponse({
     status: 200,
-    description: 'Paginated list of Messages.',
+    description:
+      'Paginated list of Messages from the caller’s own conversations.',
     type: MessageListResponseDto,
   })
   async list(
+    @CurrentUser() caller: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ): Promise<MessageListResponseDto> {
     const query = new ListMessageQuery(
+      caller,
       page !== undefined ? Number(page) : undefined,
       pageSize !== undefined ? Number(pageSize) : undefined,
     );
@@ -138,9 +170,12 @@ export class MessageController {
     description: 'Messages matching the search term.',
     type: [MessageResponseDto],
   })
-  async search(@Query('term') term: string): Promise<MessageResponseDto[]> {
+  async search(
+    @Query('term') term: string,
+    @CurrentUser() caller: AuthenticatedUser,
+  ): Promise<MessageResponseDto[]> {
     const messages = await this.searchMessageUseCase.execute(
-      new SearchMessageQuery(term),
+      new SearchMessageQuery(term, caller),
     );
     return messages.map((message) => MessageHttpMapper.toResponse(message));
   }
@@ -158,9 +193,17 @@ export class MessageController {
     description: 'Message not found.',
     type: ErrorResponseDto,
   })
-  async findOne(@Param('id') id: string): Promise<MessageResponseDto> {
+  @ApiResponse({
+    status: 403,
+    description: 'Caller is not a participant of this Message’s Chat.',
+    type: ErrorResponseDto,
+  })
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser() caller: AuthenticatedUser,
+  ): Promise<MessageResponseDto> {
     const message = await this.getMessageUseCase.execute(
-      new GetMessageQuery(id),
+      new GetMessageQuery(id, caller),
     );
     if (!message) {
       throw new NotFoundException(`Message ${id} not found`);

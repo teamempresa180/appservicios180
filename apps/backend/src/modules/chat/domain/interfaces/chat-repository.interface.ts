@@ -18,13 +18,31 @@ import { ProviderId } from '../../../provider/domain/value-objects/provider-id.v
  *  instead of by concrete class. */
 export const CHAT_REPOSITORY = Symbol('ChatRepository');
 
+/**
+ * Identifies the two sides a caller may occupy in a Chat: the client
+ * (`clientIdentityId`, always known for an authenticated caller) and
+ * the provider (`providerId`, `null` when the caller has no Provider
+ * record). Passing one to `list`/`search` restricts the result set to
+ * conversations the caller actually takes part in — without it those
+ * two methods would return every Chat in the system.
+ */
+export interface ChatParticipantScope {
+  clientIdentityId: IdentityId;
+  providerId: ProviderId | null;
+}
+
 export interface ChatRepository {
   findById(id: ChatId): Promise<Chat | null>;
   findByOrderId(orderId: OrderId): Promise<Chat[]>;
   findByClientIdentityId(identityId: IdentityId): Promise<Chat[]>;
   findByProviderId(providerId: ProviderId): Promise<Chat[]>;
   save(chat: Chat): Promise<void>;
-  list(page: number, pageSize: number): Promise<PaginatedResult<Chat>>;
-  /** Free-text match against `type`. */
-  search(term: string): Promise<Chat[]>;
+  /** `scope` `null` means "no restriction" — reserved for Admin callers. */
+  list(
+    page: number,
+    pageSize: number,
+    scope: ChatParticipantScope | null,
+  ): Promise<PaginatedResult<Chat>>;
+  /** Free-text match against `type`, restricted to `scope` when given. */
+  search(term: string, scope: ChatParticipantScope | null): Promise<Chat[]>;
 }

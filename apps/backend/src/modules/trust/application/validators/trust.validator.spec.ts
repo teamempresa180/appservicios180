@@ -1,3 +1,5 @@
+﻿import { Role } from '../../../../common/auth/role.enum';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { TrustLevel } from '../../domain/value-objects/trust-level.value-object';
 import { TrustStatus } from '../../domain/value-objects/trust-status.value-object';
@@ -6,11 +8,13 @@ import { UpdateTrustProfileCommand } from '../commands/update-trust-profile.comm
 import { TrustValidator } from './trust.validator';
 
 describe('TrustValidator', () => {
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+
   describe('validateCreate', () => {
     it('passes for a well-formed command', () => {
       expect(() =>
         TrustValidator.validateCreate(
-          new CreateTrustProfileCommand('identity-1', 75, TrustLevel.High),
+          new CreateTrustProfileCommand('identity-1', 75, TrustLevel.High, caller),
         ),
       ).not.toThrow();
     });
@@ -18,7 +22,7 @@ describe('TrustValidator', () => {
     it('rejects a blank identityId', () => {
       expect(() =>
         TrustValidator.validateCreate(
-          new CreateTrustProfileCommand('  ', 75, TrustLevel.High),
+          new CreateTrustProfileCommand('  ', 75, TrustLevel.High, caller),
         ),
       ).toThrow(ValidationException);
     });
@@ -30,6 +34,7 @@ describe('TrustValidator', () => {
             'identity-1',
             Number.NaN,
             TrustLevel.High,
+            caller,
           ),
         ),
       ).toThrow(ValidationException);
@@ -42,6 +47,7 @@ describe('TrustValidator', () => {
             'identity-1',
             75,
             'INVALID' as TrustLevel,
+            caller,
           ),
         ),
       ).toThrow(ValidationException);
@@ -102,3 +108,4 @@ describe('TrustValidator', () => {
     });
   });
 });
+

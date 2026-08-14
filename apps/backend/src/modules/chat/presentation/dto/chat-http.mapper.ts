@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { CreateChatCommand } from '../../application/commands/create-chat.command';
 import { ChatDto } from '../../application/dto/chat.dto';
@@ -13,12 +14,16 @@ import { ChatListResponseDto } from './chat-list.response.dto';
  * `UpdateChatCommand` in the Application layer, only Create/Close.
  */
 export class ChatHttpMapper {
-  static toCreateCommand(dto: CreateChatRequestDto): CreateChatCommand {
+  static toCreateCommand(
+    dto: CreateChatRequestDto,
+    caller: AuthenticatedUser,
+  ): CreateChatCommand {
     return new CreateChatCommand(
       dto.orderId,
       dto.clientIdentityId,
       dto.providerId,
       dto.type,
+      caller,
     );
   }
 

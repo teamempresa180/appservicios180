@@ -1,3 +1,5 @@
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
@@ -22,6 +24,13 @@ import { ChatValidator } from '../validators/chat.validator';
  * creating the chat — all three already have Infrastructure (Order
  * since Sprint 3 Etapa 8, Identity since Etapa 2, Provider since Etapa
  * 7), so none of these checks is deferred.
+ *
+ * The caller must end up on one of the two sides of the conversation
+ * it is opening — either as the client (`clientIdentityId` is its own
+ * Identity) or as the provider (the `Provider` record resolved from
+ * its Identity is the `providerId`). Without this check any
+ * authenticated user could open a chat between two other people.
+ * Admins are exempt.
  */
 export class CreateChatUseCase {
   constructor(
@@ -56,6 +65,18 @@ export class CreateChatUseCase {
     }
     if (!provider) {
       throw new NotFoundException(`Provider ${command.providerId} not found`);
+    }
+
+    if (command.caller.role !== Role.Admin) {
+      const isClient = command.clientIdentityId === command.caller.id;
+      const isProvider =
+        provider.identityId.value === command.caller.id &&
+        provider.id.value === command.providerId;
+      if (!isClient && !isProvider) {
+        throw new ForbiddenException(
+          'A Chat can only be created by one of its two participants',
+        );
+      }
     }
 
     const now = new Date();

@@ -1,3 +1,6 @@
+import { Role } from '../../../../common/auth/role.enum';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Identity } from '../../../identity/domain/entities/identity.entity';
@@ -34,6 +37,7 @@ import { CloseChatCommand } from '../commands/close-chat.command';
 import { GetChatQuery } from '../queries/get-chat.query';
 import { ListChatQuery } from '../queries/list-chat.query';
 import { SearchChatQuery } from '../queries/search-chat.query';
+import { ChatParticipationService } from '../services/chat-participation.service';
 import { InMemoryChatRepository } from './test-support/in-memory-chat.repository';
 import { CreateChatUseCase } from './create-chat.use-case';
 import { GetChatUseCase } from './get-chat.use-case';
@@ -49,6 +53,9 @@ describe('Chat use cases', () => {
   let orderId: string;
   let clientIdentityId: string;
   let providerId: string;
+  let providerIdentityId: string;
+  let caller: AuthenticatedUser;
+  let participation: ChatParticipationService;
 
   beforeEach(async () => {
     repository = new InMemoryChatRepository();
@@ -84,6 +91,9 @@ describe('Chat use cases', () => {
     });
     await providerRepository.save(provider);
     providerId = provider.id.value;
+    providerIdentityId = provider.identityId.value;
+    caller = { id: clientIdentityId, role: Role.Customer };
+    participation = new ChatParticipationService(providerRepository);
 
     const category = new Category(CategoryId.create(), {
       name: 'Plumbing',
@@ -135,6 +145,7 @@ describe('Chat use cases', () => {
       clientIdentityId,
       providerId,
       ChatType.OrderRelated,
+      caller,
     );
   }
 
@@ -165,6 +176,7 @@ describe('Chat use cases', () => {
             clientIdentityId,
             providerId,
             ChatType.OrderRelated,
+            caller,
           ),
         ),
       ).rejects.toThrow(NotFoundException);
@@ -178,6 +190,7 @@ describe('Chat use cases', () => {
             'unknown-identity',
             providerId,
             ChatType.OrderRelated,
+            caller,
           ),
         ),
       ).rejects.toThrow(NotFoundException);
@@ -191,6 +204,7 @@ describe('Chat use cases', () => {
             clientIdentityId,
             'unknown-provider',
             ChatType.OrderRelated,
+            caller,
           ),
         ),
       ).rejects.toThrow(NotFoundException);
@@ -204,16 +218,45 @@ describe('Chat use cases', () => {
             clientIdentityId,
             providerId,
             'INVALID' as ChatType,
+            caller,
           ),
         ),
       ).rejects.toThrow(ValidationException);
+    });
+
+    it('lets the provider side open the conversation', async () => {
+      const dto = await useCase().execute(
+        new CreateChatCommand(
+          orderId,
+          clientIdentityId,
+          providerId,
+          ChatType.OrderRelated,
+          { id: providerIdentityId, role: Role.Provider },
+        ),
+      );
+
+      expect(dto.providerId).toBe(providerId);
+    });
+
+    it('throws ForbiddenException when the caller is neither participant', async () => {
+      await expect(
+        useCase().execute(
+          new CreateChatCommand(
+            orderId,
+            clientIdentityId,
+            providerId,
+            ChatType.OrderRelated,
+            { id: IdentityId.create().value, role: Role.Customer },
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('GetChatUseCase', () => {
     it('returns null when it does not exist', async () => {
-      const result = await new GetChatUseCase(repository).execute(
-        new GetChatQuery('unknown-id'),
+      const result = await new GetChatUseCase(repository, participation).execute(
+        new GetChatQuery('unknown-id', caller),
       );
       expect(result).toBeNull();
     });
@@ -221,8 +264,33 @@ describe('Chat use cases', () => {
     it('returns the Chat when it exists', async () => {
       const created = await useCase().execute(createCommand());
 
-      const result = await new GetChatUseCase(repository).execute(
-        new GetChatQuery(created.id),
+      const result = await new GetChatUseCase(repository, participation).execute(
+        new GetChatQuery(created.id, caller),
+      );
+      expect(result?.id).toBe(created.id);
+    });
+
+    it('throws ForbiddenException for a non-participant', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new GetChatUseCase(repository, participation).execute(
+          new GetChatQuery(created.id, {
+            id: IdentityId.create().value,
+            role: Role.Customer,
+          }),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('returns any Chat to an Admin', async () => {
+      const created = await useCase().execute(createCommand());
+
+      const result = await new GetChatUseCase(repository, participation).execute(
+        new GetChatQuery(created.id, {
+          id: IdentityId.create().value,
+          role: Role.Admin,
+        }),
       );
       expect(result?.id).toBe(created.id);
     });
@@ -232,19 +300,33 @@ describe('Chat use cases', () => {
     it('closes an existing Chat', async () => {
       const created = await useCase().execute(createCommand());
 
-      const closed = await new CloseChatUseCase(repository).execute(
-        new CloseChatCommand(created.id),
-      );
+      const closed = await new CloseChatUseCase(
+        repository,
+        participation,
+      ).execute(new CloseChatCommand(created.id, caller));
 
       expect(closed.status).toBe(ChatStatus.Closed);
     });
 
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
-        new CloseChatUseCase(repository).execute(
-          new CloseChatCommand('unknown-id'),
+        new CloseChatUseCase(repository, participation).execute(
+          new CloseChatCommand('unknown-id', caller),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException for a non-participant', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new CloseChatUseCase(repository, participation).execute(
+          new CloseChatCommand(created.id, {
+            id: IdentityId.create().value,
+            role: Role.Customer,
+          }),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -253,12 +335,36 @@ describe('Chat use cases', () => {
       await useCase().execute(createCommand());
       await useCase().execute(createCommand());
 
-      const page = await new ListChatUseCase(repository).execute(
-        new ListChatQuery(1, 1),
+      const page = await new ListChatUseCase(repository, participation).execute(
+        new ListChatQuery(caller, 1, 1),
       );
 
       expect(page.items).toHaveLength(1);
       expect(page.total).toBe(2);
+    });
+
+    it('hides Chats the caller does not take part in', async () => {
+      await useCase().execute(createCommand());
+
+      const page = await new ListChatUseCase(repository, participation).execute(
+        new ListChatQuery({
+          id: IdentityId.create().value,
+          role: Role.Customer,
+        }),
+      );
+
+      expect(page.items).toHaveLength(0);
+      expect(page.total).toBe(0);
+    });
+
+    it('lists the Chats of the provider side', async () => {
+      await useCase().execute(createCommand());
+
+      const page = await new ListChatUseCase(repository, participation).execute(
+        new ListChatQuery({ id: providerIdentityId, role: Role.Provider }),
+      );
+
+      expect(page.items).toHaveLength(1);
     });
   });
 
@@ -266,12 +372,29 @@ describe('Chat use cases', () => {
     it('finds Chats by type', async () => {
       await useCase().execute(createCommand());
 
-      const results = await new SearchChatUseCase(repository).execute(
-        new SearchChatQuery('order_related'),
-      );
+      const results = await new SearchChatUseCase(
+        repository,
+        participation,
+      ).execute(new SearchChatQuery('order_related', caller));
 
       expect(results).toHaveLength(1);
       expect(results[0].type).toBe(ChatType.OrderRelated);
+    });
+
+    it('does not leak Chats of other people', async () => {
+      await useCase().execute(createCommand());
+
+      const results = await new SearchChatUseCase(
+        repository,
+        participation,
+      ).execute(
+        new SearchChatQuery('order_related', {
+          id: IdentityId.create().value,
+          role: Role.Customer,
+        }),
+      );
+
+      expect(results).toHaveLength(0);
     });
   });
 });

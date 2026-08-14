@@ -211,7 +211,7 @@ describe('PrismaChatRepository (integration)', () => {
     await repository.save(buildChat());
     await repository.save(buildChat());
 
-    const page = await repository.list(1, 1);
+    const page = await repository.list(1, 1, null);
 
     expect(page.items).toHaveLength(1);
     expect(page.total).toBeGreaterThanOrEqual(2);
@@ -222,7 +222,7 @@ describe('PrismaChatRepository (integration)', () => {
   it('searches Chats by type', async () => {
     await repository.save(buildChat());
 
-    const results = await repository.search('order_related');
+    const results = await repository.search('order_related', null);
 
     expect(results.some((chat) => chat.type === ChatType.OrderRelated)).toBe(
       true,

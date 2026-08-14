@@ -1,3 +1,6 @@
+import { Role } from '../../../../common/auth/role.enum';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Chat } from '../../../chat/domain/entities/chat.entity';
@@ -5,6 +8,7 @@ import { ChatId } from '../../../chat/domain/value-objects/chat-id.value-object'
 import { ChatStatus } from '../../../chat/domain/value-objects/chat-status.value-object';
 import { ChatType } from '../../../chat/domain/value-objects/chat-type.value-object';
 import { InMemoryChatRepository } from '../../../chat/application/use_cases/test-support/in-memory-chat.repository';
+import { ChatParticipationService } from '../../../chat/application/services/chat-participation.service';
 import { Identity } from '../../../identity/domain/entities/identity.entity';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
 import { DocumentType } from '../../../identity/domain/value-objects/document-type.value-object';
@@ -38,10 +42,13 @@ describe('Message use cases', () => {
   let identityRepository: InMemoryIdentityRepository;
   let chatId: string;
   let senderIdentityId: string;
+  let caller: AuthenticatedUser;
+  let outsider: AuthenticatedUser;
+  let participation: ChatParticipationService;
 
   beforeEach(async () => {
-    repository = new InMemoryMessageRepository();
     chatRepository = new InMemoryChatRepository();
+    repository = new InMemoryMessageRepository(chatRepository);
     identityRepository = new InMemoryIdentityRepository();
     const providerRepository = new InMemoryProviderRepository();
 
@@ -70,6 +77,9 @@ describe('Message use cases', () => {
       updatedAt: now,
     });
     await providerRepository.save(provider);
+    participation = new ChatParticipationService(providerRepository);
+    caller = { id: senderIdentityId, role: Role.Customer };
+    outsider = { id: IdentityId.create().value, role: Role.Customer };
 
     const chat = new Chat(ChatId.create(), {
       orderId: OrderId.create(),
@@ -90,6 +100,7 @@ describe('Message use cases', () => {
       senderIdentityId,
       overrides.content ?? 'Hello there',
       MessageType.Text,
+      caller,
     );
   }
 
@@ -98,6 +109,7 @@ describe('Message use cases', () => {
       repository,
       chatRepository,
       identityRepository,
+      participation,
     );
   }
 
@@ -119,11 +131,15 @@ describe('Message use cases', () => {
             senderIdentityId,
             'Hello',
             MessageType.Text,
+            caller,
           ),
         ),
       ).rejects.toThrow(NotFoundException);
     });
 
+    // An Admin caller: a non-admin naming somebody else as the sender
+    // is rejected as impersonation long before the Identity is looked
+    // up, so only an Admin can still reach this branch.
     it('throws NotFoundException when the sender Identity does not exist', async () => {
       await expect(
         useCase().execute(
@@ -132,9 +148,49 @@ describe('Message use cases', () => {
             'unknown-identity',
             'Hello',
             MessageType.Text,
+            { id: IdentityId.create().value, role: Role.Admin },
           ),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException when the caller is not the named sender', async () => {
+      await expect(
+        useCase().execute(
+          new SendMessageCommand(
+            chatId,
+            senderIdentityId,
+            'Hello',
+            MessageType.Text,
+            outsider,
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('throws ForbiddenException when the sender is not a participant of the Chat', async () => {
+      const stranger = new Identity(IdentityId.create(), {
+        fullName: 'Stranger',
+        documentType: DocumentType.NationalId,
+        documentNumber: '987654321',
+        birthDate: new Date('1990-01-01'),
+        status: IdentityStatus.Active,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      await identityRepository.save(stranger);
+
+      await expect(
+        useCase().execute(
+          new SendMessageCommand(
+            chatId,
+            stranger.id.value,
+            'Hello',
+            MessageType.Text,
+            { id: stranger.id.value, role: Role.Customer },
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('rejects a blank content', async () => {
@@ -145,16 +201,21 @@ describe('Message use cases', () => {
             senderIdentityId,
             '  ',
             MessageType.Text,
+            caller,
           ),
         ),
       ).rejects.toThrow(ValidationException);
     });
   });
 
+  function getUseCase() {
+    return new GetMessageUseCase(repository, chatRepository, participation);
+  }
+
   describe('GetMessageUseCase', () => {
     it('returns null when it does not exist', async () => {
-      const result = await new GetMessageUseCase(repository).execute(
-        new GetMessageQuery('unknown-id'),
+      const result = await getUseCase().execute(
+        new GetMessageQuery('unknown-id', caller),
       );
       expect(result).toBeNull();
     });
@@ -162,10 +223,18 @@ describe('Message use cases', () => {
     it('returns the Message when it exists', async () => {
       const created = await useCase().execute(createCommand());
 
-      const result = await new GetMessageUseCase(repository).execute(
-        new GetMessageQuery(created.id),
+      const result = await getUseCase().execute(
+        new GetMessageQuery(created.id, caller),
       );
       expect(result?.id).toBe(created.id);
+    });
+
+    it('throws ForbiddenException for a non-participant of the Chat', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        getUseCase().execute(new GetMessageQuery(created.id, outsider)),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -174,11 +243,11 @@ describe('Message use cases', () => {
       const created = await useCase().execute(createCommand());
 
       await new DeleteMessageUseCase(repository).execute(
-        new DeleteMessageCommand(created.id),
+        new DeleteMessageCommand(created.id, caller),
       );
 
-      const result = await new GetMessageUseCase(repository).execute(
-        new GetMessageQuery(created.id),
+      const result = await getUseCase().execute(
+        new GetMessageQuery(created.id, caller),
       );
       expect(result).toBeNull();
     });
@@ -186,9 +255,19 @@ describe('Message use cases', () => {
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
         new DeleteMessageUseCase(repository).execute(
-          new DeleteMessageCommand('unknown-id'),
+          new DeleteMessageCommand('unknown-id', caller),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException for anyone but the original sender', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new DeleteMessageUseCase(repository).execute(
+          new DeleteMessageCommand(created.id, outsider),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -197,12 +276,25 @@ describe('Message use cases', () => {
       await useCase().execute(createCommand({ content: 'A' }));
       await useCase().execute(createCommand({ content: 'B' }));
 
-      const page = await new ListMessageUseCase(repository).execute(
-        new ListMessageQuery(1, 1),
-      );
+      const page = await new ListMessageUseCase(
+        repository,
+        participation,
+      ).execute(new ListMessageQuery(caller, 1, 1));
 
       expect(page.items).toHaveLength(1);
       expect(page.total).toBe(2);
+    });
+
+    it('hides Messages from Chats the caller does not take part in', async () => {
+      await useCase().execute(createCommand({ content: 'A' }));
+
+      const page = await new ListMessageUseCase(
+        repository,
+        participation,
+      ).execute(new ListMessageQuery(outsider));
+
+      expect(page.items).toHaveLength(0);
+      expect(page.total).toBe(0);
     });
   });
 
@@ -210,12 +302,24 @@ describe('Message use cases', () => {
     it('finds Messages by content', async () => {
       await useCase().execute(createCommand({ content: 'Special Message' }));
 
-      const results = await new SearchMessageUseCase(repository).execute(
-        new SearchMessageQuery('special'),
-      );
+      const results = await new SearchMessageUseCase(
+        repository,
+        participation,
+      ).execute(new SearchMessageQuery('special', caller));
 
       expect(results).toHaveLength(1);
       expect(results[0].content).toBe('Special Message');
+    });
+
+    it('does not leak Messages of other people’s conversations', async () => {
+      await useCase().execute(createCommand({ content: 'Special Message' }));
+
+      const results = await new SearchMessageUseCase(
+        repository,
+        participation,
+      ).execute(new SearchMessageQuery('special', outsider));
+
+      expect(results).toHaveLength(0);
     });
   });
 });

@@ -204,7 +204,7 @@ describe('PrismaMessageRepository (integration)', () => {
     await repository.save(buildMessage());
     await repository.save(buildMessage());
 
-    const page = await repository.list(1, 1);
+    const page = await repository.list(1, 1, null);
 
     expect(page.items).toHaveLength(1);
     expect(page.total).toBeGreaterThanOrEqual(2);
@@ -216,7 +216,7 @@ describe('PrismaMessageRepository (integration)', () => {
     const marker = `Searchable-${Date.now()}`;
     await repository.save(buildMessage({ content: marker }));
 
-    const results = await repository.search(marker);
+    const results = await repository.search(marker, null);
 
     expect(results.some((message) => message.content === marker)).toBe(true);
   });
