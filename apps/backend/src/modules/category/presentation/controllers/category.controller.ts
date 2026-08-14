@@ -19,6 +19,9 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { RolesGuard } from '../../../../common/auth/roles.guard';
+import { Roles } from '../../../../common/auth/roles.decorator';
+import { Role } from '../../../../common/auth/role.enum';
 import { CategoryRoutes } from '../routes/category.routes';
 import { CategorySwagger } from '../swagger/category.swagger';
 import { CreateCategoryUseCase } from '../../application/use_cases/create-category.use-case';
@@ -54,9 +57,19 @@ import { CategoryHttpMapper } from '../dto/category-http.mapper';
  * `list`/`search` are declared before the dynamic `findOne(:id)` route
  * so `GET /categories/search` resolves to `search()` rather than
  * being matched as `findOne({ id: 'search' })`.
+ *
+ * Authorization (Sprint 4, Etapa 18): Categories are marketplace-wide
+ * catalog data, so the write routes (`create`/`update`/`remove`) are
+ * `@Roles(Role.Admin)`. Until an administrative account exists, they
+ * are effectively closed — which is the intended state: no mobile
+ * client calls them (the app only ever issues `GET /categories`), and
+ * previously any authenticated user could rename or delete a category
+ * the whole marketplace depends on. The read routes stay open to any
+ * authenticated caller, since browsing the catalog is what every
+ * Customer does.
  */
 @ApiTags('Category')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 @Controller(CategoryRoutes.base)
 export class CategoryController {
@@ -82,6 +95,7 @@ export class CategoryController {
     description: 'Validation error.',
     type: ErrorResponseDto,
   })
+  @Roles(Role.Admin)
   async create(
     @Body() dto: CreateCategoryRequestDto,
   ): Promise<CategoryResponseDto> {
@@ -109,6 +123,7 @@ export class CategoryController {
     description: 'Category not found.',
     type: ErrorResponseDto,
   })
+  @Roles(Role.Admin)
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateCategoryRequestDto,
@@ -128,6 +143,7 @@ export class CategoryController {
     description: 'Category not found.',
     type: ErrorResponseDto,
   })
+  @Roles(Role.Admin)
   async remove(@Param('id') id: string): Promise<void> {
     await this.deleteCategoryUseCase.execute(new DeleteCategoryCommand(id));
   }

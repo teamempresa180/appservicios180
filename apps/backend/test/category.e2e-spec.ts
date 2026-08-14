@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -26,6 +26,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
 describe('CategoryController (e2e)', () => {
   let app: INestApplication<App>;
   let authHeader: string;
+  let adminAuthHeader: string;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -45,9 +46,20 @@ describe('CategoryController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await app.init();
 
+    // Catalog writes are Admin-only as of Etapa 18; `authHeader` is a
+    // plain Customer and drives the read-only browsing cases.
     authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'test-identity', role: 'CUSTOMER' })}`;
+    adminAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'admin-identity', role: 'ADMIN' })}`;
   });
 
   afterEach(async () => {
@@ -65,7 +77,7 @@ describe('CategoryController (e2e)', () => {
   it('POST /categories creates a Category and returns 201', async () => {
     const response = await request(app.getHttpServer())
       .post('/categories')
-      .set('Authorization', authHeader)
+      .set('Authorization', adminAuthHeader)
       .send(createCategoryBody())
       .expect(201);
 
@@ -75,15 +87,66 @@ describe('CategoryController (e2e)', () => {
   });
 
   it('POST /categories returns 400 for a missing name', async () => {
+    // Since Etapa 18 the blank name is rejected by the global
+    // ValidationPipe (`@IsNotEmpty()` on the DTO) before the request
+    // reaches the Use Case, so the failure surfaces as a
+    // BadRequestException rather than the domain ValidationException.
     const response = await request(app.getHttpServer())
       .post('/categories')
-      .set('Authorization', authHeader)
+      .set('Authorization', adminAuthHeader)
       .send({ ...createCategoryBody(), name: '' })
       .expect(400);
 
     expect((response.body as ErrorResponseDto).error).toBe(
-      'ValidationException',
+      'BadRequestException',
     );
+  });
+
+  it('POST /categories rejects an unknown field', async () => {
+    await request(app.getHttpServer())
+      .post('/categories')
+      .set('Authorization', adminAuthHeader)
+      .send({ ...createCategoryBody(), status: 'ACTIVE' })
+      .expect(400);
+  });
+
+  it('POST /categories refuses a non-admin caller', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/categories')
+      .set('Authorization', authHeader)
+      .send(createCategoryBody())
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
+  it('PUT /categories/:id refuses a non-admin caller', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/categories')
+      .set('Authorization', adminAuthHeader)
+      .send(createCategoryBody());
+    const createdId = (created.body as CategoryResponseDto).id;
+
+    await request(app.getHttpServer())
+      .put(`/categories/${createdId}`)
+      .set('Authorization', authHeader)
+      .send({ name: 'Hijacked Name' })
+      .expect(403);
+  });
+
+  it('DELETE /categories/:id refuses a non-admin caller', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/categories')
+      .set('Authorization', adminAuthHeader)
+      .send(createCategoryBody());
+    const createdId = (created.body as CategoryResponseDto).id;
+
+    await request(app.getHttpServer())
+      .delete(`/categories/${createdId}`)
+      .set('Authorization', authHeader)
+      .expect(403);
   });
 
   it('GET /categories/:id returns 404 for an unknown id', async () => {
@@ -96,13 +159,13 @@ describe('CategoryController (e2e)', () => {
   it('PUT /categories/:id updates the name', async () => {
     const created = await request(app.getHttpServer())
       .post('/categories')
-      .set('Authorization', authHeader)
+      .set('Authorization', adminAuthHeader)
       .send(createCategoryBody());
     const createdId = (created.body as CategoryResponseDto).id;
 
     const response = await request(app.getHttpServer())
       .put(`/categories/${createdId}`)
-      .set('Authorization', authHeader)
+      .set('Authorization', adminAuthHeader)
       .send({ name: 'Updated Name' })
       .expect(200);
 
@@ -112,13 +175,13 @@ describe('CategoryController (e2e)', () => {
   it('DELETE /categories/:id deletes an existing Category', async () => {
     const created = await request(app.getHttpServer())
       .post('/categories')
-      .set('Authorization', authHeader)
+      .set('Authorization', adminAuthHeader)
       .send(createCategoryBody());
     const createdId = (created.body as CategoryResponseDto).id;
 
     await request(app.getHttpServer())
       .delete(`/categories/${createdId}`)
-      .set('Authorization', authHeader)
+      .set('Authorization', adminAuthHeader)
       .expect(200);
     await request(app.getHttpServer())
       .get(`/categories/${createdId}`)
@@ -129,7 +192,7 @@ describe('CategoryController (e2e)', () => {
   it('GET /categories lists Categories page by page', async () => {
     await request(app.getHttpServer())
       .post('/categories')
-      .set('Authorization', authHeader)
+      .set('Authorization', adminAuthHeader)
       .send(createCategoryBody());
 
     const response = await request(app.getHttpServer())
@@ -146,7 +209,7 @@ describe('CategoryController (e2e)', () => {
   it('GET /categories/search searches by name', async () => {
     await request(app.getHttpServer())
       .post('/categories')
-      .set('Authorization', authHeader)
+      .set('Authorization', adminAuthHeader)
       .send(createCategoryBody());
 
     const response = await request(app.getHttpServer())

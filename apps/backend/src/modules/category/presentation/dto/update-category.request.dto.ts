@@ -1,4 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { CategoryStatus } from '../../domain/value-objects/category-status.value-object';
 
 /**
@@ -11,11 +18,21 @@ import { CategoryStatus } from '../../domain/value-objects/category-status.value
  */
 export class UpdateCategoryRequestDto {
   @ApiPropertyOptional({ example: 'Plumbing' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
   name?: string;
 
   @ApiPropertyOptional({ example: 'Plumbing-related home services.' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(1000)
   description?: string;
 
   @ApiPropertyOptional({ enum: CategoryStatus, example: CategoryStatus.Active })
+  @IsOptional()
+  @IsEnum(CategoryStatus)
   status?: CategoryStatus;
 }
