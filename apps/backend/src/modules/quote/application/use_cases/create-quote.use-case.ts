@@ -1,5 +1,6 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { OrderRepository } from '../../../order/domain/interfaces/order-repository.interface';
 import { OrderId } from '../../../order/domain/value-objects/order-id.value-object';
 import { ProviderRepository } from '../../../provider/domain/interfaces/provider-repository.interface';
@@ -22,6 +23,12 @@ import { QuoteValidator } from '../validators/quote.validator';
  * and Etapa 7 respectively), so neither check is deferred. No
  * uniqueness check: `findByOrderId` returns `Quote[]`, so multiple
  * Providers may quote the same Order.
+ *
+ * The `providerId` in the request must resolve to a Provider record
+ * the caller actually owns (`Provider.identityId === caller`), so a
+ * Provider cannot submit a quote under a competitor's name — a
+ * `Provider` id is not a secret, it appears in every marketplace
+ * listing response. Admin bypasses.
  */
 export class CreateQuoteUseCase {
   constructor(
@@ -43,6 +50,14 @@ export class CreateQuoteUseCase {
     const provider = await this.providerRepository.findById(providerId);
     if (!provider) {
       throw new NotFoundException(`Provider ${command.providerId} not found`);
+    }
+    if (
+      !command.caller.isAdmin &&
+      provider.identityId.value !== command.caller.identityId
+    ) {
+      throw new ForbiddenException(
+        `Provider ${command.providerId} does not belong to the calling Identity`,
+      );
     }
 
     if (order.providerId && !order.providerId.equals(providerId)) {

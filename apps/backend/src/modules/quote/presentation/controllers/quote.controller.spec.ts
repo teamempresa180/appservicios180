@@ -13,6 +13,9 @@ import { RejectQuoteCommand } from '../../application/commands/reject-quote.comm
 import { GetQuoteQuery } from '../../application/queries/get-quote.query';
 import { ListQuoteQuery } from '../../application/queries/list-quote.query';
 import { SearchQuoteQuery } from '../../application/queries/search-quote.query';
+import { Caller } from '../../../core/application/caller';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { QuoteDto } from '../../application/dto/quote.dto';
 import { QuoteStatus } from '../../domain/value-objects/quote-status.value-object';
 import { QuoteType } from '../../domain/value-objects/quote-type.value-object';
@@ -21,6 +24,9 @@ import { UpdateQuoteRequestDto } from '../dto/update-quote.request.dto';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 
 describe('QuoteController', () => {
+  const user: AuthenticatedUser = { id: 'identity-1', role: Role.Provider };
+  const caller: Caller = { identityId: 'identity-1', isAdmin: false };
+
   let controller: QuoteController;
   let createUseCase: { execute: jest.Mock };
   let updateUseCase: { execute: jest.Mock };
@@ -80,7 +86,7 @@ describe('QuoteController', () => {
       type: QuoteType.Standard,
     };
 
-    const response = await controller.create(dto);
+    const response = await controller.create(dto, user);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
       new CreateQuoteCommand(
@@ -90,53 +96,56 @@ describe('QuoteController', () => {
         90,
         'Includes parts and labor.',
         QuoteType.Standard,
+        caller,
       ),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('update() maps id + request DTO to a command', async () => {
+  it('update() maps id + request DTO + caller to a command', async () => {
     const dto: UpdateQuoteRequestDto = { proposedPrice: 80.0 };
 
-    const response = await controller.update('id-1', dto);
+    const response = await controller.update('id-1', dto, user);
 
     expect(updateUseCase.execute).toHaveBeenCalledWith(
-      new UpdateQuoteCommand('id-1', 80.0, undefined, undefined),
+      new UpdateQuoteCommand('id-1', caller, 80.0, undefined, undefined),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('accept() delegates to AcceptQuoteUseCase with the id', async () => {
-    const response = await controller.accept('id-1');
+  it('accept() delegates to AcceptQuoteUseCase with the id and the caller', async () => {
+    const response = await controller.accept('id-1', user);
 
     expect(acceptUseCase.execute).toHaveBeenCalledWith(
-      new AcceptQuoteCommand('id-1'),
+      new AcceptQuoteCommand('id-1', caller),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('reject() delegates to RejectQuoteUseCase with the id', async () => {
-    const response = await controller.reject('id-1');
+  it('reject() delegates to RejectQuoteUseCase with the id and the caller', async () => {
+    const response = await controller.reject('id-1', user);
 
     expect(rejectUseCase.execute).toHaveBeenCalledWith(
-      new RejectQuoteCommand('id-1'),
+      new RejectQuoteCommand('id-1', caller),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('list() maps page/pageSize query params to a query and wraps the paginated result', async () => {
-    const response = await controller.list('2', '10');
+  it('list() maps page/pageSize query params plus the caller to a query', async () => {
+    const response = await controller.list(user, '2', '10');
 
-    expect(listUseCase.execute).toHaveBeenCalledWith(new ListQuoteQuery(2, 10));
+    expect(listUseCase.execute).toHaveBeenCalledWith(
+      new ListQuoteQuery(caller, 2, 10),
+    );
     expect(response.items).toHaveLength(1);
     expect(response.total).toBe(1);
   });
 
-  it('search() maps the term query param and the Application DTOs to response DTOs', async () => {
-    const response = await controller.search('labor');
+  it('search() maps the term query param and the caller', async () => {
+    const response = await controller.search('labor', user);
 
     expect(searchUseCase.execute).toHaveBeenCalledWith(
-      new SearchQuoteQuery('labor'),
+      new SearchQuoteQuery('labor', caller),
     );
     expect(response).toHaveLength(1);
     expect(response[0].notes).toBe('Includes parts and labor.');

@@ -6,6 +6,7 @@ import { OrderStatus } from '../../../order/domain/value-objects/order-status.va
 import { QuoteRepository } from '../../domain/interfaces/quote-repository.interface';
 import { QuoteId } from '../../domain/value-objects/quote-id.value-object';
 import { QuoteStatus } from '../../domain/value-objects/quote-status.value-object';
+import { assertOrderCustomer } from '../authorization/quote-access';
 import { AcceptQuoteCommand } from '../commands/accept-quote.command';
 import { QuoteDto } from '../dto/quote.dto';
 import { QuoteMapper } from '../mappers/quote.mapper';
@@ -26,18 +27,22 @@ import { QuoteMapper } from '../mappers/quote.mapper';
  *
  * Throws `BusinessRuleException` if the Order isn't `Pending` (already
  * accepted by another Quote, or cancelled) — a Quote can't be
- * accepted twice over, from the Order's perspective. `orderRepository`
- * is optional only so existing unit tests that construct this Use
- * Case with just a `QuoteRepository` keep compiling unchanged; when
- * omitted, only the Quote itself transitions (no Order side effect) —
- * `QuotePresentationModule` always wires the real one.
+ * accepted twice over, from the Order's perspective.
+ *
+ * Accepting is the customer's decision and nobody else's: the caller
+ * must be the Identity that requested the referenced Order (or an
+ * Admin), checked before any state is inspected or written. That is
+ * also why `orderRepository` is a required dependency rather than the
+ * optional convenience it used to be — without it there is no way to
+ * reach `Order.identityId`, and an unauthorized accept would bind a
+ * Provider to a stranger's Order.
  */
 export class AcceptQuoteUseCase {
   private readonly logger = new Logger(AcceptQuoteUseCase.name);
 
   constructor(
     private readonly quoteRepository: QuoteRepository,
-    private readonly orderRepository?: OrderRepository,
+    private readonly orderRepository: OrderRepository,
   ) {}
 
   async execute(command: AcceptQuoteCommand): Promise<QuoteDto> {
@@ -46,27 +51,31 @@ export class AcceptQuoteUseCase {
     if (!existing) {
       throw new NotFoundException(`Quote ${command.id} not found`);
     }
+    await assertOrderCustomer(
+      existing,
+      command.caller,
+      this.orderRepository,
+      'accept',
+    );
 
-    if (this.orderRepository) {
-      const order = await this.orderRepository.findById(existing.orderId);
-      if (order) {
-        if (order.status !== OrderStatus.Pending) {
-          throw new BusinessRuleException(
-            `Order ${order.id.value} is not awaiting a quote decision`,
-          );
-        }
-        if (order.providerId && !order.providerId.equals(existing.providerId)) {
-          throw new BusinessRuleException(
-            `Order ${order.id.value} is a direct hire for a different Provider`,
-          );
-        }
-        const acceptedOrder = order.with({
-          providerId: order.providerId ?? existing.providerId,
-          status: OrderStatus.Accepted,
-          updatedAt: new Date(),
-        });
-        await this.orderRepository.save(acceptedOrder);
+    const order = await this.orderRepository.findById(existing.orderId);
+    if (order) {
+      if (order.status !== OrderStatus.Pending) {
+        throw new BusinessRuleException(
+          `Order ${order.id.value} is not awaiting a quote decision`,
+        );
       }
+      if (order.providerId && !order.providerId.equals(existing.providerId)) {
+        throw new BusinessRuleException(
+          `Order ${order.id.value} is a direct hire for a different Provider`,
+        );
+      }
+      const acceptedOrder = order.with({
+        providerId: order.providerId ?? existing.providerId,
+        status: OrderStatus.Accepted,
+        updatedAt: new Date(),
+      });
+      await this.orderRepository.save(acceptedOrder);
     }
 
     const accepted = existing.with({

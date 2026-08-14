@@ -30,6 +30,13 @@ import { PrismaQuoteRepository } from '../infrastructure/persistence/prisma-quot
  * and `ProviderPresentationModule` — `CreateQuoteUseCase` verifies
  * the referenced Order and Provider both exist before creating a
  * quote.
+ *
+ * Both repositories are needed well beyond that existence check since
+ * Etapa 18: `ORDER_REPOSITORY` resolves `Quote.orderId` to the
+ * customer allowed to accept/reject it, and `PROVIDER_REPOSITORY`
+ * resolves `Quote.providerId` to the Provider allowed to revise it
+ * (see `quote-access.ts`). The list/search Use Cases take both to
+ * scope their results to the caller.
  */
 @Module({
   imports: [OrderPresentationModule, ProviderPresentationModule],
@@ -47,8 +54,9 @@ import { PrismaQuoteRepository } from '../infrastructure/persistence/prisma-quot
     },
     {
       provide: UpdateQuoteUseCase,
-      useFactory: (repo: QuoteRepository) => new UpdateQuoteUseCase(repo),
-      inject: [QUOTE_REPOSITORY],
+      useFactory: (repo: QuoteRepository, providerRepo: ProviderRepository) =>
+        new UpdateQuoteUseCase(repo, providerRepo),
+      inject: [QUOTE_REPOSITORY, PROVIDER_REPOSITORY],
     },
     {
       provide: AcceptQuoteUseCase,
@@ -58,8 +66,9 @@ import { PrismaQuoteRepository } from '../infrastructure/persistence/prisma-quot
     },
     {
       provide: RejectQuoteUseCase,
-      useFactory: (repo: QuoteRepository) => new RejectQuoteUseCase(repo),
-      inject: [QUOTE_REPOSITORY],
+      useFactory: (repo: QuoteRepository, orderRepo: OrderRepository) =>
+        new RejectQuoteUseCase(repo, orderRepo),
+      inject: [QUOTE_REPOSITORY, ORDER_REPOSITORY],
     },
     {
       provide: GetQuoteUseCase,
@@ -68,13 +77,21 @@ import { PrismaQuoteRepository } from '../infrastructure/persistence/prisma-quot
     },
     {
       provide: ListQuoteUseCase,
-      useFactory: (repo: QuoteRepository) => new ListQuoteUseCase(repo),
-      inject: [QUOTE_REPOSITORY],
+      useFactory: (
+        repo: QuoteRepository,
+        orderRepo: OrderRepository,
+        providerRepo: ProviderRepository,
+      ) => new ListQuoteUseCase(repo, orderRepo, providerRepo),
+      inject: [QUOTE_REPOSITORY, ORDER_REPOSITORY, PROVIDER_REPOSITORY],
     },
     {
       provide: SearchQuoteUseCase,
-      useFactory: (repo: QuoteRepository) => new SearchQuoteUseCase(repo),
-      inject: [QUOTE_REPOSITORY],
+      useFactory: (
+        repo: QuoteRepository,
+        orderRepo: OrderRepository,
+        providerRepo: ProviderRepository,
+      ) => new SearchQuoteUseCase(repo, orderRepo, providerRepo),
+      inject: [QUOTE_REPOSITORY, ORDER_REPOSITORY, PROVIDER_REPOSITORY],
     },
   ],
   exports: [QUOTE_REPOSITORY],
