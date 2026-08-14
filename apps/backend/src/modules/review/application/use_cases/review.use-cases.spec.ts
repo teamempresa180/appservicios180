@@ -1,3 +1,5 @@
+import { Caller } from '../../../core/application/caller';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Identity } from '../../../identity/domain/entities/identity.entity';
@@ -48,6 +50,13 @@ describe('Review use cases', () => {
   let identityRepository: InMemoryIdentityRepository;
   let orderId: string;
   let providerId: string;
+  /** The Identity that writes every Review created here. */
+  let author: Caller;
+  /** Authenticated, but not the author. */
+  const stranger: Caller = {
+    identityId: 'a0000000-0000-4000-8000-000000000000',
+    isAdmin: false,
+  };
   let reviewerIdentityId: string;
 
   beforeEach(async () => {
@@ -70,6 +79,7 @@ describe('Review use cases', () => {
     });
     await identityRepository.save(reviewer);
     reviewerIdentityId = reviewer.id.value;
+    author = { identityId: reviewerIdentityId, isAdmin: false };
 
     const provider = new Provider(ProviderId.create(), {
       identityId: IdentityId.create(),
@@ -137,6 +147,7 @@ describe('Review use cases', () => {
       5,
       overrides.title ?? 'Great service',
       'Very professional and on time.',
+      author,
     );
   }
 
@@ -168,6 +179,7 @@ describe('Review use cases', () => {
             5,
             'title',
             'comment',
+            author,
           ),
         ),
       ).rejects.toThrow(NotFoundException);
@@ -183,6 +195,7 @@ describe('Review use cases', () => {
             5,
             'title',
             'comment',
+            author,
           ),
         ),
       ).rejects.toThrow(NotFoundException);
@@ -198,9 +211,47 @@ describe('Review use cases', () => {
             5,
             'title',
             'comment',
+            // The caller *is* the unknown reviewer, so this gets past
+            // the "review as yourself" check and reaches the
+            // existence check it is testing.
+            { identityId: 'unknown-identity', isAdmin: false },
           ),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException when posting under another Identity’s name', async () => {
+      await expect(
+        useCase().execute(
+          new CreateReviewCommand(
+            orderId,
+            providerId,
+            reviewerIdentityId,
+            5,
+            'title',
+            'comment',
+            stranger,
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects a rating outside the 1..5 scale', async () => {
+      for (const rating of [0, -5, 6, 1000000]) {
+        await expect(
+          useCase().execute(
+            new CreateReviewCommand(
+              orderId,
+              providerId,
+              reviewerIdentityId,
+              rating,
+              'title',
+              'comment',
+              author,
+            ),
+          ),
+        ).rejects.toThrow(ValidationException);
+      }
     });
 
     it('rejects a blank title', async () => {
@@ -213,6 +264,7 @@ describe('Review use cases', () => {
             5,
             '  ',
             'comment',
+            author,
           ),
         ),
       ).rejects.toThrow(ValidationException);
@@ -238,11 +290,16 @@ describe('Review use cases', () => {
   });
 
   describe('UpdateReviewUseCase', () => {
-    it('updates title and comment', async () => {
+    it('updates title and comment for the author', async () => {
       const created = await useCase().execute(createCommand());
 
       const updated = await new UpdateReviewUseCase(repository).execute(
-        new UpdateReviewCommand(created.id, 'New title', 'New comment'),
+        new UpdateReviewCommand(
+          created.id,
+          author,
+          'New title',
+          'New comment',
+        ),
       );
 
       expect(updated.title).toBe('New title');
@@ -252,18 +309,28 @@ describe('Review use cases', () => {
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
         new UpdateReviewUseCase(repository).execute(
-          new UpdateReviewCommand('unknown-id', 'New title'),
+          new UpdateReviewCommand('unknown-id', author, 'New title'),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException for anyone but the author', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new UpdateReviewUseCase(repository).execute(
+          new UpdateReviewCommand(created.id, stranger, 'Whitewashed'),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('DeleteReviewUseCase', () => {
-    it('deletes an existing Review', async () => {
+    it('deletes an existing Review for the author', async () => {
       const created = await useCase().execute(createCommand());
 
       await new DeleteReviewUseCase(repository).execute(
-        new DeleteReviewCommand(created.id),
+        new DeleteReviewCommand(created.id, author),
       );
 
       const result = await new GetReviewUseCase(repository).execute(
@@ -275,9 +342,19 @@ describe('Review use cases', () => {
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
         new DeleteReviewUseCase(repository).execute(
-          new DeleteReviewCommand('unknown-id'),
+          new DeleteReviewCommand('unknown-id', author),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException for anyone but the author', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new DeleteReviewUseCase(repository).execute(
+          new DeleteReviewCommand(created.id, stranger),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

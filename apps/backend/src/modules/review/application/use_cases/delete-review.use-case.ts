@@ -1,12 +1,16 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ReviewRepository } from '../../domain/interfaces/review-repository.interface';
 import { ReviewId } from '../../domain/value-objects/review-id.value-object';
+import { assertReviewAuthor } from '../authorization/review-access';
 import { DeleteReviewCommand } from '../commands/delete-review.command';
 
 /**
  * Deletes an existing Review. No cascade rule is documented for what
  * this means for aggregate reputation scores — same criterion as
  * every other `Delete*UseCase`.
+ *
+ * Restricted to the review's author (or an Admin): a Provider must
+ * not be able to delete a bad review of themselves.
  */
 export class DeleteReviewUseCase {
   constructor(private readonly reviewRepository: ReviewRepository) {}
@@ -17,6 +21,7 @@ export class DeleteReviewUseCase {
     if (!existing) {
       throw new NotFoundException(`Review ${command.id} not found`);
     }
+    assertReviewAuthor(existing, command.caller, 'delete');
     await this.reviewRepository.delete(id);
   }
 }

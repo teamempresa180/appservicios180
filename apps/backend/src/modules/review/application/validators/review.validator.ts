@@ -4,10 +4,11 @@ import { UpdateReviewCommand } from '../commands/update-review.command';
 
 /**
  * Structural validation for Review commands — required fields,
- * well-formed values. `ReviewRating.of()` has no scale validation by
- * design (see its doc comment), so this validator does not enforce a
- * numeric range either — only that `rating` is a real number, not
- * inventing bounds the domain doesn't declare. No uniqueness check —
+ * well-formed values. The `rating` *scale* is not re-checked here:
+ * `ReviewRating.of()` owns it, so the bound is stated once and holds
+ * for every construction path (see that value object). This validator
+ * only rejects a `rating` that is not a number at all, which would
+ * otherwise reach the value object as `NaN`. No uniqueness check —
  * `findByOrderId` returns `Review[]`, so multiple reviews per Order
  * are allowed.
  */

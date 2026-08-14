@@ -11,6 +11,9 @@ import { DeleteReviewCommand } from '../../application/commands/delete-review.co
 import { GetReviewQuery } from '../../application/queries/get-review.query';
 import { ListReviewQuery } from '../../application/queries/list-review.query';
 import { SearchReviewQuery } from '../../application/queries/search-review.query';
+import { Caller } from '../../../core/application/caller';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { ReviewDto } from '../../application/dto/review.dto';
 import { ReviewStatus } from '../../domain/value-objects/review-status.value-object';
 import { CreateReviewRequestDto } from '../dto/create-review.request.dto';
@@ -18,6 +21,9 @@ import { UpdateReviewRequestDto } from '../dto/update-review.request.dto';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 
 describe('ReviewController', () => {
+  const user: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+  const caller: Caller = { identityId: 'identity-1', isAdmin: false };
+
   let controller: ReviewController;
   let createUseCase: { execute: jest.Mock };
   let updateUseCase: { execute: jest.Mock };
@@ -74,7 +80,7 @@ describe('ReviewController', () => {
       comment: 'Fixed the leak quickly.',
     };
 
-    const response = await controller.create(dto);
+    const response = await controller.create(dto, user);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
       new CreateReviewCommand(
@@ -84,27 +90,28 @@ describe('ReviewController', () => {
         5,
         'Great service',
         'Fixed the leak quickly.',
+        caller,
       ),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('update() maps id + request DTO to a command', async () => {
+  it('update() maps id + request DTO + caller to a command', async () => {
     const dto: UpdateReviewRequestDto = { title: 'Updated title' };
 
-    const response = await controller.update('id-1', dto);
+    const response = await controller.update('id-1', dto, user);
 
     expect(updateUseCase.execute).toHaveBeenCalledWith(
-      new UpdateReviewCommand('id-1', 'Updated title', undefined),
+      new UpdateReviewCommand('id-1', caller, 'Updated title', undefined),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('remove() delegates to DeleteReviewUseCase with the id', async () => {
-    await controller.remove('id-1');
+  it('remove() delegates to DeleteReviewUseCase with the id and the caller', async () => {
+    await controller.remove('id-1', user);
 
     expect(deleteUseCase.execute).toHaveBeenCalledWith(
-      new DeleteReviewCommand('id-1'),
+      new DeleteReviewCommand('id-1', caller),
     );
   });
 

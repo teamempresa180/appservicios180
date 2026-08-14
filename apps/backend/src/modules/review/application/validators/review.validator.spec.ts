@@ -1,9 +1,12 @@
+import { Caller } from '../../../core/application/caller';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { CreateReviewCommand } from '../commands/create-review.command';
 import { UpdateReviewCommand } from '../commands/update-review.command';
 import { ReviewValidator } from './review.validator';
 
 describe('ReviewValidator', () => {
+  const caller: Caller = { identityId: 'identity-1', isAdmin: false };
+
   function validCommand(
     overrides: Partial<{ orderId: string }> = {},
   ): CreateReviewCommand {
@@ -14,6 +17,7 @@ describe('ReviewValidator', () => {
       5,
       'Great service',
       'Very professional and on time.',
+      caller,
     );
   }
 
@@ -40,6 +44,7 @@ describe('ReviewValidator', () => {
             NaN,
             'title',
             'comment',
+            caller,
           ),
         ),
       ).toThrow(ValidationException);
@@ -55,6 +60,7 @@ describe('ReviewValidator', () => {
             5,
             '  ',
             'comment',
+            caller,
           ),
         ),
       ).toThrow(ValidationException);
@@ -65,21 +71,21 @@ describe('ReviewValidator', () => {
     it('passes for a well-formed command', () => {
       expect(() =>
         ReviewValidator.validateUpdate(
-          new UpdateReviewCommand('id-1', 'New title'),
+          new UpdateReviewCommand('id-1', caller, 'New title'),
         ),
       ).not.toThrow();
     });
 
     it('rejects a blank id', () => {
       expect(() =>
-        ReviewValidator.validateUpdate(new UpdateReviewCommand('  ')),
+        ReviewValidator.validateUpdate(new UpdateReviewCommand('  ', caller)),
       ).toThrow(ValidationException);
     });
 
     it('rejects a blank comment when provided', () => {
       expect(() =>
         ReviewValidator.validateUpdate(
-          new UpdateReviewCommand('id-1', undefined, '  '),
+          new UpdateReviewCommand('id-1', caller, undefined, '  '),
         ),
       ).toThrow(ValidationException);
     });

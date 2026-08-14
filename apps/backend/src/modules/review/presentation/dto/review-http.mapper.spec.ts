@@ -1,3 +1,4 @@
+import { Caller } from '../../../core/application/caller';
 import { ReviewDto } from '../../application/dto/review.dto';
 import { ReviewStatus } from '../../domain/value-objects/review-status.value-object';
 import { CreateReviewRequestDto } from './create-review.request.dto';
@@ -5,6 +6,8 @@ import { UpdateReviewRequestDto } from './update-review.request.dto';
 import { ReviewHttpMapper } from './review-http.mapper';
 
 describe('ReviewHttpMapper', () => {
+  const caller: Caller = { identityId: 'identity-1', isAdmin: false };
+
   it('toCreateCommand() maps every field in order', () => {
     const dto: CreateReviewRequestDto = {
       orderId: 'order-1',
@@ -15,7 +18,7 @@ describe('ReviewHttpMapper', () => {
       comment: 'Fixed the leak quickly.',
     };
 
-    const command = ReviewHttpMapper.toCreateCommand(dto);
+    const command = ReviewHttpMapper.toCreateCommand(dto, caller);
 
     expect(command.orderId).toBe('order-1');
     expect(command.providerId).toBe('provider-1');
@@ -28,9 +31,10 @@ describe('ReviewHttpMapper', () => {
   it('toUpdateCommand() carries the id and optional fields through', () => {
     const dto: UpdateReviewRequestDto = { title: 'Updated title' };
 
-    const command = ReviewHttpMapper.toUpdateCommand('id-1', dto);
+    const command = ReviewHttpMapper.toUpdateCommand('id-1', dto, caller);
 
     expect(command.id).toBe('id-1');
+    expect(command.caller).toBe(caller);
     expect(command.title).toBe('Updated title');
     expect(command.comment).toBeUndefined();
   });

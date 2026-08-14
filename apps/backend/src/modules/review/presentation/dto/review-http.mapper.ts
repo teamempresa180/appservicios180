@@ -1,3 +1,4 @@
+import { Caller } from '../../../core/application/caller';
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { CreateReviewCommand } from '../../application/commands/create-review.command';
 import { UpdateReviewCommand } from '../../application/commands/update-review.command';
@@ -14,7 +15,10 @@ import { ReviewListResponseDto } from './review-list.response.dto';
  * `CreateReviewCommand` or a `ReviewResponseDto` by hand.
  */
 export class ReviewHttpMapper {
-  static toCreateCommand(dto: CreateReviewRequestDto): CreateReviewCommand {
+  static toCreateCommand(
+    dto: CreateReviewRequestDto,
+    caller: Caller,
+  ): CreateReviewCommand {
     return new CreateReviewCommand(
       dto.orderId,
       dto.providerId,
@@ -22,14 +26,16 @@ export class ReviewHttpMapper {
       dto.rating,
       dto.title,
       dto.comment,
+      caller,
     );
   }
 
   static toUpdateCommand(
     id: string,
     dto: UpdateReviewRequestDto,
+    caller: Caller,
   ): UpdateReviewCommand {
-    return new UpdateReviewCommand(id, dto.title, dto.comment);
+    return new UpdateReviewCommand(id, caller, dto.title, dto.comment);
   }
 
   static toResponse(dto: ReviewDto): ReviewResponseDto {
