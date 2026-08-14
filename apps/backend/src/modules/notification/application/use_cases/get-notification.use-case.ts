@@ -1,3 +1,4 @@
+import { assertOwnership } from '../../../core/application/ownership';
 import { NotificationRepository } from '../../domain/interfaces/notification-repository.interface';
 import { NotificationId } from '../../domain/value-objects/notification-id.value-object';
 import { NotificationDto } from '../dto/notification.dto';
@@ -7,7 +8,10 @@ import { GetNotificationQuery } from '../queries/get-notification.query';
 /**
  * Fetches a single Notification by id, returning `null` when not
  * found — matches the `Promise<NotificationDto | null>` signature
- * already declared for this use case.
+ * already declared for this use case, which
+ * `NotificationController` turns into a 404. A found Notification
+ * addressed to another Identity raises `ForbiddenException`, so a
+ * guessed id cannot be used to read someone else's inbox.
  */
 export class GetNotificationUseCase {
   constructor(
@@ -18,6 +22,14 @@ export class GetNotificationUseCase {
     const notification = await this.notificationRepository.findById(
       NotificationId.fromString(query.id),
     );
-    return notification ? NotificationMapper.toDto(notification) : null;
+    if (!notification) {
+      return null;
+    }
+    assertOwnership(
+      query.caller,
+      notification.identityId.value,
+      'Notification',
+    );
+    return NotificationMapper.toDto(notification);
   }
 }

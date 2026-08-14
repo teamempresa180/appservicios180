@@ -19,6 +19,8 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { NotificationRoutes } from '../routes/notification.routes';
 import { NotificationSwagger } from '../swagger/notification.swagger';
@@ -94,10 +96,11 @@ export class NotificationController {
     type: ErrorResponseDto,
   })
   async create(
+    @CurrentUser() caller: AuthenticatedUser,
     @Body() dto: CreateNotificationRequestDto,
   ): Promise<NotificationResponseDto> {
     const notification = await this.createNotificationUseCase.execute(
-      NotificationHttpMapper.toCreateCommand(dto),
+      NotificationHttpMapper.toCreateCommand(caller, dto),
     );
     return NotificationHttpMapper.toResponse(notification);
   }
@@ -115,9 +118,12 @@ export class NotificationController {
     description: 'Notification not found.',
     type: ErrorResponseDto,
   })
-  async markAsRead(@Param('id') id: string): Promise<NotificationResponseDto> {
+  async markAsRead(
+    @CurrentUser() caller: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<NotificationResponseDto> {
     const notification = await this.markNotificationAsReadUseCase.execute(
-      new MarkNotificationAsReadCommand(id),
+      new MarkNotificationAsReadCommand(caller, id),
     );
     return NotificationHttpMapper.toResponse(notification);
   }
@@ -131,9 +137,12 @@ export class NotificationController {
     description: 'Notification not found.',
     type: ErrorResponseDto,
   })
-  async remove(@Param('id') id: string): Promise<void> {
+  async remove(
+    @CurrentUser() caller: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<void> {
     await this.deleteNotificationUseCase.execute(
-      new DeleteNotificationCommand(id),
+      new DeleteNotificationCommand(caller, id),
     );
   }
 
@@ -147,10 +156,12 @@ export class NotificationController {
     type: NotificationListResponseDto,
   })
   async list(
+    @CurrentUser() caller: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ): Promise<NotificationListResponseDto> {
     const query = new ListNotificationQuery(
+      caller,
       page !== undefined ? Number(page) : undefined,
       pageSize !== undefined ? Number(pageSize) : undefined,
     );
@@ -167,10 +178,11 @@ export class NotificationController {
     type: [NotificationResponseDto],
   })
   async search(
+    @CurrentUser() caller: AuthenticatedUser,
     @Query('term') term: string,
   ): Promise<NotificationResponseDto[]> {
     const notifications = await this.searchNotificationUseCase.execute(
-      new SearchNotificationQuery(term),
+      new SearchNotificationQuery(caller, term),
     );
     return notifications.map((notification) =>
       NotificationHttpMapper.toResponse(notification),
@@ -190,9 +202,12 @@ export class NotificationController {
     description: 'Notification not found.',
     type: ErrorResponseDto,
   })
-  async findOne(@Param('id') id: string): Promise<NotificationResponseDto> {
+  async findOne(
+    @CurrentUser() caller: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<NotificationResponseDto> {
     const notification = await this.getNotificationUseCase.execute(
-      new GetNotificationQuery(id),
+      new GetNotificationQuery(caller, id),
     );
     if (!notification) {
       throw new NotFoundException(`Notification ${id} not found`);

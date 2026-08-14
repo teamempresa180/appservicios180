@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { PassportModule } from '@nestjs/passport';
@@ -33,6 +33,7 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
 describe('NotificationController (e2e)', () => {
   let app: INestApplication<App>;
   let authHeader: string;
+  let otherAuthHeader: string;
   let identityId: string;
 
   beforeEach(async () => {
@@ -70,9 +71,18 @@ describe('NotificationController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await app.init();
 
     authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
+    otherAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'another-identity', role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -169,6 +179,84 @@ describe('NotificationController (e2e)', () => {
     expect(body.items).toHaveLength(1);
     expect(body.page).toBe(1);
     expect(body.pageSize).toBe(20);
+  });
+
+  it('POST /notifications returns 400 for an unknown field', async () => {
+    await request(app.getHttpServer())
+      .post('/notifications')
+      .set('Authorization', authHeader)
+      .send(createNotificationBody({ injected: 'value' }))
+      .expect(400);
+  });
+
+  it('GET /notifications only returns the caller’s own Notifications', async () => {
+    await request(app.getHttpServer())
+      .post('/notifications')
+      .set('Authorization', authHeader)
+      .send(createNotificationBody());
+
+    const response = await request(app.getHttpServer())
+      .get('/notifications')
+      .set('Authorization', otherAuthHeader)
+      .expect(200);
+
+    const body = response.body as NotificationListResponseDto;
+    expect(body.items).toHaveLength(0);
+    expect(body.total).toBe(0);
+  });
+
+  it('GET /notifications/:id returns 403 for another Identity’s Notification', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/notifications')
+      .set('Authorization', authHeader)
+      .send(createNotificationBody());
+    const createdId = (created.body as NotificationResponseDto).id;
+
+    await request(app.getHttpServer())
+      .get(`/notifications/${createdId}`)
+      .set('Authorization', otherAuthHeader)
+      .expect(403);
+  });
+
+  it('PUT /notifications/:id/read returns 403 for another Identity’s Notification', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/notifications')
+      .set('Authorization', authHeader)
+      .send(createNotificationBody());
+    const createdId = (created.body as NotificationResponseDto).id;
+
+    await request(app.getHttpServer())
+      .put(`/notifications/${createdId}/read`)
+      .set('Authorization', otherAuthHeader)
+      .expect(403);
+  });
+
+  it('DELETE /notifications/:id returns 403 for another Identity’s Notification', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/notifications')
+      .set('Authorization', authHeader)
+      .send(createNotificationBody());
+    const createdId = (created.body as NotificationResponseDto).id;
+
+    await request(app.getHttpServer())
+      .delete(`/notifications/${createdId}`)
+      .set('Authorization', otherAuthHeader)
+      .expect(403);
+  });
+
+  it('GET /notifications/search only returns the caller’s own Notifications', async () => {
+    await request(app.getHttpServer())
+      .post('/notifications')
+      .set('Authorization', authHeader)
+      .send(createNotificationBody());
+
+    const response = await request(app.getHttpServer())
+      .get('/notifications/search')
+      .set('Authorization', otherAuthHeader)
+      .query({ term: 'order' })
+      .expect(200);
+
+    expect(response.body as NotificationResponseDto[]).toHaveLength(0);
   });
 
   it('GET /notifications/search searches by title/body', async () => {

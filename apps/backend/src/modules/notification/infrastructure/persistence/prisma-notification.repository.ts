@@ -47,14 +47,18 @@ export class PrismaNotificationRepository implements NotificationRepository {
   async list(
     page: number,
     pageSize: number,
+    identityId?: IdentityId,
   ): Promise<PaginatedResult<Notification>> {
+    const where =
+      identityId !== undefined ? { identityId: identityId.value } : {};
     const [rows, total] = await Promise.all([
       this.prisma.notificationModel.findMany({
+        where,
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.notificationModel.count(),
+      this.prisma.notificationModel.count({ where }),
     ]);
     return {
       items: rows.map((row) => NotificationPrismaMapper.toDomain(row)),
@@ -64,9 +68,12 @@ export class PrismaNotificationRepository implements NotificationRepository {
     };
   }
 
-  async search(term: string): Promise<Notification[]> {
+  async search(term: string, identityId?: IdentityId): Promise<Notification[]> {
     const rows = await this.prisma.notificationModel.findMany({
       where: {
+        ...(identityId !== undefined
+          ? { identityId: identityId.value }
+          : undefined),
         OR: [{ title: { contains: term } }, { body: { contains: term } }],
       },
       orderBy: { createdAt: 'desc' },

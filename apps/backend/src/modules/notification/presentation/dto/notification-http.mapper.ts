@@ -1,3 +1,4 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { CreateNotificationCommand } from '../../application/commands/create-notification.command';
 import { NotificationDto } from '../../application/dto/notification.dto';
@@ -15,9 +16,11 @@ import { NotificationListResponseDto } from './notification-list.response.dto';
  */
 export class NotificationHttpMapper {
   static toCreateCommand(
+    caller: AuthenticatedUser,
     dto: CreateNotificationRequestDto,
   ): CreateNotificationCommand {
     return new CreateNotificationCommand(
+      caller,
       dto.identityId,
       dto.title,
       dto.body,

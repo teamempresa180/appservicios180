@@ -30,8 +30,14 @@ export class InMemoryNotificationRepository implements NotificationRepository {
     return Promise.resolve();
   }
 
-  list(page: number, pageSize: number): Promise<PaginatedResult<Notification>> {
-    const all = [...this.rows.values()];
+  list(
+    page: number,
+    pageSize: number,
+    identityId?: IdentityId,
+  ): Promise<PaginatedResult<Notification>> {
+    const all = [...this.rows.values()].filter(
+      (row) => identityId === undefined || row.identityId.equals(identityId),
+    );
     const start = (page - 1) * pageSize;
     return Promise.resolve({
       items: all.slice(start, start + pageSize),
@@ -41,13 +47,14 @@ export class InMemoryNotificationRepository implements NotificationRepository {
     });
   }
 
-  search(term: string): Promise<Notification[]> {
+  search(term: string, identityId?: IdentityId): Promise<Notification[]> {
     const lower = term.toLowerCase();
     return Promise.resolve(
       [...this.rows.values()].filter(
         (row) =>
-          row.title.toLowerCase().includes(lower) ||
-          row.body.toLowerCase().includes(lower),
+          (identityId === undefined || row.identityId.equals(identityId)) &&
+          (row.title.toLowerCase().includes(lower) ||
+            row.body.toLowerCase().includes(lower)),
       ),
     );
   }
