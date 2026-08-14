@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PrismaModule } from '../../../infrastructure/prisma/prisma.module';
 import { PrismaTransactionRunner } from '../../../infrastructure/prisma/prisma-transaction-runner';
 import { TransactionRunner } from '../../core/application/ports/transaction-runner.port';
 import { OrderPresentationModule } from '../../order/presentation/order.module';
@@ -34,7 +35,7 @@ import { PrismaQuoteRepository } from '../infrastructure/persistence/prisma-quot
  * quote.
  */
 @Module({
-  imports: [OrderPresentationModule, ProviderPresentationModule],
+  imports: [PrismaModule, OrderPresentationModule, ProviderPresentationModule],
   controllers: [QuoteController],
   providers: [
     { provide: QUOTE_REPOSITORY, useClass: PrismaQuoteRepository },
