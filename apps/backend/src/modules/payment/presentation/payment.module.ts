@@ -40,6 +40,11 @@ import { PrismaPaymentRepository } from '../infrastructure/persistence/prisma-pa
  * `ProviderPresentationModule` — `CreatePaymentUseCase` verifies the
  * referenced Quote, Order, payer Identity and receiver Provider all
  * exist before creating a payment.
+ *
+ * `PROVIDER_REPOSITORY` is also injected into the read Use Cases:
+ * `Payment.receiverProviderId` is a `Provider` id, so deciding
+ * whether the caller is the receiving Provider means resolving it to
+ * the owning Identity (see `payment-access.ts`).
  */
 @Module({
   imports: [
@@ -87,18 +92,21 @@ import { PrismaPaymentRepository } from '../infrastructure/persistence/prisma-pa
     },
     {
       provide: GetPaymentUseCase,
-      useFactory: (repo: PaymentRepository) => new GetPaymentUseCase(repo),
-      inject: [PAYMENT_REPOSITORY],
+      useFactory: (repo: PaymentRepository, providerRepo: ProviderRepository) =>
+        new GetPaymentUseCase(repo, providerRepo),
+      inject: [PAYMENT_REPOSITORY, PROVIDER_REPOSITORY],
     },
     {
       provide: ListPaymentUseCase,
-      useFactory: (repo: PaymentRepository) => new ListPaymentUseCase(repo),
-      inject: [PAYMENT_REPOSITORY],
+      useFactory: (repo: PaymentRepository, providerRepo: ProviderRepository) =>
+        new ListPaymentUseCase(repo, providerRepo),
+      inject: [PAYMENT_REPOSITORY, PROVIDER_REPOSITORY],
     },
     {
       provide: SearchPaymentUseCase,
-      useFactory: (repo: PaymentRepository) => new SearchPaymentUseCase(repo),
-      inject: [PAYMENT_REPOSITORY],
+      useFactory: (repo: PaymentRepository, providerRepo: ProviderRepository) =>
+        new SearchPaymentUseCase(repo, providerRepo),
+      inject: [PAYMENT_REPOSITORY, PROVIDER_REPOSITORY],
     },
   ],
   exports: [PAYMENT_REPOSITORY],

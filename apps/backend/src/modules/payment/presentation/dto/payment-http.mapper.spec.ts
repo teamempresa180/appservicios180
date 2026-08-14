@@ -1,3 +1,4 @@
+import { Caller } from '../../../core/application/caller';
 import { PaymentDto } from '../../application/dto/payment.dto';
 import { PaymentMethod } from '../../domain/value-objects/payment-method.value-object';
 import { PaymentStatus } from '../../domain/value-objects/payment-status.value-object';
@@ -6,6 +7,8 @@ import { UpdatePaymentRequestDto } from './update-payment.request.dto';
 import { PaymentHttpMapper } from './payment-http.mapper';
 
 describe('PaymentHttpMapper', () => {
+  const caller: Caller = { identityId: 'identity-1', isAdmin: false };
+
   it('toCreateCommand() maps every field in order', () => {
     const dto: CreatePaymentRequestDto = {
       quoteId: 'quote-1',
@@ -16,7 +19,7 @@ describe('PaymentHttpMapper', () => {
       method: PaymentMethod.Card,
     };
 
-    const command = PaymentHttpMapper.toCreateCommand(dto);
+    const command = PaymentHttpMapper.toCreateCommand(dto, caller);
 
     expect(command.quoteId).toBe('quote-1');
     expect(command.orderId).toBe('order-1');
@@ -29,9 +32,10 @@ describe('PaymentHttpMapper', () => {
   it('toUpdateCommand() carries the id and optional status through', () => {
     const dto: UpdatePaymentRequestDto = { status: PaymentStatus.Completed };
 
-    const command = PaymentHttpMapper.toUpdateCommand('id-1', dto);
+    const command = PaymentHttpMapper.toUpdateCommand('id-1', dto, caller);
 
     expect(command.id).toBe('id-1');
+    expect(command.caller).toBe(caller);
     expect(command.status).toBe(PaymentStatus.Completed);
   });
 

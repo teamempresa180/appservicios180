@@ -1,3 +1,5 @@
+import { Caller } from '../../../core/application/caller';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Identity } from '../../../identity/domain/entities/identity.entity';
@@ -58,6 +60,15 @@ describe('Payment use cases', () => {
   let orderId: string;
   let payerIdentityId: string;
   let providerId: string;
+  /** The Identity that pays for every Payment created here. */
+  let payerCaller: Caller;
+  /** The Identity behind the Provider receiving those Payments. */
+  let receiverCaller: Caller;
+  /** Authenticated, but on neither end of the Payment. */
+  const stranger: Caller = {
+    identityId: 'a0000000-0000-4000-8000-000000000000',
+    isAdmin: false,
+  };
 
   beforeEach(async () => {
     repository = new InMemoryPaymentRepository();
@@ -80,9 +91,12 @@ describe('Payment use cases', () => {
     });
     await identityRepository.save(payer);
     payerIdentityId = payer.id.value;
+    payerCaller = { identityId: payerIdentityId, isAdmin: false };
 
+    const providerIdentityId = IdentityId.create();
+    receiverCaller = { identityId: providerIdentityId.value, isAdmin: false };
     const provider = new Provider(ProviderId.create(), {
-      identityId: IdentityId.create(),
+      identityId: providerIdentityId,
       providerProfileId: ProfileId.create(),
       status: ProviderStatus.Active,
       type: ProviderType.Independent,
@@ -161,6 +175,7 @@ describe('Payment use cases', () => {
       providerId,
       overrides.amount ?? 100,
       PaymentMethod.Card,
+      payerCaller,
     );
   }
 
@@ -193,6 +208,7 @@ describe('Payment use cases', () => {
             providerId,
             100,
             PaymentMethod.Card,
+            payerCaller,
           ),
         ),
       ).rejects.toThrow(NotFoundException);
@@ -208,6 +224,7 @@ describe('Payment use cases', () => {
             providerId,
             100,
             PaymentMethod.Card,
+            payerCaller,
           ),
         ),
       ).rejects.toThrow(NotFoundException);
@@ -223,9 +240,29 @@ describe('Payment use cases', () => {
             providerId,
             100,
             PaymentMethod.Card,
+            // The caller *is* the unknown payer, so this gets past the
+            // "pay only as yourself" check and reaches the existence
+            // check it is testing.
+            { identityId: 'unknown-identity', isAdmin: false },
           ),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException when paying in another Identity’s name', async () => {
+      await expect(
+        useCase().execute(
+          new CreatePaymentCommand(
+            quoteId,
+            orderId,
+            payerIdentityId,
+            providerId,
+            100,
+            PaymentMethod.Card,
+            stranger,
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('throws NotFoundException when the receiver Provider does not exist', async () => {
@@ -238,6 +275,7 @@ describe('Payment use cases', () => {
             'unknown-provider',
             100,
             PaymentMethod.Card,
+            payerCaller,
           ),
         ),
       ).rejects.toThrow(NotFoundException);
@@ -253,6 +291,7 @@ describe('Payment use cases', () => {
             providerId,
             0,
             PaymentMethod.Card,
+            payerCaller,
           ),
         ),
       ).rejects.toThrow(ValidationException);
@@ -260,29 +299,54 @@ describe('Payment use cases', () => {
   });
 
   describe('GetPaymentUseCase', () => {
+    function getUseCase() {
+      return new GetPaymentUseCase(repository, providerRepository);
+    }
+
     it('returns null when it does not exist', async () => {
-      const result = await new GetPaymentUseCase(repository).execute(
-        new GetPaymentQuery('unknown-id'),
+      const result = await getUseCase().execute(
+        new GetPaymentQuery('unknown-id', payerCaller),
       );
       expect(result).toBeNull();
     });
 
-    it('returns the Payment when it exists', async () => {
+    it('returns the Payment to its payer', async () => {
       const created = await useCase().execute(createCommand());
 
-      const result = await new GetPaymentUseCase(repository).execute(
-        new GetPaymentQuery(created.id),
+      const result = await getUseCase().execute(
+        new GetPaymentQuery(created.id, payerCaller),
       );
       expect(result?.id).toBe(created.id);
+    });
+
+    it('returns the Payment to the receiving Provider', async () => {
+      const created = await useCase().execute(createCommand());
+
+      const result = await getUseCase().execute(
+        new GetPaymentQuery(created.id, receiverCaller),
+      );
+      expect(result?.id).toBe(created.id);
+    });
+
+    it('throws ForbiddenException for a third party', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        getUseCase().execute(new GetPaymentQuery(created.id, stranger)),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('UpdatePaymentUseCase', () => {
-    it('updates status', async () => {
+    it('updates status for the payer', async () => {
       const created = await useCase().execute(createCommand());
 
       const updated = await new UpdatePaymentUseCase(repository).execute(
-        new UpdatePaymentCommand(created.id, PaymentStatus.Completed),
+        new UpdatePaymentCommand(
+          created.id,
+          payerCaller,
+          PaymentStatus.Completed,
+        ),
       );
 
       expect(updated.status).toBe(PaymentStatus.Completed);
@@ -291,18 +355,36 @@ describe('Payment use cases', () => {
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
         new UpdatePaymentUseCase(repository).execute(
-          new UpdatePaymentCommand('unknown-id', PaymentStatus.Completed),
+          new UpdatePaymentCommand(
+            'unknown-id',
+            payerCaller,
+            PaymentStatus.Completed,
+          ),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException for the receiving Provider', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new UpdatePaymentUseCase(repository).execute(
+          new UpdatePaymentCommand(
+            created.id,
+            receiverCaller,
+            PaymentStatus.Completed,
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('CancelPaymentUseCase', () => {
-    it('cancels an existing Payment', async () => {
+    it('cancels an existing Payment for the payer', async () => {
       const created = await useCase().execute(createCommand());
 
       const cancelled = await new CancelPaymentUseCase(repository).execute(
-        new CancelPaymentCommand(created.id),
+        new CancelPaymentCommand(created.id, payerCaller),
       );
 
       expect(cancelled.status).toBe(PaymentStatus.Cancelled);
@@ -311,36 +393,93 @@ describe('Payment use cases', () => {
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
         new CancelPaymentUseCase(repository).execute(
-          new CancelPaymentCommand('unknown-id'),
+          new CancelPaymentCommand('unknown-id', payerCaller),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException for anyone but the payer', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new CancelPaymentUseCase(repository).execute(
+          new CancelPaymentCommand(created.id, stranger),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('ListPaymentUseCase', () => {
-    it('paginates results', async () => {
+    function listUseCase() {
+      return new ListPaymentUseCase(repository, providerRepository);
+    }
+
+    it('paginates the payer’s own Payments', async () => {
       await useCase().execute(createCommand({ amount: 50 }));
       await useCase().execute(createCommand({ amount: 75 }));
 
-      const page = await new ListPaymentUseCase(repository).execute(
-        new ListPaymentQuery(1, 1),
+      const page = await listUseCase().execute(
+        new ListPaymentQuery(payerCaller, 1, 1),
       );
 
       expect(page.items).toHaveLength(1);
       expect(page.total).toBe(2);
     });
+
+    it('shows the receiving Provider the Payments made to them', async () => {
+      await useCase().execute(createCommand());
+
+      const page = await listUseCase().execute(
+        new ListPaymentQuery(receiverCaller),
+      );
+
+      expect(page.total).toBe(1);
+    });
+
+    it('shows nothing to a third party', async () => {
+      await useCase().execute(createCommand());
+
+      const page = await listUseCase().execute(new ListPaymentQuery(stranger));
+
+      expect(page.items).toHaveLength(0);
+      expect(page.total).toBe(0);
+    });
+
+    it('shows everything to an Admin', async () => {
+      await useCase().execute(createCommand());
+
+      const page = await listUseCase().execute(
+        new ListPaymentQuery({ identityId: 'admin-1', isAdmin: true }),
+      );
+
+      expect(page.total).toBe(1);
+    });
   });
 
   describe('SearchPaymentUseCase', () => {
-    it('finds Payments by method', async () => {
+    function searchUseCase() {
+      return new SearchPaymentUseCase(repository, providerRepository);
+    }
+
+    it('finds the caller’s own Payments by method', async () => {
       await useCase().execute(createCommand());
 
-      const results = await new SearchPaymentUseCase(repository).execute(
-        new SearchPaymentQuery('card'),
+      const results = await searchUseCase().execute(
+        new SearchPaymentQuery('card', payerCaller),
       );
 
       expect(results).toHaveLength(1);
       expect(results[0].method).toBe(PaymentMethod.Card);
+    });
+
+    it('drops matches belonging to third parties', async () => {
+      await useCase().execute(createCommand());
+
+      const results = await searchUseCase().execute(
+        new SearchPaymentQuery('card', stranger),
+      );
+
+      expect(results).toHaveLength(0);
     });
   });
 });

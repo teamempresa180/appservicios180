@@ -18,6 +18,9 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { toCaller } from '../../../core/application/caller';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { PaymentRoutes } from '../routes/payment.routes';
 import { PaymentSwagger } from '../swagger/payment.swagger';
@@ -61,6 +64,14 @@ import { PaymentHttpMapper } from '../dto/payment-http.mapper';
  * `search` is declared before the dynamic `findOne(:id)` route so
  * `GET /payments/search` resolves to `search()` rather than being
  * matched as `findOne({ id: 'search' })`.
+ *
+ * Every route here is scoped to the caller rather than role-gated:
+ * a Payment names its own two parties (payer and receiving
+ * Provider), so who may see or change one depends on the stored
+ * record, not on the caller's role. The controller passes the caller
+ * into each command/query and the Use Cases decide — see
+ * `payment-access.ts`. No endpoint returns a Payment the caller is
+ * not a party to.
  */
 @ApiTags('Payment')
 @UseGuards(JwtAuthGuard)
@@ -93,11 +104,17 @@ export class PaymentController {
     description: 'Quote, Order, payer Identity or receiver Provider not found.',
     type: ErrorResponseDto,
   })
+  @ApiResponse({
+    status: 403,
+    description: 'payerIdentityId is not the calling Identity.',
+    type: ErrorResponseDto,
+  })
   async create(
     @Body() dto: CreatePaymentRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<PaymentResponseDto> {
     const payment = await this.createPaymentUseCase.execute(
-      PaymentHttpMapper.toCreateCommand(dto),
+      PaymentHttpMapper.toCreateCommand(dto, toCaller(user)),
     );
     return PaymentHttpMapper.toResponse(payment);
   }
@@ -120,12 +137,18 @@ export class PaymentController {
     description: 'Payment not found.',
     type: ErrorResponseDto,
   })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller is not the payer of this Payment.',
+    type: ErrorResponseDto,
+  })
   async update(
     @Param('id') id: string,
     @Body() dto: UpdatePaymentRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<PaymentResponseDto> {
     const payment = await this.updatePaymentUseCase.execute(
-      PaymentHttpMapper.toUpdateCommand(id, dto),
+      PaymentHttpMapper.toUpdateCommand(id, dto, toCaller(user)),
     );
     return PaymentHttpMapper.toResponse(payment);
   }
@@ -143,9 +166,17 @@ export class PaymentController {
     description: 'Payment not found.',
     type: ErrorResponseDto,
   })
-  async cancel(@Param('id') id: string): Promise<PaymentResponseDto> {
+  @ApiResponse({
+    status: 403,
+    description: 'Caller is not the payer of this Payment.',
+    type: ErrorResponseDto,
+  })
+  async cancel(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<PaymentResponseDto> {
     const payment = await this.cancelPaymentUseCase.execute(
-      new CancelPaymentCommand(id),
+      new CancelPaymentCommand(id, toCaller(user)),
     );
     return PaymentHttpMapper.toResponse(payment);
   }
@@ -160,10 +191,12 @@ export class PaymentController {
     type: PaymentListResponseDto,
   })
   async list(
+    @CurrentUser() user: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ): Promise<PaymentListResponseDto> {
     const query = new ListPaymentQuery(
+      toCaller(user),
       page !== undefined ? Number(page) : undefined,
       pageSize !== undefined ? Number(pageSize) : undefined,
     );
@@ -179,9 +212,12 @@ export class PaymentController {
     description: 'Payments matching the search term.',
     type: [PaymentResponseDto],
   })
-  async search(@Query('term') term: string): Promise<PaymentResponseDto[]> {
+  async search(
+    @Query('term') term: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<PaymentResponseDto[]> {
     const payments = await this.searchPaymentUseCase.execute(
-      new SearchPaymentQuery(term),
+      new SearchPaymentQuery(term, toCaller(user)),
     );
     return payments.map((payment) => PaymentHttpMapper.toResponse(payment));
   }
@@ -199,9 +235,18 @@ export class PaymentController {
     description: 'Payment not found.',
     type: ErrorResponseDto,
   })
-  async findOne(@Param('id') id: string): Promise<PaymentResponseDto> {
+  @ApiResponse({
+    status: 403,
+    description:
+      'Caller is neither the payer nor the receiving Provider of this Payment.',
+    type: ErrorResponseDto,
+  })
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<PaymentResponseDto> {
     const payment = await this.getPaymentUseCase.execute(
-      new GetPaymentQuery(id),
+      new GetPaymentQuery(id, toCaller(user)),
     );
     if (!payment) {
       throw new NotFoundException(`Payment ${id} not found`);
