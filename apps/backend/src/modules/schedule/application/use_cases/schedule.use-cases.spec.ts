@@ -1,3 +1,6 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Provider } from '../../../provider/domain/entities/provider.entity';
@@ -28,6 +31,8 @@ describe('Schedule use cases', () => {
   let repository: InMemoryScheduleRepository;
   let providerRepository: InMemoryProviderRepository;
   let providerId: string;
+  /** The Identity owning the seeded Provider — the legitimate caller. */
+  let ownerIdentityId: string;
 
   beforeEach(async () => {
     repository = new InMemoryScheduleRepository();
@@ -47,7 +52,22 @@ describe('Schedule use cases', () => {
     });
     await providerRepository.save(provider);
     providerId = provider.id.value;
+    ownerIdentityId = provider.identityId.value;
   });
+
+  /**
+   * Cases unrelated to the Etapa 18 authorization rules run as the
+   * Provider's owner; the rules themselves get dedicated cases below.
+   */
+  const owner = (): AuthenticatedUser => ({
+    id: ownerIdentityId,
+    role: Role.Provider,
+  });
+  const admin: AuthenticatedUser = { id: 'admin-identity', role: Role.Admin };
+  const stranger: AuthenticatedUser = {
+    id: 'someone-else',
+    role: Role.Provider,
+  };
 
   function createCommand() {
     return new CreateScheduleCommand(
@@ -61,7 +81,7 @@ describe('Schedule use cases', () => {
   describe('CreateScheduleUseCase', () => {
     it('creates a Schedule block in Open status', async () => {
       const useCase = new CreateScheduleUseCase(repository, providerRepository);
-      const dto = await useCase.execute(createCommand());
+      const dto = await useCase.execute(createCommand(), owner());
 
       expect(dto.providerId).toBe(providerId);
       expect(dto.status).toBe(ScheduleStatus.Open);
@@ -77,6 +97,7 @@ describe('Schedule use cases', () => {
             new Date('2026-01-01T09:00:00Z'),
             ScheduleType.Regular,
           ),
+          owner(),
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -91,8 +112,17 @@ describe('Schedule use cases', () => {
             new Date('2026-01-01T08:00:00Z'),
             ScheduleType.Regular,
           ),
+          owner(),
         ),
       ).rejects.toThrow(ValidationException);
+    });
+
+    it("refuses to create a block in another Provider's calendar", async () => {
+      const useCase = new CreateScheduleUseCase(repository, providerRepository);
+
+      await expect(
+        useCase.execute(createCommand(), stranger),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -111,15 +141,19 @@ describe('Schedule use cases', () => {
       const created = await new CreateScheduleUseCase(
         repository,
         providerRepository,
-      ).execute(createCommand());
+      ).execute(createCommand(), owner());
 
-      const updated = await new UpdateScheduleUseCase(repository).execute(
+      const updated = await new UpdateScheduleUseCase(
+        repository,
+        providerRepository,
+      ).execute(
         new UpdateScheduleCommand(
           created.id,
           undefined,
           undefined,
           ScheduleStatus.Blocked,
         ),
+        owner(),
       );
 
       expect(updated.status).toBe(ScheduleStatus.Blocked);
@@ -127,10 +161,52 @@ describe('Schedule use cases', () => {
 
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
-        new UpdateScheduleUseCase(repository).execute(
+        new UpdateScheduleUseCase(repository, providerRepository).execute(
           new UpdateScheduleCommand('unknown-id'),
+          owner(),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it("refuses to update another Provider's Schedule block", async () => {
+      const created = await new CreateScheduleUseCase(
+        repository,
+        providerRepository,
+      ).execute(createCommand(), owner());
+
+      await expect(
+        new UpdateScheduleUseCase(repository, providerRepository).execute(
+          new UpdateScheduleCommand(
+            created.id,
+            undefined,
+            undefined,
+            ScheduleStatus.Blocked,
+          ),
+          stranger,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('lets an Admin update any Schedule block', async () => {
+      const created = await new CreateScheduleUseCase(
+        repository,
+        providerRepository,
+      ).execute(createCommand(), owner());
+
+      const updated = await new UpdateScheduleUseCase(
+        repository,
+        providerRepository,
+      ).execute(
+        new UpdateScheduleCommand(
+          created.id,
+          undefined,
+          undefined,
+          ScheduleStatus.Blocked,
+        ),
+        admin,
+      );
+
+      expect(updated.status).toBe(ScheduleStatus.Blocked);
     });
   });
 
@@ -139,10 +215,11 @@ describe('Schedule use cases', () => {
       const created = await new CreateScheduleUseCase(
         repository,
         providerRepository,
-      ).execute(createCommand());
+      ).execute(createCommand(), owner());
 
-      await new DeleteScheduleUseCase(repository).execute(
+      await new DeleteScheduleUseCase(repository, providerRepository).execute(
         new DeleteScheduleCommand(created.id),
+        owner(),
       );
 
       await expect(
@@ -150,6 +227,20 @@ describe('Schedule use cases', () => {
           new GetScheduleQuery(created.id),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it("refuses to delete another Provider's Schedule block", async () => {
+      const created = await new CreateScheduleUseCase(
+        repository,
+        providerRepository,
+      ).execute(createCommand(), owner());
+
+      await expect(
+        new DeleteScheduleUseCase(repository, providerRepository).execute(
+          new DeleteScheduleCommand(created.id),
+          stranger,
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -159,8 +250,8 @@ describe('Schedule use cases', () => {
         repository,
         providerRepository,
       );
-      await createUseCase.execute(createCommand());
-      await createUseCase.execute(createCommand());
+      await createUseCase.execute(createCommand(), owner());
+      await createUseCase.execute(createCommand(), owner());
 
       const page = await new ListScheduleUseCase(repository).execute(
         new ListScheduleQuery(1, 1),
@@ -180,6 +271,7 @@ describe('Schedule use cases', () => {
           new Date('2026-01-01T09:00:00Z'),
           ScheduleType.Special,
         ),
+        owner(),
       );
 
       const results = await new SearchScheduleUseCase(repository).execute(

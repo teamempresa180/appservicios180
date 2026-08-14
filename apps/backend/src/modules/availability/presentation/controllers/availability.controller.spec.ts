@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { AvailabilityController } from './availability.controller';
 import { CreateAvailabilityUseCase } from '../../application/use_cases/create-availability.use-case';
 import { UpdateAvailabilityUseCase } from '../../application/use_cases/update-availability.use-case';
@@ -25,6 +27,15 @@ describe('AvailabilityController', () => {
   let getUseCase: { execute: jest.Mock };
   let listUseCase: { execute: jest.Mock };
   let searchUseCase: { execute: jest.Mock };
+
+  /**
+   * The controller forwards the authenticated caller to the Use Case,
+   * which owns the ownership rules — these cases assert wiring only.
+   */
+  const caller: AuthenticatedUser = {
+    id: 'identity-1',
+    role: Role.Provider,
+  };
 
   const availabilityDto: AvailabilityDto = {
     id: 'id-1',
@@ -70,7 +81,7 @@ describe('AvailabilityController', () => {
       availableTo: '2026-01-01T18:00:00.000Z',
     };
 
-    const response = await controller.create(dto);
+    const response = await controller.create(dto, caller);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
       new CreateAvailabilityCommand(
@@ -79,6 +90,7 @@ describe('AvailabilityController', () => {
         new Date('2026-01-01T08:00:00.000Z'),
         new Date('2026-01-01T18:00:00.000Z'),
       ),
+      caller,
     );
     expect(response.id).toBe('id-1');
     expect(response.availableFrom).toBe('2026-01-01T08:00:00.000Z');
@@ -89,7 +101,7 @@ describe('AvailabilityController', () => {
       status: AvailabilityStatus.Inactive,
     };
 
-    const response = await controller.update('id-1', dto);
+    const response = await controller.update('id-1', dto, caller);
 
     expect(updateUseCase.execute).toHaveBeenCalledWith(
       new UpdateAvailabilityCommand(
@@ -98,15 +110,17 @@ describe('AvailabilityController', () => {
         undefined,
         AvailabilityStatus.Inactive,
       ),
+      caller,
     );
     expect(response.id).toBe('id-1');
   });
 
   it('remove() delegates to DeleteAvailabilityUseCase with the id', async () => {
-    await controller.remove('id-1');
+    await controller.remove('id-1', caller);
 
     expect(deleteUseCase.execute).toHaveBeenCalledWith(
       new DeleteAvailabilityCommand('id-1'),
+      caller,
     );
   });
 

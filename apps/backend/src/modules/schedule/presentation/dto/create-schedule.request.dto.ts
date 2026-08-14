@@ -1,4 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsDateString,
+  IsEnum,
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { ScheduleType } from '../../domain/value-objects/schedule-type.value-object';
 
 /**
@@ -17,14 +24,21 @@ export class CreateScheduleRequestDto {
     example: 'provider-id-123',
     description: 'The id of the Provider this Schedule block belongs to.',
   })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(64)
   providerId!: string;
 
   @ApiProperty({ example: '2026-01-01T08:00:00.000Z', type: String })
+  @IsDateString()
   startDateTime!: string;
 
+  /** Ordering against `startDateTime` stays in `ScheduleValidator` — a cross-field rule the pipe cannot express. */
   @ApiProperty({ example: '2026-01-01T09:00:00.000Z', type: String })
+  @IsDateString()
   endDateTime!: string;
 
   @ApiProperty({ enum: ScheduleType, example: ScheduleType.Regular })
+  @IsEnum(ScheduleType)
   type!: ScheduleType;
 }

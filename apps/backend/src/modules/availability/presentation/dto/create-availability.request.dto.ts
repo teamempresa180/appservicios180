@@ -1,4 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsDateString,
+  IsEnum,
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { AvailabilityType } from '../../domain/value-objects/availability-type.value-object';
 
 /**
@@ -17,14 +24,21 @@ export class CreateAvailabilityRequestDto {
     example: 'provider-id-123',
     description: 'The id of the Provider this Availability belongs to.',
   })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(64)
   providerId!: string;
 
   @ApiProperty({ enum: AvailabilityType, example: AvailabilityType.FullTime })
+  @IsEnum(AvailabilityType)
   type!: AvailabilityType;
 
   @ApiProperty({ example: '2026-01-01T08:00:00.000Z', type: String })
+  @IsDateString()
   availableFrom!: string;
 
+  /** Ordering against `availableFrom` stays in `AvailabilityValidator` — a cross-field rule the pipe cannot express. */
   @ApiProperty({ example: '2026-01-01T18:00:00.000Z', type: String })
+  @IsDateString()
   availableTo!: string;
 }

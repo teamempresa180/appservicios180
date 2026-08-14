@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -47,7 +47,10 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
 describe('AvailabilityController (e2e)', () => {
   let app: INestApplication<App>;
   let providerId: string;
+  let providerIdentityId: string;
   let authHeader: string;
+  let customerAuthHeader: string;
+  let otherProviderAuthHeader: string;
 
   beforeEach(async () => {
     const now = new Date();
@@ -65,6 +68,7 @@ describe('AvailabilityController (e2e)', () => {
     });
     await providerRepository.save(provider);
     providerId = provider.id.value;
+    providerIdentityId = provider.identityId.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
@@ -87,13 +91,26 @@ describe('AvailabilityController (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     app.useGlobalFilters(
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
     await app.init();
 
-    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'test-identity', role: 'CUSTOMER' })}`;
+    // Since Etapa 18 writes require the Provider role and ownership of
+    // the target Provider, so the default token is the seeded
+    // Provider's owner. The other two drive the negative cases.
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: providerIdentityId, role: 'PROVIDER' })}`;
+    customerAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'test-identity', role: 'CUSTOMER' })}`;
+    otherProviderAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'another-identity', role: 'PROVIDER' })}`;
   });
 
   afterEach(async () => {
@@ -108,6 +125,69 @@ describe('AvailabilityController (e2e)', () => {
     availableFrom: '2026-01-01T08:00:00.000Z',
     availableTo: '2026-01-01T18:00:00.000Z',
     ...overrides,
+  });
+
+  it('POST /availabilities refuses a Customer', async () => {
+    await request(app.getHttpServer())
+      .post('/availabilities')
+      .set('Authorization', customerAuthHeader)
+      .send(createAvailabilityBody())
+      .expect(403);
+  });
+
+  it("POST /availabilities refuses another Provider's calendar", async () => {
+    const response = await request(app.getHttpServer())
+      .post('/availabilities')
+      .set('Authorization', otherProviderAuthHeader)
+      .send(createAvailabilityBody())
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
+  it('POST /availabilities rejects a malformed availableFrom', async () => {
+    await request(app.getHttpServer())
+      .post('/availabilities')
+      .set('Authorization', authHeader)
+      .send(createAvailabilityBody({ availableFrom: 'not-a-date' }))
+      .expect(400);
+  });
+
+  it('POST /availabilities rejects an unknown field', async () => {
+    await request(app.getHttpServer())
+      .post('/availabilities')
+      .set('Authorization', authHeader)
+      .send(createAvailabilityBody({ status: 'ACTIVE' }))
+      .expect(400);
+  });
+
+  it("PUT /availabilities/:id refuses another Provider's record", async () => {
+    const created = await request(app.getHttpServer())
+      .post('/availabilities')
+      .set('Authorization', authHeader)
+      .send(createAvailabilityBody());
+    const createdId = (created.body as AvailabilityResponseDto).id;
+
+    await request(app.getHttpServer())
+      .put(`/availabilities/${createdId}`)
+      .set('Authorization', otherProviderAuthHeader)
+      .send({ status: 'INACTIVE' })
+      .expect(403);
+  });
+
+  it("DELETE /availabilities/:id refuses another Provider's record", async () => {
+    const created = await request(app.getHttpServer())
+      .post('/availabilities')
+      .set('Authorization', authHeader)
+      .send(createAvailabilityBody());
+    const createdId = (created.body as AvailabilityResponseDto).id;
+
+    await request(app.getHttpServer())
+      .delete(`/availabilities/${createdId}`)
+      .set('Authorization', otherProviderAuthHeader)
+      .expect(403);
   });
 
   it('POST /availabilities creates an Availability and returns 201', async () => {

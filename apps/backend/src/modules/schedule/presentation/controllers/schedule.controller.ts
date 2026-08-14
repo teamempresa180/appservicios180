@@ -19,6 +19,11 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { RolesGuard } from '../../../../common/auth/roles.guard';
+import { Roles } from '../../../../common/auth/roles.decorator';
+import { Role } from '../../../../common/auth/role.enum';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { ScheduleRoutes } from '../routes/schedule.routes';
 import { ScheduleSwagger } from '../swagger/schedule.swagger';
 import { CreateScheduleUseCase } from '../../application/use_cases/create-schedule.use-case';
@@ -53,7 +58,7 @@ import { ScheduleHttpMapper } from '../dto/schedule-http.mapper';
  * matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Schedule')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 @Controller(ScheduleRoutes.base)
 export class ScheduleController {
@@ -83,11 +88,14 @@ export class ScheduleController {
     description: 'Provider not found.',
     type: ErrorResponseDto,
   })
+  @Roles(Role.Provider, Role.Admin)
   async create(
     @Body() dto: CreateScheduleRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<ScheduleResponseDto> {
     const schedule = await this.createScheduleUseCase.execute(
       ScheduleHttpMapper.toCreateCommand(dto),
+      user,
     );
     return ScheduleHttpMapper.toResponse(schedule);
   }
@@ -113,9 +121,11 @@ export class ScheduleController {
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateScheduleRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<ScheduleResponseDto> {
     const schedule = await this.updateScheduleUseCase.execute(
       ScheduleHttpMapper.toUpdateCommand(id, dto),
+      user,
     );
     return ScheduleHttpMapper.toResponse(schedule);
   }
@@ -129,8 +139,14 @@ export class ScheduleController {
     description: 'Schedule block not found.',
     type: ErrorResponseDto,
   })
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.deleteScheduleUseCase.execute(new DeleteScheduleCommand(id));
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<void> {
+    await this.deleteScheduleUseCase.execute(
+      new DeleteScheduleCommand(id),
+      user,
+    );
   }
 
   @Get()

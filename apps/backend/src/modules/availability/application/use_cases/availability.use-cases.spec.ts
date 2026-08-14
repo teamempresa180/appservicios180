@@ -1,3 +1,6 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Provider } from '../../../provider/domain/entities/provider.entity';
@@ -28,6 +31,8 @@ describe('Availability use cases', () => {
   let repository: InMemoryAvailabilityRepository;
   let providerRepository: InMemoryProviderRepository;
   let providerId: string;
+  /** The Identity owning the seeded Provider — the legitimate caller. */
+  let ownerIdentityId: string;
 
   beforeEach(async () => {
     repository = new InMemoryAvailabilityRepository();
@@ -47,7 +52,22 @@ describe('Availability use cases', () => {
     });
     await providerRepository.save(provider);
     providerId = provider.id.value;
+    ownerIdentityId = provider.identityId.value;
   });
+
+  /**
+   * Cases unrelated to the Etapa 18 authorization rules run as the
+   * Provider's owner; the rules themselves get dedicated cases below.
+   */
+  const owner = (): AuthenticatedUser => ({
+    id: ownerIdentityId,
+    role: Role.Provider,
+  });
+  const admin: AuthenticatedUser = { id: 'admin-identity', role: Role.Admin };
+  const stranger: AuthenticatedUser = {
+    id: 'someone-else',
+    role: Role.Provider,
+  };
 
   function createCommand() {
     return new CreateAvailabilityCommand(
@@ -64,7 +84,7 @@ describe('Availability use cases', () => {
         repository,
         providerRepository,
       );
-      const dto = await useCase.execute(createCommand());
+      const dto = await useCase.execute(createCommand(), owner());
 
       expect(dto.providerId).toBe(providerId);
       expect(dto.status).toBe(AvailabilityStatus.Active);
@@ -83,6 +103,7 @@ describe('Availability use cases', () => {
             new Date('2026-01-01T08:00:00Z'),
             new Date('2026-01-01T17:00:00Z'),
           ),
+          owner(),
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -100,8 +121,20 @@ describe('Availability use cases', () => {
             new Date('2026-01-01T17:00:00Z'),
             new Date('2026-01-01T08:00:00Z'),
           ),
+          owner(),
         ),
       ).rejects.toThrow(ValidationException);
+    });
+
+    it("refuses to create Availability against another Provider's calendar", async () => {
+      const useCase = new CreateAvailabilityUseCase(
+        repository,
+        providerRepository,
+      );
+
+      await expect(
+        useCase.execute(createCommand(), stranger),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -120,15 +153,19 @@ describe('Availability use cases', () => {
       const created = await new CreateAvailabilityUseCase(
         repository,
         providerRepository,
-      ).execute(createCommand());
+      ).execute(createCommand(), owner());
 
-      const updated = await new UpdateAvailabilityUseCase(repository).execute(
+      const updated = await new UpdateAvailabilityUseCase(
+        repository,
+        providerRepository,
+      ).execute(
         new UpdateAvailabilityCommand(
           created.id,
           new Date('2026-02-01T08:00:00Z'),
           new Date('2026-02-01T17:00:00Z'),
           AvailabilityStatus.Inactive,
         ),
+        owner(),
       );
 
       expect(updated.status).toBe(AvailabilityStatus.Inactive);
@@ -136,10 +173,52 @@ describe('Availability use cases', () => {
 
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
-        new UpdateAvailabilityUseCase(repository).execute(
+        new UpdateAvailabilityUseCase(repository, providerRepository).execute(
           new UpdateAvailabilityCommand('unknown-id'),
+          owner(),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it("refuses to update another Provider's Availability", async () => {
+      const created = await new CreateAvailabilityUseCase(
+        repository,
+        providerRepository,
+      ).execute(createCommand(), owner());
+
+      await expect(
+        new UpdateAvailabilityUseCase(repository, providerRepository).execute(
+          new UpdateAvailabilityCommand(
+            created.id,
+            undefined,
+            undefined,
+            AvailabilityStatus.Inactive,
+          ),
+          stranger,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('lets an Admin update any Availability', async () => {
+      const created = await new CreateAvailabilityUseCase(
+        repository,
+        providerRepository,
+      ).execute(createCommand(), owner());
+
+      const updated = await new UpdateAvailabilityUseCase(
+        repository,
+        providerRepository,
+      ).execute(
+        new UpdateAvailabilityCommand(
+          created.id,
+          undefined,
+          undefined,
+          AvailabilityStatus.Inactive,
+        ),
+        admin,
+      );
+
+      expect(updated.status).toBe(AvailabilityStatus.Inactive);
     });
   });
 
@@ -148,17 +227,32 @@ describe('Availability use cases', () => {
       const created = await new CreateAvailabilityUseCase(
         repository,
         providerRepository,
-      ).execute(createCommand());
+      ).execute(createCommand(), owner());
 
-      await new DeleteAvailabilityUseCase(repository).execute(
-        new DeleteAvailabilityCommand(created.id),
-      );
+      await new DeleteAvailabilityUseCase(
+        repository,
+        providerRepository,
+      ).execute(new DeleteAvailabilityCommand(created.id), owner());
 
       await expect(
         new GetAvailabilityUseCase(repository).execute(
           new GetAvailabilityQuery(created.id),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it("refuses to delete another Provider's Availability", async () => {
+      const created = await new CreateAvailabilityUseCase(
+        repository,
+        providerRepository,
+      ).execute(createCommand(), owner());
+
+      await expect(
+        new DeleteAvailabilityUseCase(repository, providerRepository).execute(
+          new DeleteAvailabilityCommand(created.id),
+          stranger,
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -168,8 +262,8 @@ describe('Availability use cases', () => {
         repository,
         providerRepository,
       );
-      await createUseCase.execute(createCommand());
-      await createUseCase.execute(createCommand());
+      await createUseCase.execute(createCommand(), owner());
+      await createUseCase.execute(createCommand(), owner());
 
       const page = await new ListAvailabilityUseCase(repository).execute(
         new ListAvailabilityQuery(1, 1),
@@ -192,6 +286,7 @@ describe('Availability use cases', () => {
           new Date('2026-01-01T08:00:00Z'),
           new Date('2026-01-01T17:00:00Z'),
         ),
+        owner(),
       );
 
       const results = await new SearchAvailabilityUseCase(repository).execute(

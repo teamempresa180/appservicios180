@@ -19,6 +19,11 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { RolesGuard } from '../../../../common/auth/roles.guard';
+import { Roles } from '../../../../common/auth/roles.decorator';
+import { Role } from '../../../../common/auth/role.enum';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { AvailabilityRoutes } from '../routes/availability.routes';
 import { AvailabilitySwagger } from '../swagger/availability.swagger';
 import { CreateAvailabilityUseCase } from '../../application/use_cases/create-availability.use-case';
@@ -53,7 +58,7 @@ import { AvailabilityHttpMapper } from '../dto/availability-http.mapper';
  * being matched as `findOne({ id: 'search' })`.
  */
 @ApiTags('Availability')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 @Controller(AvailabilityRoutes.base)
 export class AvailabilityController {
@@ -83,11 +88,14 @@ export class AvailabilityController {
     description: 'Provider not found.',
     type: ErrorResponseDto,
   })
+  @Roles(Role.Provider, Role.Admin)
   async create(
     @Body() dto: CreateAvailabilityRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<AvailabilityResponseDto> {
     const availability = await this.createAvailabilityUseCase.execute(
       AvailabilityHttpMapper.toCreateCommand(dto),
+      user,
     );
     return AvailabilityHttpMapper.toResponse(availability);
   }
@@ -113,9 +121,11 @@ export class AvailabilityController {
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateAvailabilityRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<AvailabilityResponseDto> {
     const availability = await this.updateAvailabilityUseCase.execute(
       AvailabilityHttpMapper.toUpdateCommand(id, dto),
+      user,
     );
     return AvailabilityHttpMapper.toResponse(availability);
   }
@@ -129,9 +139,13 @@ export class AvailabilityController {
     description: 'Availability not found.',
     type: ErrorResponseDto,
   })
-  async remove(@Param('id') id: string): Promise<void> {
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<void> {
     await this.deleteAvailabilityUseCase.execute(
       new DeleteAvailabilityCommand(id),
+      user,
     );
   }
 

@@ -43,15 +43,19 @@ import { PrismaAvailabilityRepository } from '../infrastructure/persistence/pris
     },
     {
       provide: UpdateAvailabilityUseCase,
-      useFactory: (repo: AvailabilityRepository) =>
-        new UpdateAvailabilityUseCase(repo),
-      inject: [AVAILABILITY_REPOSITORY],
+      useFactory: (
+        repo: AvailabilityRepository,
+        providerRepo: ProviderRepository,
+      ) => new UpdateAvailabilityUseCase(repo, providerRepo),
+      inject: [AVAILABILITY_REPOSITORY, PROVIDER_REPOSITORY],
     },
     {
       provide: DeleteAvailabilityUseCase,
-      useFactory: (repo: AvailabilityRepository) =>
-        new DeleteAvailabilityUseCase(repo),
-      inject: [AVAILABILITY_REPOSITORY],
+      useFactory: (
+        repo: AvailabilityRepository,
+        providerRepo: ProviderRepository,
+      ) => new DeleteAvailabilityUseCase(repo, providerRepo),
+      inject: [AVAILABILITY_REPOSITORY, PROVIDER_REPOSITORY],
     },
     {
       provide: GetAvailabilityUseCase,

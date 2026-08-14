@@ -40,13 +40,19 @@ import { PrismaScheduleRepository } from '../infrastructure/persistence/prisma-s
     },
     {
       provide: UpdateScheduleUseCase,
-      useFactory: (repo: ScheduleRepository) => new UpdateScheduleUseCase(repo),
-      inject: [SCHEDULE_REPOSITORY],
+      useFactory: (
+        repo: ScheduleRepository,
+        providerRepo: ProviderRepository,
+      ) => new UpdateScheduleUseCase(repo, providerRepo),
+      inject: [SCHEDULE_REPOSITORY, PROVIDER_REPOSITORY],
     },
     {
       provide: DeleteScheduleUseCase,
-      useFactory: (repo: ScheduleRepository) => new DeleteScheduleUseCase(repo),
-      inject: [SCHEDULE_REPOSITORY],
+      useFactory: (
+        repo: ScheduleRepository,
+        providerRepo: ProviderRepository,
+      ) => new DeleteScheduleUseCase(repo, providerRepo),
+      inject: [SCHEDULE_REPOSITORY, PROVIDER_REPOSITORY],
     },
     {
       provide: GetScheduleUseCase,

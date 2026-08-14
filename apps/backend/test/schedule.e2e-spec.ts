@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -47,7 +47,10 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
 describe('ScheduleController (e2e)', () => {
   let app: INestApplication<App>;
   let providerId: string;
+  let providerIdentityId: string;
   let authHeader: string;
+  let customerAuthHeader: string;
+  let otherProviderAuthHeader: string;
 
   beforeEach(async () => {
     const now = new Date();
@@ -65,6 +68,7 @@ describe('ScheduleController (e2e)', () => {
     });
     await providerRepository.save(provider);
     providerId = provider.id.value;
+    providerIdentityId = provider.identityId.value;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
@@ -87,13 +91,26 @@ describe('ScheduleController (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     app.useGlobalFilters(
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
     await app.init();
 
-    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'test-identity', role: 'CUSTOMER' })}`;
+    // Since Etapa 18 writes require the Provider role and ownership of
+    // the target Provider, so the default token is the seeded
+    // Provider's owner. The other two drive the negative cases.
+    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: providerIdentityId, role: 'PROVIDER' })}`;
+    customerAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'test-identity', role: 'CUSTOMER' })}`;
+    otherProviderAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'another-identity', role: 'PROVIDER' })}`;
   });
 
   afterEach(async () => {
@@ -108,6 +125,69 @@ describe('ScheduleController (e2e)', () => {
     endDateTime: '2026-01-01T09:00:00.000Z',
     type: ScheduleType.Regular,
     ...overrides,
+  });
+
+  it('POST /schedules refuses a Customer', async () => {
+    await request(app.getHttpServer())
+      .post('/schedules')
+      .set('Authorization', customerAuthHeader)
+      .send(createScheduleBody())
+      .expect(403);
+  });
+
+  it("POST /schedules refuses another Provider's calendar", async () => {
+    const response = await request(app.getHttpServer())
+      .post('/schedules')
+      .set('Authorization', otherProviderAuthHeader)
+      .send(createScheduleBody())
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
+  it('POST /schedules rejects a malformed startDateTime', async () => {
+    await request(app.getHttpServer())
+      .post('/schedules')
+      .set('Authorization', authHeader)
+      .send(createScheduleBody({ startDateTime: 'not-a-date' }))
+      .expect(400);
+  });
+
+  it('POST /schedules rejects an unknown field', async () => {
+    await request(app.getHttpServer())
+      .post('/schedules')
+      .set('Authorization', authHeader)
+      .send(createScheduleBody({ status: 'OPEN' }))
+      .expect(400);
+  });
+
+  it("PUT /schedules/:id refuses another Provider's block", async () => {
+    const created = await request(app.getHttpServer())
+      .post('/schedules')
+      .set('Authorization', authHeader)
+      .send(createScheduleBody());
+    const createdId = (created.body as ScheduleResponseDto).id;
+
+    await request(app.getHttpServer())
+      .put(`/schedules/${createdId}`)
+      .set('Authorization', otherProviderAuthHeader)
+      .send({ status: 'BLOCKED' })
+      .expect(403);
+  });
+
+  it("DELETE /schedules/:id refuses another Provider's block", async () => {
+    const created = await request(app.getHttpServer())
+      .post('/schedules')
+      .set('Authorization', authHeader)
+      .send(createScheduleBody());
+    const createdId = (created.body as ScheduleResponseDto).id;
+
+    await request(app.getHttpServer())
+      .delete(`/schedules/${createdId}`)
+      .set('Authorization', otherProviderAuthHeader)
+      .expect(403);
   });
 
   it('POST /schedules creates a Schedule block and returns 201', async () => {
