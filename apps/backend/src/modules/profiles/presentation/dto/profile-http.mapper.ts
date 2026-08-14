@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { CreateProfileCommand } from '../../application/commands/create-profile.command';
 import { UpdateProfileCommand } from '../../application/commands/update-profile.command';
@@ -15,9 +16,14 @@ import { ProfileListResponseDto } from './profile-list.response.dto';
  * `CreateProfileCommand` or a `ProfileResponseDto` by hand.
  */
 export class ProfileHttpMapper {
-  static toCreateCommand(dto: CreateProfileRequestDto): CreateProfileCommand {
+  static toCreateCommand(
+    dto: CreateProfileRequestDto,
+    caller: AuthenticatedUser,
+  ): CreateProfileCommand {
     return new CreateProfileCommand(
       dto.identityId,
+      caller.id,
+      caller.role,
       dto.displayName,
       dto.avatarUrl ?? null,
       dto.bio ?? null,
@@ -28,9 +34,12 @@ export class ProfileHttpMapper {
   static toUpdateCommand(
     id: string,
     dto: UpdateProfileRequestDto,
+    caller: AuthenticatedUser,
   ): UpdateProfileCommand {
     return new UpdateProfileCommand(
       id,
+      caller.id,
+      caller.role,
       dto.displayName,
       dto.visibility,
       dto.status,
@@ -40,8 +49,14 @@ export class ProfileHttpMapper {
   static toUpdateAvatarCommand(
     id: string,
     avatarUrl: string,
+    caller: AuthenticatedUser,
   ): UpdateProfileAvatarCommand {
-    return new UpdateProfileAvatarCommand(id, avatarUrl);
+    return new UpdateProfileAvatarCommand(
+      id,
+      caller.id,
+      caller.role,
+      avatarUrl,
+    );
   }
 
   static toResponse(dto: ProfileDto): ProfileResponseDto {

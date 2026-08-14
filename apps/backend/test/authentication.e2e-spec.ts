@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AuthenticationPresentationModule } from '../src/modules/authentication/presentation/authentication.module';
@@ -19,6 +19,8 @@ import { PROFILE_REPOSITORY } from '../src/modules/profiles/domain/interfaces/pr
 import { InMemoryProfileRepository } from '../src/modules/profiles/application/use_cases/test-support/in-memory-profile.repository';
 import { CATEGORY_REPOSITORY } from '../src/modules/category/domain/interfaces/category-repository.interface';
 import { InMemoryCategoryRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category.repository';
+import { CATEGORY_SPECIALIZATION_REPOSITORY } from '../src/modules/category/domain/interfaces/category-specialization-repository.interface';
+import { InMemoryCategorySpecializationRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category-specialization.repository';
 import { CREDENTIAL_REPOSITORY } from '../src/modules/credentials/domain/interfaces/credential-repository.interface';
 import { InMemoryCredentialRepository } from '../src/modules/credentials/application/use_cases/test-support/in-memory-credential.repository';
 import { Credential } from '../src/modules/credentials/domain/entities/credential.entity';
@@ -33,6 +35,8 @@ import { AuthenticationStatus } from '../src/modules/authentication/domain/value
 import { AuthenticationResponseDto } from '../src/modules/authentication/presentation/dto/authentication.response.dto';
 import { AuthTokensResponseDto } from '../src/modules/authentication/presentation/dto/auth-tokens.response.dto';
 import { CurrentUserResponseDto } from '../src/modules/authentication/presentation/dto/current-user.response.dto';
+import { ConfigService } from '../src/config/config.service';
+import { signTestAccessToken } from './support/sign-test-token';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 import { DomainExceptionFilter } from '../src/common/filters/domain-exception.filter';
 import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
@@ -109,6 +113,14 @@ describe('AuthenticationController (e2e)', () => {
       .useValue(credentialRepository)
       .overrideProvider(CATEGORY_REPOSITORY)
       .useValue(new InMemoryCategoryRepository())
+      // `CategoryPresentationModule` is pulled in transitively and binds
+      // `CATEGORY_SPECIALIZATION_REPOSITORY` to a Prisma-backed class.
+      // Overriding it keeps this spec in the DB-free `test:e2e` bucket
+      // like every other repository above — without it the fixture can't
+      // even compile, since that class asks for a `PrismaService` its own
+      // module doesn't provide.
+      .overrideProvider(CATEGORY_SPECIALIZATION_REPOSITORY)
+      .useValue(new InMemoryCategorySpecializationRepository())
       .compile();
 
     const nestApp = moduleFixture.createNestApplication();
@@ -116,11 +128,28 @@ describe('AuthenticationController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    nestApp.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await nestApp.init();
     return nestApp;
   }
 
   let authHeader: string;
+
+  /** A token for an Identity that owns none of the records under test —
+   *  every by-id Authentication route is scoped to its owner (Etapa
+   *  18), so this is what a cross-account attempt looks like. */
+  const otherAuthHeader = (): string =>
+    `Bearer ${signTestAccessToken(app.get(ConfigService), {
+      sub: 'another-identity',
+      role: 'CUSTOMER',
+    })}`;
 
   beforeEach(async () => {
     app = await buildApp();
@@ -152,10 +181,62 @@ describe('AuthenticationController (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/authentications')
       .set('Authorization', authHeader)
-      .send({ identityId: 'unknown-identity', methodType: 'PASSWORD' })
+      .send({ identityId: IdentityId.create().value, methodType: 'PASSWORD' })
       .expect(404);
 
     expect((response.body as ErrorResponseDto).error).toBe('NotFoundException');
+  });
+
+  it('POST /authentications returns 400 for a non-UUID identityId', async () => {
+    await request(app.getHttpServer())
+      .post('/authentications')
+      .set('Authorization', authHeader)
+      .send({ identityId: 'unknown-identity', methodType: 'PASSWORD' })
+      .expect(400);
+  });
+
+  it('GET /authentications/:id returns 403 for another Identity’s method', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/authentications')
+      .set('Authorization', authHeader)
+      .send({ identityId, methodType: 'PASSWORD' });
+    const createdId = (created.body as AuthenticationResponseDto).id;
+
+    const response = await request(app.getHttpServer())
+      .get(`/authentications/${createdId}`)
+      .set('Authorization', otherAuthHeader())
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
+  it('PUT /authentications/:id returns 403 for another Identity’s method', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/authentications')
+      .set('Authorization', authHeader)
+      .send({ identityId, methodType: 'PASSWORD' });
+    const createdId = (created.body as AuthenticationResponseDto).id;
+
+    await request(app.getHttpServer())
+      .put(`/authentications/${createdId}`)
+      .set('Authorization', otherAuthHeader())
+      .send({ status: 'LOCKED' })
+      .expect(403);
+  });
+
+  it('DELETE /authentications/:id returns 403 for another Identity’s method', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/authentications')
+      .set('Authorization', authHeader)
+      .send({ identityId, methodType: 'PASSWORD' });
+    const createdId = (created.body as AuthenticationResponseDto).id;
+
+    await request(app.getHttpServer())
+      .delete(`/authentications/${createdId}`)
+      .set('Authorization', otherAuthHeader())
+      .expect(403);
   });
 
   it('POST /authentications succeeds without an Authorization header — it is the public registration step that creates the very first Authentication record a caller needs before they can log in at all', async () => {

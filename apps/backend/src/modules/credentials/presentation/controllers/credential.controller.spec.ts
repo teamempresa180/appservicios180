@@ -1,3 +1,5 @@
+import { Role } from '../../../../common/auth/role.enum';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { CredentialController } from './credential.controller';
 import { CreateCredentialUseCase } from '../../application/use_cases/create-credential.use-case';
 import { UpdateCredentialUseCase } from '../../application/use_cases/update-credential.use-case';
@@ -19,6 +21,8 @@ describe('CredentialController', () => {
   let updateUseCase: { execute: jest.Mock };
   let deleteUseCase: { execute: jest.Mock };
   let getUseCase: { execute: jest.Mock };
+
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
 
   const credentialDto: CredentialDto = {
     id: 'id-1',
@@ -63,32 +67,37 @@ describe('CredentialController', () => {
     expect(response.createdAt).toBe('2026-01-01T00:00:00.000Z');
   });
 
-  it('update() maps id + request DTO to a command', async () => {
+  it('update() maps id + request DTO + caller to a command', async () => {
     const dto: UpdateCredentialRequestDto = {
       status: CredentialStatus.Revoked,
     };
 
-    const response = await controller.update('id-1', dto);
+    const response = await controller.update('id-1', dto, caller);
 
     expect(updateUseCase.execute).toHaveBeenCalledWith(
-      new UpdateCredentialCommand('id-1', CredentialStatus.Revoked),
+      new UpdateCredentialCommand(
+        'id-1',
+        'identity-1',
+        Role.Customer,
+        CredentialStatus.Revoked,
+      ),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('remove() delegates to DeleteCredentialUseCase with the id', async () => {
-    await controller.remove('id-1');
+  it('remove() delegates to DeleteCredentialUseCase with the id and the caller', async () => {
+    await controller.remove('id-1', caller);
 
     expect(deleteUseCase.execute).toHaveBeenCalledWith(
-      new DeleteCredentialCommand('id-1'),
+      new DeleteCredentialCommand('id-1', 'identity-1', Role.Customer),
     );
   });
 
-  it('findOne() maps the Application DTO returned by GetCredentialUseCase', async () => {
-    const response = await controller.findOne('id-1');
+  it('findOne() passes the caller to GetCredentialUseCase and maps its Application DTO', async () => {
+    const response = await controller.findOne('id-1', caller);
 
     expect(getUseCase.execute).toHaveBeenCalledWith(
-      new GetCredentialQuery('id-1'),
+      new GetCredentialQuery('id-1', 'identity-1', Role.Customer),
     );
     expect(response.type).toBe(CredentialType.Password);
   });

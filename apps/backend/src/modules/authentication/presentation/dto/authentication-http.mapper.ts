@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { CreateAuthenticationCommand } from '../../application/commands/create-authentication.command';
 import { UpdateAuthenticationCommand } from '../../application/commands/update-authentication.command';
 import { AuthenticationDto } from '../../application/dto/authentication.dto';
@@ -20,8 +21,14 @@ export class AuthenticationHttpMapper {
   static toUpdateCommand(
     id: string,
     dto: UpdateAuthenticationRequestDto,
+    caller: AuthenticatedUser,
   ): UpdateAuthenticationCommand {
-    return new UpdateAuthenticationCommand(id, dto.status);
+    return new UpdateAuthenticationCommand(
+      id,
+      caller.id,
+      caller.role,
+      dto.status,
+    );
   }
 
   static toResponse(dto: AuthenticationDto): AuthenticationResponseDto {

@@ -1,3 +1,4 @@
+import { Role } from '../../../../common/auth/role.enum';
 import { AuthenticationDto } from '../../application/dto/authentication.dto';
 import { AuthMethodType } from '../../domain/value-objects/auth-method-type.value-object';
 import { AuthenticationStatus } from '../../domain/value-objects/authentication-status.value-object';
@@ -18,14 +19,19 @@ describe('AuthenticationHttpMapper', () => {
     expect(command.methodType).toBe(AuthMethodType.Biometric);
   });
 
-  it('toUpdateCommand() carries the id and optional status through', () => {
+  it('toUpdateCommand() carries the id, the caller and optional status through', () => {
     const dto: UpdateAuthenticationRequestDto = {
       status: AuthenticationStatus.Revoked,
     };
 
-    const command = AuthenticationHttpMapper.toUpdateCommand('id-1', dto);
+    const command = AuthenticationHttpMapper.toUpdateCommand('id-1', dto, {
+      id: 'identity-1',
+      role: Role.Customer,
+    });
 
     expect(command.id).toBe('id-1');
+    expect(command.callerId).toBe('identity-1');
+    expect(command.callerRole).toBe(Role.Customer);
     expect(command.status).toBe(AuthenticationStatus.Revoked);
   });
 

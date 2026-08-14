@@ -1,3 +1,5 @@
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Identity } from '../../../identity/domain/entities/identity.entity';
@@ -93,9 +95,24 @@ describe('Authentication use cases', () => {
     it('throws NotFoundException when it does not exist', async () => {
       await expect(
         new GetAuthenticationUseCase(repository).execute(
-          new GetAuthenticationQuery('unknown-id'),
+          new GetAuthenticationQuery('unknown-id', identityId, Role.Customer),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException when the record belongs to another Identity', async () => {
+      const created = await new CreateAuthenticationUseCase(
+        repository,
+        identityRepository,
+      ).execute(
+        new CreateAuthenticationCommand(identityId, AuthMethodType.Password),
+      );
+
+      await expect(
+        new GetAuthenticationUseCase(repository).execute(
+          new GetAuthenticationQuery(created.id, 'someone-else', Role.Customer),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -111,11 +128,33 @@ describe('Authentication use cases', () => {
       const updated = await new UpdateAuthenticationUseCase(repository).execute(
         new UpdateAuthenticationCommand(
           created.id,
+          identityId,
+          Role.Customer,
           AuthenticationStatus.Revoked,
         ),
       );
 
       expect(updated.status).toBe(AuthenticationStatus.Revoked);
+    });
+
+    it('throws ForbiddenException when the record belongs to another Identity', async () => {
+      const created = await new CreateAuthenticationUseCase(
+        repository,
+        identityRepository,
+      ).execute(
+        new CreateAuthenticationCommand(identityId, AuthMethodType.Password),
+      );
+
+      await expect(
+        new UpdateAuthenticationUseCase(repository).execute(
+          new UpdateAuthenticationCommand(
+            created.id,
+            'someone-else',
+            Role.Customer,
+            AuthenticationStatus.Locked,
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -129,14 +168,33 @@ describe('Authentication use cases', () => {
       );
 
       await new DeleteAuthenticationUseCase(repository).execute(
-        new DeleteAuthenticationCommand(created.id),
+        new DeleteAuthenticationCommand(created.id, identityId, Role.Customer),
       );
 
       await expect(
         new GetAuthenticationUseCase(repository).execute(
-          new GetAuthenticationQuery(created.id),
+          new GetAuthenticationQuery(created.id, identityId, Role.Customer),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException when the record belongs to another Identity', async () => {
+      const created = await new CreateAuthenticationUseCase(
+        repository,
+        identityRepository,
+      ).execute(
+        new CreateAuthenticationCommand(identityId, AuthMethodType.Password),
+      );
+
+      await expect(
+        new DeleteAuthenticationUseCase(repository).execute(
+          new DeleteAuthenticationCommand(
+            created.id,
+            'someone-else',
+            Role.Customer,
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

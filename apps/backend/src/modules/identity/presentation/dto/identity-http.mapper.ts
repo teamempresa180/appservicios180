@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { CreateIdentityCommand } from '../../application/commands/create-identity.command';
 import { UpdateIdentityCommand } from '../../application/commands/update-identity.command';
 import { IdentityDto } from '../../application/dto/identity.dto';
@@ -28,8 +29,15 @@ export class IdentityHttpMapper {
   static toUpdateCommand(
     id: string,
     dto: UpdateIdentityRequestDto,
+    caller: AuthenticatedUser,
   ): UpdateIdentityCommand {
-    return new UpdateIdentityCommand(id, dto.fullName, dto.status);
+    return new UpdateIdentityCommand(
+      id,
+      caller.id,
+      caller.role,
+      dto.fullName,
+      dto.status,
+    );
   }
 
   static toResponse(dto: IdentityDto): IdentityResponseDto {

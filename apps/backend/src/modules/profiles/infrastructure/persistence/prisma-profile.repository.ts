@@ -69,10 +69,7 @@ export class PrismaProfileRepository implements ProfileRepository {
   async search(term: string): Promise<Profile[]> {
     const rows = await this.prisma.profileModel.findMany({
       where: {
-        OR: [
-          { displayName: { contains: term } },
-          { bio: { contains: term } },
-        ],
+        OR: [{ displayName: { contains: term } }, { bio: { contains: term } }],
       },
       orderBy: { createdAt: 'desc' },
       take: MAX_UNPAGINATED_RESULTS,

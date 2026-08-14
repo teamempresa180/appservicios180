@@ -56,9 +56,7 @@ export class RefreshUseCase {
       this.logger.warn(
         `Refresh token reuse detected for identityId=${stored.identityId.value} — revoking all sessions`,
       );
-      await this.refreshTokenRepository.revokeAllForIdentity(
-        stored.identityId,
-      );
+      await this.refreshTokenRepository.revokeAllForIdentity(stored.identityId);
       throw new UnauthorizedException('Refresh token is invalid or expired');
     }
     if (stored.isExpired) {

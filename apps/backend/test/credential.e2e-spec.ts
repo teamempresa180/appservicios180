@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -32,6 +32,13 @@ describe('CredentialController (e2e)', () => {
   let app: INestApplication<App>;
   let identityId: string;
   let authHeader: string;
+  let config: ConfigService;
+
+  /** Every by-id Credential route is scoped to the owning Identity
+   *  (Etapa 18), so tests acting as a different account sign their own
+   *  token. */
+  const tokenFor = (sub: string): string =>
+    `Bearer ${signTestAccessToken(config, { sub, role: 'CUSTOMER' })}`;
 
   beforeEach(async () => {
     const identityRepository = new InMemoryIdentityRepository();
@@ -67,9 +74,18 @@ describe('CredentialController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await app.init();
 
-    authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
+    config = app.get(ConfigService);
+    authHeader = `Bearer ${signTestAccessToken(config, { sub: identityId, role: 'CUSTOMER' })}`;
   });
 
   afterEach(async () => {
@@ -91,7 +107,7 @@ describe('CredentialController (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/credentials')
       .send({
-        identityId: 'unknown-identity',
+        identityId: IdentityId.create().value,
         type: 'PASSWORD',
         password: 'Str0ngPassw0rd!',
       })
@@ -100,11 +116,86 @@ describe('CredentialController (e2e)', () => {
     expect((response.body as ErrorResponseDto).error).toBe('NotFoundException');
   });
 
+  it('POST /credentials returns 400 for a non-UUID identityId', async () => {
+    await request(app.getHttpServer())
+      .post('/credentials')
+      .send({
+        identityId: 'unknown-identity',
+        type: 'PASSWORD',
+        password: 'Str0ngPassw0rd!',
+      })
+      .expect(400);
+  });
+
+  it('POST /credentials returns 400 for a password below the minimum length', async () => {
+    await request(app.getHttpServer())
+      .post('/credentials')
+      .send({ identityId, type: 'PASSWORD', password: 'short' })
+      .expect(400);
+  });
+
+  it('POST /credentials refuses a second Password credential for the same Identity (account takeover)', async () => {
+    await request(app.getHttpServer())
+      .post('/credentials')
+      .send({ identityId, type: 'PASSWORD', password: 'Str0ngPassw0rd!' })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .post('/credentials')
+      .send({ identityId, type: 'PASSWORD', password: 'Attack3rPassw0rd!' })
+      .expect(422);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'BusinessRuleException',
+    );
+  });
+
   it('GET /credentials/:id returns 404 for an unknown id', async () => {
     await request(app.getHttpServer())
       .get('/credentials/unknown-id')
       .set('Authorization', authHeader)
       .expect(404);
+  });
+
+  it('GET /credentials/:id returns 403 for a Credential owned by another Identity', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/credentials')
+      .send({ identityId, type: 'PASSWORD', password: 'Str0ngPassw0rd!' });
+    const createdId = (created.body as CredentialResponseDto).id;
+
+    const response = await request(app.getHttpServer())
+      .get(`/credentials/${createdId}`)
+      .set('Authorization', tokenFor('another-identity'))
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
+  it('PUT /credentials/:id returns 403 for a Credential owned by another Identity', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/credentials')
+      .send({ identityId, type: 'PASSWORD', password: 'Str0ngPassw0rd!' });
+    const createdId = (created.body as CredentialResponseDto).id;
+
+    await request(app.getHttpServer())
+      .put(`/credentials/${createdId}`)
+      .set('Authorization', tokenFor('another-identity'))
+      .send({ status: 'REVOKED' })
+      .expect(403);
+  });
+
+  it('DELETE /credentials/:id returns 403 for a Credential owned by another Identity', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/credentials')
+      .send({ identityId, type: 'PASSWORD', password: 'Str0ngPassw0rd!' });
+    const createdId = (created.body as CredentialResponseDto).id;
+
+    await request(app.getHttpServer())
+      .delete(`/credentials/${createdId}`)
+      .set('Authorization', tokenFor('another-identity'))
+      .expect(403);
   });
 
   it('PUT /credentials/:id updates the status', async () => {

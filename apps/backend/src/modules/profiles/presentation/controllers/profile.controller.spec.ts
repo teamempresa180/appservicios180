@@ -20,6 +20,9 @@ import { CreateProfileRequestDto } from '../dto/create-profile.request.dto';
 import { UpdateProfileRequestDto } from '../dto/update-profile.request.dto';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
+import { Role } from '../../../../common/auth/role.enum';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { LocalProfileAvatarStorageService } from '../../infrastructure/storage/local-profile-avatar-storage.service';
 
 describe('ProfileController', () => {
@@ -32,6 +35,10 @@ describe('ProfileController', () => {
   let searchUseCase: { execute: jest.Mock };
   let updateAvatarUseCase: { execute: jest.Mock };
   let avatarStorage: { save: jest.Mock };
+
+  /** `profileDto.identityId` — the caller owns the Profile under test
+   *  in every happy-path case. */
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
 
   const profileDto: ProfileDto = {
     id: 'id-1',
@@ -92,11 +99,13 @@ describe('ProfileController', () => {
       visibility: ProfileVisibility.Public,
     };
 
-    const response = await controller.create(dto);
+    const response = await controller.create(dto, caller);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
       new CreateProfileCommand(
         'identity-1',
+        'identity-1',
+        Role.Customer,
         'Jane Doe',
         null,
         null,
@@ -107,39 +116,48 @@ describe('ProfileController', () => {
     expect(response.createdAt).toBe('2026-01-01T00:00:00.000Z');
   });
 
-  it('update() maps id + request DTO to a command', async () => {
+  it('update() maps id + request DTO + caller to a command', async () => {
     const dto: UpdateProfileRequestDto = { displayName: 'New Name' };
 
-    const response = await controller.update('id-1', dto);
+    const response = await controller.update('id-1', dto, caller);
 
     expect(updateUseCase.execute).toHaveBeenCalledWith(
-      new UpdateProfileCommand('id-1', 'New Name', undefined, undefined),
+      new UpdateProfileCommand(
+        'id-1',
+        'identity-1',
+        Role.Customer,
+        'New Name',
+        undefined,
+        undefined,
+      ),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('remove() delegates to DeleteProfileUseCase with the id', async () => {
-    await controller.remove('id-1');
+  it('remove() delegates to DeleteProfileUseCase with the id and the caller', async () => {
+    await controller.remove('id-1', caller);
 
     expect(deleteUseCase.execute).toHaveBeenCalledWith(
-      new DeleteProfileCommand('id-1'),
+      new DeleteProfileCommand('id-1', 'identity-1', Role.Customer),
     );
   });
 
-  it('list() maps page/pageSize query params to a query and wraps the paginated result', async () => {
-    const response = await controller.list('2', '10');
+  it('list() scopes the query to the caller and maps page/pageSize', async () => {
+    const response = await controller.list(caller, '2', '10');
 
     expect(listUseCase.execute).toHaveBeenCalledWith(
-      new ListProfileQuery(2, 10),
+      new ListProfileQuery('identity-1', Role.Customer, 2, 10),
     );
     expect(response.items).toHaveLength(1);
     expect(response.total).toBe(1);
   });
 
   it('list() defaults page/pageSize when query params are omitted', async () => {
-    await controller.list(undefined, undefined);
+    await controller.list(caller, undefined, undefined);
 
-    expect(listUseCase.execute).toHaveBeenCalledWith(new ListProfileQuery());
+    expect(listUseCase.execute).toHaveBeenCalledWith(
+      new ListProfileQuery('identity-1', Role.Customer),
+    );
   });
 
   it('search() maps the term query param and the Application DTOs to response DTOs', async () => {
@@ -152,11 +170,11 @@ describe('ProfileController', () => {
     expect(response[0].displayName).toBe('Jane Doe');
   });
 
-  it('findOne() maps the Application DTO returned by GetProfileUseCase', async () => {
-    const response = await controller.findOne('id-1');
+  it('findOne() passes the caller to GetProfileUseCase and maps its Application DTO', async () => {
+    const response = await controller.findOne('id-1', caller);
 
     expect(getUseCase.execute).toHaveBeenCalledWith(
-      new GetProfileQuery('id-1'),
+      new GetProfileQuery('id-1', 'identity-1', Role.Customer),
     );
     expect(response.displayName).toBe('Jane Doe');
   });
@@ -169,15 +187,17 @@ describe('ProfileController', () => {
     };
 
     it('confirms the Profile exists, stores the file, then persists the resulting path', async () => {
-      const response = await controller.uploadAvatar('id-1', file);
+      const response = await controller.uploadAvatar('id-1', file, caller);
 
       expect(getUseCase.execute).toHaveBeenCalledWith(
-        new GetProfileQuery('id-1'),
+        new GetProfileQuery('id-1', 'identity-1', Role.Customer),
       );
       expect(avatarStorage.save).toHaveBeenCalledWith('id-1', file);
       expect(updateAvatarUseCase.execute).toHaveBeenCalledWith(
         new UpdateProfileAvatarCommand(
           'id-1',
+          'identity-1',
+          Role.Customer,
           'uploads/profiles/id-1/avatar.png',
         ),
       );
@@ -186,7 +206,7 @@ describe('ProfileController', () => {
 
     it('throws ValidationException when no file is provided', async () => {
       await expect(
-        controller.uploadAvatar('id-1', undefined),
+        controller.uploadAvatar('id-1', undefined, caller),
       ).rejects.toThrow(ValidationException);
       expect(avatarStorage.save).not.toHaveBeenCalled();
       expect(updateAvatarUseCase.execute).not.toHaveBeenCalled();
@@ -198,9 +218,20 @@ describe('ProfileController', () => {
       );
 
       await expect(
-        controller.uploadAvatar('unknown-id', file),
+        controller.uploadAvatar('unknown-id', file, caller),
       ).rejects.toThrow(NotFoundException);
       expect(avatarStorage.save).not.toHaveBeenCalled();
+    });
+
+    it('refuses to store the file when the Profile belongs to another Identity', async () => {
+      await expect(
+        controller.uploadAvatar('id-1', file, {
+          id: 'someone-else',
+          role: Role.Customer,
+        }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(avatarStorage.save).not.toHaveBeenCalled();
+      expect(updateAvatarUseCase.execute).not.toHaveBeenCalled();
     });
   });
 });

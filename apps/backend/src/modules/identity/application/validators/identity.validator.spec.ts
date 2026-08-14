@@ -1,3 +1,4 @@
+import { Role } from '../../../../common/auth/role.enum';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { DocumentType } from '../../domain/value-objects/document-type.value-object';
 import { IdentityStatus } from '../../domain/value-objects/identity-status.value-object';
@@ -77,21 +78,29 @@ describe('IdentityValidator', () => {
     it('passes for a well-formed command', () => {
       expect(() =>
         IdentityValidator.validateUpdate(
-          new UpdateIdentityCommand('id-1', 'New Name', IdentityStatus.Active),
+          new UpdateIdentityCommand(
+            'id-1',
+            'id-1',
+            Role.Customer,
+            'New Name',
+            IdentityStatus.Active,
+          ),
         ),
       ).not.toThrow();
     });
 
     it('rejects a blank id', () => {
       expect(() =>
-        IdentityValidator.validateUpdate(new UpdateIdentityCommand('  ')),
+        IdentityValidator.validateUpdate(
+          new UpdateIdentityCommand('  ', 'id-1', Role.Customer),
+        ),
       ).toThrow(ValidationException);
     });
 
     it('rejects a blank fullName when provided', () => {
       expect(() =>
         IdentityValidator.validateUpdate(
-          new UpdateIdentityCommand('id-1', '   '),
+          new UpdateIdentityCommand('id-1', 'id-1', Role.Customer, '   '),
         ),
       ).toThrow(ValidationException);
     });
@@ -101,6 +110,8 @@ describe('IdentityValidator', () => {
         IdentityValidator.validateUpdate(
           new UpdateIdentityCommand(
             'id-1',
+            'id-1',
+            Role.Customer,
             undefined,
             'INVALID' as IdentityStatus,
           ),

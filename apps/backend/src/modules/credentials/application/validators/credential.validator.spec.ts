@@ -1,3 +1,4 @@
+import { Role } from '../../../../common/auth/role.enum';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { CredentialStatus } from '../../domain/value-objects/credential-status.value-object';
 import { CredentialType } from '../../domain/value-objects/credential-type.value-object';
@@ -90,14 +91,21 @@ describe('CredentialValidator', () => {
   describe('validateUpdate', () => {
     it('rejects a blank id', () => {
       expect(() =>
-        CredentialValidator.validateUpdate(new UpdateCredentialCommand('  ')),
+        CredentialValidator.validateUpdate(
+          new UpdateCredentialCommand('  ', 'identity-1', Role.Customer),
+        ),
       ).toThrow(ValidationException);
     });
 
     it('rejects an invalid status when provided', () => {
       expect(() =>
         CredentialValidator.validateUpdate(
-          new UpdateCredentialCommand('id-1', 'INVALID' as CredentialStatus),
+          new UpdateCredentialCommand(
+            'id-1',
+            'identity-1',
+            Role.Customer,
+            'INVALID' as CredentialStatus,
+          ),
         ),
       ).toThrow(ValidationException);
     });
@@ -105,7 +113,12 @@ describe('CredentialValidator', () => {
     it('passes for a well-formed command', () => {
       expect(() =>
         CredentialValidator.validateUpdate(
-          new UpdateCredentialCommand('id-1', CredentialStatus.Expired),
+          new UpdateCredentialCommand(
+            'id-1',
+            'identity-1',
+            Role.Customer,
+            CredentialStatus.Expired,
+          ),
         ),
       ).not.toThrow();
     });

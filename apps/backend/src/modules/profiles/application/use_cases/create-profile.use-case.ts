@@ -1,3 +1,5 @@
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
@@ -16,6 +18,10 @@ import { ProfileValidator } from '../validators/profile.validator';
  * the referenced Identity actually exists before creating a profile
  * for it — same rule already applied to `Authentication`/`Credential`
  * in Sprint 3 Etapa 2, since `Profile` also references `IdentityId`.
+ *
+ * A caller may only create a Profile for their own Identity — see
+ * `CreateProfileCommand`. The check runs before the Identity lookup so
+ * the endpoint can't be used to probe which Identity ids exist.
  */
 export class CreateProfileUseCase {
   constructor(
@@ -25,6 +31,15 @@ export class CreateProfileUseCase {
 
   async execute(command: CreateProfileCommand): Promise<ProfileDto> {
     ProfileValidator.validateCreate(command);
+
+    if (
+      command.identityId !== command.callerId &&
+      command.callerRole !== Role.Admin
+    ) {
+      throw new ForbiddenException(
+        'You may only create a Profile for your own Identity',
+      );
+    }
 
     const identityId = IdentityId.fromString(command.identityId);
     const identity = await this.identityRepository.findById(identityId);

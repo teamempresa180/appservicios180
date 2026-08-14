@@ -1,3 +1,4 @@
+import { Role } from '../../../../common/auth/role.enum';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { AuthMethodType } from '../../domain/value-objects/auth-method-type.value-object';
 import { AuthenticationStatus } from '../../domain/value-objects/authentication-status.value-object';
@@ -42,7 +43,7 @@ describe('AuthenticationValidator', () => {
     it('rejects a blank id', () => {
       expect(() =>
         AuthenticationValidator.validateUpdate(
-          new UpdateAuthenticationCommand('  '),
+          new UpdateAuthenticationCommand('  ', 'identity-1', Role.Customer),
         ),
       ).toThrow(ValidationException);
     });
@@ -52,6 +53,8 @@ describe('AuthenticationValidator', () => {
         AuthenticationValidator.validateUpdate(
           new UpdateAuthenticationCommand(
             'id-1',
+            'identity-1',
+            Role.Customer,
             'INVALID' as AuthenticationStatus,
           ),
         ),
@@ -61,7 +64,12 @@ describe('AuthenticationValidator', () => {
     it('passes for a well-formed command', () => {
       expect(() =>
         AuthenticationValidator.validateUpdate(
-          new UpdateAuthenticationCommand('id-1', AuthenticationStatus.Locked),
+          new UpdateAuthenticationCommand(
+            'id-1',
+            'identity-1',
+            Role.Customer,
+            AuthenticationStatus.Locked,
+          ),
         ),
       ).not.toThrow();
     });

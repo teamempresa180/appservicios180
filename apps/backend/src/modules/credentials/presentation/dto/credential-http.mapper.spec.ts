@@ -1,3 +1,4 @@
+import { Role } from '../../../../common/auth/role.enum';
 import { CredentialDto } from '../../application/dto/credential.dto';
 import { CredentialType } from '../../domain/value-objects/credential-type.value-object';
 import { CredentialStatus } from '../../domain/value-objects/credential-status.value-object';
@@ -30,14 +31,19 @@ describe('CredentialHttpMapper', () => {
     expect(command.password).toBe('Str0ngPassw0rd!');
   });
 
-  it('toUpdateCommand() carries the id and optional status through', () => {
+  it('toUpdateCommand() carries the id, the caller and optional status through', () => {
     const dto: UpdateCredentialRequestDto = {
       status: CredentialStatus.Expired,
     };
 
-    const command = CredentialHttpMapper.toUpdateCommand('id-1', dto);
+    const command = CredentialHttpMapper.toUpdateCommand('id-1', dto, {
+      id: 'identity-1',
+      role: Role.Customer,
+    });
 
     expect(command.id).toBe('id-1');
+    expect(command.callerId).toBe('identity-1');
+    expect(command.callerRole).toBe(Role.Customer);
     expect(command.status).toBe(CredentialStatus.Expired);
   });
 

@@ -1,3 +1,6 @@
+import { Role } from '../../../../common/auth/role.enum';
+import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Identity } from '../../../identity/domain/entities/identity.entity';
@@ -162,15 +165,93 @@ describe('Credential use cases', () => {
         ),
       ).rejects.toThrow(ValidationException);
     });
+
+    it('rejects a second Password credential for the same Identity', async () => {
+      const useCase = new CreateCredentialUseCase(
+        repository,
+        identityRepository,
+        passwordHasher,
+      );
+      await useCase.execute(
+        new CreateCredentialCommand(
+          identityId,
+          CredentialType.Password,
+          'Str0ngPassw0rd!',
+        ),
+      );
+
+      await expect(
+        useCase.execute(
+          new CreateCredentialCommand(
+            identityId,
+            CredentialType.Password,
+            'Attack3rPassw0rd!',
+          ),
+        ),
+      ).rejects.toThrow(BusinessRuleException);
+    });
+
+    it('rejects a second Password credential even when the first one is revoked', async () => {
+      const useCase = new CreateCredentialUseCase(
+        repository,
+        identityRepository,
+        passwordHasher,
+      );
+      const created = await useCase.execute(
+        new CreateCredentialCommand(
+          identityId,
+          CredentialType.Password,
+          'Str0ngPassw0rd!',
+        ),
+      );
+      await new UpdateCredentialUseCase(repository).execute(
+        new UpdateCredentialCommand(
+          created.id,
+          identityId,
+          Role.Customer,
+          CredentialStatus.Revoked,
+        ),
+      );
+
+      await expect(
+        useCase.execute(
+          new CreateCredentialCommand(
+            identityId,
+            CredentialType.Password,
+            'Attack3rPassw0rd!',
+          ),
+        ),
+      ).rejects.toThrow(BusinessRuleException);
+    });
   });
 
   describe('GetCredentialUseCase', () => {
     it('throws NotFoundException when it does not exist', async () => {
       await expect(
         new GetCredentialUseCase(repository).execute(
-          new GetCredentialQuery('unknown-id'),
+          new GetCredentialQuery('unknown-id', identityId, Role.Customer),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException when the Credential belongs to another Identity', async () => {
+      const created = await new CreateCredentialUseCase(
+        repository,
+        identityRepository,
+        passwordHasher,
+      ).execute(
+        new CreateCredentialCommand(
+          identityId,
+          CredentialType.Password,
+          'Str0ngPassw0rd!',
+        ),
+      );
+
+      await expect(
+        new GetCredentialUseCase(repository).execute(
+          new GetCredentialQuery(created.id, 'someone-else', Role.Customer),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -189,7 +270,12 @@ describe('Credential use cases', () => {
       );
 
       const updated = await new UpdateCredentialUseCase(repository).execute(
-        new UpdateCredentialCommand(created.id, CredentialStatus.Expired),
+        new UpdateCredentialCommand(
+          created.id,
+          identityId,
+          Role.Customer,
+          CredentialStatus.Expired,
+        ),
       );
 
       expect(updated.status).toBe(CredentialStatus.Expired);
@@ -209,7 +295,12 @@ describe('Credential use cases', () => {
       );
 
       await new UpdateCredentialUseCase(repository).execute(
-        new UpdateCredentialCommand(created.id, CredentialStatus.Expired),
+        new UpdateCredentialCommand(
+          created.id,
+          identityId,
+          Role.Customer,
+          CredentialStatus.Expired,
+        ),
       );
 
       const stored = await repository.findById(
@@ -236,14 +327,38 @@ describe('Credential use cases', () => {
       );
 
       await new DeleteCredentialUseCase(repository).execute(
-        new DeleteCredentialCommand(created.id),
+        new DeleteCredentialCommand(created.id, identityId, Role.Customer),
       );
 
       await expect(
         new GetCredentialUseCase(repository).execute(
-          new GetCredentialQuery(created.id),
+          new GetCredentialQuery(created.id, identityId, Role.Customer),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException when the Credential belongs to another Identity', async () => {
+      const created = await new CreateCredentialUseCase(
+        repository,
+        identityRepository,
+        passwordHasher,
+      ).execute(
+        new CreateCredentialCommand(
+          identityId,
+          CredentialType.Password,
+          'Str0ngPassw0rd!',
+        ),
+      );
+
+      await expect(
+        new DeleteCredentialUseCase(repository).execute(
+          new DeleteCredentialCommand(
+            created.id,
+            'someone-else',
+            Role.Customer,
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

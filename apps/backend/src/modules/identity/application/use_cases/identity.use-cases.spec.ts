@@ -1,3 +1,6 @@
+import { Role } from '../../../../common/auth/role.enum';
+import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { DocumentType } from '../../domain/value-objects/document-type.value-object';
@@ -70,10 +73,33 @@ describe('Identity use cases', () => {
         ),
       ).rejects.toThrow(ValidationException);
     });
+
+    it('rejects a documentNumber already registered by another Identity', async () => {
+      const useCase = new CreateIdentityUseCase(repository);
+      await useCase.execute(
+        new CreateIdentityCommand(
+          'Ana',
+          DocumentType.NationalId,
+          '1002003000',
+          new Date('1990-05-10'),
+        ),
+      );
+
+      await expect(
+        useCase.execute(
+          new CreateIdentityCommand(
+            'Impostor',
+            DocumentType.Passport,
+            '1002003000',
+            new Date('1991-06-11'),
+          ),
+        ),
+      ).rejects.toThrow(BusinessRuleException);
+    });
   });
 
   describe('GetIdentityUseCase', () => {
-    it('returns the Identity when it exists', async () => {
+    it('returns the Identity when the caller owns it', async () => {
       const created = await new CreateIdentityUseCase(repository).execute(
         new CreateIdentityCommand(
           'Ana',
@@ -84,15 +110,32 @@ describe('Identity use cases', () => {
       );
 
       const found = await new GetIdentityUseCase(repository).execute(
-        new GetIdentityQuery(created.id),
+        new GetIdentityQuery(created.id, created.id, Role.Customer),
       );
       expect(found.id).toBe(created.id);
+    });
+
+    it('throws ForbiddenException when the caller is not the owner', async () => {
+      const created = await new CreateIdentityUseCase(repository).execute(
+        new CreateIdentityCommand(
+          'Ana',
+          DocumentType.NationalId,
+          '123',
+          new Date(),
+        ),
+      );
+
+      await expect(
+        new GetIdentityUseCase(repository).execute(
+          new GetIdentityQuery(created.id, 'someone-else', Role.Customer),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('throws NotFoundException when it does not exist', async () => {
       await expect(
         new GetIdentityUseCase(repository).execute(
-          new GetIdentityQuery('unknown-id'),
+          new GetIdentityQuery('unknown-id', 'unknown-id', Role.Customer),
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -112,6 +155,8 @@ describe('Identity use cases', () => {
       const updated = await new UpdateIdentityUseCase(repository).execute(
         new UpdateIdentityCommand(
           created.id,
+          created.id,
+          Role.Customer,
           'Ana María',
           IdentityStatus.Suspended,
         ),
@@ -121,10 +166,37 @@ describe('Identity use cases', () => {
       expect(updated.status).toBe(IdentityStatus.Suspended);
     });
 
+    it('throws ForbiddenException when the caller is not the owner', async () => {
+      const created = await new CreateIdentityUseCase(repository).execute(
+        new CreateIdentityCommand(
+          'Ana',
+          DocumentType.NationalId,
+          '123',
+          new Date(),
+        ),
+      );
+
+      await expect(
+        new UpdateIdentityUseCase(repository).execute(
+          new UpdateIdentityCommand(
+            created.id,
+            'someone-else',
+            Role.Customer,
+            'Hijacked Name',
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
         new UpdateIdentityUseCase(repository).execute(
-          new UpdateIdentityCommand('unknown-id', 'New Name'),
+          new UpdateIdentityCommand(
+            'unknown-id',
+            'unknown-id',
+            Role.Customer,
+            'New Name',
+          ),
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -142,20 +214,37 @@ describe('Identity use cases', () => {
       );
 
       await new DeleteIdentityUseCase(repository).execute(
-        new DeleteIdentityCommand(created.id),
+        new DeleteIdentityCommand(created.id, created.id, Role.Customer),
       );
 
       await expect(
         new GetIdentityUseCase(repository).execute(
-          new GetIdentityQuery(created.id),
+          new GetIdentityQuery(created.id, created.id, Role.Customer),
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException when the caller is not the owner', async () => {
+      const created = await new CreateIdentityUseCase(repository).execute(
+        new CreateIdentityCommand(
+          'Ana',
+          DocumentType.NationalId,
+          '123',
+          new Date(),
+        ),
+      );
+
+      await expect(
+        new DeleteIdentityUseCase(repository).execute(
+          new DeleteIdentityCommand(created.id, 'someone-else', Role.Customer),
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
         new DeleteIdentityUseCase(repository).execute(
-          new DeleteIdentityCommand('unknown-id'),
+          new DeleteIdentityCommand('unknown-id', 'unknown-id', Role.Customer),
         ),
       ).rejects.toThrow(NotFoundException);
     });
