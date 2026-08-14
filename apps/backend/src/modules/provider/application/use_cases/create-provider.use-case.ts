@@ -1,4 +1,7 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { IdentityRepository } from '../../../identity/domain/interfaces/identity-repository.interface';
 import { IdentityId } from '../../../identity/domain/value-objects/identity-id.value-object';
@@ -41,6 +44,12 @@ import { ProviderValidator } from '../validators/provider.validator';
  * `CategorySpecialization` exists and actually belongs to the
  * referenced Category — a real business rule (a Provider cannot claim
  * "Paneles solares" under "Plomería"), not just type-safety.
+ *
+ * Authorization (Sprint 4, Etapa 18): a caller may only enrol itself.
+ * `command.identityId` must equal the authenticated caller's Identity
+ * unless the caller is an `Admin`, so nobody can create a Provider
+ * record in someone else's name. Complements — it does not replace —
+ * the existing one-Provider-per-Identity invariant below.
  */
 export class CreateProviderUseCase {
   constructor(
@@ -51,8 +60,17 @@ export class CreateProviderUseCase {
     private readonly categorySpecializationRepository?: CategorySpecializationRepository,
   ) {}
 
-  async execute(command: CreateProviderCommand): Promise<ProviderDto> {
+  async execute(
+    command: CreateProviderCommand,
+    caller: AuthenticatedUser,
+  ): Promise<ProviderDto> {
     ProviderValidator.validateCreate(command);
+
+    if (caller.role !== Role.Admin && command.identityId !== caller.id) {
+      throw new ForbiddenException(
+        'A Provider can only be created for the authenticated Identity',
+      );
+    }
 
     const identityId = IdentityId.fromString(command.identityId);
     const identity = await this.identityRepository.findById(identityId);

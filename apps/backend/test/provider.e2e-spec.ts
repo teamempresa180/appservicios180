@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { PassportModule } from '@nestjs/passport';
@@ -43,6 +43,8 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
 describe('ProviderController (e2e)', () => {
   let app: INestApplication<App>;
   let authHeader: string;
+  let strangerAuthHeader: string;
+  let adminAuthHeader: string;
   let identityId: string;
   let profileId: string;
 
@@ -98,9 +100,19 @@ describe('ProviderController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await app.init();
 
     authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
+    strangerAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'someone-else', role: 'CUSTOMER' })}`;
+    adminAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: 'admin-identity', role: 'ADMIN' })}`;
   });
 
   afterEach(async () => {
@@ -132,13 +144,43 @@ describe('ProviderController (e2e)', () => {
   });
 
   it('POST /providers returns 404 when the Identity does not exist', async () => {
+    // Only an Admin can name an identityId other than its own, so the
+    // Identity-not-found branch is only reachable with an Admin token.
     const response = await request(app.getHttpServer())
       .post('/providers')
-      .set('Authorization', authHeader)
+      .set('Authorization', adminAuthHeader)
       .send(createProviderBody({ identityId: 'unknown-identity' }))
       .expect(404);
 
     expect((response.body as ErrorResponseDto).error).toBe('NotFoundException');
+  });
+
+  it('POST /providers refuses to create a Provider for another Identity', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/providers')
+      .set('Authorization', strangerAuthHeader)
+      .send(createProviderBody())
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
+  it('POST /providers rejects an unknown field', async () => {
+    await request(app.getHttpServer())
+      .post('/providers')
+      .set('Authorization', authHeader)
+      .send(createProviderBody({ status: 'ACTIVE' }))
+      .expect(400);
+  });
+
+  it('POST /providers rejects a non-integer yearsOfExperience', async () => {
+    await request(app.getHttpServer())
+      .post('/providers')
+      .set('Authorization', authHeader)
+      .send(createProviderBody({ yearsOfExperience: 4.5 }))
+      .expect(400);
   });
 
   it('POST /providers returns 422 when the Identity already has a Provider record', async () => {
@@ -181,6 +223,95 @@ describe('ProviderController (e2e)', () => {
     expect((response.body as ProviderResponseDto).biography).toBe(
       'Updated bio.',
     );
+  });
+
+  it('PUT /providers/:id refuses a non-admin self-approval to ACTIVE', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/providers')
+      .set('Authorization', authHeader)
+      .send(createProviderBody());
+    const createdId = (created.body as ProviderResponseDto).id;
+
+    const response = await request(app.getHttpServer())
+      .put(`/providers/${createdId}`)
+      .set('Authorization', authHeader)
+      .send({ status: 'ACTIVE' })
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+
+    const after = await request(app.getHttpServer())
+      .get(`/providers/${createdId}`)
+      .set('Authorization', authHeader)
+      .expect(200);
+    expect((after.body as ProviderResponseDto).status).toBe('PENDING');
+  });
+
+  it('PUT /providers/:id lets an Admin approve a Provider', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/providers')
+      .set('Authorization', authHeader)
+      .send(createProviderBody());
+    const createdId = (created.body as ProviderResponseDto).id;
+
+    const response = await request(app.getHttpServer())
+      .put(`/providers/${createdId}`)
+      .set('Authorization', adminAuthHeader)
+      .send({ status: 'ACTIVE' })
+      .expect(200);
+
+    expect((response.body as ProviderResponseDto).status).toBe('ACTIVE');
+  });
+
+  it('PUT /providers/:id lets the owner resubmit after a rejection', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/providers')
+      .set('Authorization', authHeader)
+      .send(createProviderBody());
+    const createdId = (created.body as ProviderResponseDto).id;
+
+    await request(app.getHttpServer())
+      .put(`/providers/${createdId}`)
+      .set('Authorization', adminAuthHeader)
+      .send({ status: 'REJECTED' })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .put(`/providers/${createdId}`)
+      .set('Authorization', authHeader)
+      .send({ status: 'PENDING' })
+      .expect(200);
+
+    expect((response.body as ProviderResponseDto).status).toBe('PENDING');
+  });
+
+  it("PUT /providers/:id refuses to edit another Identity's Provider", async () => {
+    const created = await request(app.getHttpServer())
+      .post('/providers')
+      .set('Authorization', authHeader)
+      .send(createProviderBody());
+    const createdId = (created.body as ProviderResponseDto).id;
+
+    await request(app.getHttpServer())
+      .put(`/providers/${createdId}`)
+      .set('Authorization', strangerAuthHeader)
+      .send({ biography: 'Hijacked bio.' })
+      .expect(403);
+  });
+
+  it("DELETE /providers/:id refuses to delete another Identity's Provider", async () => {
+    const created = await request(app.getHttpServer())
+      .post('/providers')
+      .set('Authorization', authHeader)
+      .send(createProviderBody());
+    const createdId = (created.body as ProviderResponseDto).id;
+
+    await request(app.getHttpServer())
+      .delete(`/providers/${createdId}`)
+      .set('Authorization', strangerAuthHeader)
+      .expect(403);
   });
 
   it('DELETE /providers/:id deletes an existing Provider', async () => {

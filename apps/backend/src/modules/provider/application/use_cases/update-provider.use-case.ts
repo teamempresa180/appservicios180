@@ -1,4 +1,7 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { CategoryId } from '../../../category/domain/value-objects/category-id.value-object';
 import { CategorySpecializationRepository } from '../../../category/domain/interfaces/category-specialization-repository.interface';
@@ -6,6 +9,7 @@ import { SpecializationId } from '../../../category/domain/value-objects/special
 import { Provider } from '../../domain/entities/provider.entity';
 import { ProviderRepository } from '../../domain/interfaces/provider-repository.interface';
 import { ProviderId } from '../../domain/value-objects/provider-id.value-object';
+import { ProviderStatus } from '../../domain/value-objects/provider-status.value-object';
 import { UpdateProviderCommand } from '../commands/update-provider.command';
 import { ProviderDto } from '../dto/provider.dto';
 import { ProviderMapper } from '../mappers/provider.mapper';
@@ -23,6 +27,21 @@ import { ProviderValidator } from '../validators/provider.validator';
  * `CategorySpecialization` exists and actually belongs to the
  * resulting Category — same real business rule as
  * `CreateProviderUseCase`.
+ *
+ * Authorization (Sprint 4, Etapa 18). `status` is the sensitive field:
+ * left ungated it let any authenticated caller self-approve as a
+ * Provider by sending `{"status":"ACTIVE"}`. The rules are:
+ *
+ * - `Admin` may edit any Provider and set `status` to any value.
+ * - The owner (`existing.identityId === caller.id`) may freely edit
+ *   `biography`/`experience`/`categoryId`/`specializationId`, but the
+ *   only `status` transition available to them is `Rejected → Pending`
+ *   — resubmitting an application after a rejection, which is the sole
+ *   status write the mobile client performs
+ *   (`http_become_provider_repository.dart` sends `{'status':
+ *   'PENDING'}`). Every other `status` value, `Active` included, is
+ *   rejected with `ForbiddenException`.
+ * - Anyone else is refused the update outright.
  */
 export class UpdateProviderUseCase {
   constructor(
@@ -30,13 +49,35 @@ export class UpdateProviderUseCase {
     private readonly categorySpecializationRepository?: CategorySpecializationRepository,
   ) {}
 
-  async execute(command: UpdateProviderCommand): Promise<ProviderDto> {
+  async execute(
+    command: UpdateProviderCommand,
+    caller: AuthenticatedUser,
+  ): Promise<ProviderDto> {
     ProviderValidator.validateUpdate(command);
 
     const id = ProviderId.fromString(command.id);
     const existing = await this.providerRepository.findById(id);
     if (!existing) {
       throw new NotFoundException(`Provider ${command.id} not found`);
+    }
+
+    if (caller.role !== Role.Admin) {
+      if (existing.identityId.value !== caller.id) {
+        throw new ForbiddenException(
+          'Only the owning Identity or an Admin may update this Provider',
+        );
+      }
+      if (
+        command.status !== undefined &&
+        !(
+          existing.status === ProviderStatus.Rejected &&
+          command.status === ProviderStatus.Pending
+        )
+      ) {
+        throw new ForbiddenException(
+          'Only an Admin may change a Provider status; the owner may only resubmit a rejected application (REJECTED to PENDING)',
+        );
+      }
     }
 
     const categoryId = command.categoryId

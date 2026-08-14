@@ -19,6 +19,8 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/swagger/error-response.dto';
 import { JwtAuthGuard } from '../../../../common/auth/jwt-auth.guard';
+import { CurrentUser } from '../../../../common/auth/current-user.decorator';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { ProviderRoutes } from '../routes/provider.routes';
 import { ProviderSwagger } from '../swagger/provider.swagger';
 import { CreateProviderUseCase } from '../../application/use_cases/create-provider.use-case';
@@ -95,9 +97,11 @@ export class ProviderController {
   })
   async create(
     @Body() dto: CreateProviderRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<ProviderResponseDto> {
     const provider = await this.createProviderUseCase.execute(
       ProviderHttpMapper.toCreateCommand(dto),
+      user,
     );
     return ProviderHttpMapper.toResponse(provider);
   }
@@ -123,9 +127,11 @@ export class ProviderController {
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateProviderRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<ProviderResponseDto> {
     const provider = await this.updateProviderUseCase.execute(
       ProviderHttpMapper.toUpdateCommand(id, dto),
+      user,
     );
     return ProviderHttpMapper.toResponse(provider);
   }
@@ -139,8 +145,14 @@ export class ProviderController {
     description: 'Provider not found.',
     type: ErrorResponseDto,
   })
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.deleteProviderUseCase.execute(new DeleteProviderCommand(id));
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<void> {
+    await this.deleteProviderUseCase.execute(
+      new DeleteProviderCommand(id),
+      user,
+    );
   }
 
   @Get()

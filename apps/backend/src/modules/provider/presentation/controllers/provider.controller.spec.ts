@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { ProviderController } from './provider.controller';
 import { CreateProviderUseCase } from '../../application/use_cases/create-provider.use-case';
 import { UpdateProviderUseCase } from '../../application/use_cases/update-provider.use-case';
@@ -30,6 +32,11 @@ describe('ProviderController', () => {
   let searchUseCase: { execute: jest.Mock };
   let compatibleUseCase: { execute: jest.Mock };
 
+  const caller: AuthenticatedUser = {
+    id: 'identity-1',
+    role: Role.Provider,
+  };
+
   const providerDto: ProviderDto = {
     id: 'id-1',
     identityId: 'identity-1',
@@ -61,6 +68,11 @@ describe('ProviderController', () => {
     searchUseCase = { execute: jest.fn().mockResolvedValue([providerDto]) };
     compatibleUseCase = { execute: jest.fn().mockResolvedValue([providerDto]) };
 
+    /**
+     * The controller forwards the authenticated caller straight to the
+     * Use Case, which owns the ownership/role rules — these cases only
+     * assert the wiring, not the rules themselves.
+     */
     controller = new ProviderController(
       createUseCase as unknown as CreateProviderUseCase,
       updateUseCase as unknown as UpdateProviderUseCase,
@@ -82,7 +94,7 @@ describe('ProviderController', () => {
       yearsOfExperience: 10,
     };
 
-    const response = await controller.create(dto);
+    const response = await controller.create(dto, caller);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
       new CreateProviderCommand(
@@ -93,6 +105,7 @@ describe('ProviderController', () => {
         'Plumber with 10 years of experience.',
         10,
       ),
+      caller,
     );
     expect(response.id).toBe('id-1');
   });
@@ -100,19 +113,21 @@ describe('ProviderController', () => {
   it('update() maps id + request DTO to a command', async () => {
     const dto: UpdateProviderRequestDto = { biography: 'Updated bio.' };
 
-    const response = await controller.update('id-1', dto);
+    const response = await controller.update('id-1', dto, caller);
 
     expect(updateUseCase.execute).toHaveBeenCalledWith(
       new UpdateProviderCommand('id-1', 'Updated bio.', undefined, undefined),
+      caller,
     );
     expect(response.id).toBe('id-1');
   });
 
   it('remove() delegates to DeleteProviderUseCase with the id', async () => {
-    await controller.remove('id-1');
+    await controller.remove('id-1', caller);
 
     expect(deleteUseCase.execute).toHaveBeenCalledWith(
       new DeleteProviderCommand('id-1'),
+      caller,
     );
   });
 

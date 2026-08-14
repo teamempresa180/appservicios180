@@ -1,4 +1,7 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { BusinessRuleException } from '../../../core/domain/exceptions/business-rule.exception';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Identity } from '../../../identity/domain/entities/identity.entity';
@@ -67,6 +70,22 @@ describe('Provider use cases', () => {
     profileId = profile.id.value;
   });
 
+  /**
+   * Most cases below exercise behaviour that is orthogonal to the
+   * Etapa 18 authorization rules, so they run as an `Admin` — the one
+   * caller allowed through every branch. The ownership and
+   * status-transition rules themselves get their own dedicated cases.
+   */
+  const admin: AuthenticatedUser = { id: 'admin-identity', role: Role.Admin };
+  const owner = (): AuthenticatedUser => ({
+    id: identityId,
+    role: Role.Provider,
+  });
+  const stranger: AuthenticatedUser = {
+    id: 'someone-else',
+    role: Role.Customer,
+  };
+
   function createCommand() {
     return new CreateProviderCommand(
       identityId,
@@ -85,7 +104,7 @@ describe('Provider use cases', () => {
         identityRepository,
         profileRepository,
       );
-      const dto = await useCase.execute(createCommand());
+      const dto = await useCase.execute(createCommand(), owner());
 
       expect(dto.identityId).toBe(identityId);
       expect(dto.providerProfileId).toBe(profileId);
@@ -108,6 +127,7 @@ describe('Provider use cases', () => {
             'bio',
             5,
           ),
+          admin,
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -128,6 +148,7 @@ describe('Provider use cases', () => {
             'bio',
             5,
           ),
+          owner(),
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -148,6 +169,7 @@ describe('Provider use cases', () => {
             'bio',
             -1,
           ),
+          owner(),
         ),
       ).rejects.toThrow(ValidationException);
     });
@@ -158,11 +180,35 @@ describe('Provider use cases', () => {
         identityRepository,
         profileRepository,
       );
-      await useCase.execute(createCommand());
+      await useCase.execute(createCommand(), owner());
 
-      await expect(useCase.execute(createCommand())).rejects.toThrow(
+      await expect(useCase.execute(createCommand(), owner())).rejects.toThrow(
         BusinessRuleException,
       );
+    });
+
+    it('refuses to create a Provider for another Identity', async () => {
+      const useCase = new CreateProviderUseCase(
+        repository,
+        identityRepository,
+        profileRepository,
+      );
+
+      await expect(
+        useCase.execute(createCommand(), stranger),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('lets an Admin create a Provider on behalf of another Identity', async () => {
+      const useCase = new CreateProviderUseCase(
+        repository,
+        identityRepository,
+        profileRepository,
+      );
+
+      const dto = await useCase.execute(createCommand(), admin);
+
+      expect(dto.identityId).toBe(identityId);
     });
   });
 
@@ -182,7 +228,7 @@ describe('Provider use cases', () => {
         repository,
         identityRepository,
         profileRepository,
-      ).execute(createCommand());
+      ).execute(createCommand(), owner());
 
       const updated = await new UpdateProviderUseCase(repository).execute(
         new UpdateProviderCommand(
@@ -191,6 +237,7 @@ describe('Provider use cases', () => {
           ProviderExperience.Expert,
           ProviderStatus.Inactive,
         ),
+        admin,
       );
 
       expect(updated.biography).toBe('New bio');
@@ -202,8 +249,114 @@ describe('Provider use cases', () => {
       await expect(
         new UpdateProviderUseCase(repository).execute(
           new UpdateProviderCommand('unknown-id', 'bio'),
+          admin,
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('lets the owner edit non-status fields', async () => {
+      const created = await new CreateProviderUseCase(
+        repository,
+        identityRepository,
+        profileRepository,
+      ).execute(createCommand(), owner());
+
+      const updated = await new UpdateProviderUseCase(repository).execute(
+        new UpdateProviderCommand(
+          created.id,
+          'Owner-edited bio',
+          ProviderExperience.Expert,
+        ),
+        owner(),
+      );
+
+      expect(updated.biography).toBe('Owner-edited bio');
+      expect(updated.status).toBe(ProviderStatus.Pending);
+    });
+
+    it('refuses to let a non-admin owner self-approve as ACTIVE', async () => {
+      const created = await new CreateProviderUseCase(
+        repository,
+        identityRepository,
+        profileRepository,
+      ).execute(createCommand(), owner());
+
+      await expect(
+        new UpdateProviderUseCase(repository).execute(
+          new UpdateProviderCommand(
+            created.id,
+            undefined,
+            undefined,
+            ProviderStatus.Active,
+          ),
+          owner(),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('lets the owner resubmit a rejected application (REJECTED to PENDING)', async () => {
+      const created = await new CreateProviderUseCase(
+        repository,
+        identityRepository,
+        profileRepository,
+      ).execute(createCommand(), owner());
+
+      await new UpdateProviderUseCase(repository).execute(
+        new UpdateProviderCommand(
+          created.id,
+          undefined,
+          undefined,
+          ProviderStatus.Rejected,
+        ),
+        admin,
+      );
+
+      const resubmitted = await new UpdateProviderUseCase(repository).execute(
+        new UpdateProviderCommand(
+          created.id,
+          undefined,
+          undefined,
+          ProviderStatus.Pending,
+        ),
+        owner(),
+      );
+
+      expect(resubmitted.status).toBe(ProviderStatus.Pending);
+    });
+
+    it('refuses a PENDING status write when the Provider was not rejected', async () => {
+      const created = await new CreateProviderUseCase(
+        repository,
+        identityRepository,
+        profileRepository,
+      ).execute(createCommand(), owner());
+
+      await expect(
+        new UpdateProviderUseCase(repository).execute(
+          new UpdateProviderCommand(
+            created.id,
+            undefined,
+            undefined,
+            ProviderStatus.Pending,
+          ),
+          owner(),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('refuses an update from a caller who is neither owner nor admin', async () => {
+      const created = await new CreateProviderUseCase(
+        repository,
+        identityRepository,
+        profileRepository,
+      ).execute(createCommand(), owner());
+
+      await expect(
+        new UpdateProviderUseCase(repository).execute(
+          new UpdateProviderCommand(created.id, 'Hijacked bio'),
+          stranger,
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -213,10 +366,11 @@ describe('Provider use cases', () => {
         repository,
         identityRepository,
         profileRepository,
-      ).execute(createCommand());
+      ).execute(createCommand(), owner());
 
       await new DeleteProviderUseCase(repository).execute(
         new DeleteProviderCommand(created.id),
+        owner(),
       );
 
       await expect(
@@ -230,8 +384,24 @@ describe('Provider use cases', () => {
       await expect(
         new DeleteProviderUseCase(repository).execute(
           new DeleteProviderCommand('unknown-id'),
+          admin,
         ),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('refuses to delete a Provider owned by someone else', async () => {
+      const created = await new CreateProviderUseCase(
+        repository,
+        identityRepository,
+        profileRepository,
+      ).execute(createCommand(), owner());
+
+      await expect(
+        new DeleteProviderUseCase(repository).execute(
+          new DeleteProviderCommand(created.id),
+          stranger,
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -264,7 +434,7 @@ describe('Provider use cases', () => {
         identityRepository,
         profileRepository,
       );
-      await createUseCase.execute(createCommand());
+      await createUseCase.execute(createCommand(), owner());
       await createUseCase.execute(
         new CreateProviderCommand(
           identity2.id.value,
@@ -274,6 +444,7 @@ describe('Provider use cases', () => {
           'Second bio',
           10,
         ),
+        { id: identity2.id.value, role: Role.Provider },
       );
 
       const page = await new ListProviderUseCase(repository).execute(
@@ -300,6 +471,7 @@ describe('Provider use cases', () => {
           'Special marker biography',
           5,
         ),
+        owner(),
       );
 
       const results = await new SearchProviderUseCase(repository).execute(
