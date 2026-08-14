@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { PassportModule } from '@nestjs/passport';
@@ -27,7 +28,9 @@ import { ProviderType } from '../src/modules/provider/domain/value-objects/provi
 import { ProviderExperience } from '../src/modules/provider/domain/value-objects/provider-experience.value-object';
 import { ProfileId } from '../src/modules/profiles/domain/value-objects/profile-id.value-object';
 import { CATEGORY_REPOSITORY } from '../src/modules/category/domain/interfaces/category-repository.interface';
+import { CATEGORY_SPECIALIZATION_REPOSITORY } from '../src/modules/category/domain/interfaces/category-specialization-repository.interface';
 import { InMemoryCategoryRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category.repository';
+import { InMemoryCategorySpecializationRepository } from '../src/modules/category/application/use_cases/test-support/in-memory-category-specialization.repository';
 import { Category } from '../src/modules/category/domain/entities/category.entity';
 import { CategoryType } from '../src/modules/category/domain/value-objects/category-type.value-object';
 import { CategoryStatus } from '../src/modules/category/domain/value-objects/category-status.value-object';
@@ -60,6 +63,8 @@ import { ErrorResponseDto } from '../src/common/swagger/error-response.dto';
 describe('OrderController (e2e)', () => {
   let app: INestApplication<App>;
   let authHeader: string;
+  let adminAuthHeader: string;
+  let strangerAuthHeader: string;
   let identityId: string;
   let providerId: string;
   let serviceId: string;
@@ -146,6 +151,8 @@ describe('OrderController (e2e)', () => {
       .useValue(new InMemoryProfileRepository())
       .overrideProvider(CATEGORY_REPOSITORY)
       .useValue(categoryRepository)
+      .overrideProvider(CATEGORY_SPECIALIZATION_REPOSITORY)
+      .useValue(new InMemoryCategorySpecializationRepository())
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -153,9 +160,25 @@ describe('OrderController (e2e)', () => {
       new AllExceptionsFilter(),
       new DomainExceptionFilter(),
     );
+    // Mirrors the global pipe `main.ts` installs, so this suite
+    // exercises the same DTO validation production runs.
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
     await app.init();
 
     authHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: identityId, role: 'CUSTOMER' })}`;
+    // `GET /orders` and `GET /orders/search` are unscoped back-office
+    // listings, restricted to Admin since Etapa 18.
+    adminAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: randomUUID(), role: 'ADMIN' })}`;
+    // A Provider with no relationship to the Orders created here —
+    // used to prove the ownership checks actually reject outsiders.
+    strangerAuthHeader = `Bearer ${signTestAccessToken(app.get(ConfigService), { sub: randomUUID(), role: 'PROVIDER' })}`;
   });
 
   afterEach(async () => {
@@ -193,10 +216,34 @@ describe('OrderController (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/orders')
       .set('Authorization', authHeader)
-      .send(createOrderBody({ identityId: 'unknown-identity' }))
+      .send(createOrderBody({ identityId: randomUUID() }))
       .expect(404);
 
     expect((response.body as ErrorResponseDto).error).toBe('NotFoundException');
+  });
+
+  it('POST /orders returns 400 when a reference id is not a UUID', async () => {
+    await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', authHeader)
+      .send(createOrderBody({ identityId: 'unknown-identity' }))
+      .expect(400);
+  });
+
+  it('POST /orders returns 400 for an out-of-range title', async () => {
+    await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', authHeader)
+      .send(createOrderBody({ title: 'x'.repeat(151) }))
+      .expect(400);
+  });
+
+  it('POST /orders returns 400 for an unknown field (forbidNonWhitelisted)', async () => {
+    await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', authHeader)
+      .send(createOrderBody({ status: 'COMPLETED' }))
+      .expect(400);
   });
 
   it('GET /orders/:id returns 404 for an unknown id', async () => {
@@ -237,7 +284,77 @@ describe('OrderController (e2e)', () => {
     expect((response.body as OrderResponseDto).status).toBe('CANCELLED');
   });
 
-  it('GET /orders lists Orders page by page', async () => {
+  it('PUT /orders/:id/cancel returns 403 for a user who is neither the customer nor the assigned Provider', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', authHeader)
+      .send(createOrderBody());
+    const createdId = (created.body as OrderResponseDto).id;
+
+    const response = await request(app.getHttpServer())
+      .put(`/orders/${createdId}/cancel`)
+      .set('Authorization', strangerAuthHeader)
+      .expect(403);
+
+    expect((response.body as ErrorResponseDto).error).toBe(
+      'ForbiddenException',
+    );
+  });
+
+  it('PUT /orders/:id/start returns 403 for a caller who is not the assigned Provider', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', authHeader)
+      .send(createOrderBody());
+    const createdId = (created.body as OrderResponseDto).id;
+
+    await request(app.getHttpServer())
+      .put(`/orders/${createdId}/start`)
+      .set('Authorization', strangerAuthHeader)
+      .expect(403);
+  });
+
+  it('PUT /orders/:id/complete returns 403 for a caller who is not the assigned Provider', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', authHeader)
+      .send(createOrderBody());
+    const createdId = (created.body as OrderResponseDto).id;
+
+    await request(app.getHttpServer())
+      .put(`/orders/${createdId}/complete`)
+      .set('Authorization', strangerAuthHeader)
+      .expect(403);
+  });
+
+  it('GET /orders/:id returns 403 for a caller who is not a party to the Order', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', authHeader)
+      .send(createOrderBody());
+    const createdId = (created.body as OrderResponseDto).id;
+
+    await request(app.getHttpServer())
+      .get(`/orders/${createdId}`)
+      .set('Authorization', strangerAuthHeader)
+      .expect(403);
+  });
+
+  it('PUT /orders/:id returns 403 for a caller who is not the customer', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/orders')
+      .set('Authorization', authHeader)
+      .send(createOrderBody());
+    const createdId = (created.body as OrderResponseDto).id;
+
+    await request(app.getHttpServer())
+      .put(`/orders/${createdId}`)
+      .set('Authorization', strangerAuthHeader)
+      .send({ title: 'Hijacked' })
+      .expect(403);
+  });
+
+  it('GET /orders lists Orders page by page for an Admin', async () => {
     await request(app.getHttpServer())
       .post('/orders')
       .set('Authorization', authHeader)
@@ -245,7 +362,7 @@ describe('OrderController (e2e)', () => {
 
     const response = await request(app.getHttpServer())
       .get('/orders')
-      .set('Authorization', authHeader)
+      .set('Authorization', adminAuthHeader)
       .expect(200);
 
     const body = response.body as OrderListResponseDto;
@@ -254,7 +371,14 @@ describe('OrderController (e2e)', () => {
     expect(body.pageSize).toBe(20);
   });
 
-  it('GET /orders/search searches by title', async () => {
+  it('GET /orders returns 403 for a non-Admin', async () => {
+    await request(app.getHttpServer())
+      .get('/orders')
+      .set('Authorization', authHeader)
+      .expect(403);
+  });
+
+  it('GET /orders/search searches by title for an Admin', async () => {
     await request(app.getHttpServer())
       .post('/orders')
       .set('Authorization', authHeader)
@@ -262,12 +386,20 @@ describe('OrderController (e2e)', () => {
 
     const response = await request(app.getHttpServer())
       .get('/orders/search')
-      .set('Authorization', authHeader)
+      .set('Authorization', adminAuthHeader)
       .query({ term: 'faucet' })
       .expect(200);
 
     const body = response.body as OrderResponseDto[];
     expect(body).toHaveLength(1);
     expect(body[0].title).toBe('Fix leaking kitchen faucet');
+  });
+
+  it('GET /orders/search returns 403 for a non-Admin', async () => {
+    await request(app.getHttpServer())
+      .get('/orders/search')
+      .set('Authorization', authHeader)
+      .query({ term: 'faucet' })
+      .expect(403);
   });
 });

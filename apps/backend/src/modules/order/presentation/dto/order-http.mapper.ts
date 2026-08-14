@@ -1,3 +1,4 @@
+import { Caller } from '../../../core/application/caller';
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { CreateOrderCommand } from '../../application/commands/create-order.command';
 import { UpdateOrderCommand } from '../../application/commands/update-order.command';
@@ -35,9 +36,11 @@ export class OrderHttpMapper {
   static toUpdateCommand(
     id: string,
     dto: UpdateOrderRequestDto,
+    caller: Caller,
   ): UpdateOrderCommand {
     return new UpdateOrderCommand(
       id,
+      caller,
       dto.title,
       dto.description,
       dto.scheduledDate !== undefined ? new Date(dto.scheduledDate) : undefined,

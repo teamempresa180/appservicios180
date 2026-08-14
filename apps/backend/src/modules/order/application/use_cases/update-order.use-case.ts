@@ -1,6 +1,7 @@
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { OrderRepository } from '../../domain/interfaces/order-repository.interface';
 import { OrderId } from '../../domain/value-objects/order-id.value-object';
+import { assertOwningCustomer } from '../authorization/order-access';
 import { UpdateOrderCommand } from '../commands/update-order.command';
 import { OrderDto } from '../dto/order.dto';
 import { OrderMapper } from '../mappers/order.mapper';
@@ -14,6 +15,10 @@ import { OrderValidator } from '../validators/order.validator';
  * `CancelOrderUseCase`/`StartOrderUseCase`/`CompleteOrderUseCase`
  * (and, for `Pending` → `Accepted` on an open request, through
  * `AcceptQuoteUseCase` assigning a Provider).
+ *
+ * Restricted to the customer who requested the Order (or an Admin):
+ * these are the client's own request details, so not even the
+ * assigned Provider may rewrite them.
  */
 export class UpdateOrderUseCase {
   constructor(private readonly orderRepository: OrderRepository) {}
@@ -26,6 +31,7 @@ export class UpdateOrderUseCase {
     if (!existing) {
       throw new NotFoundException(`Order ${command.id} not found`);
     }
+    assertOwningCustomer(existing, command.caller, 'update');
 
     const updated = existing.with({
       title: command.title ?? existing.title,
