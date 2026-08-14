@@ -1,3 +1,4 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { CreateAttachmentCommand } from '../../application/commands/create-attachment.command';
 import { AttachmentDto } from '../../application/dto/attachment.dto';
@@ -12,12 +13,18 @@ import { AttachmentListResponseDto } from './attachment-list.response.dto';
  * `CreateAttachmentCommand` or an `AttachmentResponseDto` by hand. No
  * `toUpdateCommand`: there is no `UpdateAttachmentCommand` in the
  * Application layer, only Create/Delete.
+ *
+ * The command carries the authenticated caller so the Use Case can
+ * enforce authorship; it comes from `@CurrentUser()`, never from the
+ * request body.
  */
 export class AttachmentHttpMapper {
   static toCreateCommand(
+    caller: AuthenticatedUser,
     dto: CreateAttachmentRequestDto,
   ): CreateAttachmentCommand {
     return new CreateAttachmentCommand(
+      caller,
       dto.messageId,
       dto.fileName,
       dto.mimeType,

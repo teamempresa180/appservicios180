@@ -1,3 +1,6 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
+import { ForbiddenException } from '../../../core/domain/exceptions/forbidden.exception';
 import { NotFoundException } from '../../../core/domain/exceptions/not-found.exception';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { Message } from '../../../message/domain/entities/message.entity';
@@ -25,15 +28,21 @@ describe('Attachment use cases', () => {
   let repository: InMemoryAttachmentRepository;
   let messageRepository: InMemoryMessageRepository;
   let messageId: string;
+  /** The Message's sender — the only Identity allowed to attach to it. */
+  let caller: AuthenticatedUser;
+  /** The other side of the Chat — sees Attachments, cannot mutate them. */
+  let peer: AuthenticatedUser;
 
   beforeEach(async () => {
     repository = new InMemoryAttachmentRepository();
     messageRepository = new InMemoryMessageRepository();
 
     const now = new Date();
+    const senderIdentityId = IdentityId.create();
+    const peerIdentityId = IdentityId.create();
     const message = new Message(MessageId.create(), {
       chatId: ChatId.create(),
-      senderIdentityId: IdentityId.create(),
+      senderIdentityId,
       content: 'Here is the photo',
       type: MessageType.Text,
       status: MessageStatus.Sent,
@@ -42,10 +51,18 @@ describe('Attachment use cases', () => {
     });
     await messageRepository.save(message);
     messageId = message.id.value;
+
+    caller = { id: senderIdentityId.value, role: Role.Customer };
+    peer = { id: peerIdentityId.value, role: Role.Provider };
+    repository.registerParticipants(messageId, [
+      senderIdentityId.value,
+      peerIdentityId.value,
+    ]);
   });
 
   function createCommand(overrides: Partial<{ fileName: string }> = {}) {
     return new CreateAttachmentCommand(
+      caller,
       messageId,
       overrides.fileName ?? 'photo.jpg',
       'image/jpeg',
@@ -70,6 +87,7 @@ describe('Attachment use cases', () => {
       await expect(
         useCase().execute(
           new CreateAttachmentCommand(
+            caller,
             'unknown-message',
             'photo.jpg',
             'image/jpeg',
@@ -84,6 +102,7 @@ describe('Attachment use cases', () => {
       await expect(
         useCase().execute(
           new CreateAttachmentCommand(
+            caller,
             messageId,
             'photo.jpg',
             'image/jpeg',
@@ -98,7 +117,7 @@ describe('Attachment use cases', () => {
   describe('GetAttachmentUseCase', () => {
     it('returns null when it does not exist', async () => {
       const result = await new GetAttachmentUseCase(repository).execute(
-        new GetAttachmentQuery('unknown-id'),
+        new GetAttachmentQuery(caller, 'unknown-id'),
       );
       expect(result).toBeNull();
     });
@@ -107,7 +126,7 @@ describe('Attachment use cases', () => {
       const created = await useCase().execute(createCommand());
 
       const result = await new GetAttachmentUseCase(repository).execute(
-        new GetAttachmentQuery(created.id),
+        new GetAttachmentQuery(caller, created.id),
       );
       expect(result?.id).toBe(created.id);
     });
@@ -117,20 +136,20 @@ describe('Attachment use cases', () => {
     it('deletes an existing Attachment', async () => {
       const created = await useCase().execute(createCommand());
 
-      await new DeleteAttachmentUseCase(repository).execute(
-        new DeleteAttachmentCommand(created.id),
+      await new DeleteAttachmentUseCase(repository, messageRepository).execute(
+        new DeleteAttachmentCommand(caller, created.id),
       );
 
       const result = await new GetAttachmentUseCase(repository).execute(
-        new GetAttachmentQuery(created.id),
+        new GetAttachmentQuery(caller, created.id),
       );
       expect(result).toBeNull();
     });
 
     it('throws NotFoundException for an unknown id', async () => {
       await expect(
-        new DeleteAttachmentUseCase(repository).execute(
-          new DeleteAttachmentCommand('unknown-id'),
+        new DeleteAttachmentUseCase(repository, messageRepository).execute(
+          new DeleteAttachmentCommand(caller, 'unknown-id'),
         ),
       ).rejects.toThrow(NotFoundException);
     });
@@ -142,11 +161,108 @@ describe('Attachment use cases', () => {
       await useCase().execute(createCommand({ fileName: 'b.jpg' }));
 
       const page = await new ListAttachmentUseCase(repository).execute(
-        new ListAttachmentQuery(1, 1),
+        new ListAttachmentQuery(caller, 1, 1),
       );
 
       expect(page.items).toHaveLength(1);
       expect(page.total).toBe(2);
+    });
+  });
+
+  describe('authorization', () => {
+    const stranger: AuthenticatedUser = {
+      id: 'stranger-identity',
+      role: Role.Customer,
+    };
+    const admin: AuthenticatedUser = {
+      id: 'admin-identity',
+      role: Role.Admin,
+    };
+
+    it('CreateAttachmentUseCase rejects attaching to someone else’s Message', async () => {
+      await expect(
+        useCase().execute(
+          new CreateAttachmentCommand(
+            peer,
+            messageId,
+            'photo.jpg',
+            'image/jpeg',
+            2048,
+            AttachmentType.Image,
+          ),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('DeleteAttachmentUseCase rejects a chat peer deleting the sender’s Attachment', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new DeleteAttachmentUseCase(repository, messageRepository).execute(
+          new DeleteAttachmentCommand(peer, created.id),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('GetAttachmentUseCase lets the chat peer read the Attachment', async () => {
+      const created = await useCase().execute(createCommand());
+
+      const result = await new GetAttachmentUseCase(repository).execute(
+        new GetAttachmentQuery(peer, created.id),
+      );
+
+      expect(result?.id).toBe(created.id);
+    });
+
+    it('GetAttachmentUseCase rejects an Identity outside the Chat', async () => {
+      const created = await useCase().execute(createCommand());
+
+      await expect(
+        new GetAttachmentUseCase(repository).execute(
+          new GetAttachmentQuery(stranger, created.id),
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('ListAttachmentUseCase hides Attachments from Chats the caller is not in', async () => {
+      await useCase().execute(createCommand());
+
+      const page = await new ListAttachmentUseCase(repository).execute(
+        new ListAttachmentQuery(stranger),
+      );
+
+      expect(page.items).toHaveLength(0);
+      expect(page.total).toBe(0);
+    });
+
+    it('ListAttachmentUseCase shows the chat peer the conversation’s Attachments', async () => {
+      await useCase().execute(createCommand());
+
+      const page = await new ListAttachmentUseCase(repository).execute(
+        new ListAttachmentQuery(peer),
+      );
+
+      expect(page.total).toBe(1);
+    });
+
+    it('SearchAttachmentUseCase hides Attachments from Chats the caller is not in', async () => {
+      await useCase().execute(createCommand({ fileName: 'secret-plan.pdf' }));
+
+      const results = await new SearchAttachmentUseCase(repository).execute(
+        new SearchAttachmentQuery(stranger, 'secret'),
+      );
+
+      expect(results).toHaveLength(0);
+    });
+
+    it('an Admin caller sees every Attachment', async () => {
+      await useCase().execute(createCommand());
+
+      const page = await new ListAttachmentUseCase(repository).execute(
+        new ListAttachmentQuery(admin),
+      );
+
+      expect(page.total).toBe(1);
     });
   });
 
@@ -155,7 +271,7 @@ describe('Attachment use cases', () => {
       await useCase().execute(createCommand({ fileName: 'special-photo.jpg' }));
 
       const results = await new SearchAttachmentUseCase(repository).execute(
-        new SearchAttachmentQuery('special'),
+        new SearchAttachmentQuery(caller, 'special'),
       );
 
       expect(results).toHaveLength(1);

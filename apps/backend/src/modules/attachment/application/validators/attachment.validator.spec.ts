@@ -1,13 +1,18 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { ValidationException } from '../../../core/domain/exceptions/validation.exception';
 import { AttachmentType } from '../../domain/value-objects/attachment-type.value-object';
 import { CreateAttachmentCommand } from '../commands/create-attachment.command';
 import { AttachmentValidator } from './attachment.validator';
 
 describe('AttachmentValidator', () => {
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
+
   function validCommand(
     overrides: Partial<{ messageId: string }> = {},
   ): CreateAttachmentCommand {
     return new CreateAttachmentCommand(
+      caller,
       overrides.messageId ?? 'message-1',
       'photo.jpg',
       'image/jpeg',
@@ -33,6 +38,7 @@ describe('AttachmentValidator', () => {
       expect(() =>
         AttachmentValidator.validateCreate(
           new CreateAttachmentCommand(
+            caller,
             'message-1',
             'photo.jpg',
             'image/jpeg',
@@ -47,6 +53,7 @@ describe('AttachmentValidator', () => {
       expect(() =>
         AttachmentValidator.validateCreate(
           new CreateAttachmentCommand(
+            caller,
             'message-1',
             'photo.jpg',
             'image/jpeg',

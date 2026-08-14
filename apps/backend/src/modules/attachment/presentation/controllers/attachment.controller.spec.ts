@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
+import { Role } from '../../../../common/auth/role.enum';
 import { AttachmentController } from './attachment.controller';
 import { CreateAttachmentUseCase } from '../../application/use_cases/create-attachment.use-case';
 import { DeleteAttachmentUseCase } from '../../application/use_cases/delete-attachment.use-case';
@@ -22,6 +24,8 @@ describe('AttachmentController', () => {
   let getUseCase: { execute: jest.Mock };
   let listUseCase: { execute: jest.Mock };
   let searchUseCase: { execute: jest.Mock };
+
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
 
   const attachmentDto: AttachmentDto = {
     id: 'id-1',
@@ -66,10 +70,11 @@ describe('AttachmentController', () => {
       type: AttachmentType.Image,
     };
 
-    const response = await controller.create(dto);
+    const response = await controller.create(caller, dto);
 
     expect(createUseCase.execute).toHaveBeenCalledWith(
       new CreateAttachmentCommand(
+        caller,
         'message-1',
         'leak-photo.jpg',
         'image/jpeg',
@@ -81,38 +86,38 @@ describe('AttachmentController', () => {
   });
 
   it('remove() delegates to DeleteAttachmentUseCase with the id', async () => {
-    await controller.remove('id-1');
+    await controller.remove(caller, 'id-1');
 
     expect(deleteUseCase.execute).toHaveBeenCalledWith(
-      new DeleteAttachmentCommand('id-1'),
+      new DeleteAttachmentCommand(caller, 'id-1'),
     );
   });
 
   it('list() maps page/pageSize query params to a query and wraps the paginated result', async () => {
-    const response = await controller.list('2', '10');
+    const response = await controller.list(caller, '2', '10');
 
     expect(listUseCase.execute).toHaveBeenCalledWith(
-      new ListAttachmentQuery(2, 10),
+      new ListAttachmentQuery(caller, 2, 10),
     );
     expect(response.items).toHaveLength(1);
     expect(response.total).toBe(1);
   });
 
   it('search() maps the term query param and the Application DTOs to response DTOs', async () => {
-    const response = await controller.search('photo');
+    const response = await controller.search(caller, 'photo');
 
     expect(searchUseCase.execute).toHaveBeenCalledWith(
-      new SearchAttachmentQuery('photo'),
+      new SearchAttachmentQuery(caller, 'photo'),
     );
     expect(response).toHaveLength(1);
     expect(response[0].fileName).toBe('leak-photo.jpg');
   });
 
   it('findOne() maps the Application DTO returned by GetAttachmentUseCase', async () => {
-    const response = await controller.findOne('id-1');
+    const response = await controller.findOne(caller, 'id-1');
 
     expect(getUseCase.execute).toHaveBeenCalledWith(
-      new GetAttachmentQuery('id-1'),
+      new GetAttachmentQuery(caller, 'id-1'),
     );
     expect(response.fileName).toBe('leak-photo.jpg');
   });
@@ -120,7 +125,7 @@ describe('AttachmentController', () => {
   it('findOne() throws NotFoundException when GetAttachmentUseCase returns null', async () => {
     getUseCase.execute.mockResolvedValue(null);
 
-    await expect(controller.findOne('unknown-id')).rejects.toThrow(
+    await expect(controller.findOne(caller, 'unknown-id')).rejects.toThrow(
       NotFoundException,
     );
   });
