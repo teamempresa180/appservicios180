@@ -1,3 +1,5 @@
+import { Role } from '../../../../common/auth/role.enum';
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { MessageController } from './message.controller';
 import { SendMessageUseCase } from '../../application/use_cases/send-message.use-case';
 import { DeleteMessageUseCase } from '../../application/use_cases/delete-message.use-case';
@@ -22,6 +24,8 @@ describe('MessageController', () => {
   let getUseCase: { execute: jest.Mock };
   let listUseCase: { execute: jest.Mock };
   let searchUseCase: { execute: jest.Mock };
+
+  const caller: AuthenticatedUser = { id: 'identity-1', role: Role.Customer };
 
   const messageDto: MessageDto = {
     id: 'id-1',
@@ -65,7 +69,7 @@ describe('MessageController', () => {
       type: MessageType.Text,
     };
 
-    const response = await controller.send(dto);
+    const response = await controller.send(dto, caller);
 
     expect(sendUseCase.execute).toHaveBeenCalledWith(
       new SendMessageCommand(
@@ -73,44 +77,45 @@ describe('MessageController', () => {
         'identity-1',
         'On my way.',
         MessageType.Text,
+        caller,
       ),
     );
     expect(response.id).toBe('id-1');
   });
 
-  it('remove() delegates to DeleteMessageUseCase with the id', async () => {
-    await controller.remove('id-1');
+  it('remove() delegates to DeleteMessageUseCase with the id and the caller', async () => {
+    await controller.remove('id-1', caller);
 
     expect(deleteUseCase.execute).toHaveBeenCalledWith(
-      new DeleteMessageCommand('id-1'),
+      new DeleteMessageCommand('id-1', caller),
     );
   });
 
   it('list() maps page/pageSize query params to a query and wraps the paginated result', async () => {
-    const response = await controller.list('2', '10');
+    const response = await controller.list(caller, '2', '10');
 
     expect(listUseCase.execute).toHaveBeenCalledWith(
-      new ListMessageQuery(2, 10),
+      new ListMessageQuery(caller, 2, 10),
     );
     expect(response.items).toHaveLength(1);
     expect(response.total).toBe(1);
   });
 
   it('search() maps the term query param and the Application DTOs to response DTOs', async () => {
-    const response = await controller.search('faucet');
+    const response = await controller.search('faucet', caller);
 
     expect(searchUseCase.execute).toHaveBeenCalledWith(
-      new SearchMessageQuery('faucet'),
+      new SearchMessageQuery('faucet', caller),
     );
     expect(response).toHaveLength(1);
     expect(response[0].content).toBe('On my way.');
   });
 
   it('findOne() maps the Application DTO returned by GetMessageUseCase', async () => {
-    const response = await controller.findOne('id-1');
+    const response = await controller.findOne('id-1', caller);
 
     expect(getUseCase.execute).toHaveBeenCalledWith(
-      new GetMessageQuery('id-1'),
+      new GetMessageQuery('id-1', caller),
     );
     expect(response.content).toBe('On my way.');
   });
@@ -118,7 +123,7 @@ describe('MessageController', () => {
   it('findOne() throws NotFoundException when GetMessageUseCase returns null', async () => {
     getUseCase.execute.mockResolvedValue(null);
 
-    await expect(controller.findOne('unknown-id')).rejects.toThrow(
+    await expect(controller.findOne('unknown-id', caller)).rejects.toThrow(
       NotFoundException,
     );
   });

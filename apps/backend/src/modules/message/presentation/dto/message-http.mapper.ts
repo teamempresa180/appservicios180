@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { PaginatedResult } from '../../../core/application/paginated-result';
 import { SendMessageCommand } from '../../application/commands/send-message.command';
 import { MessageDto } from '../../application/dto/message.dto';
@@ -14,12 +15,16 @@ import { MessageListResponseDto } from './message-list.response.dto';
  * Application layer, only Send/Delete.
  */
 export class MessageHttpMapper {
-  static toSendCommand(dto: SendMessageRequestDto): SendMessageCommand {
+  static toSendCommand(
+    dto: SendMessageRequestDto,
+    caller: AuthenticatedUser,
+  ): SendMessageCommand {
     return new SendMessageCommand(
       dto.chatId,
       dto.senderIdentityId,
       dto.content,
       dto.type,
+      caller,
     );
   }
 

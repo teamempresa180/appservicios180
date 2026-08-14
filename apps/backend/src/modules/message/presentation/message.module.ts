@@ -20,6 +20,7 @@ import {
   MessageRepository,
 } from '../domain/interfaces/message-repository.interface';
 import { PrismaMessageRepository } from '../infrastructure/persistence/prisma-message.repository';
+import { ChatParticipationService } from '../../chat/application/services/chat-participation.service';
 
 /**
  * Wires the Message presentation layer to its Use Cases, which are
@@ -40,8 +41,20 @@ import { PrismaMessageRepository } from '../infrastructure/persistence/prisma-me
         messageRepo: MessageRepository,
         chatRepo: ChatRepository,
         identityRepo: IdentityRepository,
-      ) => new SendMessageUseCase(messageRepo, chatRepo, identityRepo),
-      inject: [MESSAGE_REPOSITORY, CHAT_REPOSITORY, IDENTITY_REPOSITORY],
+        participation: ChatParticipationService,
+      ) =>
+        new SendMessageUseCase(
+          messageRepo,
+          chatRepo,
+          identityRepo,
+          participation,
+        ),
+      inject: [
+        MESSAGE_REPOSITORY,
+        CHAT_REPOSITORY,
+        IDENTITY_REPOSITORY,
+        ChatParticipationService,
+      ],
     },
     {
       provide: DeleteMessageUseCase,
@@ -50,18 +63,28 @@ import { PrismaMessageRepository } from '../infrastructure/persistence/prisma-me
     },
     {
       provide: GetMessageUseCase,
-      useFactory: (repo: MessageRepository) => new GetMessageUseCase(repo),
-      inject: [MESSAGE_REPOSITORY],
+      useFactory: (
+        repo: MessageRepository,
+        chatRepo: ChatRepository,
+        participation: ChatParticipationService,
+      ) => new GetMessageUseCase(repo, chatRepo, participation),
+      inject: [MESSAGE_REPOSITORY, CHAT_REPOSITORY, ChatParticipationService],
     },
     {
       provide: ListMessageUseCase,
-      useFactory: (repo: MessageRepository) => new ListMessageUseCase(repo),
-      inject: [MESSAGE_REPOSITORY],
+      useFactory: (
+        repo: MessageRepository,
+        participation: ChatParticipationService,
+      ) => new ListMessageUseCase(repo, participation),
+      inject: [MESSAGE_REPOSITORY, ChatParticipationService],
     },
     {
       provide: SearchMessageUseCase,
-      useFactory: (repo: MessageRepository) => new SearchMessageUseCase(repo),
-      inject: [MESSAGE_REPOSITORY],
+      useFactory: (
+        repo: MessageRepository,
+        participation: ChatParticipationService,
+      ) => new SearchMessageUseCase(repo, participation),
+      inject: [MESSAGE_REPOSITORY, ChatParticipationService],
     },
   ],
   exports: [MESSAGE_REPOSITORY],
