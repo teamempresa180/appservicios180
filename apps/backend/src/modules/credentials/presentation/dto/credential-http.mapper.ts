@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from '../../../../common/auth/authenticated-user.interface';
 import { CreateCredentialCommand } from '../../application/commands/create-credential.command';
 import { UpdateCredentialCommand } from '../../application/commands/update-credential.command';
 import { CredentialDto } from '../../application/dto/credential.dto';
@@ -20,8 +21,9 @@ export class CredentialHttpMapper {
   static toUpdateCommand(
     id: string,
     dto: UpdateCredentialRequestDto,
+    caller: AuthenticatedUser,
   ): UpdateCredentialCommand {
-    return new UpdateCredentialCommand(id, dto.status);
+    return new UpdateCredentialCommand(id, caller.id, caller.role, dto.status);
   }
 
   static toResponse(dto: CredentialDto): CredentialResponseDto {
