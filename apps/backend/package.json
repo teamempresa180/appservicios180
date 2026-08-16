@@ -21,7 +21,15 @@
     "test:integration": "jest --config ./test/jest-integration.json",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
-    "prisma:seed": "prisma db seed"
+    "prisma:seed": "prisma db seed",
+    "k6:seed": "node ../tests/k6/fixtures/seed.js",
+    "k6:teardown": "node ../tests/k6/fixtures/teardown.js",
+    "k6:smoke": "cd ../tests/k6 && k6 run tests/smoke.js",
+    "k6:load": "cd ../tests/k6 && k6 run tests/load.js",
+    "k6:stress": "cd ../tests/k6 && k6 run tests/stress.js",
+    "k6:spike": "cd ../tests/k6 && k6 run tests/spike.js",
+    "k6:soak": "cd ../tests/k6 && k6 run tests/soak.js",
+    "k6:all": "npm run k6:smoke && npm run k6:load && npm run k6:stress && npm run k6:spike && npm run k6:soak"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

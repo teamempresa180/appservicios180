@@ -1,0 +1,24 @@
+{
+  "category": { "id": "example-category-id", "name": "K6-LOADTEST Category" },
+  "clients": [
+    {
+      "identityId": "example-identity-id",
+      "documentNumber": "K6TEST-CLIENT-0001",
+      "password": "K6-Load-Test-Pass1!",
+      "profileId": "example-profile-id",
+      "addressId": "example-address-id"
+    }
+  ],
+  "providers": [
+    {
+      "identityId": "example-identity-id",
+      "documentNumber": "K6TEST-PROVIDER-0001",
+      "password": "K6-Load-Test-Pass1!",
+      "providerId": "example-provider-id",
+      "services": [
+        { "id": "example-service-id", "basePrice": 50, "estimatedDuration": 60 }
+      ]
+    }
+  ],
+  "seededAt": "2026-01-01T00:00:00.000Z"
+}
